@@ -27,7 +27,7 @@ A modern, self-hosted blogging platform built with Go + Next.js. Features a them
 
 ```
 utterlog/
-├── utterlog-admin/          # Frontend (Next.js 16)
+├── web/          # Frontend (Next.js 16)
 │   ├── app/                 # App Router
 │   │   ├── (blog)/          # Blog frontend (theme-aware)
 │   │   ├── dashboard/       # Admin dashboard
@@ -45,7 +45,7 @@ utterlog/
 │   │   └── icons/           # Custom SVG icons
 │   └── lib/                 # API clients, stores, theme loader
 │
-├── utterlog-go/             # Backend (Go)
+├── api/             # Backend (Go)
 │   ├── internal/
 │   │   ├── handler/         # HTTP handlers
 │   │   ├── model/           # Data models
@@ -69,7 +69,7 @@ utterlog/
 ### Backend
 
 ```bash
-cd utterlog-go
+cd api
 cp .env.example .env     # Edit database credentials
 go run main.go           # http://localhost:8080
 ```
@@ -77,7 +77,7 @@ go run main.go           # http://localhost:8080
 ### Frontend
 
 ```bash
-cd utterlog-admin
+cd web
 npm install
 cp .env.example .env.local
 npm run dev              # http://localhost:3000
@@ -86,10 +86,10 @@ npm run dev              # http://localhost:3000
 ### Environment
 
 ```bash
-# utterlog-admin/.env.local
+# web/.env.local
 NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
 
-# utterlog-go/.env
+# api/.env
 APP_URL=http://localhost:8080
 PORT=8080
 DB_HOST=localhost

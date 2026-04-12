@@ -30,10 +30,11 @@ build/
 
 # Uploads
 utterlog-api/public/uploads/
-utterlog-go/public/uploads/
+api/public/uploads/
 
 # Go binary
-utterlog-go/utterlog-go
+api/utterlog-go
+api/api
 
 # Cache
 *.cache
