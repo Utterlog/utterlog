@@ -1,0 +1,15 @@
+{
+  "name": "Lared",
+  "version": "1.0.0",
+  "description": "极简内容优先主题 — 灵感来自 Lared WordPress 主题",
+  "author": "Utterlog Team",
+  "screenshot": "screenshot.png",
+  "colors": {
+    "primary": "#f53004",
+    "background": "#ffffff"
+  },
+  "layout": {
+    "maxWidth": "900px",
+    "headerStyle": "fixed"
+  }
+}

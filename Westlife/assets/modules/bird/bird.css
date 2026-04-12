@@ -1,0 +1,306 @@
+/* Bird & Wire Module (extracted from main.css)
+ *  - 年度电线刻度 + 今日 marker
+ *  - 小鸟定位与响应式缩放
+ *  - 提示气泡 / 投喂粒子（可后续补充）
+ */
+.wire-curve-divider {
+  position: relative;
+  /* 调整：上 20px 下 10px */
+  margin: 20px 0 -20px;
+  height: 56px;
+  padding: 0; /* 去除两侧预留 */
+}
+/* 移动端与桌面保持一致，无需单独缩减 */
+/* expand-16: 轻度左右扩展 16px（不再使用 full-bleed） */
+.wire-curve-divider.expand-16 {
+  margin-left: -16px;
+  margin-right: -16px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+/* 修正：不再额外放大内部线宽，避免 100% (next-year) 节点跑出右侧边界 */
+.wire-curve-divider.expand-16 .wire-scale,
+.wire-curve-divider.expand-16 .wire-curve {
+  left: 0;
+  width: 100%;
+}
+.wire-curve-divider .wire-curve {
+  position: absolute;
+  left: 0;
+  top: 25px;
+  width: 100%;
+  height: 8px;
+  overflow: visible;
+}
+.wire-curve-divider .wire-curve path {
+  stroke: var(--wire-stroke, #b8c2d4);
+  stroke-width: 1.2;
+  fill: none;
+}
+body[data-theme="dark"] .wire-curve-divider .wire-curve path {
+  stroke: #546170;
+}
+/* 年度刻度 */
+.wire-curve-divider .wire-scale {
+  position: absolute;
+  left: 0;
+  top: 25px;
+  width: 100%;
+  height: 8px;
+  pointer-events: auto; /* 允许 hover / click */
+}
+/* 刻度圆点：采用绝对居中（父容器 8px 高）+ translateY(-50%) 让线穿中心 */
+/* Tick active 样式放在后面保留 */
+/* 文章月份高亮闪烁 */
+.month-highlight {
+  position: relative;
+  animation: monthFlash 1.2s ease-out;
+}
+@keyframes monthFlash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 159, 67, 0.45);
+  }
+  40% {
+    box-shadow: 0 0 0 6px rgba(255, 159, 67, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 159, 67, 0);
+  }
+}
+/* 重要刻度点 */
+.wire-curve-divider .wire-scale-tick.major {
+  background: transparent;
+  border: 1.5px solid var(--wire-tick-major, #5a6577);
+  opacity: 0.95;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+}
+/* 统一 tick 定义（放在 major 之后以便覆盖尺寸） */
+.wire-curve-divider .wire-scale-tick {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  transform: translateY(calc(-50% + 3px)); /* 整体向下 3px */
+  background: transparent;
+  border: 1px solid var(--wire-tick, #7f8899);
+  box-sizing: border-box;
+  opacity: 0.75;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.3s, transform 0.35s, box-shadow 0.35s, opacity 0.3s,
+    border-color 0.3s;
+}
+.wire-curve-divider .wire-scale-tick.active {
+  background: transparent; /* 移除填充颜色 */
+  border-color: #ff9f43; /* 高亮描边 */
+  opacity: 1;
+  box-shadow: none; /* 去掉光晕 */
+  transform: translateY(calc(-50% + 3px)) scale(1.05);
+}
+/* 边界刻度（下一年 1 月 1 日） */
+.wire-curve-divider .wire-scale-tick.next-year {
+  border-color: #5a6577;
+  opacity: 0.6;
+  /* 避免视觉被裁切：向左微移半个边框宽度 */
+  transform: translate(calc(-50% - 1px), calc(-50% + 3px));
+}
+.wire-curve-divider .wire-scale-tick.next-year:hover {
+  opacity: 0.9;
+}
+/* 小鸟位置（动态 left 由 PHP 输出） */
+.wire-curve-divider .hf-bird-wire.on-curve {
+  position: absolute;
+  top: 4px; /* 上移后的最终高度 */
+  transform: translate(-50%, -30%) scale(0.9);
+  transition: left 0.6s cubic-bezier(0.65, 0.05, 0.36, 1);
+  width: 56px;
+  height: 56px;
+}
+/* 提示气泡（睡眠/节日） */
+.bird-sleep-tip,
+.bird-festival-tip {
+  position: absolute;
+  z-index: 60;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, 0);
+  background: var(--bird-tip-bg, rgba(40, 46, 55, 0.92));
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.3);
+}
+.bird-sleep-tip.show,
+.bird-festival-tip.show {
+  opacity: 1;
+  transform: translate(-50%, -4px);
+}
+.bird-festival-tip[data-state="upcoming"] {
+  background: linear-gradient(
+    135deg,
+    rgba(55, 66, 82, 0.95),
+    rgba(40, 46, 55, 0.95)
+  );
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(120, 160, 255, 0.15) inset;
+}
+.bird-festival-tip[data-state="ongoing"] {
+  background: linear-gradient(
+    135deg,
+    rgba(70, 78, 96, 0.96),
+    rgba(46, 52, 62, 0.96)
+  );
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 210, 120, 0.25) inset;
+}
+.bird-festival-tip[data-state="passed"] {
+  background: linear-gradient(
+    135deg,
+    rgba(44, 50, 60, 0.93),
+    rgba(32, 36, 44, 0.93)
+  );
+  opacity: 0.92;
+  box-shadow: 0 3px 10px -2px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(180, 180, 180, 0.15) inset;
+}
+.bird-month-tip {
+  position: absolute;
+  z-index: 70;
+  padding: 4px 8px;
+  background: rgba(34, 38, 46, 0.92);
+  color: #fff;
+  font-size: 11px;
+  border-radius: 4px;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 0);
+  transition: opacity 0.18s, transform 0.18s;
+  backdrop-filter: blur(4px);
+  white-space: normal;
+  text-align: center;
+  max-width: 160px;
+}
+.bird-month-tip.show {
+  opacity: 1;
+  transform: translate(-50%, -4px);
+}
+.bird-float-enabled {
+  will-change: transform;
+}
+.bird-festival-tip {
+  background: linear-gradient(
+    135deg,
+    rgba(61, 72, 88, 0.95),
+    rgba(34, 39, 48, 0.95)
+  );
+}
+/* 投喂粒子 */
+.bird-seed {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: radial-gradient(circle at 30% 30%, #fff, #ffe2a8 70%);
+  border-radius: 50%;
+  animation: seedFall 0.9s ease-in forwards;
+  opacity: 0.85;
+}
+@keyframes seedFall {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.9);
+  }
+  60% {
+    transform: translate3d(-6px, 14px, 0) scale(0.75);
+  }
+  100% {
+    transform: translate3d(-10px, 26px, 0) scale(0.55);
+    opacity: 0;
+  }
+}
+/* 能量环 */
+.bird-energy-ring {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border: 2px solid rgba(255, 200, 120, 0.75);
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(255, 170, 70, 0.45),
+    0 0 3px rgba(255, 255, 255, 0.5) inset;
+  animation: birdRing 0.85s ease-out forwards;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+@keyframes birdRing {
+  0% {
+    transform: scale(0.25);
+    opacity: 0.9;
+  }
+  55% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+/* 投喂散射粒子 */
+.bird-feed-grain {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  background: radial-gradient(circle at 30% 30%, #fff, #ffd28a 70%);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(255, 200, 120, 0.6);
+  opacity: 0.95;
+  transform: translate(0, 0) scale(1);
+  transition: transform 0.9s cubic-bezier(0.55, 0.12, 0.25, 1.15),
+    opacity 0.9s ease;
+  pointer-events: none;
+}
+/* 入场 */
+.wire-scale-tick {
+  will-change: transform, opacity;
+}
+@media (max-width: 860px) {
+  .wire-curve-divider {
+    margin: 36px 0 24px;
+    height: 52px;
+  }
+  .wire-curve-divider .hf-bird-wire.on-curve {
+    width: 48px;
+    height: 48px;
+  }
+  .wire-curve-divider .wire-today-marker {
+    width: 5px;
+    height: 5px;
+  }
+}
+@media (max-width: 540px) {
+  .wire-curve-divider {
+    margin: 30px 0 20px;
+    height: 48px;
+  }
+  .wire-curve-divider .hf-bird-wire.on-curve {
+    width: 42px;
+    height: 42px;
+  }
+  .wire-curve-divider .wire-scale-tick {
+    height: 5px;
+  }
+  .wire-curve-divider .wire-scale-tick.major {
+    height: 6px;
+  }
+}

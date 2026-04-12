@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Bridge - API Token 申请</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 480px;
+            padding: 40px;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #2d3748;
+        }
+
+        input[type="email"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        input[type="email"]:focus,
+        input[type="text"]:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input[type="email"]:disabled,
+        input[type="text"]:disabled {
+            background: #f7fafc;
+            cursor: not-allowed;
+        }
+
+        .button {
+            width: 100%;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .button.loading {
+            color: transparent;
+        }
+
+        .button.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spinner 0.8s linear infinite;
+        }
+
+        @keyframes spinner {
+            to { transform: rotate(360deg); }
+        }
+
+        .result {
+            margin-top: 24px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .result.success {
+            background: #f0fff4;
+            border-color: #9ae6b4;
+        }
+
+        .result.error {
+            background: #fff5f5;
+            border-color: #feb2b2;
+        }
+
+        .result-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result.success .result-title {
+            color: #22543d;
+        }
+
+        .result.error .result-title {
+            color: #742a2a;
+        }
+
+        .token-box {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .token-value {
+            flex: 1;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            color: #2d3748;
+            word-break: break-all;
+            user-select: all;
+        }
+
+        .copy-btn {
+            padding: 8px 16px;
+            background: #edf2f7;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #4a5568;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .copy-btn:hover {
+            background: #e2e8f0;
+        }
+
+        .copy-btn.copied {
+            background: #9ae6b4;
+            color: #22543d;
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #718096;
+            line-height: 1.5;
+        }
+
+        .error-message {
+            font-size: 14px;
+            color: #742a2a;
+            line-height: 1.5;
+        }
+
+        .features {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #4a5568;
+        }
+
+        .feature-icon {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .feature-icon svg {
+            width: 12px;
+            height: 12px;
+            fill: white;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #2d3748;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <svg class="logo" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                <path d="M963.764706 180.705882H180.705882a60.235294 60.235294 0 0 0-60.235294 60.235294v602.352942a60.235294 60.235294 0 0 0 60.235294 60.235294h481.882353v120.470588l192.752941-120.470588H963.764706a60.235294 60.235294 0 0 0 60.235294-60.235294V240.941176a60.235294 60.235294 0 0 0-60.235294-60.235294z" fill="#95C7FF" opacity=".6"></path>
+                <path d="M813.176471 120.470588H361.411765V0L120.470588 150.588235 361.411765 301.176471V180.705882h451.764706a30.117647 30.117647 0 0 1 30.117647 30.117647v542.117647h60.235294v-542.117647A90.352941 90.352941 0 0 0 813.176471 120.470588zM542.117647 783.058824H90.352941a30.117647 30.117647 0 0 1-30.117647-30.117648v-542.117647H0v542.117647A90.352941 90.352941 0 0 0 90.352941 843.294118H542.117647v120.470588l240.941177-150.588235L542.117647 662.588235z" fill="#667eea"></path>
+            </svg>
+            <h1>AI Bridge Token 申请</h1>
+            <p>输入您的邮箱地址，获取专属的 API Token</p>
+        </div>
+
+        <form id="tokenForm">
+            <div class="form-group">
+                <label for="email">邮箱地址</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="your@email.com" 
+                    required
+                    autocomplete="email"
+                >
+            </div>
+
+            <button type="submit" class="button" id="submitBtn">
+                申请 Token
+            </button>
+        </form>
+
+        <div class="result" id="result">
+            <div class="result-title">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <span>申请成功！请保存好您的 Token</span>
+            </div>
+            <div class="token-box">
+                <span class="token-value" id="tokenValue"></span>
+                <button class="copy-btn" id="copyBtn" onclick="copyToken()">
+                    复制
+                </button>
+            </div>
+            <p class="info-text">
+                此 Token 与您的邮箱绑定，可用于访问 AI Bridge API。<br>
+                请妥善保管，不要分享给他人。每个邮箱只能申请一个 Token。
+            </p>
+        </div>
+
+        <div class="features">
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                </div>
+                <span>支持多种 AI 模型：OpenAI、Claude、Gemini、DeepSeek 等</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                </div>
+                <span>智能路由：自动选择最优节点，支持出国/回国模式</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                </div>
+                <span>安全可靠：BYOK 模式，您的 API Key 只保存在本地</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const form = document.getElementById('tokenForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const result = document.getElementById('result');
+        const tokenValue = document.getElementById('tokenValue');
+        const emailInput = document.getElementById('email');
+        const toast = document.getElementById('toast');
+
+        // API 基础地址
+        const API_BASE = window.location.origin;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = emailInput.value.trim();
+            
+            // 验证邮箱格式
+            if (!isValidEmail(email)) {
+                showError('请输入有效的邮箱地址');
+                return;
+            }
+
+            // 设置加载状态
+            setLoading(true);
+            result.classList.remove('show', 'success', 'error');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/apply-token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // 显示成功结果
+                    tokenValue.textContent = data.token;
+                    result.classList.add('show', 'success');
+                    emailInput.disabled = true;
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '已申请';
+                } else {
+                    throw new Error(data.message || '申请失败，请稍后重试');
+                }
+            } catch (error) {
+                showError(error.message || '网络错误，请稍后重试');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function setLoading(loading) {
+            submitBtn.disabled = loading;
+            submitBtn.classList.toggle('loading', loading);
+        }
+
+        function showError(message) {
+            result.className = 'result show error';
+            result.innerHTML = `
+                <div class="result-title">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>申请失败</span>
+                </div>
+                <p class="error-message">${escapeHtml(message)}</p>
+            `;
+        }
+
+        function copyToken() {
+            const token = tokenValue.textContent;
+            if (!token) return;
+
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(token).then(() => {
+                    showCopySuccess();
+                });
+            } else {
+                // 降级方案
+                const textarea = document.createElement('textarea');
+                textarea.value = token;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showCopySuccess();
+            }
+        }
+
+        function showCopySuccess() {
+            const copyBtn = document.getElementById('copyBtn');
+            copyBtn.textContent = '已复制';
+            copyBtn.classList.add('copied');
+            showToast('Token 已复制到剪贴板');
+            
+            setTimeout(() => {
+                copyBtn.textContent = '复制';
+                copyBtn.classList.remove('copied');
+            }, 2000);
+        }
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 如果 URL 中有 email 参数，自动填充
+        const urlParams = new URLSearchParams(window.location.search);
+        const emailParam = urlParams.get('email');
+        if (emailParam && isValidEmail(emailParam)) {
+            emailInput.value = emailParam;
+        }
+    </script>
+</body>
+</html>

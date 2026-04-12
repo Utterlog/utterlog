@@ -1,0 +1,13 @@
+{
+  "name": "westlife-theme",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:prod",
+    "build:dev": "NODE_ENV=development node scripts/build.mjs",
+    "build:prod": "NODE_ENV=production node scripts/build.mjs",
+    "build:watch": "NODE_ENV=development node scripts/build.mjs --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.1"
+  }
+}

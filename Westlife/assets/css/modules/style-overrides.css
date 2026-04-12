@@ -1,0 +1,107 @@
+/*
+ * Final front-end overrides loaded last.
+ * Theme shape mode is now controlled by the body class:
+ * - body.westlife-shape-sharp
+ * - body.westlife-shape-rounded
+ */
+
+:root {
+  --theme-radius: 0;
+}
+
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+}
+
+body {
+  min-height: 100%;
+}
+
+body :where(
+  .site-title a,
+  .page-title,
+  .vm-page-title,
+  .hero-title,
+  .hero-title-block,
+  .section-title,
+  .vm-topn-title,
+  .entry-title,
+  .comment-reply-title,
+  .compose-welcome .welcome-title,
+  .compose-welcome--top .welcome-title,
+  .arc-page-title,
+  .arc-section-title
+) {
+  font-family: var(--font-heading) !important;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+body.westlife-shape-sharp :where(*, *::before, *::after) {
+  border-radius: 0 !important;
+}
+
+body.westlife-shape-sharp :where(*, *::before, *::after) {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+body.westlife-shape-rounded :where(
+  .site-panel-dialog,
+  .search-modal-inner,
+  .login-modal-inner,
+  .logout-confirm-inner,
+  .logout-card,
+  .rss-popover,
+  .icp-info-panel,
+  .comment-wrap,
+  .comment-editor-wrapper,
+  .guest-fields-top,
+  .comment-form input,
+  .comment-form textarea,
+  .comment-form select,
+  .comment-form button,
+  .form-submit input[type="submit"],
+  .button,
+  input,
+  textarea,
+  select,
+  .post-card,
+  .card,
+  .widget,
+  .page-numbers,
+  .toc-link,
+  .article-toc,
+  .toc-list a,
+  .site-panel-item,
+  .archive-card,
+  .feed-item,
+  .memos-card,
+  .links-card,
+  .vm-card,
+  .visitor-stat-card,
+  .header-search-btn,
+  .modal-content,
+  .month-modal .modal-content
+) {
+  border-radius: var(--theme-radius, 14px) !important;
+}
+
+body :where(
+  .wl-turnstile-spinner,
+  .wl-turnstile-spinner::before,
+  .wl-turnstile-spinner::after
+) {
+  border-radius: 50% !important;
+}
+
+body.westlife-shape-sharp :where(
+  .comment-actions .submit-comment,
+  #respond .submit-comment,
+  #respond .form-submit input[type="submit"]
+) {
+  border-radius: 0 !important;
+}

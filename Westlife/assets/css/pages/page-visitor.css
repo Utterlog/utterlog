@@ -1,0 +1,1456 @@
+/*
+ * 访客地图页面样式 - 精简版
+ */
+
+/* 页面容器 */
+.visitor-page {
+  width: 100%;
+  max-width: var(--container-width); /* 使用 CSS 变量: 1280px */
+  margin: 0 auto 24px;
+  background: var(--card-bg, white);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* Hero 标题区域 */
+.vm-hero {
+  position: relative;
+  padding: 48px 0;
+  height: 500px;
+  min-height: 500px;
+  background: url("../../../static/images/banner/visitor.jpg") center/cover
+    no-repeat;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .vm-hero {
+  background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)),
+    url("../../../static/images/banner/visitor.jpg") center/cover no-repeat;
+}
+
+.vm-hero-container {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 26px;
+}
+
+.vm-hero-inner {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 32px;
+  max-width: 100%;
+  align-items: stretch; /* 两列等高，便于底部对齐 */
+}
+
+.vm-hero-content {
+  /* 为固定标题预留空间，保持与其他页面一致 */
+  padding-top: 72px;
+  /* 与关于页 .hero-content 一致，使标题绝对定位基于左列内容区 */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* 让左列撑满与右侧同高的行，便于把指标区推到底部 */
+}
+
+.vm-page-title {
+  position: absolute;
+  top: -10px;
+  left: 25px;
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 500;
+  color: #ffffff;
+  line-height: 1.2;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 2;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.vm-page-title i {
+  /* 图标继承标题色，保证一致 */
+  color: inherit;
+  font-size: 2rem;
+}
+
+.vm-hero-description {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #ffffff; /* 改为白色 */
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(0, 0, 0, 0.4); /* 多层阴影 */
+}
+
+.vm-hero-description p {
+  margin: 0 0 12px 0;
+}
+
+.vm-hero-description p:last-child {
+  margin-bottom: 0;
+}
+
+/* 深色模式 - 阴影更强 */
+[data-theme="dark"] .vm-hero-description {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Hero 徽章组 */
+/* 统一徽章与小时图容器，方便对齐与统一宽度 */
+.vm-hero-metrics {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  margin-top: auto; /* 推到底部以对齐右侧卡片底部 */
+  padding-top: 12px; /* 保持与上方描述的间距感 */
+  max-width: 100%;
+}
+
+.vm-hero-badges {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.vm-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.vm-badge i {
+  color: var(--primary-color, #3b82f6);
+}
+
+.vm-badge-label {
+  color: #64748b;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.vm-badge-value {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+/* Hero 小时图（轻量柱状） */
+.vm-hero-chart {
+  margin-top: 0;
+  background: #fff;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 10px;
+  padding: 12px 12px 8px; /* 底部略收窄，刻度更贴近边框 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  position: relative;
+  /* 自适应比例：根据容器宽度确定高度，保证不同屏幕占比相近 */
+  aspect-ratio: 4 / 1;
+}
+.vm-hero-chart.is-collapsed .vhc-bars {
+  height: 140px;
+  flex: none; /* 折叠时固定高度 */
+}
+.vhc-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+.vhc-title i {
+  color: var(--primary-color, #3b82f6);
+}
+.vm-hero-chart .vhc-controls {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  display: flex;
+  gap: 6px;
+}
+.vm-hero-chart .vhc-btn {
+  appearance: none;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: #fff;
+  color: #64748b;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.vm-hero-chart .vhc-btn.is-active,
+.vm-hero-chart .vhc-btn:hover {
+  color: var(--primary-color, #3b82f6);
+  border-color: var(--primary-color, #3b82f6);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+.vhc-bars {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 4px;
+  align-items: end;
+  /* 通过 Flex 容器填满剩余空间（由 .vhc-wrap 控制） */
+  height: auto;
+  min-height: 80px;
+  flex: 1; /* 占据标题与刻度之间的所有空间，避免垂直居中 */
+}
+.vhc-bar {
+  /* 使用新品牌主色 #0166CC */
+  background: linear-gradient(
+    180deg,
+    rgba(var(--color-primary-rgb, 1, 102, 204), 0.95),
+    rgba(var(--color-primary-rgb, 1, 102, 204), 0.6)
+  );
+  border-radius: 3px 3px 0 0;
+  min-height: 2px; /* 最细可见线 */
+  transition: height 160ms ease-in-out;
+}
+.vhc-bar.zero {
+  background: rgba(148, 163, 184, 0.35);
+}
+.vhc-axis {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 4px;
+  margin-top: 2px; /* 紧挨底部边框 */
+  font-size: 11px;
+  color: #94a3b8;
+}
+.vhc-tick {
+  text-align: center;
+}
+.vhc-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #111827;
+  color: var(--color-text-inverse);
+  font-size: 12px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transform: translate(-50%, -8px);
+  white-space: nowrap;
+  z-index: 5;
+  display: none;
+}
+/* 包裹层：让柱区按剩余高度自适应 */
+.vhc-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 右侧统计卡片 */
+.vm-stats-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  height: fit-content;
+  width: 380px;
+  flex-shrink: 0;
+}
+
+.vm-stats-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.vm-stats-header i {
+  font-size: 1.25rem;
+  color: var(--primary-color, #64748b);
+}
+
+.vm-stats-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-color, #1f2937);
+}
+
+/* 统计列表 */
+.vm-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vm-stat-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  min-height: 60px;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.vm-stat-item:hover {
+  background: rgba(59, 130, 246, 0.12);
+  transform: translateX(4px);
+}
+
+.vm-stat-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 8px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.vm-stat-icon i {
+  font-size: 1rem;
+  color: var(--primary-color, #64748b);
+}
+
+.vm-stat-content {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vm-stat-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.vm-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-color, #1f2937);
+}
+
+/* 地图容器 */
+.vm-map-wrapper {
+  padding: 0;
+  position: relative; /* 作为覆层定位上下文 */
+}
+
+.vm-map-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.vm-map-source .fas {
+  color: var(--color-primary, #3f6ad8);
+  font-size: 13px;
+}
+
+.visitor-map-background,
+#visitor-map-background {
+  width: 100%;
+  height: 600px;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  background: var(--card-bg, white);
+  border: none;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+/* 隐藏地图右下角的版权与归属控件 */
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+/* 地图右上角：时间范围控制条（保留玻璃拟态样式） */
+.leaflet-control.vhc-controls {
+  display: inline-flex;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: saturate(140%) blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.leaflet-control.vhc-controls .vhc-btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-inverse);
+  font-size: 12px;
+  line-height: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.leaflet-control.vhc-controls .vhc-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.leaflet-control.vhc-controls .vhc-btn.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* 地图底部覆层：黑色磨砂贴底显示最近访客（10个以内） */
+.vm-map-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* 高于 tile/marker(600)，低于 popup(700) */
+  z-index: 690; /* 提升层级，确保不被地图图层遮挡，仍低于弹窗(700) */
+  pointer-events: none; /* 默认让事件穿透地图 */
+}
+.vm-map-overlay .vm-recent-inline {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* 左对齐以配合拖动 */
+  padding: 8px 10px;
+  min-height: 42px; /* 即使无数据时也提供可见的磨砂条高度 */
+  width: 100%;
+  box-sizing: border-box;
+  /* 整条黑色磨砂背景，避免仅卡片有底色时显得不明显 */
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  overflow: hidden; /* 隐藏横向溢出 */
+  pointer-events: auto; /* 允许箭头与拖动交互 */
+}
+.vm-map-overlay .vm-recent-empty {
+  margin-left: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.visitor-popup .vp-source {
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 12px;
+}
+.vm-map-overlay .visitor-recent-inline {
+  pointer-events: auto; /* 允许列表自身交互 */
+  display: inline-flex !important; /* 覆盖通用 .visitor-recent-list 的 display:grid 设置 */
+  gap: 8px;
+  width: auto;
+  white-space: nowrap; /* 保持一行 */
+  will-change: transform;
+  transition: transform 0.2s ease;
+}
+.vm-map-overlay .visitor-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--color-text-inverse);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.vm-map-overlay .visitor-recent-inline.is-grabbing,
+.vm-map-overlay .vm-recent-inline.is-grabbing {
+  cursor: grabbing;
+  user-select: none;
+}
+.vm-map-overlay .visitor-item:hover {
+  background: rgba(0, 0, 0, 0.65) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.vm-map-overlay .visitor-one-line {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+.vm-map-overlay .visitor-one-line .vol-loc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vm-map-overlay .visitor-one-line .vol-time {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+}
+.vm-map-overlay .visitor-item.is-current {
+  border-color: rgba(34, 197, 94, 0.9); /* 绿色描边提示当前访客 */
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.5) inset;
+}
+/* 列表项 hover/active 态 */
+.vm-map-overlay .visitor-item.is-hover,
+.vm-map-overlay .visitor-item:hover {
+  background: rgba(0, 0, 0, 0.65) !important;
+}
+.vm-map-overlay .visitor-item.is-active {
+  border-color: rgba(59, 130, 246, 0.9); /* 蓝色描边表示当前激活 */
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5) inset;
+}
+
+/* 最近访客左右箭头 */
+.vm-map-overlay .vm-recent-inline {
+  position: relative;
+}
+.vm-map-overlay .vm-recent-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--color-text-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.vm-map-overlay .vm-recent-arrow:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+.vm-map-overlay .vm-recent-arrow:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.vm-map-overlay .vm-recent-arrow--left {
+  left: 6px;
+}
+.vm-map-overlay .vm-recent-arrow--right {
+  right: 6px;
+}
+
+/* 保持 10 列，窄屏时自动缩小每个卡片宽度以自适应，不做换列 */
+
+/* Leaflet 圆点悬停呼吸动画 */
+.vm-marker-breath {
+  animation: vm-breath 1.2s ease-in-out infinite;
+  transform-box: fill-box; /* 使 SVG 变换使用自身边界 */
+  transform-origin: center; /* 以中心缩放 */
+}
+/* 列表悬浮联动：让目标标记变为黄色并呼吸 */
+.vm-marker--hover-yellow {
+  /* 针对 Leaflet SVG 圆，fill 设置为黄色，描边保持白色以增强对比 */
+  fill: #fbbf24 !important; /* amber-400 */
+}
+@keyframes vm-breath {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 全屏模式左右侧紧凑列表 */
+.leaflet-fullscreen-on .vm-fs-overlay {
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none; /* 默认不拦截，只有列表本身可点 */
+  z-index: 650;
+}
+.leaflet-fullscreen-on .vm-fs-left {
+  left: 16px;
+}
+.leaflet-fullscreen-on .vm-fs-right {
+  right: 16px;
+}
+.leaflet-fullscreen-on .vm-fs-list {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 8px;
+  padding: 8px;
+  overflow: auto;
+  pointer-events: auto;
+}
+.leaflet-fullscreen-on .vm-fs-list .visitor-item {
+  display: block;
+  padding: 6px 8px;
+  margin: 0 0 6px 0;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--color-text-inverse);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.leaflet-fullscreen-on .vm-fs-list .visitor-item:last-child {
+  margin-bottom: 0;
+}
+.leaflet-fullscreen-on .vm-fs-list .visitor-item .visitor-one-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.leaflet-fullscreen-on .vm-fs-list .visitor-item.is-active {
+  border-color: rgba(59, 130, 246, 0.9);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5) inset;
+}
+.leaflet-fullscreen-on .vm-fs-list .visitor-item.is-hover,
+.leaflet-fullscreen-on .vm-fs-list .visitor-item:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+/* 最近访客 */
+.vm-recent {
+  background: var(--card-bg, white);
+  padding: 26px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.vm-recent-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-color, #1f2937);
+  margin: 0 0 20px 0;
+}
+
+.vm-recent-title i {
+  color: var(--primary-color, #64748b);
+  margin-right: 8px;
+}
+
+.visitor-recent-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.visitor-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  background: var(--bg-color, #f9fafb);
+  border-left: 3px solid var(--primary-color, #3b82f6);
+  transition: all 0.2s;
+  font-size: 0.85rem;
+}
+
+.visitor-item:hover {
+  background: var(--hover-bg, #e0f2fe);
+  transform: translateX(3px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.visitor-flag {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.visitor-flag .fi,
+.vol-loc .fi {
+  width: 1rem;
+  height: 0.75rem;
+  display: inline-block;
+  vertical-align: -0.08em;
+  margin: 0 0.2rem 0 0.1rem;
+}
+
+.visitor-info-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.visitor-location {
+  font-weight: 600;
+  color: var(--text-color, #1f2937);
+  margin: 0;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.visitor-location i {
+  font-size: 0.75rem;
+  margin-right: 0.3rem;
+  color: var(--primary-color, #3b82f6);
+}
+
+.visitor-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted, #6b7280);
+  margin: 0.15rem 0 0 0;
+}
+
+.visitor-time {
+  font-size: 0.7rem;
+  color: var(--text-muted, #9ca3af);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.visitor-time i {
+  font-size: 0.65rem;
+  margin-right: 0.2rem;
+}
+
+.visitor-empty {
+  text-align: center;
+  color: var(--text-muted, #9ca3af);
+  padding: 2rem;
+  font-size: 0.9rem;
+}
+
+/* Top N 列表 */
+.vm-topn {
+  background: var(--card-bg, #fff);
+  padding: 26px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.vm-topn-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px; /* 与 .vm-recent-title 下边距统一 */
+}
+
+.vm-topn-title {
+  font-size: 1.25rem; /* 与 .vm-recent-title 统一 */
+  font-weight: 700;
+  color: var(--text-color, #1f2937);
+  display: flex;
+  align-items: center;
+}
+
+.vm-topn-title i {
+  color: var(--primary-color, #64748b);
+  margin-right: 8px;
+}
+
+.vm-topn-range-select {
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--text-color, #1f2937);
+  font-size: 0.9rem;
+}
+
+.vm-topn-body {
+  margin-top: 8px;
+}
+
+.vm-topn-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px; /* 国家之间稍微多一点间距 */
+}
+
+/* OS 区块一行 5 列（与国家/浏览器一致） */
+.vm-topn.vm-topn-os .vm-topn-list {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.vm-topn-list[data-empty]:empty::after {
+  content: attr(data-empty);
+  display: block;
+  color: var(--text-muted, #9ca3af);
+}
+
+.vm-topn-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.vm-topn-item .meta {
+  color: var(--text-muted, #64748b);
+  font-size: 0.85rem;
+}
+/* 浏览器 / 系统：图标保持居中，卡片高度统一，宽度自适应 */
+.vm-topn[data-type="browser"] .vm-topn-item,
+.vm-topn[data-type="os"] .vm-topn-item {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  min-height: 0;
+  padding: 0;
+  display: block;
+}
+.vm-topn[data-type="browser"] .flag-emoji,
+.vm-topn[data-type="os"] .flag-emoji {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(100% - 24%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.vm-topn[data-type="browser"] .flag-emoji img,
+.vm-topn[data-type="os"] .flag-emoji img {
+  width: auto;
+  max-width: 72%;
+  height: auto;
+  max-height: 88px;
+  object-fit: contain;
+  display: block;
+}
+.vm-topn[data-type="browser"] .vm-country-glass,
+.vm-topn[data-type="os"] .vm-country-glass {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 24%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.55);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.vm-topn[data-type="browser"] .label,
+.vm-topn[data-type="os"] .label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--color-text-inverse);
+}
+.vm-topn[data-type="browser"] .meta,
+.vm-topn[data-type="os"] .meta {
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+}
+/* 国家卡片：统一高度，底部磨砂信息行 */
+.vm-country-grid .vm-topn-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 国旗卡片使用 4:3 比例，旗面直接铺满 */
+  aspect-ratio: 4 / 3;
+  /* 作为容器，供子元素使用 cqi 等容器单位进行自适应 */
+  container-type: inline-size;
+  padding: 0;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 0; /* 直角 90° */
+  overflow: hidden;
+  background: #fff; /* Emoji 模式不使用背景图 */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+/* Flag Icons 国旗：置中放大显示 */
+.vm-country-grid .flag-emoji {
+  position: absolute;
+  inset: 0; /* 占满卡片 */
+  display: block;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
+  filter: saturate(1.02);
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+}
+.vm-country-grid .flag-emoji .fi {
+  width: 100%;
+  height: 100%;
+  display: block;
+  box-shadow: none;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* 底部向上的渐变遮罩（提升背景过亮时的对比） */
+.vm-country-grid .vm-topn-item::after {
+  /* 取消额外渐变遮罩，避免与黑色磨砂条叠加 */
+  content: none;
+}
+
+/* 不再需要渐变遮罩 */
+
+/* 文本磨砂罩层：底部对齐，单行左右布局 */
+.vm-country-grid .vm-topn-item .vm-country-glass {
+  position: absolute;
+  left: 0; /* 两边不留空 */
+  right: 0; /* 两边不留空 */
+  bottom: 0; /* 底部不留空，贴底显示 */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  /* 玻璃条占卡片高度的 24% */
+  height: 24%;
+  padding: 6px 10px; /* 减小内边距，适配更小卡片 */
+  border-radius: 0; /* 直角 */
+  background: rgba(0, 0, 0, 0.55); /* 黑色磨砂效果 */
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+/* 小国旗：矩形、无圆角 */
+/* 使用背景国旗，隐藏内联小国旗 */
+.vm-country-grid .flag {
+  display: none;
+}
+.vm-country-grid .label {
+  font-weight: 700;
+  color: var(--color-text-inverse); /* inverse token */
+  font-size: 0.85rem; /* 略小的文字以适配更小卡片 */
+  flex: 1; /* 左侧占满 */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vm-country-grid .meta {
+  color: rgba(255, 255, 255, 0.95); /* 白字 */
+  font-size: 0.8rem; /* 略小的比例文字 */
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+/* 让 TopN 区域在数据为空时仍能居中展示加载动画 */
+.vm-topn-body {
+  position: relative;
+  min-height: 140px; /* 给加载动画一个可视空间 */
+}
+.vm-topn-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* 不拦截交互 */
+  background: transparent; /* 仅展示动画，不遮挡内容 */
+  z-index: 2;
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+  .vm-hero-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .visitor-recent-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .vm-hero {
+    padding: 32px 0;
+  }
+
+  .vm-hero-container {
+    padding: 0 20px;
+  }
+
+  .vm-page-title {
+    font-size: 1.75rem;
+  }
+
+  .vm-stats-card {
+    padding: 20px;
+  }
+
+  .visitor-map-background {
+    height: 400px;
+  }
+
+  .visitor-recent-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .visitor-item {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  .vm-recent {
+    padding: 20px;
+  }
+
+  .vm-hero-badges {
+    gap: 10px;
+  }
+
+  .vm-badge {
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .vm-page-title {
+    font-size: 1.5rem;
+  }
+
+  .vm-page-title i {
+    display: block;
+    margin: 0 0 8px 0;
+  }
+
+  .vm-stats-card {
+    padding: 16px;
+  }
+
+  .vm-stat-item {
+    padding: 10px;
+  }
+
+  .vm-stat-value {
+    font-size: 1.25rem;
+  }
+
+  .visitor-recent-list {
+    grid-template-columns: 1fr;
+  }
+
+  .vm-recent {
+    padding: 16px;
+  }
+}
+
+/* Dark Mode */
+[data-theme="dark"] .visitor-page {
+  background: #1a1a1a;
+  border-color: #2d2d2d;
+}
+
+[data-theme="dark"] .vm-hero {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 58, 138, 0.15) 0%,
+    rgba(37, 99, 235, 0.1) 100%
+  );
+  border-bottom-color: #2d2d2d;
+}
+
+[data-theme="dark"] .vm-page-title {
+  /* 暗色模式同样让标题与图标一致，采用主题暗色主色 */
+  color: var(--primary-dark, #94a3b8);
+}
+
+[data-theme="dark"] .vm-page-title i {
+  color: inherit;
+}
+
+[data-theme="dark"] .vm-hero-description {
+  color: var(--text-muted-dark, #9ca3af);
+}
+
+[data-theme="dark"] .vm-stats-card {
+  background: var(--color-background-light) !important;
+  border-color: var(--color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .vm-stats-header {
+  border-bottom-color: var(--border-dark, #4b5563);
+}
+
+[data-theme="dark"] .vm-stats-header i {
+  color: var(--primary-dark, #94a3b8);
+}
+
+[data-theme="dark"] .vm-stats-header h3 {
+  color: var(--text-dark, #f9fafb);
+}
+
+[data-theme="dark"] .vm-stat-item {
+  background: rgba(100, 116, 139, 0.12);
+}
+
+[data-theme="dark"] .vm-stat-item:hover {
+  background: rgba(100, 116, 139, 0.2);
+}
+
+[data-theme="dark"] .vm-stat-icon {
+  background: var(--card-dark, #1f2937);
+}
+
+[data-theme="dark"] .vm-stat-icon i {
+  color: var(--primary-dark, #94a3b8);
+}
+
+[data-theme="dark"] .vm-stat-label {
+  color: var(--text-muted-dark, #9ca3af);
+}
+
+[data-theme="dark"] .vm-stat-value {
+  color: var(--text-dark, #f9fafb);
+}
+
+[data-theme="dark"] .visitor-map-background {
+  background: var(--card-dark, #374151);
+  border-top-color: var(--border-dark, #4b5563);
+  border-bottom-color: var(--border-dark, #4b5563);
+}
+
+[data-theme="dark"] .vm-recent {
+  background: var(--card-dark, #1f2937);
+  border-top-color: var(--border-dark, #374151);
+}
+
+[data-theme="dark"] .vm-recent-title {
+  color: var(--text-dark, #f9fafb);
+}
+
+[data-theme="dark"] .vm-recent-title i {
+  color: var(--primary-dark, #94a3b8);
+}
+
+/* TopN 标题在暗色模式下与最近访客标题统一 */
+[data-theme="dark"] .vm-topn-title {
+  color: var(--text-dark, #f9fafb);
+}
+[data-theme="dark"] .vm-topn-title i {
+  color: var(--primary-dark, #94a3b8);
+}
+
+[data-theme="dark"] .vm-badge {
+  background: var(--card-dark, #1f2937);
+  border-color: var(--border-dark, #374151);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .vm-badge i {
+  color: var(--primary-dark, #94a3b8);
+}
+
+[data-theme="dark"] .vm-badge-label {
+  color: var(--text-muted-dark, #9ca3af);
+}
+
+[data-theme="dark"] .vm-badge-value {
+  color: var(--text-dark, #f9fafb);
+}
+
+[data-theme="dark"] .vm-hero-chart {
+  background: var(--card-dark, #1f2937);
+  border-color: var(--border-dark, #374151);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"] .vhc-title {
+  color: var(--text-muted-dark, #9ca3af);
+}
+[data-theme="dark"] .vhc-title i {
+  color: var(--primary-dark, #94a3b8);
+}
+[data-theme="dark"] .vhc-bar.zero {
+  background: rgba(75, 85, 99, 0.55);
+}
+[data-theme="dark"] .vm-country-grid .vm-topn-item {
+  /* 保留背景图，仅调整边框颜色 */
+  border-color: rgba(255, 255, 255, 0.12);
+}
+[data-theme="dark"] .vm-country-grid .meta {
+  color: #9aa4b2;
+}
+
+/* 暗色下的磨砂罩层更深一些，便于可读性 */
+[data-theme="dark"] .vm-country-grid .vm-country-glass {
+  background: rgba(0, 0, 0, 0.42);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* 页脚低调说明 */
+.visitor-disclaimer {
+  margin: 16px 0 24px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+  color: #6b7280;
+  font-size: 12px;
+  text-align: center; /* 居中显示 */
+}
+[data-theme="dark"] .visitor-disclaimer {
+  background: rgba(255, 255, 255, 0.03);
+  color: #9aa4b2;
+}
+
+[data-theme="dark"] .visitor-item:hover {
+  background: var(--hover-dark, #4b5563);
+}
+
+[data-theme="dark"] .visitor-location {
+  color: var(--text-dark, #f9fafb);
+}
+
+[data-theme="dark"] .visitor-location i {
+  color: var(--primary-dark, #94a3b8);
+}
+
+[data-theme="dark"] .visitor-meta,
+[data-theme="dark"] .visitor-time {
+  color: var(--text-muted-dark, #9ca3af);
+}
+
+[data-theme="dark"] .visitor-empty {
+  color: var(--text-muted-dark, #6b7280);
+}
+
+[data-theme="dark"] .vm-topn {
+  background: var(--card-dark, #1f2937);
+  border-top-color: var(--border-dark, #374151);
+}
+
+[data-theme="dark"] .vm-topn-tab {
+  background: var(--card-dark, #1f2937);
+  border-color: var(--border-dark, #374151);
+  color: var(--text-dark, #f9fafb);
+}
+
+[data-theme="dark"] .vm-topn-range-select {
+  background: var(--card-dark, #1f2937);
+  border-color: var(--border-dark, #374151);
+  color: var(--text-dark, #f9fafb);
+}
+
+[data-theme="dark"] .vm-topn-item {
+  background: var(--bg-dark-subtle, #374151);
+  border-color: var(--border-dark, #4b5563);
+}
+
+[data-theme="dark"] .vm-topn-item .meta {
+  color: var(--text-muted-dark, #9ca3af);
+}
+
+@media (prefers-color-scheme: dark) {
+  .visitor-page {
+    background: var(--bg-dark, #1f2937);
+    border-color: var(--border-dark, #374151);
+  }
+
+  .vm-hero {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    border-bottom-color: var(--border-dark, #374151);
+  }
+
+  .vm-page-title {
+    color: var(--primary-dark, #94a3b8);
+  }
+
+  .vm-page-title i {
+    color: inherit;
+  }
+
+  .vm-hero-description {
+    color: var(--text-muted-dark, #9ca3af);
+  }
+
+  .vm-stat {
+    background: var(--card-dark, #374151);
+    border-color: var(--border-dark, #4b5563);
+  }
+
+  .vm-stat:hover {
+    border-color: var(--primary-dark, #94a3b8);
+  }
+
+  .vm-stat i {
+    color: var(--primary-dark, #94a3b8);
+  }
+
+  .vm-stat-num {
+    color: var(--text-dark, #f9fafb);
+  }
+
+  .vm-stat-label {
+    color: var(--text-muted-dark, #9ca3af);
+  }
+
+  .visitor-map-background {
+    background: var(--card-dark, #374151);
+    border-color: var(--border-dark, #4b5563);
+  }
+
+  .vm-recent {
+    background: var(--card-dark, #1f2937);
+    border-top-color: var(--border-dark, #374151);
+  }
+
+  .vm-recent-title {
+    color: var(--text-dark, #f9fafb);
+  }
+
+  .vm-recent-title i {
+    color: var(--primary-dark, #94a3b8);
+  }
+
+  .visitor-item {
+    background: var(--bg-dark-subtle, #374151);
+    border-left-color: var(--primary-dark, #94a3b8);
+  }
+
+  .visitor-item:hover {
+    background: var(--hover-dark, #4b5563);
+  }
+
+  .visitor-location {
+    color: var(--text-dark, #f9fafb);
+  }
+
+  .visitor-location i {
+    color: var(--primary-dark, #94a3b8);
+  }
+
+  .visitor-meta,
+  .visitor-time {
+    color: var(--text-muted-dark, #9ca3af);
+  }
+
+  .visitor-empty {
+    color: var(--text-muted-dark, #6b7280);
+  }
+}
+
+/* 移动端 Hero 简化 - 只显示背景图和标题 */
+@media (max-width: 768px) {
+  /* 简化 Hero 容器 */
+  .vm-hero {
+    min-height: 180px !important;
+    padding: 20px 0 !important;
+  }
+
+  .vm-hero-container {
+    min-height: 180px;
+    padding: 0 16px;
+  }
+
+  .vm-hero-inner {
+    justify-content: center;
+    align-items: center;
+    min-height: 180px;
+  }
+
+  /* 隐藏描述、统计、图表等所有内容 */
+  .vm-hero-description,
+  .vm-hero-metrics,
+  .vm-hero-badges,
+  .vm-hero-chart,
+  .vm-hero-stats {
+    display: none !important;
+  }
+
+  /* 只显示标题，居中 */
+  .vm-hero-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    padding: 0;
+  }
+
+  .vm-page-title {
+    margin: 0 !important;
+    text-align: center;
+    font-size: 1.5rem;
+  }
+
+  .vm-page-title i {
+    display: inline-block;
+    margin-right: 8px;
+  }
+}
+
+/* 移动端 Hero 标题完美居中（增强版 - 垂直+水平） */
+@media (max-width: 768px) {
+  /* Hero 最外层 - Flexbox 垂直水平居中 */
+  .about-hero,
+  .vm-hero,
+  .feeds-hero,
+  .links-hero,
+  .archive-hero,
+  .posts-list-hero,
+  .theme-info-hero {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Hero 容器层 - 继续居中传递 */
+  .hero-container,
+  .vm-hero-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100%;
+  }
+
+  /* Hero 内层 - 确保居中 */
+  .hero-inner,
+  .vm-hero-inner,
+  .hero-grid {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100%;
+  }
+
+  /* Hero 内容区 - 最终居中层 */
+  .hero-content,
+  .vm-hero-content,
+  .about-hero-content,
+  .hero-title,
+  .hero-title-block {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100%;
+  }
+
+  /* 标题本身 - 完美居中 */
+  .page-title,
+  .vm-page-title {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    margin: 0 auto !important;
+  }
+}

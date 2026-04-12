@@ -1,0 +1,274 @@
+/**
+ * Westlife 图片加载样式 - 精简版
+ * ==============================================
+ * 包含：
+ * 1. 缩略图淡入效果
+ * 2. 文章内图片 loading 圆圈
+ * 3. 文章内图片拼图遮罩效果
+ * 4. 头像淡入效果
+ */
+
+/* ============================================
+   1. 缩略图淡入效果 (首页 + 相关文章)
+   ============================================ */
+
+.thumb-fade {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  /* 移除 will-change，避免与 hover transform 冲突导致卡顿 */
+}
+
+.thumb-fade.is-eager,
+.thumb-fade[loading="eager"] {
+  /* 首屏图片立即显示，避免等待 JS */
+  opacity: 1 !important;
+  transition-duration: 0.3s;
+}
+
+/* 图片加载完成后淡入 */
+img.thumb-fade {
+  opacity: 0;
+}
+
+img.thumb-fade[loading="lazy"] {
+  /* 等待浏览器原生懒加载完成 */
+  opacity: 0;
+}
+
+/* 使用 JS 或原生 load 事件触发 */
+img.thumb-fade.loaded,
+img.thumb-fade:not([loading]),
+img.thumb-fade[loading="eager"] {
+  opacity: 1;
+}
+
+/* 兜底：超过2秒未加载完成，强制显示（避免永久不可见） */
+@media (prefers-reduced-motion: no-preference) {
+  img.thumb-fade:not(.loaded):not([loading="eager"]):not(.is-eager) {
+    animation: thumb-fade-fallback 0.6s ease-out 2s forwards;
+  }
+}
+
+@keyframes thumb-fade-fallback {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 缩略图比例容器 */
+.thumb-ratio {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  background: var(--thumb-bg, #111);
+}
+
+.thumb-ratio-16x9 {
+  aspect-ratio: 16 / 9;
+  /* 确保有足够高度 */
+  min-height: 200px;
+}
+
+.thumb-ratio img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* 确保图片在容器内绝对定位 */
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* ============================================
+   2. 文章内图片容器 + Loading 圆圈
+   ============================================ */
+
+.wl-img-outer {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+/* Loading 圆圈指示器 */
+.wl-img-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.35); /* 浅色磨砂 */
+  backdrop-filter: blur(5px) saturate(140%);
+  -webkit-backdrop-filter: blur(5px) saturate(140%);
+  z-index: 2; /* 高于遮罩 */
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.wl-img-loader::before {
+  content: "";
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid rgba(0, 0, 0, 0.15);
+  border-top-color: var(--color-primary, #3182ce);
+  animation: wl-spin 0.9s linear infinite;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(2px);
+}
+
+@keyframes wl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 加载完成后隐藏 loader */
+.wl-img-outer.is-loaded > .wl-img-loader {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* 加载失败提示 */
+.wl-img-outer.is-error > .wl-img-loader {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.wl-img-outer.is-error::after {
+  content: "加载失败";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #999;
+  background: #f5f5f5;
+  z-index: 3;
+}
+
+/* ============================================
+   3. 拼图遮罩效果 (4×4)
+   ============================================ */
+
+.puzzle-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.puzzle-layer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.puzzle-piece {
+  background: rgba(0, 0, 0, 0.8);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform-origin: center;
+  animation: puzzleReveal 0.6s ease-out forwards;
+  animation-delay: calc(var(--delay) * 30ms);
+}
+
+@keyframes puzzleReveal {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  60% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+/* 加载完成后移除拼图层 */
+.puzzle-wrapper.is-loaded .puzzle-layer {
+  animation: fadeOutLayer 0.3s ease forwards;
+  animation-delay: 0.6s;
+}
+
+@keyframes fadeOutLayer {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* ============================================
+   4. 头像淡入效果
+   ============================================ */
+
+.avatar-fade,
+img.avatar.avatar-fade {
+  opacity: 0;
+  transform: translateY(2px);
+  filter: blur(2px);
+  transition: opacity 0.9s ease, transform 0.9s ease, filter 0.9s ease;
+}
+
+.avatar-fade.is-in,
+img.avatar.avatar-fade.is-in {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
+/* ============================================
+   5. 响应式和辅助
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb-fade,
+  .avatar-fade,
+  .puzzle-piece {
+    animation: none !important;
+    transition-duration: 0.2s !important;
+  }
+
+  .avatar-fade,
+  img.avatar.avatar-fade {
+    transform: none;
+    filter: none;
+  }
+
+  .avatar-fade.is-in,
+  img.avatar.avatar-fade.is-in {
+    transform: none;
+    filter: none;
+  }
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .wl-img-loader {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .wl-img-loader::before {
+    border-color: rgba(255, 255, 255, 0.2);
+    border-top-color: var(--color-primary, #60a5fa);
+  }
+
+  .wl-img-outer.is-error::after {
+    background: #1a1a1a;
+    color: #999;
+  }
+
+  .puzzle-piece {
+    background: rgba(0, 0, 0, 0.9);
+  }
+}

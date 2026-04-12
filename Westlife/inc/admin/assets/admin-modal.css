@@ -1,0 +1,349 @@
+/**
+ * WordPress 后台统一弹窗样式
+ * 参考前端 header.php 退出登录弹窗风格
+ * 
+ * @package Westlife
+ * @since 1.1.0
+ */
+
+/* ========== 弹窗遮罩层（居中显示） ========== */
+.westlife-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999; /* WordPress 后台需要更高的 z-index */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px) saturate(1.2);
+  -webkit-backdrop-filter: blur(4px) saturate(1.2);
+  animation: fadeInModal 0.25s ease;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.westlife-modal-overlay.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ========== 弹窗容器 ========== */
+.westlife-modal {
+  width: min(400px, 90vw);
+  background: #fff;
+  border: 1px solid #dcdcde;
+  border-radius: 14px;
+  padding: 0;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  position: relative;
+  animation: scaleInModal 0.38s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  overflow: hidden;
+  transform: scale(0.85);
+  opacity: 0;
+  transition: transform 0.38s cubic-bezier(0.68, -0.55, 0.27, 1.55), 
+              opacity 0.38s ease;
+}
+
+.westlife-modal-overlay.is-visible .westlife-modal {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* ========== 弹窗头部 ========== */
+.westlife-modal-header {
+  padding: 22px 22px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* 图标容器 */
+.westlife-modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
+/* 不同类型图标颜色 */
+.westlife-modal-icon.warning {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.westlife-modal-icon.danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.westlife-modal-icon.success {
+  background: #d1f4e0;
+  color: #00a32a;
+}
+
+.westlife-modal-icon.info {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.westlife-modal-icon svg,
+.westlife-modal-icon i {
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 1.6rem;
+}
+
+/* 标题 */
+.westlife-modal-title {
+  margin: 14px 0 6px;
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+  letter-spacing: 0.3px;
+  color: #1d2327;
+}
+
+/* 消息内容 */
+.westlife-modal-message {
+  margin: 0 0 10px;
+  padding: 0 10px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: #50575e;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* ========== 弹窗底部按钮区 ========== */
+.westlife-modal-actions {
+  margin: 14px 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f6f7f7;
+  padding: 14px 14px 16px;
+  border-radius: 12px;
+}
+
+/* 按钮基础样式 */
+.westlife-modal-btn {
+  width: 100%;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.62rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+}
+
+/* 主按钮（确认/提交） */
+.westlife-modal-btn.primary {
+  background: #2271b1;
+  color: #fff;
+  border-color: #2271b1;
+}
+
+.westlife-modal-btn.primary:hover {
+  background: #135e96;
+  border-color: #135e96;
+}
+
+/* 危险按钮（删除/退出） */
+.westlife-modal-btn.danger {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
+.westlife-modal-btn.danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+/* 成功按钮 */
+.westlife-modal-btn.success {
+  background: #00a32a;
+  color: #fff;
+  border-color: #00a32a;
+}
+
+.westlife-modal-btn.success:hover {
+  background: #008a20;
+  border-color: #008a20;
+}
+
+/* 次要按钮（取消） */
+.westlife-modal-btn.secondary {
+  background: #fff;
+  color: #2c3338;
+  border-color: #c3c4c7;
+}
+
+.westlife-modal-btn.secondary:hover {
+  background: #f6f7f7;
+  border-color: #8c8f94;
+}
+
+/* 按钮激活状态 */
+.westlife-modal-btn:active {
+  transform: translateY(1px);
+}
+
+/* 按钮焦点状态（可访问性） */
+.westlife-modal-btn:focus-visible {
+  outline: 2px solid #2271b1;
+  outline-offset: 2px;
+}
+
+/* ========== 加载状态 ========== */
+.westlife-modal-btn.loading {
+  pointer-events: none;
+  opacity: 0.6;
+  position: relative;
+}
+
+.westlife-modal-btn.loading::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinModal 0.6s linear infinite;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 480px) {
+  .westlife-modal {
+    max-width: 92vw;
+  }
+  
+  .westlife-modal-message {
+    font-size: 0.85rem;
+  }
+}
+
+/* ========== 动画 ========== */
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleInModal {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes spinModal {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ========== 输入框类型弹窗 ========== */
+.westlife-modal-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #8c8f94;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin-top: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.westlife-modal-input:focus {
+  border-color: #2271b1;
+  outline: none;
+  box-shadow: 0 0 0 1px #2271b1;
+}
+
+/* ========== 自定义内容区域 ========== */
+.westlife-modal-content {
+  padding: 0 22px 16px;
+}
+
+/* ========== Toast 通知（简短提示） ========== */
+.westlife-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000000;
+  min-width: 200px;
+  max-width: 400px;
+  padding: 16px 20px;
+  background: #1d2327;
+  color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  font-size: 0.9rem;
+  text-align: center;
+  animation: fadeInToast 0.3s ease, fadeOutToast 0.3s ease 2.7s;
+  pointer-events: none;
+}
+
+.westlife-toast.success {
+  background: #00a32a;
+}
+
+.westlife-toast.error {
+  background: #dc2626;
+}
+
+.westlife-toast.warning {
+  background: #f0b429;
+  color: #1d2327;
+}
+
+.westlife-toast.info {
+  background: #2271b1;
+}
+
+@keyframes fadeInToast {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes fadeOutToast {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+

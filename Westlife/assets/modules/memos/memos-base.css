@@ -1,0 +1,2671 @@
+/* 
+ * Memos Page Styles - 说说页面样式
+ * Version: 3.1 (优化版)
+ * 
+ * 基于 feeds.css 风格统一重构
+ * 保持与友链动态页面的视觉一致性
+ */
+
+/* ============================================
+   1. 基础重置
+   ============================================ */
+
+/* ============================================
+   2. 页面容器
+   ============================================ */
+.memos-page {
+  max-width: var(--container-width); /* 使用 CSS 变量: 1280px */
+  /* 顶部留白统一由 header 的 --header-content-gap 控制，这里取消顶部外边距 */
+  margin: 0 auto 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* ============================================
+   3. Hero 区域
+   ============================================ */
+.memos-hero {
+  position: relative;
+  padding: 48px 0;
+  height: 450px;
+  min-height: 450px;
+  background: url("../../../static/images/banner/memos.jpg") center/cover
+    no-repeat;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 32px;
+  overflow: hidden;
+  z-index: 1;
+}
+
+[data-theme="dark"] .memos-hero {
+  background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)),
+    url("../../../static/images/banner/memos.jpg") center/cover no-repeat;
+}
+
+.memos-hero .hero-container {
+  position: relative;
+  z-index: 1 !important; /* 降低层级，避免遮挡主导航（主导航 z-index: 1000） */
+  padding: 0 26px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.memos-hero .hero-inner {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 32px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  align-items: start;
+}
+
+/* 让热力图靠右贴近统计面板，并使图例位于右下角 */
+.memos-hero .arc-hero-heatmap .arc-heatmap-container {
+  /* 收缩为内容宽度，并在左列内部左右居中，左右留白相等 */
+  width: auto;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* months / grid / legend 水平居中 */
+}
+
+/* 注：月份条与网格本身使用归档页样式，这里不重复设置，
+   右对齐由父容器 .arc-heatmap-container 的 align-items 控制 */
+
+/* 说说页：不再隐藏窄月份文本，保持每个月都可见 */
+.memos-hero .arc-hero-heatmap .arc-month-label.arc-month-narrow {
+  overflow: visible;
+  text-indent: 0;
+}
+
+/* 使 memos 页热力图网格列数可变，宽度随实际周数收缩，便于在左右间均匀居中 */
+.memos-hero .arc-hero-heatmap .arc-heatmap-grid {
+  grid-template-columns: repeat(var(--weeks, 53), var(--cell-size, 10px));
+  grid-auto-flow: column; /* 关键：按列填充，从上到下填满一列后再填下一列 */
+}
+
+.memos-hero .arc-hero-heatmap #memos-heatmap-legend.arc-heatmap-legend {
+  /* 仍与热力图右边缘对齐（容器居中时，legend 在容器的右侧） */
+  align-self: stretch; /* 让 legend 占满容器宽度 */
+  display: flex;
+  justify-content: flex-end; /* 内容对齐到右侧 */
+  margin-top: 8px; /* 与上方网格留出间距 */
+}
+
+/* 左侧内容区 */
+.hero-left,
+.hero-content {
+  position: relative;
+  min-height: 140px;
+}
+
+/* Hero 内容 */
+.hero-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  /* 为固定标题预留空间，保持与其他页面一致 */
+  padding-top: 72px;
+  padding-left: 0;
+}
+
+.memos-hero .page-title {
+  position: absolute;
+  top: -10px;
+  left: 25px;
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 500;
+  color: #ffffff;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.memos-hero .page-title i {
+  font-size: 2rem;
+}
+
+.hero-text {
+  margin-top: 16px;
+  color: #ffffff; /* 改为白色 */
+  font-family: var(--font-chinese);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(0, 0, 0, 0.4); /* 多层阴影 */
+}
+
+.hero-text p {
+  margin: 0 0 16px;
+}
+
+/* 深色模式 - 阴影更强 */
+[data-theme="dark"] .memos-hero .hero-text {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Hero 按钮区域 */
+.hero-actions {
+  position: absolute;
+  bottom: 16px;
+  left: 60px;
+  right: 0px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 20px;
+  z-index: 1;
+}
+
+/* 让热力图与文案距离更紧凑，视觉更协调 */
+.memos-hero .arc-hero-heatmap {
+  margin-top: 16px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.85); /* 浅色模式：半透明白色背景 */
+  backdrop-filter: blur(10px); /* 毛玻璃效果 */
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 深色模式的磨砂背景 */
+[data-theme="dark"] .memos-hero .arc-hero-heatmap {
+  background: rgba(30, 41, 59, 0.85);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   4. 统计卡片
+   ============================================ */
+.memos-info-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  height: fit-content;
+  width: 380px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.memos-info-card .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: left;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 16px;
+}
+
+.memos-info-card .card-header i {
+  font-size: 1.25rem;
+  color: #1da1f2;
+}
+
+.memos-info-card .card-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* 统计摘要 */
+.memos-info-card .stats-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.memos-info-card .summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  min-height: 60px;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.memos-info-card .summary-item:hover {
+  background: rgba(59, 130, 246, 0.12);
+  transform: translateX(4px);
+}
+
+.memos-info-card .summary-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 8px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.memos-info-card .summary-icon i {
+  font-size: 1rem;
+  color: #1da1f2;
+}
+
+.memos-info-card .summary-content {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 旧的样式已废弃,统一使用 .summary-item .summary-label 和 .summary-item .summary-value */
+
+/* 服务状态指示器 */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.status-indicator .fa-circle {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.status-indicator.online {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.status-indicator.online .fa-circle {
+  color: #10b981;
+}
+
+.status-indicator.offline {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.status-indicator.offline .fa-circle {
+  color: #ef4444;
+}
+
+.status-indicator.u-loading {
+  background: #e3f2fd;
+  color: #0d47a1;
+  border: 1px solid #90caf9;
+}
+
+.status-indicator.u-loading .fa-circle {
+  color: #1da1f2;
+  animation: memos-pulse 1.5s infinite;
+}
+
+/* 分隔线 */
+.card-divider {
+  height: 1px;
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* 最后更新信息 */
+.last-update-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.875rem;
+  color: #6b7280;
+  padding: 8px 0;
+}
+
+.last-update-info > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.last-update-info .fa-wifi {
+  font-size: 14px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+}
+
+/* 刷新按钮 */
+.btn-refresh-inline {
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+.btn-refresh-inline:hover {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.btn-refresh-inline:active {
+  transform: scale(0.95);
+}
+
+/* 状态文本 */
+#status-text {
+  line-height: 1;
+  font-size: 0.75rem;
+}
+
+/* ============================================
+   5. 按钮样式
+   ============================================ */
+.memos-page .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.memos-page .btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+}
+
+.memos-page .btn.primary {
+  color: var(--color-text-inverse);
+  background: #1da1f2;
+  border-color: #1da1f2;
+}
+
+.memos-page .btn.primary:hover {
+  background: #0d8bd9;
+  border-color: #0d8bd9;
+}
+
+.btn.secondary {
+  color: #1da1f2;
+  background: #e3f2fd;
+  border-color: #bbdefb;
+}
+
+.btn.secondary:hover {
+  background: #bbdefb;
+  border-color: #90caf9;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================
+   6. 工具栏区域
+   ============================================ */
+.memos-section {
+  padding: 0 20px 40px;
+}
+
+.memos-container {
+  max-width: var(--container-width); /* 使用 CSS 变量: 1280px */
+  margin: 0 auto;
+}
+
+/* 工具栏 */
+.memos-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* 筛选标签 */
+.memos-filters {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.filter-btn:hover {
+  background: #ffffff;
+  color: #1da1f2;
+}
+
+.filter-btn.active {
+  background: #1da1f2;
+  color: var(--color-text-inverse);
+  box-shadow: 0 1px 3px rgba(29, 161, 242, 0.3);
+}
+
+.filter-btn i {
+  font-size: 0.75rem;
+}
+
+/* 搜索框 */
+.memos-search {
+  position: relative;
+  flex: 1;
+  max-width: 320px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 40px 10px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #1da1f2;
+  box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.1);
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.search-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-btn:hover {
+  color: #f59e0b;
+  background: #fef3c7;
+}
+
+/* 操作按钮 */
+.memos-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.action-btn i {
+  font-size: 0.875rem;
+}
+
+.action-btn .view-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.action-btn:hover {
+  color: #f59e0b;
+  border-color: #f59e0b;
+  background: #fef3c7;
+}
+
+.action-btn.active {
+  color: #ffffff;
+  background: #1da1f2;
+  border-color: #1da1f2;
+}
+
+.action-btn.active:hover {
+  background: #0c8ed9;
+  border-color: #0c8ed9;
+}
+
+.action-btn.u-loading {
+  color: #f59e0b;
+  pointer-events: none;
+}
+
+.action-btn.u-loading i {
+  animation: spin 1s linear infinite;
+}
+
+[data-theme="dark"] .action-btn.u-loading {
+  color: #1da1f2;
+}
+
+/* 7. 说说瀑布流布局 */
+.memos-grid {
+  margin-bottom: 40px;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+/* 列表模式（默认） - 一条一行 */
+.memos-grid[data-layout="list"] {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.memos-grid[data-layout="list"] .memo-card {
+  margin-bottom: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 列表模式下的卡片样式优化 */
+.memos-grid[data-layout="list"] .memo-card {
+  border-radius: 8px;
+}
+
+/* 杂志卡片模式 - 真正的瀑布流（Masonry，由 JS 控制） */
+.memos-grid[data-layout="magazine"] {
+  position: relative;
+  padding: 0 20px;
+  /* 高度由 JS 动态计算 */
+}
+
+.memos-grid[data-layout="magazine"] .memo-card {
+  position: absolute;
+  /* left, top 由 JS 动态设置 */
+  margin-bottom: 0;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* 杂志模式下的卡片样式优化 */
+.memos-grid[data-layout="magazine"] .memo-card {
+  border-radius: 10px;
+  border: 1px solid rgba(229, 231, 235, 0.8);
+  background: #ffffff;
+}
+
+.memos-grid[data-layout="magazine"] .memo-card:hover {
+  box-shadow: 0 10px 25px rgba(29, 161, 242, 0.15),
+    0 5px 10px rgba(0, 0, 0, 0.08);
+  transform: translateY(-3px);
+  z-index: 10;
+  border-color: rgba(29, 161, 242, 0.3);
+}
+
+/* 杂志模式下展开评论的卡片 - 变成全宽单条模式 */
+.memos-grid[data-layout="magazine"] .memo-card.expanded {
+  position: relative !important;
+  left: 0 !important;
+  top: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  margin-bottom: 20px !important;
+  margin-top: 0;
+  transform: none !important;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(29, 161, 242, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: rgba(29, 161, 242, 0.5);
+  /* 确保在文档流中占据空间 */
+  display: block;
+  float: none;
+  clear: both;
+}
+
+/* 展开卡片的内容高度限制 - 自适应但有上限 */
+.memos-grid[data-layout="magazine"] .memo-card.expanded .memo-content {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  display: block !important;
+  margin-bottom: 12px;
+  height: auto !important; /* 根据内容自适应 */
+  min-height: 0 !important; /* 最小高度为0，不强制高度 */
+}
+
+/* 展开卡片的评论区域高度限制 - 强制限制高度 */
+.memos-grid[data-layout="magazine"] .memo-card.expanded .memo-comments-wrapper {
+  max-height: 400px !important;
+  height: auto;
+  overflow: hidden;
+  display: block !important;
+}
+
+.memos-grid[data-layout="magazine"]
+  .memo-card.expanded
+  .memo-comments-container {
+  max-height: 350px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  display: block !important;
+}
+
+.memos-grid[data-layout="magazine"] .memo-card.expanded .memo-comments-body {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  display: block !important;
+}
+
+/* 针对 Twikoo/Waline 评论系统的高度限制 */
+.memos-grid[data-layout="magazine"]
+  .memo-card.expanded
+  .memo-comments-body
+  > div,
+.memos-grid[data-layout="magazine"]
+  .memo-card.expanded
+  .memo-comments-body
+  #tcomment,
+.memos-grid[data-layout="magazine"]
+  .memo-card.expanded
+  .memo-comments-body
+  .tk-container,
+.memos-grid[data-layout="magazine"]
+  .memo-card.expanded
+  .memo-comments-body
+  .waline {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+}
+
+/* 展开卡片不响应悬停效果 */
+.memos-grid[data-layout="magazine"] .memo-card.expanded:hover {
+  transform: none !important;
+}
+
+/* 展开卡片后面的卡片需要清除浮动 */
+.memos-grid[data-layout="magazine"] .memo-card.expanded + .memo-card {
+  clear: both;
+}
+
+/* 响应式 - 杂志模式（列数由 JS data-columns 控制） */
+@media (max-width: 1200px) {
+  .memos-grid[data-layout="magazine"] {
+    /* 2 列，由 JS 控制 */
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .memos-grid[data-layout="list"] {
+    padding: 0 16px;
+  }
+
+  .memos-grid[data-layout="magazine"] {
+    /* 1 列，由 JS 控制 */
+    padding: 0 12px;
+  }
+}
+
+/* 暗色模式 */
+[data-theme="dark"] .action-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .action-btn:hover {
+  background: #334155;
+  border-color: #1da1f2;
+  color: #1da1f2;
+}
+
+[data-theme="dark"] .action-btn.active {
+  background: #1da1f2;
+  border-color: #1da1f2;
+  color: #ffffff;
+}
+
+/* ============================================
+   8. 说说卡片
+   ============================================ */
+.memo-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  break-inside: avoid;
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: memoFadeIn 0.5s ease forwards;
+}
+
+/* 错开动画时间，形成瀑布流出现效果 */
+.memo-card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.memo-card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.memo-card:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.memo-card:nth-child(4) {
+  animation-delay: 0.2s;
+}
+.memo-card:nth-child(5) {
+  animation-delay: 0.25s;
+}
+.memo-card:nth-child(6) {
+  animation-delay: 0.3s;
+}
+.memo-card:nth-child(7) {
+  animation-delay: 0.35s;
+}
+.memo-card:nth-child(8) {
+  animation-delay: 0.4s;
+}
+.memo-card:nth-child(9) {
+  animation-delay: 0.45s;
+}
+.memo-card:nth-child(n + 10) {
+  animation-delay: 0.5s;
+}
+
+@keyframes memoFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.memo-card:hover {
+  box-shadow: 0 8px 24px rgba(29, 161, 242, 0.15);
+  transform: translateY(-4px);
+  border-color: #1da1f2;
+}
+
+.memo-card.pinned {
+  border-color: #1da1f2;
+  background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);
+}
+
+.memo-card.pinned::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.memo-card-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
+}
+
+/* 说说头部 */
+.memo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.memo-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.memo-time {
+  font-weight: 500;
+}
+
+.pinned-indicator {
+  color: #f59e0b;
+  font-size: 0.875rem;
+}
+
+.memo-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.memo-card:hover .memo-actions {
+  opacity: 1;
+}
+
+.memo-action-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #f9fafb;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+.memo-action-btn:hover {
+  background: #f59e0b;
+  color: var(--color-text-inverse);
+}
+
+/* 链接按钮样式 */
+.memo-link-btn {
+  text-decoration: none;
+  color: inherit;
+}
+
+.memo-link-btn:hover {
+  background: #3b82f6 !important;
+  color: var(--color-text-inverse) !important;
+}
+
+/* 说说内容 */
+.memo-content {
+  color: #0f172a;
+  line-height: 1.7;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  word-wrap: break-word;
+  flex: 1;
+}
+
+.memo-content p {
+  margin: 0 0 12px;
+}
+
+.memo-content p:last-child {
+  margin-bottom: 0;
+}
+
+.memo-content a {
+  color: #f59e0b;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.memo-content a:hover {
+  border-bottom-color: #f59e0b;
+}
+
+.memo-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.memo-content code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "Monaco", "Menlo", monospace;
+  font-size: 0.85em;
+}
+
+.memo-content pre {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.memo-content blockquote {
+  border-left: 4px solid #f59e0b;
+  padding-left: 16px;
+  margin: 12px 0;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* 说说标签 */
+.memo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+  min-height: 0;
+}
+
+.memo-tag {
+  background: #e3f2fd;
+  color: #1565c0;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.memo-tag:hover {
+  background: #1da1f2;
+  color: var(--color-text-inverse);
+  transform: translateY(-1px);
+}
+
+/* 说说底部 */
+.memo-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: auto;
+}
+
+.memo-time-detailed {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 底部标签样式 */
+.memo-footer .memo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+}
+
+.memo-footer .memo-tag {
+  background: #1da1f2;
+  color: var(--color-text-inverse);
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.memo-footer .memo-tag:hover {
+  background: #1565c0;
+  transform: translateY(-1px);
+}
+
+/* 移除可见性显示 */
+.memo-visibility {
+  display: none;
+}
+
+/* ============================================
+   9. 新增内容样式
+   ============================================ */
+
+/* 图片样式 - 完整显示不裁剪 */
+.memo-image-container {
+  margin: 12px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+}
+
+.memo-image-container .img-link {
+  display: block;
+  width: 100%;
+  line-height: 0;
+}
+
+.memo-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 400px; /* 增加最大高度 */
+  object-fit: contain; /* 改为 contain 确保图片完整显示 */
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* 懒加载完成后的效果 */
+.memo-image.lazyloaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.memo-image:hover {
+  transform: scale(1.02);
+}
+
+/* 暗色模式 */
+[data-theme="dark"] .memo-image-container {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+/* 代码块样式 */
+.memo-code-block {
+  margin: 12px 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f9fafb;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.75rem;
+}
+
+.code-language {
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.code-copy-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+}
+
+.code-copy-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.memo-code-block pre {
+  margin: 0;
+  padding: 16px;
+  background: #ffffff;
+  overflow-x: auto;
+  font-family: "Monaco", "Menlo", "Courier New", monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.memo-code-block code {
+  background: transparent;
+  color: #374151;
+  padding: 0;
+}
+
+/* 行内代码样式 */
+.memo-inline-code {
+  background: #f3f4f6;
+  color: #ef4444;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "Monaco", "Menlo", "Courier New", monospace;
+  font-size: 0.875em;
+  font-weight: 500;
+}
+
+/* 链接样式 */
+.memo-link {
+  color: #f59e0b;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+  word-break: break-all;
+}
+
+.memo-link:hover {
+  border-bottom-color: #f59e0b;
+  background: #fef3c7;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+/* 提及样式 */
+.mention {
+  color: #3b82f6;
+  background: #eff6ff;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.875em;
+}
+
+/* 内容中的标签高亮 */
+.content-tag {
+  color: #1da1f2;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.content-tag:hover {
+  color: #1565c0;
+  background: #e3f2fd;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+/* 引用样式 */
+.memo-quote {
+  border-left: 4px solid #f59e0b;
+  padding: 8px 16px;
+  margin: 12px 0;
+  background: #fef3c7;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  color: #92400e;
+}
+
+/* ============================================
+   10. 附件样式
+   ============================================ */
+.memo-attachments {
+  margin: 16px 0;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.memo-attachments .memo-image-container {
+  margin: 0;
+}
+
+/* 当只有一张图片时 */
+.memo-attachments:has(.memo-image-container:only-child) {
+  grid-template-columns: 1fr;
+  max-width: 400px;
+}
+
+/* 当有2张图片时 */
+.memo-attachments:has(.memo-image-container:nth-child(2):last-child) {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* 当有3张图片时 */
+.memo-attachments:has(.memo-image-container:nth-child(3):last-child) {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* 当有4张或更多图片时 */
+.memo-attachments:has(.memo-image-container:nth-child(4)) {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ============================================
+   11. 动画效果
+   ============================================ */
+@keyframes memos-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ============================================
+   12. 深色模式适配
+   ============================================ */
+
+/* 基础元素 */
+[data-theme="dark"] .memos-page {
+  background: var(--color-background);
+  border-color: var(--color-border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .memos-container {
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+/* Hero 区域深色模式适配 */
+[data-theme="dark"] .memos-hero {
+  background: linear-gradient(
+    135deg,
+    rgba(29, 161, 242, 0.1) 0%,
+    rgba(13, 139, 217, 0.1) 100%
+  );
+  border-bottom-color: var(--color-border);
+}
+
+[data-theme="dark"] .memos-hero::before {
+  background: radial-gradient(
+    circle,
+    rgba(29, 161, 242, 0.02) 0%,
+    transparent 70%
+  );
+}
+
+[data-theme="dark"] .memos-hero::after {
+  background: radial-gradient(
+    circle,
+    rgba(13, 139, 217, 0.01) 0%,
+    transparent 60%
+  );
+}
+
+[data-theme="dark"] .memos-hero .page-title {
+  color: #1da1f2;
+}
+
+[data-theme="dark"] .memos-hero .page-title i {
+  color: #42a5f5;
+}
+
+[data-theme="dark"] .hero-text {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .memos-info-card .card-header {
+  border-bottom-color: var(--color-border);
+}
+
+[data-theme="dark"] .memos-info-card .card-header h3 {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .memos-info-card .card-divider {
+  border-top-color: var(--color-border);
+}
+
+[data-theme="dark"] .memos-info-card {
+  background: var(--color-card-background);
+  border-color: var(--color-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .memos-info-card .stats-summary {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .memos-info-card .summary-item {
+  background: rgba(29, 161, 242, 0.1);
+}
+
+[data-theme="dark"] .memos-info-card .summary-item:hover {
+  background: rgba(29, 161, 242, 0.2);
+}
+
+[data-theme="dark"] .memos-info-card .summary-icon {
+  background: var(--color-surface);
+}
+
+[data-theme="dark"] .memos-info-card .summary-icon i {
+  color: #1da1f2;
+}
+
+[data-theme="dark"] .memos-info-card .summary-label {
+  color: var(--color-text-light);
+}
+
+/* 旧的样式已废弃,统一使用 .summary-item .summary-value */
+
+[data-theme="dark"] .memo-card {
+  background: var(--color-card-background);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .memo-card:hover {
+  background: var(--color-surface);
+  border-color: #f59e0b;
+}
+
+[data-theme="dark"] .memo-card.pinned {
+  background: var(--color-surface);
+  border-color: #f59e0b;
+}
+
+[data-theme="dark"] .memo-header {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .memo-content {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .memo-footer {
+  border-top-color: var(--color-border);
+}
+
+[data-theme="dark"] .memo-time {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .memo-tags .tag {
+  background: var(--color-background-light);
+  border-color: var(--color-border);
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .memo-tags .tag:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .memo-action-btn {
+  background: var(--color-background-light);
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .memo-action-btn:hover {
+  background: #f59e0b;
+  color: #000000;
+}
+
+[data-theme="dark"] .memo-link-btn:hover {
+  background: #3b82f6 !important;
+  color: var(--color-text-inverse) !important;
+}
+
+/* 按钮和控件 */
+[data-theme="dark"] .memos-page .btn {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .memos-page .btn:hover {
+  background: var(--color-background-light);
+}
+
+[data-theme="dark"] .memos-header {
+  background: var(--color-card-background);
+  border-color: var(--color-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .load-more-btn {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .load-more-btn:hover {
+  background: var(--color-background-light);
+  border-color: #f59e0b;
+}
+
+[data-theme="dark"] .no-more-content {
+  background: var(--color-surface);
+  color: var(--color-text-light);
+}
+
+/* 工具栏和搜索筛选 */
+[data-theme="dark"] .memos-toolbar {
+  background: var(--color-card-background);
+  border-color: var(--color-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .memos-filters {
+  background: var(--color-background-light);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .filter-btn {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .filter-btn:hover {
+  background: var(--color-surface);
+  color: #1da1f2;
+}
+
+[data-theme="dark"] .filter-btn.active {
+  background: #1da1f2;
+  color: #000000;
+  box-shadow: 0 1px 3px rgba(29, 161, 242, 0.3);
+}
+
+[data-theme="dark"] .search-container,
+[data-theme="dark"] .filter-controls {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .search-input {
+  background: var(--color-background);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .search-input:focus {
+  border-color: #1da1f2;
+  box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.1);
+}
+
+[data-theme="dark"] .search-input::placeholder {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .search-btn {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .search-btn:hover {
+  color: #1da1f2;
+  background: rgba(29, 161, 242, 0.1);
+}
+
+[data-theme="dark"] .action-btn {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .action-btn:hover {
+  color: #1da1f2;
+  border-color: #1da1f2;
+  background: rgba(29, 161, 242, 0.1);
+}
+
+[data-theme="dark"] .action-btn.u-loading {
+  color: #1da1f2;
+}
+
+[data-theme="dark"] .filter-tag {
+  background: var(--color-background-light);
+  border-color: var(--color-border);
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .filter-tag.active,
+[data-theme="dark"] .filter-tag:hover {
+  background: #1da1f2;
+  color: #000000;
+}
+
+/* 统计信息 */
+[data-theme="dark"] .stats-container {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .stats-item {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .stats-number {
+  color: #1da1f2;
+}
+
+[data-theme="dark"] .stats-label {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .last-update-info {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .fa-wifi {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .status-indicator.online {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .status-indicator.offline {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .status-indicator.loading {
+  background: rgba(29, 161, 242, 0.1);
+  color: #42a5f5;
+  border-color: rgba(29, 161, 242, 0.3);
+}
+
+[data-theme="dark"] .btn-refresh-inline {
+  border-color: var(--color-border);
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .btn-refresh-inline:hover {
+  background: var(--color-background-light);
+  color: var(--color-text);
+  border-color: var(--color-text-light);
+}
+
+[data-theme="dark"] .memo-image-container,
+[data-theme="dark"] .memo-attachments .memo-image-container {
+  background: var(--color-background-light);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .memo-code-block {
+  background: var(--color-background-light);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .code-header {
+  background: var(--color-background);
+  border-bottom-color: var(--color-border);
+}
+
+[data-theme="dark"] .code-language {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .code-copy-btn {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .code-copy-btn:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .memo-code-block pre {
+  background: var(--color-background);
+}
+
+[data-theme="dark"] .memo-code-block code {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .memo-inline-code {
+  background: var(--color-background-light);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .memo-link {
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .memo-link:hover {
+  border-bottom-color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+[data-theme="dark"] .mention {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .content-tag {
+  color: #42a5f5;
+}
+
+[data-theme="dark"] .content-tag:hover {
+  color: #1da1f2;
+  background: rgba(29, 161, 242, 0.1);
+}
+
+[data-theme="dark"] .memo-quote {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  border-left-color: #f59e0b;
+}
+
+/* 
+ * 消息和通知样式 - 已删除，统一使用主题 QQ 邮箱简约风格通知系统
+ * 所有通知由 WestlifeUtils.showMessage() 处理
+ */
+
+/* 空状态 */
+[data-theme="dark"] .memos-empty {
+  background: var(--color-surface);
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .memos-empty .empty-icon {
+  color: var(--color-text-light);
+}
+
+/* 加载状态 */
+[data-theme="dark"] .memos-loading {
+  background: var(--color-surface);
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .loading-spinner {
+  border-color: var(--color-border);
+  border-top-color: #f59e0b;
+}
+
+/* =========== 说说页 居中加载与错误 =========== */
+.memos-center-loader,
+.memos-center-error {
+  display: none; /* 由 JS 控制显示 */
+  position: relative;
+  min-height: 220px;
+  border: 1px dashed var(--color-border, #e5e7eb);
+  border-radius: 12px;
+  background: #ffffff;
+  margin: 20px 0;
+  padding: 32px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+
+.memos-center-loader .loader-text {
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* 复用主题矩形跳动动画（与 feeds 一致） */
+.memos-center-loader .loader-rect {
+  display: inline-flex;
+  gap: 6px;
+}
+.memos-center-loader .loader-rect > div {
+  width: 8px;
+  height: 28px;
+  background: #2563eb; /* 主题蓝 */
+  border-radius: 3px;
+  animation: rect-anim 0.9s ease-in-out infinite;
+}
+.memos-center-loader .loader-rect > div:nth-child(1) {
+  animation-delay: -0.4s;
+}
+.memos-center-loader .loader-rect > div:nth-child(2) {
+  animation-delay: -0.2s;
+}
+.memos-center-loader .loader-rect > div:nth-child(3) {
+  animation-delay: 0s;
+}
+.memos-center-loader .loader-rect > div:nth-child(4) {
+  animation-delay: 0.2s;
+}
+.memos-center-loader .loader-rect > div:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+@keyframes rect-anim {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.memos-center-error .error-icon {
+  font-size: 26px;
+  color: #ef4444;
+}
+.memos-center-error .error-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.memos-center-error .error-desc {
+  margin: 0;
+  color: var(--color-text-light, #6b7280);
+}
+
+[data-theme="dark"] .memos-center-loader,
+[data-theme="dark"] .memos-center-error {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+[data-theme="dark"] .memos-center-loader .loader-rect > div {
+  background: #3b82f6;
+}
+
+/* Toast 消息 */
+[data-theme="dark"] .memos-toast {
+  background: var(--color-background);
+  border-color: var(--color-border);
+  color: var(--color-text);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   13. 响应式适配
+   ============================================ */
+/* ============================================
+   全站 Hero 统计卡片统一样式 (about / archive / feeds / memos)
+   设计基准：
+   - padding: 20px (<=768: 16px; <=480: 14px)
+   - radius: 12px
+   - border: 1px solid var(--color-border 或 #e5e7eb)
+   - 背景：亮色 #fff / 暗色 var(--color-surface)
+   - shadow: 0 1px 3px rgba(0,0,0,.06)
+   使用这些类统一：.memos-stats-card, .archive-stats-card, .feeds-info-card, .memos-info-card
+   若局部页面已有特定 hover 渐变，不覆盖，仅做基础对齐。
+============================================ */
+.memos-stats-card,
+.archive-stats-card,
+.feeds-info-card,
+.memos-info-card {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  padding: 20px;
+}
+
+/* 统一内部标题行 (如果存在 .card-header) */
+.memos-stats-card .card-header,
+.archive-stats-card .card-header,
+.feeds-info-card .card-header,
+.memos-info-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* 统一 summary-item */
+.memos-stats-card .summary-item,
+.archive-stats-card .summary-item,
+.feeds-info-card .summary-item,
+.memos-info-card .summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: #fef3c7;
+  border-radius: 8px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.memos-stats-card .summary-item:hover,
+.archive-stats-card .summary-item:hover,
+.feeds-info-card .summary-item:hover,
+.memos-info-card .summary-item:hover {
+  background: #fde68a;
+  transform: translateX(4px);
+}
+
+@media (max-width: 768px) {
+  .memos-stats-card,
+  .archive-stats-card,
+  .feeds-info-card,
+  .memos-info-card {
+    padding: 16px 18px;
+  }
+  .memos-stats-card .summary-item,
+  .archive-stats-card .summary-item,
+  .feeds-info-card .summary-item,
+  .memos-info-card .summary-item {
+    padding: 10px 12px;
+  }
+}
+@media (max-width: 480px) {
+  .memos-stats-card,
+  .archive-stats-card,
+  .feeds-info-card,
+  .memos-info-card {
+    padding: 14px 16px;
+  }
+  .memos-stats-card .summary-item,
+  .archive-stats-card .summary-item,
+  .feeds-info-card .summary-item,
+  .memos-info-card .summary-item {
+    padding: 8px 10px;
+  }
+}
+
+/* 暗色统一 */
+[data-theme="dark"] .memos-stats-card,
+[data-theme="dark"] .archive-stats-card,
+[data-theme="dark"] .feeds-info-card,
+[data-theme="dark"] .memos-info-card {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] .memos-stats-card .summary-item,
+[data-theme="dark"] .archive-stats-card .summary-item,
+[data-theme="dark"] .feeds-info-card .summary-item,
+[data-theme="dark"] .memos-info-card .summary-item {
+  background: var(--color-background-light);
+}
+[data-theme="dark"] .memos-stats-card .summary-item:hover,
+[data-theme="dark"] .archive-stats-card .summary-item:hover,
+[data-theme="dark"] .feeds-info-card .summary-item:hover,
+[data-theme="dark"] .memos-info-card .summary-item:hover {
+  background: var(--color-hover-bg);
+}
+/* --- 先补充缺失的中小屏适配（Hero / 统计卡片 / 工具栏） --- */
+@media (max-width: 900px) {
+  .memos-hero .hero-inner {
+    grid-template-columns: 1fr; /* 纵向堆叠 */
+    gap: 28px;
+    padding: 0 16px;
+  }
+  .memos-info-card {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .memos-page {
+    margin: 16px auto; /* 减少外边距，腾出空间 */
+    border-radius: 6px;
+  }
+  .memos-hero {
+    padding: 40px 0; /* 缩小上下留白 */
+  }
+  .memos-hero .hero-inner {
+    gap: 24px;
+  }
+  .memos-info-card {
+    padding: 16px 18px;
+  }
+  /* 工具栏纵向堆叠 */
+  .memos-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px 16px;
+    gap: 14px;
+  }
+  .memos-filters {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .filter-btn {
+    padding: 6px 12px;
+    font-size: 0.8125rem;
+  }
+  .memos-search {
+    order: 3; /* 放到底部更符合操作流 */
+    max-width: none;
+    width: 100%;
+  }
+  .memos-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  /* 提前在 640 以下改为单列，阅读更舒适 */
+  .memos-grid,
+  .memos-grid.layout-3,
+  .memos-grid.layout-2 {
+    columns: 1 !important;
+  }
+  .memos-hero {
+    padding: 36px 0;
+  }
+  .memos-hero .page-title {
+    font-size: 1.9rem;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2; /* 标准属性 */
+    overflow: hidden;
+    word-break: break-word;
+  }
+}
+
+/* ===================== Header 随机文章按钮修正 ===================== */
+/* 某些情况下 header 中的随机文章链接被本页按钮规则或浏览器默认 :active/:focus 样式影响出现蓝色背景 */
+body.page-template-page-memos .site-header a.random-post-btn,
+body.page-template-page-memos .site-header .random-post-btn:focus,
+body.page-template-page-memos .site-header .random-post-btn:active {
+  background: transparent !important;
+  box-shadow: none !important;
+  color: inherit;
+}
+body.page-template-page-memos .site-header .random-post-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 480px) {
+  .memos-hero {
+    padding: 32px 0;
+  }
+  .memos-info-card {
+    padding: 14px 16px;
+  }
+  .memos-toolbar {
+    padding: 14px 14px;
+    gap: 12px;
+  }
+  .filter-btn {
+    padding: 5px 10px;
+  }
+  .search-input {
+    padding: 8px 36px 8px 12px;
+  }
+  .memos-hero .page-title {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .memos-grid {
+    columns: 2;
+    column-gap: 15px;
+  }
+
+  .memos-grid.layout-3 {
+    columns: 2;
+  }
+
+  .last-update-info {
+    font-size: 0.8125rem;
+    gap: 8px;
+  }
+
+  .last-update-info > span {
+    gap: 6px;
+  }
+
+  .status-indicator {
+    font-size: 0.6875rem;
+    padding: 2px 6px;
+    gap: 4px;
+  }
+
+  .btn-refresh-inline {
+    padding: 4px 6px;
+    font-size: 0.6875rem;
+  }
+
+  .memo-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .memo-footer .memo-tags {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .memo-code-block pre {
+    padding: 12px;
+    font-size: 0.8125rem;
+  }
+
+  .memo-attachments {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .memo-attachments:has(.memo-image-container:only-child) {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .memos-grid {
+    columns: 1; /* 与 640 规则保持一致，统一单列 */
+    column-gap: 0;
+  }
+
+  .memos-grid.layout-3,
+  .memos-grid.layout-2 {
+    columns: 1;
+  }
+
+  .memo-image {
+    max-height: 160px;
+  }
+
+  .memo-card {
+    margin-bottom: 15px;
+  }
+}
+
+@media (max-width: 320px) {
+  .memos-grid,
+  .memos-grid.layout-3,
+  .memos-grid.layout-2 {
+    columns: 1;
+  }
+
+  .memo-image {
+    max-height: 140px;
+  }
+}
+
+.code-header {
+  padding: 6px 8px;
+}
+
+.memo-code-block pre {
+  padding: 8px;
+  font-size: 0.75rem;
+}
+
+.memo-attachments {
+  grid-template-columns: 1fr;
+}
+
+/* ============================================
+   14. 下拉加载样式
+   ============================================ */
+
+/* 加载更多说说按钮容器（参考 comment.css）*/
+.load-more-memos-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 0.4rem 0 0.6rem;
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
+}
+
+#load-more-memos {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.4rem;
+  background: var(--color-primary, #165dff);
+  border: 1px solid var(--color-primary, #165dff);
+  border-radius: 22px;
+  color: var(--color-text-inverse, #fff);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.25s, transform 0.2s, box-shadow 0.25s;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+#load-more-memos.is-busy {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: transparent !important;
+  box-shadow: none !important;
+}
+
+#load-more-memos:hover {
+  background: var(--color-primary-hover, #0e4ed6);
+  border-color: var(--color-primary-hover, #0e4ed6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(22, 93, 255, 0.28);
+}
+
+#load-more-memos:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(22, 93, 255, 0.3);
+}
+
+#load-more-memos.u-loading {
+  opacity: 0.75;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+#load-more-memos:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 加载更多按钮文本显示/隐藏 */
+.load-text {
+  display: inline-block;
+}
+
+/* 加载完成状态 */
+.load-more-btn.completed {
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  background: #f9fafb;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 错误状态 */
+.load-more-btn.error {
+  color: #ef4444;
+  border-color: #fca5a5;
+  background: #fee2e2;
+}
+
+.load-more-btn.error:hover {
+  background: #ef4444;
+  color: var(--color-text-inverse);
+  border-color: #ef4444;
+}
+
+/* 按钮文本 */
+.load-more-text {
+  transition: all 0.2s ease;
+}
+
+/* 加载图标 */
+.load-more-icon {
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.load-more-btn.u-loading .load-more-icon {
+  animation: spin 1s linear infinite;
+}
+
+/* 加载指示器 */
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.loading-indicator .spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #f59e0b;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* 无更多内容提示 */
+.no-more-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.no-more-content i {
+  font-size: 2rem;
+  margin-bottom: 12px;
+  color: #d1d5db;
+}
+
+.no-more-content .title {
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #6b7280;
+}
+
+.no-more-content .desc {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* 加载错误提示 */
+.load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #ef4444;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.load-error i {
+  font-size: 2rem;
+  margin-bottom: 12px;
+  color: #fca5a5;
+}
+
+.load-error .title {
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.load-error .desc {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  color: #9ca3af;
+}
+
+/* 重试按钮 */
+.retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #ef4444;
+  background: #ffffff;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.retry-btn:hover {
+  background: #ef4444;
+  color: var(--color-text-inverse);
+  border-color: #ef4444;
+}
+
+/* 自动加载模式的触发区域 */
+.auto-load-trigger {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+/* 加载状态动画 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.memo-card.new-loaded {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* 防重复加载遮罩 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(2px);
+}
+
+/* 深色模式适配 */
+[data-theme="dark"] .load-more-btn {
+  background: var(--color-background);
+  border-color: var(--color-border);
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .load-more-btn:hover {
+  background: #f59e0b;
+  color: var(--color-text-inverse);
+  border-color: #f59e0b;
+}
+
+[data-theme="dark"] .load-more-btn.u-loading {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .load-more-btn.completed {
+  background: var(--color-background-light);
+  border-color: var(--color-border);
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .loading-indicator {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .loading-indicator .spinner {
+  border-color: var(--color-border);
+  border-top-color: #f59e0b;
+}
+
+[data-theme="dark"] .no-more-content {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .no-more-content i {
+  color: var(--color-border);
+}
+
+[data-theme="dark"] .no-more-content .title {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .load-error .title {
+  color: #f87171;
+}
+
+[data-theme="dark"] .load-error .desc {
+  color: var(--color-text-light);
+}
+
+[data-theme="dark"] .retry-btn {
+  background: var(--color-background);
+  border-color: #fca5a5;
+  color: #f87171;
+}
+
+[data-theme="dark"] .retry-btn:hover {
+  background: #f87171;
+  color: var(--color-text-inverse);
+  border-color: #f87171;
+}
+
+[data-theme="dark"] .loading-overlay {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .load-more-container {
+    padding: 30px 15px;
+  }
+
+  .load-more-btn {
+    padding: 12px 24px;
+    font-size: 0.8125rem;
+    min-width: 140px;
+  }
+
+  .no-more-content,
+  .load-error {
+    padding: 30px 15px;
+  }
+
+  .no-more-content i,
+  .load-error i {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .load-more-btn {
+    padding: 10px 20px;
+    font-size: 0.75rem;
+    min-width: 120px;
+  }
+
+  .load-more-container {
+    padding: 25px 10px;
+  }
+}
+/* ============================================
+   15. 统计信息样式
+   ============================================ */
+.btn-refresh-stats {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.btn-refresh-stats:hover {
+  color: #f59e0b;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.btn-refresh-stats.u-loading {
+  color: #f59e0b;
+  pointer-events: none;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.summary-value {
+  transition: all 0.3s ease;
+}
+
+/* 
+ * Memos Toast 通知样式 - 已删除，统一使用主题 QQ 邮箱简约风格通知系统
+ * 通知由 WestlifeUtils.showMessage() 处理
+ * 样式定义在 main.css 中的 .wl-toast 类
+ */
+
+/* ============================================
+   说说卡片底部统计
+   ============================================ */
+.memo-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  gap: 12px;
+}
+
+.memo-stats-left,
+.memo-stats-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.memo-stats-left {
+  flex: 0 0 auto;
+}
+
+.memo-stats-right {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.stat-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stat-btn:hover {
+  background: rgba(29, 161, 242, 0.1);
+  border-color: #1da1f2;
+  color: #1da1f2;
+}
+
+.stat-btn i {
+  font-size: 0.875rem;
+}
+
+.like-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.like-btn.liked {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-color: #ef4444;
+  color: white;
+}
+
+.like-btn.liked i {
+  animation: heartBeat 0.5s ease;
+}
+
+.comment-btn:hover {
+  background: rgba(29, 161, 242, 0.1);
+  border-color: #1da1f2;
+  color: #1da1f2;
+}
+
+.like-count,
+.comment-count,
+.comment-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* 评论数默认隐藏，有数字时通过 JS 显示 */
+.comment-count {
+  display: none;
+  margin-left: 4px;
+}
+
+.comment-btn.active {
+  background: rgba(29, 161, 242, 0.15);
+  border-color: #1da1f2;
+  color: #1da1f2;
+}
+
+@keyframes heartBeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.3);
+  }
+  50% {
+    transform: scale(0.9);
+  }
+  75% {
+    transform: scale(1.1);
+  }
+}
+
+/* 暗色模式 */
+[data-theme="dark"] .memo-footer {
+  border-color: #334155;
+}
+
+[data-theme="dark"] .stat-btn {
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .stat-btn:hover {
+  background: rgba(29, 161, 242, 0.15);
+  border-color: #1da1f2;
+  color: #1da1f2;
+}

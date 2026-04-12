@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  aibridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aibridge-gateway:local
+    container_name: aibridge
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env

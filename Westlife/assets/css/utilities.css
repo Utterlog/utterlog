@@ -1,0 +1,368 @@
+/**
+ * Hero 背景图加载动画效果
+ * 为不同页面提供不同的动画方式
+ */
+
+/* ============================================
+   1. 动画定义
+   ============================================ */
+
+/* 淡入效果 */
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 从底部滑入 */
+@keyframes hero-slide-up {
+  from {
+    clip-path: inset(100% 0 0 0);
+    opacity: 0;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+/* 从上到下滑入 */
+@keyframes hero-slide-down {
+  from {
+    clip-path: inset(0 0 100% 0);
+    opacity: 0;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+/* 从左到右 */
+@keyframes hero-slide-right {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+/* 缩放淡入 */
+@keyframes hero-scale-in {
+  from {
+    transform: scale(1.1);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 百叶窗效果（垂直） */
+@keyframes hero-blinds-v {
+  0% {
+    clip-path: polygon(
+      0% 0%,
+      10% 0%,
+      10% 0%,
+      20% 0%,
+      20% 0%,
+      30% 0%,
+      30% 0%,
+      40% 0%,
+      40% 0%,
+      50% 0%,
+      50% 0%,
+      60% 0%,
+      60% 0%,
+      70% 0%,
+      70% 0%,
+      80% 0%,
+      80% 0%,
+      90% 0%,
+      90% 0%,
+      100% 0%,
+      100% 0%,
+      0% 0%
+    );
+  }
+  100% {
+    clip-path: polygon(
+      0% 0%,
+      10% 0%,
+      10% 100%,
+      20% 100%,
+      20% 0%,
+      30% 0%,
+      30% 100%,
+      40% 100%,
+      40% 0%,
+      50% 0%,
+      50% 100%,
+      60% 100%,
+      60% 0%,
+      70% 0%,
+      70% 100%,
+      80% 100%,
+      80% 0%,
+      90% 0%,
+      90% 100%,
+      100% 100%,
+      100% 0%,
+      0% 0%
+    );
+  }
+}
+
+/* 百叶窗效果（水平） */
+@keyframes hero-blinds-h {
+  0% {
+    clip-path: polygon(
+      0% 0%,
+      100% 0%,
+      100% 10%,
+      0% 10%,
+      0% 20%,
+      100% 20%,
+      100% 30%,
+      0% 30%,
+      0% 40%,
+      100% 40%,
+      100% 50%,
+      0% 50%,
+      0% 60%,
+      100% 60%,
+      100% 70%,
+      0% 70%,
+      0% 80%,
+      100% 80%,
+      100% 90%,
+      0% 90%
+    );
+    opacity: 0;
+  }
+  100% {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+    opacity: 1;
+  }
+}
+
+/* 中心扩散 */
+@keyframes hero-expand {
+  from {
+    clip-path: circle(0% at 50% 50%);
+    opacity: 0;
+  }
+  to {
+    clip-path: circle(150% at 50% 50%);
+    opacity: 1;
+  }
+}
+
+/* 对角线展开 */
+@keyframes hero-diagonal {
+  from {
+    clip-path: polygon(0% 0%, 0% 0%, 0% 0%);
+    opacity: 0;
+  }
+  to {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   2. Hero 通用样式
+   ============================================ */
+
+/* Hero 区域背景层设置 */
+.links-hero,
+.memos-hero,
+.feeds-hero,
+.vm-hero,
+.about-hero,
+.archive-hero,
+.posts-list-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景图层 */
+.links-hero::before,
+.memos-hero::before,
+.feeds-hero::before,
+.vm-hero::before,
+.about-hero::before,
+.archive-hero::before,
+.posts-list-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* 深色遮罩层 - 浅色模式无遮罩，深色模式有遮罩 */
+.links-hero::after,
+.memos-hero::after,
+.feeds-hero::after,
+.vm-hero::after,
+.about-hero::after,
+.archive-hero::after,
+.posts-list-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0); /* 浅色模式：无遮罩 */
+  z-index: 1;
+  pointer-events: none;
+  transition: background 0.3s ease;
+}
+
+/* 深色模式遮罩 - 添加遮罩以确保文字可读 */
+[data-theme="dark"] .links-hero::after,
+[data-theme="dark"] .memos-hero::after,
+[data-theme="dark"] .feeds-hero::after,
+[data-theme="dark"] .vm-hero::after,
+[data-theme="dark"] .about-hero::after,
+[data-theme="dark"] .archive-hero::after,
+[data-theme="dark"] .posts-list-hero::after {
+  background: rgba(15, 23, 42, 0.6); /* 深色模式：60%透明度 */
+}
+
+/* 确保内容在背景之上 */
+.links-hero > *,
+.memos-hero > *,
+.feeds-hero > *,
+.vm-hero > *,
+.about-hero > *,
+.archive-hero > *,
+.posts-list-hero > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ============================================
+   3. 各页面背景图配置
+   ============================================ */
+
+.links-hero::before {
+  background-image: url("../../static/images/banner/links.webp");
+}
+
+.memos-hero::before {
+  background-image: url("../../static/images/banner/memos.jpg"); /* 修正为 jpg */
+}
+
+.feeds-hero::before {
+  background-image: url("../../static/images/banner/feeds.webp");
+}
+
+.vm-hero::before {
+  background-image: url("../../static/images/banner/visitor.jpg");
+}
+
+.about-hero::before {
+  background-image: url("../../static/images/banner/about.webp");
+}
+
+.archive-hero::before {
+  background-image: url("../../static/images/banner/archive.webp");
+}
+
+.posts-list-hero::before {
+  background-image: url("../../static/images/banner/4.jpg");
+}
+
+/* ============================================
+   4. 页面加载动画（不同页面不同效果）
+   ============================================ */
+
+/* 友情链接 - 从底部滑入 */
+.links-hero.is-loaded::before {
+  animation: hero-slide-up 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Memos - 淡入 */
+.memos-hero.is-loaded::before {
+  animation: hero-fade-in 1s ease-out forwards;
+}
+
+/* Feeds - 从上到下滑入 */
+.feeds-hero.is-loaded::before {
+  animation: hero-slide-down 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* 访客统计 - 中心扩散 */
+.vm-hero.is-loaded::before {
+  animation: hero-expand 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* 关于页 - 缩放淡入 */
+.about-hero.is-loaded::before {
+  animation: hero-scale-in 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* 归档页 - 百叶窗（垂直） */
+.archive-hero.is-loaded::before {
+  animation: hero-blinds-v 1s ease-out forwards;
+}
+
+/* 文章列表 - 对角线展开 */
+.posts-list-hero.is-loaded::before {
+  animation: hero-diagonal 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ============================================
+   5. Hero 文字白色 + 阴影效果（通用）
+   ============================================ */
+
+/* 所有 Hero 区域的文字（除标题外）改为白色 */
+.links-hero .hero-intro-inner,
+.links-hero .hero-intro-inner *,
+.memos-hero .hero-text,
+.memos-hero .hero-text *,
+.feeds-hero .hero-text,
+.feeds-hero .hero-text *,
+.vm-hero .vm-hero-description,
+.vm-hero .vm-hero-description *,
+.about-hero .hero-text,
+.about-hero .hero-text *,
+.archive-hero .arc-hero-description,
+.archive-hero .arc-hero-description *,
+.posts-list-hero .hero-text,
+.posts-list-hero .hero-text * {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 深色模式 - 阴影更强 */
+[data-theme="dark"] .links-hero .hero-intro-inner,
+[data-theme="dark"] .links-hero .hero-intro-inner *,
+[data-theme="dark"] .memos-hero .hero-text,
+[data-theme="dark"] .memos-hero .hero-text *,
+[data-theme="dark"] .feeds-hero .hero-text,
+[data-theme="dark"] .feeds-hero .hero-text *,
+[data-theme="dark"] .vm-hero .vm-hero-description,
+[data-theme="dark"] .vm-hero .vm-hero-description *,
+[data-theme="dark"] .about-hero .hero-text,
+[data-theme="dark"] .about-hero .hero-text *,
+[data-theme="dark"] .archive-hero .arc-hero-description,
+[data-theme="dark"] .archive-hero .arc-hero-description *,
+[data-theme="dark"] .posts-list-hero .hero-text,
+[data-theme="dark"] .posts-list-hero .hero-text * {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(0, 0, 0, 0.5) !important;
+}

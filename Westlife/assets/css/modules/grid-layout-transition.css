@@ -1,0 +1,100 @@
+/* 
+ * 布局切换过渡动画
+ * 单栏/双栏切换时显示蓝色矩形跳动加载动画
+ */
+
+.grid-layout-transition-overlay {
+  position: fixed;
+  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10005; /* 高于所有内容 */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: none;
+}
+
+/* 暗色模式 */
+[data-theme="dark"] .grid-layout-transition-overlay {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+/* 显示状态 */
+.grid-layout-transition-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 隐藏状态 */
+.grid-layout-transition-overlay.hide {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* 确保内部 loader 始终显示 */
+.grid-layout-transition-overlay .loader-rect {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  height: auto;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* 蓝色矩形样式 */
+.grid-layout-transition-overlay .loader-rect > div {
+  width: 10px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--color-primary, #0066cc);
+  box-shadow: 0 0 20px rgba(0, 102, 204, 0.3);
+  transform-origin: center bottom;
+  backface-visibility: hidden;
+  will-change: height;
+  animation-play-state: running !important;
+}
+
+/* 动画时序（错开跳动） */
+.grid-layout-transition-overlay .loader-rect > div:nth-child(1) {
+  animation: rect-1 0.9s ease-in-out 0s infinite;
+}
+
+.grid-layout-transition-overlay .loader-rect > div:nth-child(2) {
+  animation: rect-2 0.9s ease-in-out 0.1s infinite;
+}
+
+.grid-layout-transition-overlay .loader-rect > div:nth-child(3) {
+  animation: rect-3 0.9s ease-in-out 0.2s infinite;
+}
+
+.grid-layout-transition-overlay .loader-rect > div:nth-child(4) {
+  animation: rect-4 0.9s ease-in-out 0.3s infinite;
+}
+
+.grid-layout-transition-overlay .loader-rect > div:nth-child(5) {
+  animation: rect-5 0.9s ease-in-out 0.4s infinite;
+}
+
+/* 减少动画偏好：放慢动画 */
+@media (prefers-reduced-motion: reduce) {
+  .grid-layout-transition-overlay {
+    transition-duration: 0.2s;
+  }
+
+  .grid-layout-transition-overlay .loader-rect > div {
+    animation-duration: 1.2s !important;
+  }
+}

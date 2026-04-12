@@ -1,0 +1,243 @@
+/**
+ * 媒体短代码嵌入样式
+ * - 音乐播放器 (QQ/网易云/Kugou/本地)
+ * - 视频播放器 (YouTube/Vimeo/腾讯/优酷/Bilibili)
+ * - 社交嵌入 (Twitter/Douban)
+ */
+
+/* ============================================================
+   1. 通用嵌入容器
+   ============================================================ */
+
+/* 基础容器，提供统一边距 */
+.media-embed {
+    margin: 1.5rem 0;
+    clear: both;
+}
+
+/* 卡片式/带边框的嵌入（如音乐、豆瓣） */
+.media-embed-card {
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    transition: all .25s ease-out;
+}
+.media-embed-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    border-color: var(--color-primary-light);
+}
+[data-theme="dark"] .media-embed-card {
+    background: var(--color-background);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+[data-theme="dark"] .media-embed-card:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-color: var(--color-primary);
+}
+
+/* ============================================================
+   2. 视频响应式容器
+   ============================================================ */
+
+.video-container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 宽高比 */
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+}
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/* ============================================================
+   3. 音乐播放器
+   ============================================================ */
+
+.music-player-card .player-iframe {
+    width: 100%;
+    height: 86px; /* 统一播放器高度 */
+    border: none;
+    display: block;
+}
+
+/* WordPress 原生 audio 短代码美化 */
+.wp-audio-shortcode {
+    width: 100%;
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+[data-theme="dark"] .wp-audio-shortcode {
+    background: var(--color-background);
+}
+.wp-audio-shortcode .mejs-container {
+    background: transparent !important;
+}
+.wp-audio-shortcode .mejs-controls {
+    background: var(--color-background) !important;
+    border-radius: 8px;
+}
+[data-theme="dark"] .wp-audio-shortcode .mejs-controls {
+    background: var(--color-background-light) !important;
+}
+.wp-audio-shortcode .mejs-time-rail .mejs-time-total {
+    background: rgba(128, 128, 128, 0.2) !important;
+}
+.wp-audio-shortcode .mejs-time-rail .mejs-time-current {
+    background: var(--color-primary) !important;
+}
+.wp-audio-shortcode .mejs-volume-button .mejs-volume-slider {
+    background: var(--color-background-light) !important;
+    border-color: var(--color-border) !important;
+}
+[data-theme="dark"] .wp-audio-shortcode .mejs-volume-button .mejs-volume-slider {
+    background: var(--color-background) !important;
+}
+
+/* ============================================================
+   4. Twitter / X 嵌入
+   ============================================================ */
+
+.twitter-card-embed {
+    padding: 1.25rem;
+    position: relative;
+}
+.twitter-card-embed .tweet-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1rem;
+}
+.twitter-card-embed .tweet-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+.twitter-card-embed .tweet-author .name {
+    font-weight: 700;
+    color: var(--color-text);
+}
+.twitter-card-embed .tweet-author .handle {
+    color: var(--color-text-light);
+    font-size: 0.9rem;
+}
+.twitter-card-embed .tweet-body {
+    color: var(--color-text);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+.twitter-card-embed .tweet-body a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+.twitter-card-embed .tweet-body a:hover {
+    text-decoration: underline;
+}
+.twitter-card-embed .tweet-footer {
+    font-size: 0.85rem;
+    color: var(--color-text-light);
+}
+.twitter-card-embed .tweet-logo {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    font-size: 1.5rem;
+    color: var(--color-text-light);
+    opacity: 0.5;
+}
+
+/* ============================================================
+   5. 豆瓣嵌入
+   ============================================================ */
+
+.douban-card-embed {
+    display: flex;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    align-items: flex-start;
+}
+.douban-card-embed .douban-poster {
+    flex-shrink: 0;
+    width: 100px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,.1);
+}
+.douban-card-embed .douban-poster img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+}
+.douban-card-embed .douban-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+.douban-card-embed .douban-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+}
+.douban-card-embed .douban-title a {
+    color: var(--color-text);
+    text-decoration: none;
+    transition: color .2s;
+}
+.douban-card-embed .douban-title a:hover {
+    color: var(--color-primary);
+}
+.douban-card-embed .douban-meta {
+    font-size: 0.9rem;
+    color: var(--color-text-light);
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+.douban-card-embed .douban-rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: #f59e0b;
+}
+.douban-card-embed .douban-rating .rating-value {
+    font-weight: 700;
+    font-size: 1rem;
+}
+.douban-card-embed .douban-summary {
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin-top: 1rem;
+    -webkit-line-clamp: 3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+@media (max-width: 480px) {
+    .douban-card-embed {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .douban-card-embed .douban-info {
+        align-items: center;
+    }
+}

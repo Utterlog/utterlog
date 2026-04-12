@@ -1,0 +1,384 @@
+/* Tasks Module Styles (Home Page) */
+/* 命名空间: .hf-task-*  避免与其他列表冲突 */
+
+#hf-tasks-wrapper {
+  --task-gap: 6px;
+  --task-radius: 6px;
+  --task-bg: var(--color-bg-soft, #f7f8fa);
+  --task-border: var(--color-border, #e2e8f0);
+  --task-progress-bg: var(--color-bg-alt, #eceff3);
+  --task-progress-fill: var(--color-accent, #3b82f6);
+  --task-text-light: var(--color-text-light, #6b7280);
+  --task-text: var(--color-text, #222);
+  position: relative;
+}
+
+#hf-tasks-wrapper .hf-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* 居中显示标签 */
+  gap: 8px;
+  margin-top: -5px; /* 上移 5px */
+  margin-bottom: 10px; /* 与下方留出空隙，可按需微调 */
+}
+
+.task-refresh-btn {
+  appearance: none;
+  background: var(--task-bg);
+  color: var(--task-text-light);
+  border: 1px solid var(--task-border);
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s, border-color 0.25s, transform 0.25s;
+}
+.task-refresh-btn:hover {
+  background: var(--task-progress-fill);
+  color: #fff;
+  border-color: var(--task-progress-fill);
+}
+.task-refresh-btn:active {
+  transform: scale(0.92);
+}
+.task-refresh-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hf-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--task-gap);
+}
+
+/* 自适应填充模式（<=3 条时触发）：让任务块均分容器高度 */
+.hf-task-list.tasks-fill {
+  /* height 由 JS 注入 */
+  /* 占位属性避免空规则 lint 警告 */
+  --tasks-fill: 1;
+}
+.hf-task-list.tasks-fill .hf-task-item {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 新：flex 均分模式（<=3 条且自然高度不足时启用） */
+.hf-task-list.tasks-flex-grow {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.hf-task-list.tasks-flex-grow .hf-task-item {
+  flex: 1 1 auto;
+  min-height: var(--auto-min, auto);
+  display: flex;
+  flex-direction: column;
+  transition: min-height 0.35s ease, padding 0.25s ease;
+}
+.hf-task-list.tasks-flex-grow .hf-task-item .task-progress-bar {
+  margin-top: auto;
+}
+
+/* 固定高度映射模式 */
+.hf-task-list.tasks-fixed {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--task-gap);
+}
+.hf-task-list.tasks-fixed .task-fixed-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  transition: min-height 0.3s ease, padding 0.25s ease;
+}
+.hf-task-list.tasks-fixed-single {
+  min-height: 100px;
+  align-items: stretch;
+}
+.hf-task-list.tasks-fixed-single .task-fixed-item {
+  align-items: flex-start;
+}
+
+/* 单任务置中显示 */
+.hf-task-list.tasks-single-center {
+  min-height: 180px;
+  display: flex;
+  justify-content: center;
+}
+.hf-task-list.tasks-single-center .hf-task-item {
+  justify-content: center;
+  align-items: flex-start;
+  min-height: auto !important;
+  transition: transform 0.3s ease;
+}
+.hf-task-list.tasks-single-center .hf-task-item .task-updated-line {
+  display: none;
+}
+
+.hf-task-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* 下调底部 padding 1px 以替代 JS 中的 +1 高度补偿 */
+  padding: 8px 10px 9px;
+  background: var(--task-bg);
+  border: 1px solid var(--task-border);
+  border-radius: var(--task-radius);
+}
+
+/* 新：单行头部：标题在左，进度+状态在右 */
+.hf-task-item .task-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0; /* 允许文本截断 */
+}
+.hf-task-item .task-head-row .task-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hf-task-item .task-head-meta {
+  flex: 0 0 auto;
+  display: inline-flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--task-text-light);
+  white-space: nowrap;
+}
+.hf-task-item .task-head-meta .task-progress-text {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 更新时间细行（若存在） */
+.hf-task-item .task-updated-line {
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--task-text-light);
+  margin-top: -2px; /* 进一步压缩垂直空间 */
+}
+
+/* 紧凑模式：空间不足时缩小前三条任务高度 */
+.hf-task-list.tasks-compact {
+  --task-gap: 4px;
+}
+.hf-task-list.tasks-compact .hf-task-item {
+  /* bottom -1 */
+  padding: 6px 8px 6px;
+  gap: 3px;
+}
+.hf-task-list.tasks-compact .task-title {
+  font-size: 12px;
+  line-height: 1.35;
+}
+.hf-task-list.tasks-compact .task-meta {
+  font-size: 10px;
+  gap: 8px;
+}
+.hf-task-list.tasks-compact .task-progress-bar {
+  height: 5px;
+}
+
+/* 第二级压缩：进一步减小内边距 / 字号 / 间距 */
+.hf-task-list.tasks-compact.tasks-compact-2 .hf-task-item {
+  /* bottom -1 */
+  padding: 5px 7px 5px;
+  gap: 2px;
+}
+.hf-task-list.tasks-compact.tasks-compact-2 .task-title {
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+.hf-task-list.tasks-compact.tasks-compact-2 .task-meta {
+  font-size: 9.5px;
+  gap: 6px;
+}
+.hf-task-list.tasks-compact.tasks-compact-2 .task-progress-bar {
+  height: 4px;
+}
+
+/* 第三级压缩：极限模式（保证完全可见，不考虑轻微观感损失） */
+.hf-task-list.tasks-compact.tasks-compact-2.tasks-compact-3 .hf-task-item {
+  /* bottom -1 */
+  padding: 4px 6px 4px;
+  gap: 1px;
+}
+.hf-task-list.tasks-compact.tasks-compact-2.tasks-compact-3 .task-title {
+  font-size: 11px;
+  line-height: 1.25;
+}
+.hf-task-list.tasks-compact.tasks-compact-2.tasks-compact-3 .task-meta {
+  font-size: 9px;
+  gap: 4px;
+}
+.hf-task-list.tasks-compact.tasks-compact-2.tasks-compact-3 .task-progress-bar {
+  height: 3px;
+}
+
+/* 第四级极限压缩：合并 meta 行距，最小可读尺寸 */
+.hf-task-list.tasks-compact-4 .hf-task-item {
+  /* bottom -1 */
+  padding: 3px 5px 3px;
+  gap: 0;
+}
+.hf-task-list.tasks-compact-4 .task-title {
+  font-size: 10.5px;
+  line-height: 1.22;
+}
+.hf-task-list.tasks-compact-4 .task-meta {
+  font-size: 8.5px;
+  gap: 3px;
+  line-height: 1.1;
+}
+.hf-task-list.tasks-compact-4 .task-progress-bar {
+  height: 3px;
+  margin-top: 2px;
+}
+.hf-task-item[data-status="done"] {
+  opacity: 0.72;
+}
+.hf-task-item[data-status="done"] .task-title {
+  text-decoration: line-through;
+}
+
+.task-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--task-text);
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* 旧 .task-meta 样式已不再使用（保留以防缓存旧 DOM） */
+.task-meta {
+  display: none !important;
+}
+
+/* Progress bar */
+.task-progress-bar {
+  position: relative;
+  height: 6px;
+  background: var(--task-progress-bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.task-progress-bar span {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: linear-gradient(
+    90deg,
+    var(--task-progress-fill),
+    var(--task-progress-fill)
+  );
+  border-radius: inherit;
+  transition: width 0.5s cubic-bezier(0.4, 0.1, 0, 1);
+}
+.hf-task-item[data-status="done"] .task-progress-bar span {
+  width: 100% !important;
+}
+
+/* skeleton loading */
+.hf-task-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hf-task-skel-row {
+  height: 14px;
+  background: var(--task-progress-bg);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.hf-task-skel-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 40%,
+    transparent 80%
+  );
+  animation: task-shimmer 1.1s linear infinite;
+}
+
+@keyframes task-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* 空状态 */
+#task-empty-hint {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--task-text-light);
+  text-align: center;
+  padding: 10px 4px 4px;
+}
+#task-empty-hint strong {
+  color: var(--task-text);
+}
+
+/* 错误提示 */
+.hf-task-error {
+  color: #b42318;
+  background: #feeceb;
+  border: 1px solid #f3b2ae;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.dark .hf-task-error {
+  color: #ffb4ad;
+  background: #3a0f0c;
+  border-color: #5a1b17;
+}
+
+/* 暗色模式适配 */
+.dark #hf-tasks-wrapper {
+  --task-bg: rgba(255, 255, 255, 0.05);
+  --task-border: rgba(255, 255, 255, 0.13);
+  --task-progress-bg: rgba(255, 255, 255, 0.08);
+  --task-progress-fill: var(--color-accent, #3b82f6);
+  --task-text-light: #9ca3af;
+  --task-text: #eef2f7;
+}
+.dark .task-refresh-btn {
+  background: var(--task-bg);
+  border-color: var(--task-border);
+  color: var(--task-text-light);
+}
+.dark .task-refresh-btn:hover {
+  background: var(--task-progress-fill);
+  color: #fff;
+}
+
+/* 自适应 */
+@media (max-width: 780px) {
+  .hf-task-item {
+    padding: 8px 8px 9px;
+  }
+  .task-title {
+    font-size: 13px;
+  }
+  .hf-task-item .task-head-meta {
+    font-size: 11px;
+  }
+}

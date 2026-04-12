@@ -1,0 +1,47 @@
+# AI Bridge - 托管模式 Docker Compose 配置
+#
+# 此配置用于官方托管服务
+# 特点：用户需要申请 Token 才能使用
+#
+# 使用方法：
+# 1. 配置 .env 文件（包含 SITE_TOKEN 和邮件配置）
+# 2. docker-compose up -d
+
+version: "3.8"
+
+services:
+  ai-bridge:
+    image: ghcr.io/gentpan/ai-bridge:latest
+    container_name: ai-bridge
+    restart: unless-stopped
+
+    ports:
+      - "${PORT:-8080}:8080"
+
+    volumes:
+      # 数据持久化
+      - ./data:/app/data
+
+    env_file:
+      - .env
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # 可选：Nginx 反向代理 + HTTPS
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: ai-bridge-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - ai-bridge

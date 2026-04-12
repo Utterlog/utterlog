@@ -1,0 +1,350 @@
+/**
+ * Westlife Turnstile - Cloudflare风格的验证组件
+ * 类似Cloudflare Turnstile的人机验证UI
+ * @package Westlife
+ * @since 2.0.0
+ */
+
+/* ==========================================================================
+   验证组件容器
+   ========================================================================== */
+.wl-turnstile-widget {
+  margin: 16px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transform: translateY(-10px);
+  animation: wl-slideIn 0.3s ease-out forwards;
+}
+
+@keyframes wl-slideIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wl-turnstile-box {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  height: 44px; /* 与提交按钮高度一致 */
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fafafa;
+  padding: 0 8px 0 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+}
+
+.wl-turnstile-box:hover {
+  border-color: #d0d0d0;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* 验证成功状态 - Cloudflare绿色 */
+.wl-turnstile-box.wl-verified {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+/* 验证中状态 - 浅蓝色 */
+.wl-turnstile-box.wl-verifying {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+/* 验证失败状态 - 保持红色 */
+.wl-turnstile-box.wl-verify-failed {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+/* ==========================================================================
+   内部布局
+   ========================================================================== */
+.wl-turnstile-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  position: relative;
+}
+
+/* ==========================================================================
+   复选框区域
+   ========================================================================== */
+.wl-turnstile-checkbox {
+  flex-shrink: 0;
+}
+
+.wl-verify-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.wl-checkbox-label {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #d9d9d9;
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.wl-checkbox-label:hover {
+  border-color: #60a5fa;
+}
+
+.wl-verify-checkbox:checked + .wl-checkbox-label {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.wl-verify-checkbox:disabled + .wl-checkbox-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 对勾图标 */
+.wl-checkbox-icon {
+  position: absolute;
+  display: none;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 12px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+}
+
+.wl-verify-checkbox:checked + .wl-checkbox-label .wl-checkbox-icon {
+  display: block;
+}
+
+/* 验证成功状态的对勾 - Cloudflare绿色 */
+.wl-verified .wl-verify-checkbox:checked + .wl-checkbox-label {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+/* ==========================================================================
+   文本区域
+   ========================================================================== */
+.wl-turnstile-text {
+  flex: 1;
+  font-size: 14px;
+  color: #333333;
+  user-select: none;
+}
+
+.wl-verify-text {
+  display: block;
+  transition: opacity 0.3s;
+}
+
+.wl-verify-success {
+  display: none;
+  color: #10b981;
+  font-weight: 500;
+}
+
+.wl-verified .wl-verify-success {
+  display: block;
+}
+
+.wl-verifying .wl-verify-text {
+  color: #3b82f6;
+}
+
+.wl-verify-failed .wl-verify-text {
+  color: #ef4444;
+}
+
+/* ==========================================================================
+   加载动画
+   ========================================================================== */
+.wl-turnstile-spinner {
+  display: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: wl-spin 0.8s linear infinite;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+@keyframes wl-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+   右侧徽章
+   ========================================================================== */
+.wl-turnstile-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding-left: 12px;
+  pointer-events: none;
+  height: 100%;
+}
+
+.wl-turnstile-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  background: linear-gradient(145deg, #0051c3 0%, #002fa7 100%);
+  border-radius: 5px;
+  height: 32px;
+  min-width: 60px;
+  box-shadow: 0 2px 6px rgba(0, 47, 167, 0.35), 0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+  gap: 1px;
+  position: relative;
+  overflow: hidden;
+}
+
+.wl-turnstile-logo::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    transparent 100%
+  );
+  border-radius: 5px 5px 0 0;
+}
+
+.wl-turnstile-logo .logo-line {
+  font-size: 8px;
+  color: #ffffff;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.wl-turnstile-logo .logo-line:first-child {
+  font-size: 9px;
+}
+
+/* ==========================================================================
+   深色模式
+   ========================================================================== */
+[data-theme="dark"] .wl-turnstile-box {
+  background: #1f1f1f;
+  border-color: #434343;
+}
+
+[data-theme="dark"] .wl-turnstile-box:hover {
+  border-color: #595959;
+}
+
+[data-theme="dark"] .wl-checkbox-label {
+  background: #141414;
+  border-color: #434343;
+}
+
+[data-theme="dark"] .wl-checkbox-label:hover {
+  border-color: #60a5fa;
+}
+
+[data-theme="dark"] .wl-turnstile-text {
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .wl-verify-success {
+  color: #34d399;
+}
+
+[data-theme="dark"] .wl-turnstile-logo {
+  background: linear-gradient(145deg, #1e40af 0%, #1e3a8a 100%);
+  box-shadow: 0 2px 6px rgba(30, 64, 175, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .wl-turnstile-box.wl-verified {
+  background: #064e3b;
+  border-color: #059669;
+}
+
+[data-theme="dark"] .wl-turnstile-box.wl-verifying {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+}
+
+[data-theme="dark"] .wl-turnstile-box.wl-verify-failed {
+  background: #7f1d1d;
+  border-color: #dc2626;
+}
+
+/* ==========================================================================
+   响应式
+   ========================================================================== */
+@media (max-width: 600px) {
+  .wl-turnstile-box {
+    max-width: 100%;
+    height: 42px;
+    padding: 0 6px 0 10px;
+  }
+
+  .wl-turnstile-inner {
+    gap: 8px;
+  }
+
+  .wl-checkbox-label {
+    width: 22px;
+    height: 22px;
+  }
+
+  .wl-turnstile-text {
+    font-size: 13px;
+  }
+
+  .wl-turnstile-logo {
+    height: 28px;
+    min-width: 52px;
+    padding: 2px 8px;
+  }
+
+  .wl-turnstile-logo .logo-line {
+    font-size: 7px;
+  }
+
+  .wl-turnstile-logo .logo-line:first-child {
+    font-size: 8px;
+  }
+
+  .wl-turnstile-footer {
+    padding-left: 8px;
+  }
+}

@@ -1,0 +1,40 @@
+{{ define "body_classes" }}page-blog-tag{{ end }}
+
+{{ define "main" }}
+<div id="index-card-timeline" class="index-card tag-list">
+   {{ $paginator := .Paginate .Pages 26 }}
+    {{ range .Paginator.Pages }}
+      
+      {{/* ---------------- 【A. 长篇日志】 ---------------- */}}
+
+    {{/* 随笔 */}}
+    {{ if eq .Type "posts" }}
+      <div class="card-timeline index-post">
+           <time class="index-post-time" datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+            {{ if eq .Date.Year now.Year }}
+              {{ .Date.Format "01-02" }}
+            {{ else }}
+              {{ .Date.Format "2006-01-02" }}
+            {{ end }}
+          </time>
+        <div class="index-post-title"><a href="{{ .RelPermalink }}">{{ .Title }}</a></div> 
+      </div>
+
+      {{/* ---------------- 【B. 唠叨动态】 ---------------- */}}
+      {{ else if eq .Type "laodao" }}
+        {{ partial "laodao-card.html" . }}
+      {{ end }}
+
+    {{ end }}
+</div>
+
+{{/* 翻页逻辑 */}}
+{{ if .Paginator.HasNext }}
+  <div class="laodao-more">
+    <button id="laoda-more-btn" data-next-url="{{ .Paginator.Next.URL }}" class="laodao-more-b">看更多 ...</button>
+  </div>
+{{ end }}
+
+<script src="/js/laodao.js?v=20260311a" defer></script>
+{{ partial "comments.html" . }}
+{{ end }}

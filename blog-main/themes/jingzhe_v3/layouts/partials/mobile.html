@@ -1,0 +1,12 @@
+<div id="menu-main-mobile" class="menu-main-mobile">
+    <ul class="menu">
+        {{ range site.Menus.main }}
+            {{ if not .HasChildren }}
+                <li>
+                    <a href="{{ .URL | absLangURL }}">{{ .Name }}</a>
+                </li>
+            {{ end }}
+            
+        {{ end }}
+    </ul>
+</div>

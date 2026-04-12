@@ -1,0 +1,47 @@
+{{ define "body_classes" }}page-home{{ end }}
+{{ define "title" }}{{ site.Title }}{{ end }}
+
+{{ define "main" }}
+ {{/* 分页，默认 25 条一页 */}}
+<div id="index-card-timeline" class="index-card">
+  {{ $stream := where site.RegularPages "Type" "in" (slice "posts" "laodao") }}
+  {{ $paginator := .Paginate $stream.ByDate.Reverse 25 }}
+
+  {{ range $index, $page := $paginator.Pages }}
+    {{/* 随笔 */}}
+    {{ if eq .Type "posts" }}
+      <div class="card-timeline index-post">
+        <div class="posts-index-heard">   
+          <time class="index-post-time" datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+            {{ if eq .Date.Year now.Year }}
+              {{ .Date.Format "01-02" }}
+            {{ else }}
+              {{ .Date.Format "2006-01-02" }}
+            {{ end }}
+          </time>
+          <div class="posts-index-info">随笔</div>
+        </div>
+        <div class="index-post-title"><a href="{{ .RelPermalink }}">{{ .Title }}</a></div>
+         <div class="posts-description">{{ .Params.description }}</div>   
+         {{ if .Params.image }}
+        <a href="{{ .RelPermalink }}" class="index-post-img-wrap">
+          <img loading="lazy" decoding="async" src="{{ .Params.image | relURL }}" alt="{{ .Title }}" />
+        </a> 
+        {{ end }}
+      </div>
+       {{/* 唠叨 */}}
+    {{ else if eq .Type "laodao" }}
+      {{ partial "laodao-card.html" . }}
+    {{ end }}
+  {{ end }}
+</div>
+
+{{ if $paginator.HasNext }}
+  <div class="laodao-more">
+    <button id="laoda-more-btn" data-next-url="{{ $paginator.Next.URL }}" class="laodao-more-b">看更多 ...</button>
+  </div>
+{{ end }}
+<script src="/js/laodao.js?v=20260329a" defer></script>
+{{ partial "comments.html" . }}
+
+{{ end }}

@@ -1,0 +1,446 @@
+@import "tailwindcss";
+
+/* ========================================
+   Theme Variables — CSS custom properties
+   Overridden by [data-theme] selectors
+   ======================================== */
+
+/* Steel (default) — 技术/冷静/克制 */
+:root,
+[data-theme="steel"] {
+  --color-primary: #5F7383;
+  --color-primary-hover: #4A5C6A;
+  --color-primary-active: #3B4A55;
+  --color-bg-main: #F5F7FA;
+  --color-bg-card: #FFFFFF;
+  --color-bg-soft: #EDF2F6;
+  --color-border: #E1E6EB;
+  --color-divider: #EEF2F5;
+  --color-text-main: #1F2A33;
+  --color-text-sub: #6B7C8F;
+  --color-text-dim: #9AA7B2;
+  --color-focus-ring: #5F7383;
+}
+
+/* Blue — Icons8 Office L 风格天蓝 */
+[data-theme="blue"] {
+  --color-primary: #5B9BD5;
+  --color-primary-hover: #4A8BC7;
+  --color-primary-active: #3D7CB5;
+  --color-bg-main: #F5F8FC;
+  --color-bg-card: #FFFFFF;
+  --color-bg-soft: #EAF1FA;
+  --color-border: #C8DAE8;
+  --color-divider: #E3EDF5;
+  --color-text-main: #1A2B3D;
+  --color-text-sub: #5A7A94;
+  --color-text-dim: #8EAAB8;
+  --color-focus-ring: #5B9BD5;
+}
+
+/* Green — 亲和/产品/转化 */
+[data-theme="green"] {
+  --color-primary: #4CAF73;
+  --color-primary-hover: #3E9B62;
+  --color-primary-active: #358753;
+  --color-bg-main: #F6FBF8;
+  --color-bg-card: #FFFFFF;
+  --color-bg-soft: #EAFBF1;
+  --color-border: #BFE8CF;
+  --color-divider: #DFF5E7;
+  --color-text-main: #1F3D2B;
+  --color-text-sub: #4E7C64;
+  --color-text-dim: #8FAF9F;
+  --color-focus-ring: #4CAF73;
+}
+
+/* Mint — 清新/薄荷绿 */
+[data-theme="mint"] {
+  --color-primary: #00A88E;
+  --color-primary-hover: #009078;
+  --color-primary-active: #007A66;
+  --color-bg-main: #F3FBF9;
+  --color-bg-card: #FFFFFF;
+  --color-bg-soft: #E6F7F3;
+  --color-border: #B8E8DD;
+  --color-divider: #D4F0E9;
+  --color-text-main: #1A3330;
+  --color-text-sub: #3D7068;
+  --color-text-dim: #7EADA4;
+  --color-focus-ring: #00A88E;
+}
+
+/* Claude — 温暖/优雅 */
+[data-theme="claude"] {
+  --color-primary: #DA7756;
+  --color-primary-hover: #C4633F;
+  --color-primary-active: #B05535;
+  --color-bg-main: #FAF9F6;
+  --color-bg-card: #FFFFFF;
+  --color-bg-soft: #F5F0EB;
+  --color-border: #E8E0D8;
+  --color-divider: #F2EDE7;
+  --color-text-main: #1A1410;
+  --color-text-sub: #6B5B52;
+  --color-text-dim: #9B8E85;
+  --color-focus-ring: #DA7756;
+}
+
+/* Ocean — 纯白底 + 蔚蓝色 */
+[data-theme="ocean"] {
+  --color-primary: #0052D9;
+  --color-primary-hover: #0044B8;
+  --color-primary-active: #003A9E;
+  --color-bg-main: #FFFFFF;
+  --color-bg-card: #FFFFFF;
+  --color-bg-soft: #F5F7FA;
+  --color-border: #E1E6EB;
+  --color-divider: #EEF2F5;
+  --color-text-main: #0D1A2D;
+  --color-text-sub: #5A6B7F;
+  --color-text-dim: #9AA5B0;
+  --color-focus-ring: #0052D9;
+}
+
+/* Dark — 深色 */
+[data-theme="dark"] {
+  --color-primary: #7CA0C4;
+  --color-primary-hover: #93B5D5;
+  --color-primary-active: #5A86B2;
+  --color-bg-main: #0F1117;
+  --color-bg-card: #1A1D27;
+  --color-bg-soft: #252830;
+  --color-border: #353840;
+  --color-divider: #2D3039;
+  --color-text-main: #F0F1F3;
+  --color-text-sub: #A0A8B4;
+  --color-text-dim: #6B7280;
+  --color-focus-ring: #7CA0C4;
+}
+
+/* ========================================
+   Tailwind v4 @theme — static values for utility generation
+   Use semantic class names: bg-main, text-main, border-line etc.
+   Runtime overrides happen via CSS variables above.
+   ======================================== */
+@theme inline {
+  /* Fonts */
+  --font-sans: "Noto Sans SC", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Noto Serif SC", "Source Han Serif SC", "Georgia", ui-serif, serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-logo: "Ubuntu", "Fugaz One", sans-serif;
+}
+
+/* ========================================
+   Global Resets
+   ======================================== */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  color: var(--color-text-main);
+  background: var(--color-bg-main);
+}
+
+/* ========================================
+   Semantic utility classes (theme-aware)
+   ======================================== */
+
+/* Background */
+.bg-main { background-color: var(--color-bg-main); }
+.bg-card { background-color: var(--color-bg-card); }
+.bg-soft { background-color: var(--color-bg-soft); }
+.bg-primary { background-color: var(--color-primary); }
+.hover\:bg-primary-hover:hover { background-color: var(--color-primary-hover); }
+.bg-primary-active { background-color: var(--color-primary-active); }
+
+/* Text */
+.text-main { color: var(--color-text-main); }
+.text-sub { color: var(--color-text-sub); }
+.text-dim { color: var(--color-text-dim); }
+
+/* Border */
+.border-line { border-color: var(--color-border); }
+.border-divider { border-color: var(--color-divider); }
+
+/* Logo font */
+.font-logo { font-family: "Ubuntu", "Fugaz One", sans-serif; }
+
+/* Primary accent text (for links, active tabs) */
+.text-primary-themed { color: var(--color-primary); }
+.hover\:text-primary-themed:hover { color: var(--color-primary-hover); }
+
+/* Focus */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus-ring) 25%, transparent);
+  border-color: var(--color-focus-ring);
+}
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus-ring) 25%, transparent);
+  border-color: var(--color-focus-ring);
+}
+
+/* ========================================
+   Admin Base Components
+   ======================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 0.15s, box-shadow 0.15s;
+  border-radius: 1px;
+  border: none;
+  outline: none;
+  cursor: pointer;
+}
+.btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-bg-card), 0 0 0 4px var(--color-focus-ring);
+}
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+}
+.btn-primary:active {
+  background-color: var(--color-primary-active);
+}
+
+.btn-secondary {
+  background-color: var(--color-bg-soft);
+  color: var(--color-text-main);
+  border: 1px solid var(--color-border);
+}
+.btn-secondary:hover {
+  background-color: var(--color-divider);
+}
+
+.btn-danger {
+  background-color: #dc2626;
+  color: #fff;
+}
+.btn-danger:hover {
+  background-color: #b91c1c;
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-text-sub);
+}
+.btn-ghost:hover {
+  background-color: var(--color-bg-soft);
+  color: var(--color-text-main);
+}
+
+/* Action icon button — square with icon */
+.action-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 1px;
+  background: var(--color-bg-card);
+  cursor: pointer;
+  color: var(--color-text-sub);
+  transition: background 0.15s, color 0.15s;
+}
+.action-btn:hover {
+  background: var(--color-bg-soft);
+  color: var(--color-text-main);
+}
+.action-btn.danger { color: #dc2626; }
+.action-btn.danger:hover { background: #fef2f2; }
+
+/* Sidebar nav item hover */
+nav a:not([class*="text-main"]):hover {
+  background-color: var(--color-bg-soft) !important;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1px;
+  font-size: 0.875rem;
+  color: var(--color-text-main);
+  background: var(--color-bg-card);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input::placeholder {
+  color: var(--color-text-dim);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus-ring) 20%, transparent);
+}
+
+.card {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 1px;
+}
+
+.card-hover:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 3px;
+}
+
+.table {
+  min-width: 100%;
+  border-collapse: collapse;
+}
+.table th {
+  padding: 0.75rem 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border);
+}
+.table td {
+  padding: 1rem 1.5rem;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  color: var(--color-text-main);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+/* ========================================
+   Blog Prose (Claude theme, independent)
+   ======================================== */
+:root {
+  --claude-bg: #FAF9F6;
+  --claude-surface: #FFFFFF;
+  --claude-primary: #DA7756;
+  --claude-primary-light: #E8956F;
+  --claude-primary-dark: #C4633F;
+  --claude-text: #1A1410;
+  --claude-text-secondary: #6B5B52;
+  --claude-text-muted: #9B8E85;
+  --claude-border: #E8E0D8;
+  --claude-tag: #F5F0EB;
+  --claude-code: #F8F5F1;
+  --claude-hover: #F2EDE7;
+}
+
+.blog-prose {
+  color: var(--color-text-main);
+  font-size: 1.0625rem;
+  line-height: 1.8;
+}
+
+.blog-prose h1 { font-family: var(--font-serif); font-size: 1.875rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.5rem; }
+.blog-prose h2 { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-border); }
+.blog-prose h3 { font-family: var(--font-serif); font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
+.blog-prose h4 { font-family: var(--font-serif); font-size: 1.125rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.blog-prose p { margin-bottom: 1.5rem; }
+.blog-prose a { color: var(--color-primary); text-decoration: underline; text-underline-offset: 2px; transition: color 0.15s; }
+.blog-prose a:hover { color: var(--color-primary-active); }
+.blog-prose strong { font-weight: 600; color: var(--color-text-main); }
+.blog-prose blockquote { padding-left: 1rem; border-left: 3px solid color-mix(in srgb, var(--color-primary) 40%, transparent); color: var(--color-text-sub); font-style: italic; margin: 1.5rem 0; }
+.blog-prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.5rem; }
+.blog-prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1.5rem; }
+.blog-prose li { line-height: 1.625; margin-bottom: 0.25rem; }
+.blog-prose code:not(pre code) { background-color: var(--color-bg-soft); color: var(--color-primary-active); padding: 0.125rem 0.375rem; border-radius: 3px; font-size: 0.875rem; font-family: var(--font-mono); }
+.blog-prose pre { background-color: var(--color-bg-soft); border-radius: 1px; padding: 1rem; overflow-x: auto; margin: 1.5rem 0; font-size: 0.875rem; line-height: 1.625; }
+.blog-prose pre code { background-color: transparent; padding: 0; color: var(--color-text-main); font-family: var(--font-mono); }
+.blog-prose img { border-radius: 1px; margin: 1.5rem 0; max-width: 100%; }
+.blog-prose hr { margin: 2rem 0; border: none; border-top: 1px solid var(--color-border); }
+.blog-prose table { width: 100%; margin: 1.5rem 0; border-collapse: collapse; }
+.blog-prose th { background-color: var(--color-bg-soft); text-align: left; padding: 0.5rem 1rem; font-weight: 600; font-size: 0.875rem; border: 1px solid var(--color-border); }
+.blog-prose td { padding: 0.5rem 1rem; font-size: 0.875rem; border: 1px solid var(--color-border); }
+
+/* ========================================
+   Scrollbar
+   ======================================== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--color-bg-soft); border-radius: 1px; }
+::-webkit-scrollbar-thumb { background: var(--color-text-dim); border-radius: 1px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-sub); }
+
+/* ========================================
+   Code Highlighting
+   ======================================== */
+.hljs { color: #3c3836; background: #F8F5F1; }
+.hljs-comment, .hljs-quote { color: #928374; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-addition { color: #9d0006; }
+.hljs-number, .hljs-string, .hljs-meta .hljs-meta-string, .hljs-literal, .hljs-doctag, .hljs-regexp { color: #b57614; }
+.hljs-title, .hljs-section, .hljs-name, .hljs-selector-id, .hljs-selector-class { color: #DA7756; }
+.hljs-attribute, .hljs-tag .hljs-attr, .hljs-variable, .hljs-template-variable, .hljs-class .hljs-title, .hljs-type { color: #427b58; }
+.hljs-symbol, .hljs-bullet, .hljs-subst, .hljs-meta, .hljs-meta .hljs-keyword, .hljs-selector-attr, .hljs-selector-pseudo, .hljs-link { color: #af3a03; }
+.hljs-built_in, .hljs-deletion { color: #076678; }
+.hljs-formula { background: #F5F0EB; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: bold; }
+
+[data-theme="dark"] .hljs { color: #e5e7eb; background: #1e2130; }
+[data-theme="dark"] .hljs-comment, [data-theme="dark"] .hljs-quote { color: #6b7280; }
+[data-theme="dark"] .hljs-keyword { color: #f87171; }
+[data-theme="dark"] .hljs-string, [data-theme="dark"] .hljs-number { color: #fbbf24; }
+[data-theme="dark"] .hljs-title, [data-theme="dark"] .hljs-section { color: #60a5fa; }
+[data-theme="dark"] .hljs-attribute, [data-theme="dark"] .hljs-type { color: #34d399; }
+
+/* ========================================
+   Animations
+   ======================================== */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes vinyl-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.vinyl-spinning {
+  animation: vinyl-spin 8s linear infinite;
+}
+.vinyl-paused {
+  animation-play-state: paused;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}

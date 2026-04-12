@@ -1,0 +1,144 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { postsApi } from '@/lib/api';
+import toast from 'react-hot-toast';
+import { Button, Input, Table, Pagination, Badge, ConfirmDialog } from '@/components/ui';
+import { FileText, Plus, Search, Edit2, Trash2, Eye } from '@/components/icons';
+import { formatDate } from '@/lib/utils';
+
+const statusMap: Record<string, { label: string; variant: 'default' | 'success' | 'warning' }> = {
+  publish: { label: '已发布', variant: 'success' },
+  draft: { label: '草稿', variant: 'default' },
+  private: { label: '私密', variant: 'warning' },
+  pending: { label: '待审核', variant: 'warning' },
+};
+
+export default function PostsPage() {
+  const router = useRouter();
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [perPage, setPerPage] = useState(10);
+
+  useEffect(() => { fetchPosts(); }, [page, status, perPage]);
+
+  const fetchPosts = async () => {
+    setLoading(true);
+    try {
+      setSelected(new Set());
+      const response: any = await postsApi.list({ page, limit: perPage, status: status || 'publish', search: search || undefined, order_by: 'display_id', order: 'asc' } as any);
+      setPosts(response.data?.posts || response.data || []);
+      setTotalPages(response.meta?.total_pages || response.data?.totalPages || 1);
+    } catch { toast.error('获取文章列表失败'); }
+    finally { setLoading(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try { await postsApi.delete(deleteId); toast.success('删除成功'); fetchPosts(); }
+    catch { toast.error('删除失败'); }
+    finally { setDeleting(false); setDeleteId(null); }
+  };
+
+  const toggleSelect = (id: number) => {
+    const s = new Set(selected);
+    s.has(id) ? s.delete(id) : s.add(id);
+    setSelected(s);
+  };
+  const toggleAll = () => {
+    if (selected.size === posts.length) setSelected(new Set());
+    else setSelected(new Set(posts.map((p: any) => p.id)));
+  };
+
+  const columns: any[] = [
+    { key: 'select', title: (
+      <input type="checkbox" checked={posts.length > 0 && selected.size === posts.length} onChange={toggleAll} />
+    ), width: '36px', render: (row: any) => (
+      <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
+    )},
+    { key: 'title', title: '标题', render: (row: any) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span className="text-dim" style={{ fontSize: '11px', flexShrink: 0 }}>#{row.display_id || row.id}</span>
+        <p className="text-main" style={{ fontWeight: 500, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.title}</p>
+      </div>
+    )},
+    { key: 'category', title: '分类', width: '90px', render: (row: any) => {
+      const name = row.categories?.[0]?.name;
+      return name ? <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '1px', background: 'var(--color-bg-soft)', color: 'var(--color-text-sub)', border: '1px solid var(--color-border)' }}>{name}</span> : <span className="text-dim" style={{ fontSize: '11px' }}>-</span>;
+    }},
+    { key: 'tags', title: '关键词', width: '150px', render: (row: any) => (
+      <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+        {(row.tags || []).slice(0, 3).map((t: any, i: number) => (
+          <span key={i} style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '1px', background: 'var(--color-primary)', color: '#fff', opacity: 0.8 }}>{t.name}</span>
+        ))}
+        {(row.tags?.length || 0) > 3 && <span className="text-dim" style={{ fontSize: '10px' }}>+{row.tags.length - 3}</span>}
+        {!row.tags?.length && <span className="text-dim" style={{ fontSize: '11px' }}>-</span>}
+      </div>
+    )},
+    { key: 'created_at', title: '时间', width: '110px', render: (row: any) => <span className="text-dim" style={{ fontSize: '12px' }}>{formatDate(row.created_at)}</span> },
+    { key: 'author', title: '作者', width: '70px', render: (row: any) => <span className="text-dim" style={{ fontSize: '12px' }}>{row.author?.nickname || '-'}</span> },
+    { key: 'stats', title: '评论/浏览', width: '80px', render: (row: any) => <span className="text-dim" style={{ fontSize: '12px' }}>{row.comment_count || 0}/{row.view_count || 0}</span> },
+    { key: 'status', title: '状态', width: '60px', render: (row: any) => {
+      const s = statusMap[row.status] || { label: row.status, variant: 'default' as const };
+      return <Badge variant={s.variant}>{s.label}</Badge>;
+    }},
+    { key: 'actions', title: '操作', width: '100px', render: (row: any) => (
+      <div style={{ display: 'flex', gap: '4px' }}>
+        <button onClick={() => router.push(`/dashboard/posts/edit/${row.id}`)} className="action-btn" title="编辑"><Edit2 size={14} /></button>
+        <button onClick={() => window.open(`/posts/${row.slug}`, '_blank')} className="action-btn" title="预览"><Eye size={14} /></button>
+        <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title="删除"><Trash2 size={14} /></button>
+      </div>
+    )},
+  ];
+
+  return (
+    <div>
+
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+        <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <Input placeholder="检索标题 / 摘要 / 正文" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (setPage(1), fetchPosts())} style={{ maxWidth: '300px' }} />
+          <Button onClick={() => { setPage(1); fetchPosts(); }} style={{ flexShrink: 0 }}><Search size={14} /> 搜索</Button>
+          <Button variant="secondary" onClick={() => { setSearch(''); setStatus('publish'); setPage(1); setTimeout(fetchPosts, 0); }} style={{ flexShrink: 0 }}>重置</Button>
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {(['publish', 'private', 'draft'] as const).map(s => (
+            <Button key={s} variant={status === s ? 'primary' : 'secondary'} onClick={() => { setStatus(s); setPage(1); }} style={{ flexShrink: 0 }}>
+              {{ publish: '全部文章', private: '私密', draft: '草稿' }[s]}
+            </Button>
+          ))}
+          <Button onClick={() => router.push('/dashboard/posts/create')} style={{ flexShrink: 0 }}><Plus size={16} />新建文章</Button>
+        </div>
+      </div>
+
+      <div className="card">
+        <Table columns={columns} data={posts} loading={loading} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderTop: '1px solid var(--color-border)' }}>
+          <span className="text-dim" style={{ fontSize: '12px' }}>
+            {selected.size > 0 ? `已选 ${selected.size} 项` : `共 ${totalPages * perPage > 0 ? totalPages * perPage : 0} 项`}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <select value={perPage} onChange={e => { setPerPage(parseInt(e.target.value)); setPage(1); }} className="input" style={{ width: '70px', fontSize: '12px', padding: '4px 6px' }}>
+              <option value={10}>10条</option>
+              <option value={20}>20条</option>
+              <option value={50}>50条</option>
+              <option value={100}>100条</option>
+            </select>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+          </div>
+        </div>
+      </div>
+
+      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="确认删除" message="删除后无法恢复，是否确认？" confirmText="删除" loading={deleting} />
+    </div>
+  );
+}

@@ -1,0 +1,505 @@
+/* 评论邮件专用样式，原为 inc-comment.php 内联部分，现独立维护 */
+
+/* 基础样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  background: #f8f9fa;
+  padding: 20px;
+  line-height: 1.6;
+  color: #333;
+}
+.email-wrapper {
+  max-width: 650px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(var(--color-primary-rgb, 1, 102, 204), 0.1);
+}
+.site-name {
+  box-shadow: 0 4px 20px rgba(var(--color-primary-rgb, 1, 102, 204), 0.1);
+  padding: 20px 30px 0;
+  background: #ffffff;
+}
+.site-name h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.5px;
+  color: var(--color-primary, #0166cc);
+}
+.divider-blue {
+  height: 3px;
+  background: #0166cc;
+  margin: 15px 30px 25px;
+}
+.email-header h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+  display: flex;
+  color: var(--color-primary, #0166cc);
+  gap: 8px;
+}
+.subtitle {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+.email-content {
+  padding: 0 30px 30px;
+  background: #ffffff;
+}
+.email-content p {
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+  color: #333;
+  font-size: 15px;
+}
+.article-info {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-left: 4px solid #0166cc;
+  border-radius: 6px;
+  padding: 20px;
+  border-left: 4px solid var(--color-primary, #0166cc);
+}
+.article-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+  color: var(--color-primary, #0166cc);
+}
+.article-link {
+  font-size: 13px;
+  color: #666;
+  text-decoration: none;
+  word-break: break-all;
+}
+.article-link:hover {
+  color: var(--color-primary, #0166cc);
+}
+.commenter-info {
+  color: var(--color-primary, #0166cc);
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 20px;
+  margin: 20px 0;
+}
+.commenter-info h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  color: var(--color-primary, #0166cc);
+}
+.info-grid {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 8px 15px;
+  align-items: center;
+}
+.info-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+.info-value {
+  font-size: 14px;
+  color: #333;
+  word-break: break-word;
+}
+.info-value a {
+  color: var(--color-primary, #0166cc);
+  text-decoration: none;
+}
+.info-value a:hover {
+  text-decoration: underline;
+}
+.comment-content-box {
+  background: #f8fafe;
+  border: 1px solid #e3f2fd;
+  border-left: 4px solid #0166cc;
+  border-radius: 6px;
+  padding: 20px;
+  border-left: 4px solid var(--color-primary, #0166cc);
+}
+.comment-content-box h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--color-primary, #0166cc);
+}
+.comment-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #333;
+  margin: 0;
+}
+.comment-text p {
+  margin: 0 0 10px 0;
+}
+.comment-text p:last-child {
+  margin-bottom: 0;
+}
+.reply-comment {
+  background: #fff8f0;
+  border: 1px solid #ffe4b3;
+  border-left: 4px solid #ff9500;
+}
+.reply-comment h4 {
+  color: #ff9500;
+}
+.divider {
+  height: 1px;
+  background: rgba(var(--color-primary-rgb, 1, 102, 204), 0.9);
+  margin: 25px 0;
+  border: none;
+}
+.btn-container {
+  text-align: center;
+  margin: 25px 0;
+}
+.btn-view {
+  display: inline-block;
+  padding: 12px 24px;
+  background: var(--color-primary, #0166cc);
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  margin: 5px 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+.btn-view:hover {
+  background: rgba(var(--color-primary-rgb, 1, 102, 204), 0.95);
+  color: white;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb, 1, 102, 204), 0.3);
+}
+.btn-secondary {
+  color: var(--color-primary, #0166cc);
+}
+.btn-secondary:hover {
+  background: #5a6268;
+}
+.btn-success {
+  background: #28a745;
+}
+.btn-success:hover {
+  background: #218838;
+}
+.email-footer {
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  padding: 20px 30px;
+  text-align: center;
+}
+.email-footer p {
+  margin: 6px 0;
+  font-size: 13px;
+  color: #666;
+}
+.footer-highlight {
+  color: var(--color-primary, #0166cc);
+  font-weight: 500;
+}
+.tip-box {
+  background: #e8f4fd;
+  border: 1px solid #bee5eb;
+  border-radius: 6px;
+  padding: 15px;
+  margin: 20px 0;
+  font-size: 14px;
+  color: #0c5460;
+}
+.timestamp {
+  font-size: 12px;
+  color: #999;
+  text-align: right;
+  margin-top: 10px;
+}
+@media only screen and (max-width: 680px) {
+  .email-wrapper {
+    margin: 0;
+  }
+  .site-name,
+  .email-header,
+  .email-content,
+  .email-footer {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .divider-blue {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .info-label {
+    font-weight: 600;
+    color: var(--color-primary, #0166cc);
+  }
+  .btn-view {
+    display: block;
+    margin: 8px 0;
+  }
+}
+
+/*--------------------------------------------------------------
+>>> 深色模式适配
+--------------------------------------------------------------*/
+
+/* 深色模式下，邮件通常在支持深色模式的邮件客户端中显示 */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a1a1a;
+    color: #e0e0e0;
+  }
+
+  .email-wrapper {
+    background: #2d2d2d;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .site-name,
+  .email-header,
+  .email-content {
+    background: #2d2d2d;
+  }
+
+  .site-name h3,
+  .email-header h2 {
+    color: #6bb6ff;
+  }
+
+  .subtitle,
+  .article-link,
+  .info-label,
+  .email-footer p {
+    color: #b0b0b0;
+  }
+
+  .email-content p,
+  .info-value,
+  .comment-text {
+    color: #e0e0e0;
+  }
+
+  .article-info {
+    background: #3a3a3a;
+    border-color: #4a4a4a;
+    border-left-color: #6bb6ff;
+  }
+
+  .article-title {
+    color: #6bb6ff;
+  }
+
+  .commenter-info {
+    background: #3a3a3a;
+    border-color: #4a4a4a;
+  }
+
+  .commenter-info h4 {
+    color: #6bb6ff;
+  }
+
+  .info-value a {
+    color: #6bb6ff;
+  }
+
+  .comment-content-box {
+    background: #353545;
+    border-color: #4a4a5a;
+    border-left-color: #6bb6ff;
+  }
+
+  .comment-content-box h4 {
+    color: #6bb6ff;
+  }
+
+  .reply-comment {
+    background: #4a3d2a;
+    border-color: #6b4423;
+    border-left-color: #ffa500;
+  }
+
+  .reply-comment h4 {
+    color: #ffa500;
+  }
+
+  .divider {
+    background: #4a4a4a;
+  }
+
+  .btn-view {
+    background: #6bb6ff;
+    color: #1a1a1a;
+  }
+
+  .btn-view:hover {
+    background: #5aa3e0;
+    color: #1a1a1a;
+  }
+
+  .btn-secondary {
+    background: #6c757d;
+  }
+
+  .btn-secondary:hover {
+    background: #5a6268;
+  }
+
+  .btn-success {
+    background: #28a745;
+  }
+
+  .btn-success:hover {
+    background: #218838;
+  }
+
+  .email-footer {
+    background: #3a3a3a;
+    border-top-color: #4a4a4a;
+  }
+
+  .footer-highlight {
+    color: #6bb6ff;
+  }
+
+  .tip-box {
+    background: #2a3a4a;
+    border-color: #3a4a5a;
+    color: #b0c0d0;
+  }
+
+  .timestamp {
+    color: #888;
+  }
+}
+
+/* 强制深色模式 - 使用data-theme属性 */
+[data-theme="dark"] body {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .email-wrapper {
+  background: #2d2d2d;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .site-name,
+[data-theme="dark"] .email-header,
+[data-theme="dark"] .email-content {
+  background: #2d2d2d;
+}
+
+[data-theme="dark"] .site-name h3,
+[data-theme="dark"] .email-header h2 {
+  color: #6bb6ff;
+}
+
+[data-theme="dark"] .subtitle,
+[data-theme="dark"] .article-link,
+[data-theme="dark"] .info-label,
+[data-theme="dark"] .email-footer p {
+  color: #b0b0b0;
+}
+
+[data-theme="dark"] .email-content p,
+[data-theme="dark"] .info-value,
+[data-theme="dark"] .comment-text {
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .article-info {
+  background: #3a3a3a;
+  border-color: #4a4a4a;
+  border-left-color: #6bb6ff;
+}
+
+[data-theme="dark"] .article-title {
+  color: #6bb6ff;
+}
+
+[data-theme="dark"] .commenter-info {
+  background: #3a3a3a;
+  border-color: #4a4a4a;
+}
+
+[data-theme="dark"] .commenter-info h4 {
+  color: #6bb6ff;
+}
+
+[data-theme="dark"] .info-value a {
+  color: #6bb6ff;
+}
+
+[data-theme="dark"] .comment-content-box {
+  background: #353545;
+  border-color: #4a4a5a;
+  border-left-color: #6bb6ff;
+}
+
+[data-theme="dark"] .comment-content-box h4 {
+  color: #6bb6ff;
+}
+
+[data-theme="dark"] .reply-comment {
+  background: #4a3d2a;
+  border-color: #6b4423;
+  border-left-color: #ffa500;
+}
+
+[data-theme="dark"] .reply-comment h4 {
+  color: #ffa500;
+}
+
+[data-theme="dark"] .divider {
+  background: #4a4a4a;
+}
+
+[data-theme="dark"] .btn-view {
+  background: #6bb6ff;
+  color: #1a1a1a;
+}
+
+[data-theme="dark"] .btn-view:hover {
+  background: #5aa3e0;
+  color: #1a1a1a;
+}
+
+[data-theme="dark"] .email-footer {
+  background: #3a3a3a;
+  border-top-color: #4a4a4a;
+}
+
+[data-theme="dark"] .footer-highlight {
+  color: #6bb6ff;
+}
+
+[data-theme="dark"] .tip-box {
+  background: #2a3a4a;
+  border-color: #3a4a5a;
+  color: #b0c0d0;
+}
+
+[data-theme="dark"] .timestamp {
+  color: #888;
+}

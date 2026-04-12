@@ -1,0 +1,15 @@
+{{ define "body_classes" }}page-default-single{{ end }}
+
+{{ define "main" }}
+<div class="intro">
+  <h1>{{ .Title }}{{ if site.Params.addDot }}<span class="dot">.</span>{{ end }}</h1>
+  
+  {{ with .Params.image }}
+  <img loading="lazy" decoding="async" src="{{ . | relURL }}" alt="{{ $.Title }}" />
+  {{ end }}
+</div>
+
+<div class="content">
+  {{ .Content }}
+</div>
+{{ end }}

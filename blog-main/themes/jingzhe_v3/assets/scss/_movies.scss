@@ -1,0 +1,157 @@
+.movie-grid {
+  display: grid;
+  gap: 15px 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  @include breakpoint("medium") {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.movie-card {
+  &.is-hidden {
+    display: none !important;
+  }
+  display: flex;
+  flex-direction: column;
+  gap: 8px; // 海报和下方文字的间距
+}
+
+.movie-poster-wrap {
+  display: block;
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 270 / 400;
+  position: relative;
+  will-change: transform, box-shadow;
+  // 骨架屏底色
+  background-color: var(--background-card-color);
+  @include dark {
+    background-color: var(--background-card-dark-color);
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+  }
+
+  // 悬浮遮罩层
+  .movie-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--theme-light);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 20px;
+    z-index: 3;
+    color: #fff;
+    @include dark {
+      background: var(--theme-dark);
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
+
+  .movie-comment {
+    font-size: 0.95rem;
+    line-height: 1.55;
+    text-align: justify;
+    text-align-last: left;
+    text-justify: inter-ideograph;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    flex-grow: 0;
+    overflow: hidden;
+  }
+
+  .movie-date {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    text-align: left;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      img {
+        transform: scale(1.08);
+      }
+      .movie-overlay {
+        opacity: 1;
+      }
+    }
+  }
+}
+
+// ✨ 新增：海报底部的标题与星星区域 ✨
+.movie-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 4px;
+  min-width: 0;
+}
+
+.movie-title {
+  font-size: 1rem;
+  color: var(--text-content-color);
+  line-height: 1.3;
+  text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.8;
+  @include dark {
+    color: var(--text-content-dark-color);
+  }
+  @include breakpoint("medium") {
+    font-size: 0.85rem;
+  }
+}
+
+.movie-stars {
+  display: flex;
+  gap: 2px;
+  color: #d1b58a;
+  @include dark {
+    color: #ba9f74;
+  }
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.movie-btn-more {
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-highlight-color);
+  border-radius: 50px;
+  padding: 10px 40px;
+  font-size: 0.9rem;
+  border: 1px solid var(--text-highlight-color);
+  margin-top: 20px;
+  margin-bottom: 15px;
+  display: block;
+  width: fit-content;
+  transition: all 0.3s ease;
+  &:hover {
+    opacity: 0.6;
+  }
+
+  @include dark {
+    color: var(--text-highlight-dark-color);
+    border-color: var(--text-highlight-dark-color);
+  }
+}
