@@ -1,9 +1,0 @@
-{{ $url := .Destination }}
-{{ $isInternal := or (strings.Contains $url "koobai.com") (strings.HasPrefix $url "/") (strings.HasPrefix $url "#") }}
-<a href="{{ $url | safeURL }}"
-    {{ if not $isInternal }} 
-        target="_blank" 
-        rel="noopener external nofollow noreferrer"
-    {{ end }}
->
-{{ .Text | safeHTML }}</a>

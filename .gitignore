@@ -2,6 +2,12 @@
 .DS_Store
 Thumbs.db
 
+# Claude/deployment config
+.claude/
+DEPLOY.md
+DEVELOPMENT.md
+deploy.sh
+
 # IDE
 .idea/
 .vscode/
@@ -46,3 +52,13 @@ redisdata/
 # Package locks (keep package-lock.json)
 yarn.lock
 pnpm-lock.yaml
+
+# Reference files (not part of the project)
+Lared/
+Westlife/
+LiMhy_v3.0_正式版/
+blog-main/
+global-ai-bridge/
+HeoMusic-main/
+wordpress-ai-assistant/
+xtools/
