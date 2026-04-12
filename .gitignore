@@ -29,8 +29,8 @@ dist/
 build/
 
 # Uploads
-utterlog-api/public/uploads/
-api/public/uploads/
+uploads/
+api/public/uploads
 
 # Go binary
 api/utterlog-go
