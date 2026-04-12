@@ -18,8 +18,9 @@ A modern, self-hosted blogging platform built with Go + Next.js. Features a them
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 16, React 19, Tailwind v4, TypeScript |
-| Backend | Go (Gin), PostgreSQL 17, Redis |
+| Frontend | Next.js 16, React 19.2, Tailwind v4, TypeScript 6.0 |
+| Backend | Go 1.26, PostgreSQL 17, Redis 8 |
+| Runtime | Node.js 25 |
 
 ## Project Structure
 
