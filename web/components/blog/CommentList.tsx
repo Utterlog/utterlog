@@ -5,29 +5,29 @@ import api from '@/lib/api';
 import CommentForm from './CommentForm';
 import { MessageSquare } from '@/components/icons';
 
+interface GeoInfo {
+  country_code: string;
+  country: string;
+  province: string;
+  city: string;
+}
+
 interface Comment {
   id: number;
   post_id: number;
   parent_id: number;
-  author_name: string;
-  author_email: string;
-  author_url?: string;
-  author_ip?: string;
-  author_agent?: string;
+  author: string;
+  email: string;
+  url?: string;
+  ip?: string;
+  user_agent?: string;
   content: string;
   status: string;
-  country?: string;
+  avatar_url?: string;
+  geo?: GeoInfo;
+  is_admin?: boolean;
   created_at: number;
   children?: Comment[];
-}
-
-// Simple MD5 hash for gravatar (DJB2 hash as hex, not real MD5 but works for avatar differentiation)
-function simpleHash(str: string): string {
-  let hash = 5381;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0xffffffff;
-  }
-  return Math.abs(hash).toString(16);
 }
 
 function relativeTime(ts: number): string {
@@ -67,14 +67,6 @@ function parseUA(ua?: string): { os: string; browser: string } {
   return { os, browser };
 }
 
-// Country code to name (common ones)
-const countryNames: Record<string, string> = {
-  CN: '中国', US: '美国', JP: '日本', KR: '韩国', GB: '英国', DE: '德国',
-  FR: '法国', CA: '加拿大', AU: '澳大利亚', SG: '新加坡', HK: '香港',
-  TW: '台湾', RU: '俄罗斯', IN: '印度', BR: '巴西', NL: '荷兰',
-  UZ: '乌兹别克斯坦', KZ: '哈萨克斯坦', TH: '泰国', VN: '越南',
-};
-
 function buildCommentTree(comments: Comment[]): Comment[] {
   const map = new Map<number, Comment>();
   const roots: Comment[] = [];
@@ -102,9 +94,7 @@ function CommentItem({ comment, postId, depth, onReplySuccess }: {
   onReplySuccess: () => void;
 }) {
   const [showReply, setShowReply] = useState(false);
-  const { os, browser } = parseUA(comment.author_agent);
-  const hash = simpleHash(comment.author_email || '');
-  const country = comment.country?.toLowerCase();
+  const { os, browser } = parseUA(comment.user_agent);
 
   return (
     <div style={{ marginLeft: depth > 0 ? '32px' : 0, marginTop: depth > 0 ? '16px' : 0 }}>
@@ -115,10 +105,10 @@ function CommentItem({ comment, postId, depth, onReplySuccess }: {
           background: 'var(--color-bg-soft)', overflow: 'hidden',
         }}>
           <img
-            src={`https://gravatar.bluecdn.com/avatar/${hash}?d=mp&s=80`}
+            src={comment.avatar_url || 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=80'}
             alt=""
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={e => { (e.target as HTMLImageElement).src = `https://gravatar.bluecdn.com/avatar/0?d=mp&s=80`; }}
+            onError={e => { (e.target as HTMLImageElement).src = 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=80'; }}
           />
         </div>
 
@@ -127,23 +117,28 @@ function CommentItem({ comment, postId, depth, onReplySuccess }: {
           {/* Header: name + meta */}
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
             {/* Name */}
-            {comment.author_url ? (
-              <a href={comment.author_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>
-                {comment.author_name}
+            {comment.url ? (
+              <a href={comment.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>
+                {comment.author}
               </a>
             ) : (
-              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-main)' }}>{comment.author_name}</span>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-main)' }}>{comment.author}</span>
+            )}
+            {comment.is_admin && (
+              <span style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '3px', background: 'var(--color-primary)', color: '#fff', fontWeight: 500 }}>博主</span>
             )}
 
-            {/* Country flag */}
-            {country && (
-              <img
-                src={`https://flagcdn.io/${country}.svg`}
-                alt={countryNames[country.toUpperCase()] || country}
-                title={countryNames[country.toUpperCase()] || country}
-                style={{ width: '16px', height: '12px', objectFit: 'cover', borderRadius: '1px' }}
-                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
+            {/* Country flag + city */}
+            {comment.geo?.country_code && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }} title={[comment.geo.country, comment.geo.province, comment.geo.city].filter(Boolean).join(' · ')}>
+                <img
+                  src={`https://flagcdn.io/${comment.geo.country_code}.svg`}
+                  alt=""
+                  style={{ width: '16px', height: '12px', objectFit: 'cover', borderRadius: '1px' }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>{comment.geo.city || comment.geo.province || comment.geo.country}</span>
+              </span>
             )}
 
             {/* Meta badges */}

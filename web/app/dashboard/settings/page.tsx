@@ -243,7 +243,6 @@ export default function SettingsPage() {
                     <textarea rows={2} className="input" {...register('site_description')} placeholder="一句话描述你的站点" />
                   </div>
                   <Input label="站点关键词" placeholder="博客,技术,生活" {...register('site_keywords')} />
-                  <Input label="管理员邮箱" type="email" {...register('admin_email')} />
                   <Input label="每页文章数" type="number" {...register('posts_per_page')} />
                 </div>
               </div>

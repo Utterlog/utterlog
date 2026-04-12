@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
+import { useAuthStore } from '@/lib/store';
 import toast from 'react-hot-toast';
 
 interface CommentFormProps {
@@ -13,24 +14,33 @@ interface CommentFormProps {
 }
 
 export default function CommentForm({ postId, parentId, onSuccess, onCancel, compact }: CommentFormProps) {
+  const { user, accessToken } = useAuthStore();
+  const isAdmin = !!accessToken && !!user;
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [url, setUrl] = useState('');
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Restore from localStorage
+  // Restore from localStorage or use admin info
   useEffect(() => {
-    const saved = localStorage.getItem('comment_user');
-    if (saved) {
-      try {
-        const d = JSON.parse(saved);
-        if (d.name) setName(d.name);
-        if (d.email) setEmail(d.email);
-        if (d.url) setUrl(d.url);
-      } catch {}
+    if (isAdmin && user) {
+      setName(user.nickname || user.username || '');
+      setEmail(user.email || '');
+      setUrl('');
+    } else {
+      const saved = localStorage.getItem('comment_user');
+      if (saved) {
+        try {
+          const d = JSON.parse(saved);
+          if (d.name) setName(d.name);
+          if (d.email) setEmail(d.email);
+          if (d.url) setUrl(d.url);
+        } catch {}
+      }
     }
-  }, []);
+  }, [isAdmin]);
 
   const handleSubmit = async () => {
     if (!name.trim()) { toast.error('请输入昵称'); return; }
@@ -42,9 +52,9 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
       await api.post('/comments', {
         post_id: postId,
         parent_id: parentId || 0,
-        author_name: name.trim(),
-        author_email: email.trim(),
-        author_url: url.trim() || undefined,
+        author: name.trim(),
+        email: email.trim(),
+        url: url.trim() || undefined,
         content: content.trim(),
       });
 
@@ -74,6 +84,18 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
       )}
 
       {/* User info row */}
+      {isAdmin ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '13px' }}>
+          <div style={{
+            width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+            background: 'var(--color-bg-soft)', overflow: 'hidden',
+          }}>
+            <img src={`https://gravatar.bluecdn.com/avatar/${avatarHash}?d=mp&s=64`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>{name}</span>
+          <span style={{ fontSize: '11px', padding: '1px 6px', borderRadius: '3px', background: 'var(--color-primary)', color: '#fff' }}>管理员</span>
+        </div>
+      ) : (
       <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
         {/* Avatar preview */}
         <div style={{
@@ -127,6 +149,7 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
           />
         </div>
       </div>
+      )}
 
       {/* Content */}
       <textarea

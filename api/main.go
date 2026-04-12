@@ -173,7 +173,12 @@ func main() {
 		authed.DELETE("/notifications/:id", handler.DeleteNotification)
 
 		// Profile
+		authed.GET("/profile", handler.GetProfile)
 		authed.PUT("/profile", handler.UpdateProfile)
+		authed.POST("/profile/send-code", handler.SendVerifyCode)
+
+		// Test email
+		authed.POST("/options/test-email", handler.TestEmail)
 
 		// Federation
 		authed.POST("/federation/token", handler.GenerateFederationToken)
@@ -217,7 +222,7 @@ func main() {
 
 
 		// Import
-		authed.POST("/import/wordpress", handler.ImportWordPress)
+		authed.POST("/import/wordpress", handler.ImportWordPressHandler)
 		authed.POST("/import/typecho", handler.ImportTypecho)
 
 		// ===================== AI =====================

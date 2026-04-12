@@ -119,6 +119,28 @@ export default function Header() {
         {/* Theme switcher */}
         <ThemeSwitcher />
 
+        {/* Home link */}
+        <a href="/" target="_blank" title="访问首页" className="relative p-2 text-sub btn-ghost" style={{ borderRadius: '1px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </a>
+
+        {/* Clear cache */}
+        <button
+          onClick={async () => {
+            try {
+              const res = await fetch('/api/revalidate', { method: 'POST' });
+              if (res.ok) {
+                window.location.reload();
+              }
+            } catch {}
+          }}
+          title="清除缓存"
+          className="relative p-2 text-sub btn-ghost"
+          style={{ borderRadius: '1px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </button>
+
         {/* Notifications */}
         <NotificationBell />
 

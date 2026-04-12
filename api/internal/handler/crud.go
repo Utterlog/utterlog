@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 	"utterlog-go/config"
+	"utterlog-go/internal/middleware"
 	"utterlog-go/internal/model"
 	"utterlog-go/internal/util"
 
@@ -66,6 +67,48 @@ func UpdateOptions(c *gin.Context) {
 			k, val, 0, 0)
 	}
 	util.Success(c, nil)
+}
+
+// Test email
+func TestEmail(c *gin.Context) {
+	smtpHost := model.GetOption("smtp_host")
+	if smtpHost == "" {
+		util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 SMTP 服务")
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	u, _ := model.UserByID(userID)
+	if u == nil {
+		util.Error(c, 404, "NOT_FOUND", "用户不存在")
+		return
+	}
+
+	cfg := util.EmailConfig{
+		Host:       smtpHost,
+		Port:       model.GetOption("smtp_port"),
+		User:       model.GetOption("smtp_user"),
+		Pass:       model.GetOption("smtp_pass"),
+		Encryption: model.GetOption("smtp_encryption"),
+		From:       model.GetOption("email_from"),
+		FromName:   model.GetOption("email_from_name"),
+	}
+
+	siteName := model.GetOption("site_title")
+	if siteName == "" { siteName = "Utterlog" }
+
+	body := fmt.Sprintf(`<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px;">
+		<h2>%s</h2>
+		<p>这是一封测试邮件，如果您收到了此邮件，说明邮件服务配置正确。</p>
+		<p style="color:#999;font-size:12px;">— %s</p>
+	</div>`, siteName+" 测试邮件", siteName)
+
+	if err := util.SendEmail(cfg, u.Email, siteName+" — 测试邮件", body); err != nil {
+		util.Error(c, 500, "EMAIL_SEND_FAILED", fmt.Sprintf("发送失败: %v", err))
+		return
+	}
+
+	util.Success(c, gin.H{"message": "测试邮件已发送到 " + u.Email})
 }
 
 // System status
@@ -304,8 +347,11 @@ func ListComments(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "20"))
 	status := c.Query("status")
-	comments, total, _ := model.CommentsList(page, perPage, status)
-	util.Paginate(c, comments, total, page, perPage)
+	search := c.Query("search")
+	postID, _ := strconv.Atoi(c.Query("post_id"))
+	userID, _ := strconv.Atoi(c.Query("user_id"))
+	comments, total, _ := model.CommentsList(page, perPage, status, search, postID, userID)
+	util.Paginate(c, model.FormatComments(comments), total, page, perPage)
 }
 
 func DeleteCommentHandler(c *gin.Context) {

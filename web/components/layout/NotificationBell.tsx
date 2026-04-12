@@ -58,8 +58,8 @@ export default function NotificationBell() {
   };
 
   return (
-    <div style={{ position: 'relative' }}>
-      <button onClick={handleOpen} className="relative p-2 text-sub btn-ghost" style={{ borderRadius: '1px' }}>
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      <button onClick={handleOpen} className="relative p-2 text-sub btn-ghost" style={{ borderRadius: '1px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
         <Bell size={18} />
         {unread > 0 && (
           <span style={{

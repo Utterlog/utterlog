@@ -9,6 +9,8 @@ interface User {
   nickname?: string;
   role: string;
   avatar?: string;
+  url?: string;
+  bio?: string;
 }
 
 interface AuthState {

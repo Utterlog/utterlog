@@ -98,7 +98,7 @@ export const tagsApi = {
 
 // Comments API
 export const commentsApi = {
-  list: (params?: { page?: number; limit?: number; status?: string; post_id?: number }) =>
+  list: (params?: { page?: number; per_page?: number; status?: string; post_id?: number; user_id?: number; search?: string }) =>
     api.get('/comments', { params }),
   update: (id: number, data: any) => api.put(`/comments/${id}`, data),
   delete: (id: number) => api.delete(`/comments/${id}`),

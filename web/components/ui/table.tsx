@@ -29,7 +29,7 @@ export function Table({ columns, data, keyField = 'id', loading, emptyText = 'æš
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table className="table">
+      <table className="table" style={{ width: '100%', tableLayout: 'fixed' }}>
         <thead>
           <tr>
             {columns.map((col) => (
@@ -38,11 +38,11 @@ export function Table({ columns, data, keyField = 'id', loading, emptyText = 'æš
           </tr>
         </thead>
         <tbody>
-          {data.map((row) => (
+          {data.map((row, rowIdx) => (
             <tr key={row[keyField]} className="hover:bg-soft" style={{ transition: 'background-color 0.1s' }}>
               {columns.map((col) => (
-                <td key={`${row[keyField]}-${col.key}`}>
-                  {col.render ? col.render(row) : row[col.key]}
+                <td key={`${row[keyField]}-${col.key}`} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                  {col.render ? col.render(row, col, rowIdx) : row[col.key]}
                 </td>
               ))}
             </tr>

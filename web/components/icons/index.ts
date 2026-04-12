@@ -43,6 +43,7 @@ export { Spinner } from './Spinner';
 export { Tags } from './Tags';
 export { Trash2 } from './Trash2';
 export { Upload } from './Upload';
+export { Wrench } from './Wrench';
 export { User } from './User';
 export { X } from './X';
 

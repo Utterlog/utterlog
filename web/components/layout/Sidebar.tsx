@@ -9,7 +9,7 @@ import {
   MessageSquare, LinkIcon, Settings, ImageIcon,
   ChevronLeft, ChevronRight, Shield, Sparkles,
   Pen, MusicNote, Film, BookOpen, ShoppingBag, Globe,
-  Eye, TrendingUp, Package, Copy, Database, Search,
+  Eye, TrendingUp, Package, Copy, Database, Search, Wrench,
 } from '@/components/icons';
 import { useSidebarStore } from '@/lib/store';
 import SystemStatusPanel from './SystemStatusPanel';
@@ -31,6 +31,7 @@ const menuItems = [
   { href: '/dashboard/themes', icon: Eye, label: '主题' },
   { href: '/dashboard/plugins', icon: Package, label: '插件' },
   { href: '/dashboard/backup', icon: Database, label: '备份' },
+  { href: '/dashboard/tools', icon: Wrench, label: '工具' },
   { href: '/dashboard/settings', icon: Settings, label: '系统设置' },
 ];
 
