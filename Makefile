@@ -6,7 +6,8 @@
 help:
 	@echo "Utterlog deployment targets:"
 	@echo ""
-	@echo "  make deploy              — one-command deploy (auto-generate .env with crypto-strong secrets)"
+	@echo "  make deploy              — for VPS with existing nginx/1Panel/caddy (binds 127.0.0.1 only)"
+	@echo "  make deploy-tls          — for bare VPS: bundled Caddy auto-TLS (needs DOMAIN=your.site)"
 	@echo "  make deploy-interactive  — prompt for DB_PASSWORD / JWT_SECRET (press Enter to auto-gen)"
 	@echo "  make deploy-fast         — redeploy without rebuilding images"
 	@echo "  make logs            — tail all container logs"
@@ -28,6 +29,10 @@ deploy:
 .PHONY: deploy-interactive
 deploy-interactive:
 	@bash scripts/deploy.sh --interactive
+
+.PHONY: deploy-tls
+deploy-tls:
+	@bash scripts/deploy.sh --tls
 
 .PHONY: deploy-fast
 deploy-fast:

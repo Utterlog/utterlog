@@ -58,10 +58,14 @@ rand_str() {
 
 GENERATED=0
 INTERACTIVE=0
+TLS_MODE=0
+NO_BUILD=0
 # Parse flags
 for arg in "$@"; do
   case "$arg" in
     --interactive|-i) INTERACTIVE=1 ;;
+    --tls)            TLS_MODE=1 ;;
+    --no-build)       NO_BUILD=1 ;;
   esac
 done
 
@@ -141,11 +145,43 @@ else
 fi
 
 # ============================================================
+# Step 3b: TLS mode — prompt for / validate domain
+# ============================================================
+if [ "$TLS_MODE" -eq 1 ]; then
+  if [ -z "${DOMAIN:-}" ]; then
+    if [ -t 0 ]; then
+      echo
+      log "TLS mode enabled. Caddy will auto-acquire a Let's Encrypt certificate."
+      printf "  Enter your domain (e.g. blog.example.com): "
+      read -r DOMAIN
+    fi
+    if [ -z "${DOMAIN:-}" ]; then
+      err "DOMAIN is required in TLS mode. Re-run:"
+      err "  DOMAIN=blog.example.com make deploy-tls"
+      exit 1
+    fi
+  fi
+  # Persist DOMAIN to .env for later `make` commands
+  if grep -q "^DOMAIN=" .env 2>/dev/null; then
+    sed -i.bak "s|^DOMAIN=.*|DOMAIN=$DOMAIN|" .env && rm -f .env.bak
+  else
+    echo "DOMAIN=$DOMAIN" >> .env
+  fi
+  export DOMAIN
+  # Also set APP_URL to the public https URL so Go serves correct absolute links
+  if grep -q "^APP_URL=" .env; then
+    sed -i.bak "s|^APP_URL=.*|APP_URL=https://$DOMAIN|" .env && rm -f .env.bak
+  fi
+  export COMPOSE_PROFILES=tls
+  ok "TLS mode: $DOMAIN"
+fi
+
+# ============================================================
 # Step 4: build & start containers
 # ============================================================
 COMPOSE="docker compose -f docker-compose.prod.yml"
 
-if [ "${1:-}" = "--no-build" ]; then
+if [ "$NO_BUILD" -eq 1 ]; then
   log "Starting containers (no rebuild) ..."
   $COMPOSE up -d
 else
@@ -178,24 +214,48 @@ fi
 # ============================================================
 # Step 6: print access details
 # ============================================================
-cat <<EOF
+if [ "$TLS_MODE" -eq 1 ]; then
+  cat <<EOF
+
+${C_GREEN}${C_BOLD}============================================================${C_RESET}
+${C_GREEN}${C_BOLD}  Utterlog is live at https://$DOMAIN ${C_RESET}
+${C_GREEN}${C_BOLD}============================================================${C_RESET}
+
+  ${C_BOLD}Caddy is obtaining Let's Encrypt cert in the background.${C_RESET}
+  First visit may take 5-30 seconds while the cert is issued.
+
+  ${C_BOLD}Check cert status:${C_RESET}
+    $COMPOSE logs caddy | grep -i "certificate obtained\|error"
+
+  ${C_BOLD}Next:${C_RESET}
+    Open https://$DOMAIN  →  /install wizard creates the admin user
+
+EOF
+else
+  cat <<EOF
 
 ${C_GREEN}${C_BOLD}============================================================${C_RESET}
 ${C_GREEN}${C_BOLD}  Utterlog is ready!${C_RESET}
 ${C_GREEN}${C_BOLD}============================================================${C_RESET}
 
   ${C_BOLD}Access URL:${C_RESET}
-    http://127.0.0.1:$UTTERLOG_PORT
+    http://127.0.0.1:$UTTERLOG_PORT  (loopback only, not public)
 
-  ${C_BOLD}Next step:${C_RESET}
-    1. Point your nginx / caddy at 127.0.0.1:$UTTERLOG_PORT
-       (see deploy/nginx.conf.example or deploy/Caddyfile.example)
-    2. Or SSH tunnel for local check:
-         ssh -L 9527:127.0.0.1:$UTTERLOG_PORT your-vps
-       then open http://localhost:9527
-    3. Browser → /install wizard creates the admin user
+  ${C_BOLD}Point your reverse proxy at 127.0.0.1:$UTTERLOG_PORT${C_RESET}
+
+  ${C_BOLD}Quick setup by tool:${C_RESET}
+    • 1Panel / 宝塔 / AAPanel → see deploy/1panel.md
+    • nginx (your own)        → see deploy/nginx.conf.example
+    • Caddy (your own)        → see deploy/Caddyfile.example
+    • No reverse proxy yet?   → re-run: DOMAIN=your.site make deploy-tls
+                                 (bundled Caddy takes 80/443)
+
+  ${C_BOLD}SSH tunnel to test locally (before domain setup):${C_RESET}
+    ssh -L 9527:127.0.0.1:$UTTERLOG_PORT your-vps
+    # then open http://localhost:9527 in your local browser
 
 EOF
+fi
 
 if [ "$GENERATED" -eq 1 ]; then
   cat <<EOF

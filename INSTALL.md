@@ -45,16 +45,41 @@ make deploy    # 检测到 .env 已存在，不会覆盖
 
 脚本统一做：找空闲端口（9527 被占则顺延）→ 构建镜像 → 启动容器 → 健康检查 → 打印访问地址和反代提示。首次约 3-5 分钟。
 
-### 部署后做什么
+### 部署后做什么（按你的 VPS 情况选一条）
 
-1. **验证**：`curl http://127.0.0.1:9527` 应返回 HTML（/install 向导）
-2. **配置反代**：编辑 `deploy/nginx.conf.example` 或 `deploy/Caddyfile.example`，替换域名和端口，丢到你的 nginx/caddy 配置里 reload
-3. **SSH 隧道试访问**（如果先不想配反代）：
-   ```bash
-   ssh -L 9527:127.0.0.1:9527 your-vps
-   # 本地浏览器打开 http://localhost:9527
-   ```
-4. **浏览器打开你的域名** → 跳转 `/install` 向导 → 创建管理员 → 填站点信息 → 完成
+| 你的情况 | 做什么 |
+|---|---|
+| **用 1Panel / 宝塔 / AAPanel** | 看 [deploy/1panel.md](deploy/1panel.md) —— GUI 两栏填完搞定 |
+| **已有自己的 nginx** | 复制 `deploy/nginx.conf.example` 片段，改域名和端口，reload |
+| **已有自己的 caddy** | 复制 `deploy/Caddyfile.example` 片段 |
+| **纯净 VPS，啥都没有** | **别用 `make deploy`**，用 `DOMAIN=你.域名 make deploy-tls`（自带 Caddy，自动 TLS） |
+
+最后：浏览器打开你的域名（或 `http://localhost:9527` 经 SSH 隧道）→ 跳转 `/install` 向导 → 创建管理员 → 填站点信息 → 完成。
+
+---
+
+## 场景 C：纯净 VPS + 自动 TLS（零配置）
+
+如果 VPS 上什么反代都没装：
+
+```bash
+git clone https://github.com/Utterlog/utterlog.git && cd utterlog
+
+# 一行命令：带域名 + 启用内置 Caddy
+DOMAIN=blog.yoursite.com make deploy-tls
+```
+
+`make deploy-tls` 额外做的事：
+1. 启动一个 Caddy 容器占 80/443
+2. Caddy 自动向 Let's Encrypt 申请证书
+3. 自动续签
+4. 内部反代到 `api:8080`（docker 网络内），不占用 `UTTERLOG_PORT`
+
+**前提**：
+- 域名 A 记录已解析到 VPS IP
+- VPS 的 80/443 没有其他服务占用（因为要给 Caddy 用）
+
+第一次访问 `https://blog.yoursite.com` 会等 5-30 秒（ACME challenge），之后正常。
 
 ## 架构
 

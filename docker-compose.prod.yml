@@ -104,7 +104,34 @@ services:
       # over the docker network, not through reverse proxy (faster, no loop).
       - INTERNAL_API_URL=http://api:8080/api/v1
 
+  # ============================================================
+  # Optional: bundled Caddy for users without existing reverse proxy
+  # ------------------------------------------------------------
+  # Enable by running:  DOMAIN=blog.example.com make deploy-tls
+  # Takes ports 80/443 directly, auto-acquires Let's Encrypt cert.
+  # Do NOT use this if you already have nginx/1Panel/caddy — it'll conflict.
+  # ============================================================
+  caddy:
+    profiles: [tls]
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    environment:
+      - DOMAIN=${DOMAIN:?DOMAIN is required in tls mode — set DOMAIN=yoursite.com}
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
 volumes:
   pgdata:
   redisdata:
   uploads:
+  caddy_data:
+  caddy_config:

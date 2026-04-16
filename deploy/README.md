@@ -1,19 +1,50 @@
-# 反向代理配置示例
+# 反向代理配置
 
-Utterlog 生产部署（`make deploy`）会把服务绑在 `127.0.0.1:9527`（或自动检测到的其他端口），**不占用** `80/443`。
+Utterlog 默认绑 `127.0.0.1:9527`（或自动检测到的端口），不占 80/443。按你的情况选：
 
-你需要用自己的 nginx 或 Caddy 把公网域名反代过去。以下是现成配置。
+## 有 1Panel / 宝塔 / AAPanel → [1panel.md](1panel.md)
+GUI 填两栏，自动 SSL。最省事。
 
-## 文件一览
+## 有自己的 nginx → [nginx.conf.example](nginx.conf.example)
+复制片段，改域名和端口，reload。
 
-| 文件 | 适用 |
-|---|---|
-| `nginx.conf.example` | nginx + 已有 TLS 证书（certbot/acme.sh） |
-| `Caddyfile.example` | Caddy v2 + 自动 TLS |
+## 有自己的 Caddy → [Caddyfile.example](Caddyfile.example)
+追加到 Caddyfile，reload。自动 TLS。
 
-## 关键点
+## 啥都没有 → 用内置 Caddy（零配置 TLS）
+```bash
+DOMAIN=blog.yoursite.com make deploy-tls
+```
+见根目录 `INSTALL.md` 场景 C。
 
-- **单端口**：只需反代一个端口到 `127.0.0.1:9527`，无需分别处理 `/api` 和 `/admin`。Go 后端内部已经把请求分发给 admin SPA 和 Next.js 博客。
-- **WebSocket / SSE**：AI 流式输出、在线用户推送用 SSE，确保 nginx 配 `proxy_http_version 1.1` 和 `Connection upgrade`。
-- **缓存**：`/_next/static/*` 和 `/admin/assets/*` 都是 hash 化 immutable 资源，可以缓存 1 年。
-- **上传大小**：默认 100MB，按需调整。
+---
+
+## 单端口架构说明
+
+Go API 是唯一外部入口，内部分发：
+- `/admin/*` → 嵌入的 Vite SPA
+- `/api/v1/*` → Go handlers
+- `/uploads/*` → 本地文件
+- `/themes/*` → 主题预览资源
+- 其他 → 内部反代到 Next.js 博客容器
+
+反代配置只需指向一个端口（`127.0.0.1:9527`），无需分路径处理。
+
+### 必需的 HTTP 头传递
+
+```
+X-Real-IP         → 访客真实 IP（地理位置统计、防刷）
+X-Forwarded-For   → 多层代理链
+X-Forwarded-Proto → http/https（Go 生成绝对链接用）
+X-Forwarded-Host  → 原始域名
+Upgrade/Connection → WebSocket / SSE（AI 流式输出必需）
+```
+
+各样例文件都配好了，直接用即可。
+
+### 可缓存资源（长期）
+
+- `/_next/static/*` — Next.js hash 化 chunk
+- `/admin/assets/*` — Vite hash 化 chunk
+
+这两个路径都是 content-addressed，可以 `max-age=31536000, immutable`。
