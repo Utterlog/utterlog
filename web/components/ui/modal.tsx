@@ -1,6 +1,5 @@
 'use client';
 
-import { X } from '@/components/icons';
 import { useEffect } from 'react';
 
 interface ModalProps {
@@ -18,11 +17,14 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     if (isOpen) {
       document.addEventListener('keydown', handleEsc);
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
     }
     return () => {
       document.removeEventListener('keydown', handleEsc);
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     };
   }, [isOpen, onClose]);
 
@@ -44,7 +46,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           }}>
             <h3 className="text-main" style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>{title}</h3>
             <button onClick={onClose} className="btn-ghost" style={{ padding: '4px', borderRadius: '1px', border: 'none', cursor: 'pointer' }}>
-              <X size={18} className="text-dim" />
+              <i className="fa-solid fa-xmark text-dim" style={{ fontSize: '16px' }} />
             </button>
           </div>
         )}

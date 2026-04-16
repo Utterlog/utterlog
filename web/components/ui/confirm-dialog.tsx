@@ -2,7 +2,6 @@
 
 import { Modal } from './modal';
 import { Button } from './button';
-import { AlertTriangle } from '@/components/icons';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -26,7 +25,7 @@ export function ConfirmDialog({
           width: '48px', height: '48px', margin: '0 auto', borderRadius: '50%',
           backgroundColor: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <AlertTriangle size={24} style={{ color: '#dc2626' }} />
+          <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '24px', color: '#dc2626' }} />
         </div>
         <h3 className="text-main" style={{ fontSize: '16px', fontWeight: 600, marginTop: '16px' }}>{title}</h3>
         <p className="text-sub" style={{ fontSize: '14px', marginTop: '8px' }}>{message}</p>

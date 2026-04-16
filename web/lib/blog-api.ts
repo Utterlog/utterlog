@@ -3,16 +3,18 @@
  * 用于 Server Components 获取数据
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+const API_BASE = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
-async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
+async function fetchAPI<T>(path: string, options?: any): Promise<T> {
+  // 默认不缓存（view_count/comment_count 实时变化），静态数据单独指定 next.revalidate
+  const hasCache = options?.next || options?.cache;
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
     },
-    next: { revalidate: 60 }, // 默认 60 秒缓存
+    ...(hasCache ? {} : { cache: 'no-store' as const }),
   });
 
   if (!res.ok) {
@@ -59,7 +61,7 @@ export async function getPostComments(postId: number) {
 
 // 分类列表
 export async function getCategories() {
-  return fetchAPI<any>('/categories');
+  return fetchAPI<any>('/categories', { next: { revalidate: 300 } });
 }
 
 // 分类详情
@@ -69,7 +71,7 @@ export async function getCategory(id: number) {
 
 // 标签列表
 export async function getTags() {
-  return fetchAPI<any>('/tags');
+  return fetchAPI<any>('/tags', { next: { revalidate: 300 } });
 }
 
 // 标签详情
@@ -79,12 +81,12 @@ export async function getTag(id: number) {
 
 // 友链列表
 export async function getLinks() {
-  return fetchAPI<any>('/links');
+  return fetchAPI<any>('/links', { next: { revalidate: 300 } });
 }
 
 // 站点配置
 export async function getOptions() {
-  return fetchAPI<any>('/options');
+  return fetchAPI<any>('/options', { next: { revalidate: 10 } });
 }
 
 // 说说
@@ -123,14 +125,24 @@ export async function getBooks(params?: { page?: number; per_page?: number }) {
   return fetchAPI<any>(`/books${q ? `?${q}` : ''}`);
 }
 
+// 归档统计
+export async function getArchiveStats() {
+  return fetchAPI<any>('/archive/stats', { next: { revalidate: 120 } });
+}
+
+// 搜索
+export async function searchPosts(q: string, limit = 10) {
+  return fetchAPI<any>(`/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+}
+
 // 当前活跃主题
 export async function getActiveTheme(): Promise<string> {
   try {
     const res = await fetchAPI<any>('/options');
     const data = res.data || res;
-    return data.active_theme || 'Utterlog2026';
+    return data.active_theme || '2026';
   } catch {
-    return 'Utterlog2026';
+    return '2026';
   }
 }
 
@@ -141,4 +153,13 @@ export async function getGoods(params?: { page?: number; per_page?: number }) {
   if (params?.per_page) sp.set('per_page', String(params.per_page));
   const q = sp.toString();
   return fetchAPI<any>(`/goods${q ? `?${q}` : ''}`);
+}
+
+// 游戏
+export async function getGames(params?: { page?: number; per_page?: number }) {
+  const sp = new URLSearchParams();
+  if (params?.page) sp.set('page', String(params.page));
+  if (params?.per_page) sp.set('per_page', String(params.per_page));
+  const q = sp.toString();
+  return fetchAPI<any>(`/games${q ? `?${q}` : ''}`);
 }

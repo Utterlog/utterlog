@@ -55,20 +55,30 @@ utterlog/
 └── uploads/                 # Shared upload directory
 ```
 
-## Getting Started
+## Quick Install (Docker)
+
+```bash
+git clone https://github.com/<you>/utterlog.git
+cd utterlog
+cp .env.example .env          # edit DB_PASSWORD and JWT_SECRET
+docker compose up -d
+```
+
+Open **http://localhost:3000** — you'll be auto-redirected to `/install` for a 3-step wizard (admin → site info → done). Postgres creates the DB, the API auto-loads `api/schema.sql` on first boot.
+
+See [INSTALL.md](./INSTALL.md) for bare-metal install, troubleshooting, and schema regeneration.
+
+## Manual (no Docker)
 
 ### Prerequisites
-
-- Go 1.21+
-- Node.js 18+
-- PostgreSQL 17
-- Redis (optional)
+- Go 1.21+ · Node.js 18+ · PostgreSQL 15+ · Redis (optional)
 
 ### Backend
 
 ```bash
 cd api
 cp .env.example .env     # Edit database credentials
+psql -U <user> -d utterlog < schema.sql
 go run main.go           # http://localhost:8080
 ```
 

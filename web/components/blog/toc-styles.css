@@ -1,0 +1,81 @@
+/* TOC 目录插件样式 — 插件自带 */
+
+.blog-toc-outer {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 32px);
+  width: 200px;
+  height: 100%;
+  padding-top: 6rem;
+}
+.blog-toc {
+  border-left: 1px solid var(--color-border);
+  padding-left: 0;
+}
+.blog-toc-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 10px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-sub);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.blog-toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.blog-toc-item {
+  display: block;
+  padding: 5px 12px 5px 16px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--color-text-dim);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  margin-left: -1px;
+  transition: color 0.15s, border-color 0.15s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.blog-toc-item:hover {
+  color: var(--color-text-main);
+}
+.blog-toc-item.active {
+  color: var(--color-primary);
+  border-left-color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* Curtain-style expand animation */
+@keyframes tocCurtainIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.blog-toc-header {
+  animation: tocCurtainIn 0.3s ease-out both;
+}
+.blog-toc-list li {
+  animation: tocCurtainIn 0.3s ease-out both;
+}
+.blog-toc-list li:nth-child(1) { animation-delay: 0.05s; }
+.blog-toc-list li:nth-child(2) { animation-delay: 0.08s; }
+.blog-toc-list li:nth-child(3) { animation-delay: 0.11s; }
+.blog-toc-list li:nth-child(4) { animation-delay: 0.14s; }
+.blog-toc-list li:nth-child(5) { animation-delay: 0.17s; }
+.blog-toc-list li:nth-child(6) { animation-delay: 0.20s; }
+.blog-toc-list li:nth-child(7) { animation-delay: 0.23s; }
+.blog-toc-list li:nth-child(8) { animation-delay: 0.26s; }
+.blog-toc-list li:nth-child(9) { animation-delay: 0.29s; }
+.blog-toc-list li:nth-child(10) { animation-delay: 0.32s; }
+.blog-toc-list li:nth-child(n+11) { animation-delay: 0.35s; }

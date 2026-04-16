@@ -1,6 +1,5 @@
 'use client';
 
-import { Package } from '@/components/icons';
 import { Button } from './button';
 
 interface EmptyStateProps {
@@ -19,7 +18,7 @@ export function EmptyState({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px' }}>
       <div className="bg-soft" style={{ width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-        <Package size={28} className="text-dim" />
+        <i className="fa-regular fa-box-open text-dim" style={{ fontSize: '28px' }} />
       </div>
       <h3 className="text-main" style={{ fontSize: '16px', fontWeight: 500, marginBottom: '4px' }}>{title}</h3>
       <p className="text-dim" style={{ fontSize: '14px', marginBottom: '16px' }}>{description}</p>

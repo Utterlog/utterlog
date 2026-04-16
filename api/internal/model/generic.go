@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"time"
 	"utterlog-go/config"
 )
 
@@ -96,15 +97,33 @@ type Good struct {
 }
 
 type Media struct {
-	ID        int    `db:"id" json:"id"`
-	Name      string `db:"name" json:"name"`
-	Filename  string `db:"filename" json:"filename"`
-	URL       string `db:"url" json:"url"`
-	MimeType  string `db:"mime_type" json:"mime_type"`
-	Size      int64  `db:"size" json:"size"`
-	Driver    string `db:"driver" json:"driver"`
-	Category  string `db:"category" json:"category"`
-	CreatedAt int64  `db:"created_at" json:"created_at"`
+	ID         int    `db:"id" json:"id"`
+	Name       string `db:"name" json:"name"`
+	Filename   string `db:"filename" json:"filename"`
+	URL        string `db:"url" json:"url"`
+	MimeType   string `db:"mime_type" json:"mime_type"`
+	Size       int64  `db:"size" json:"size"`
+	Driver     string `db:"driver" json:"driver"`
+	Category   string `db:"category" json:"category"`
+	AlbumID    int    `db:"album_id" json:"album_id"`
+	SourceType string `db:"source_type" json:"source_type"`
+	SourceID   int    `db:"source_id" json:"source_id"`
+	ExifData   string `db:"exif_data" json:"exif_data,omitempty"`
+	CreatedAt  int64  `db:"created_at" json:"created_at"`
+}
+
+type Album struct {
+	ID          int    `db:"id" json:"id"`
+	Title       string `db:"title" json:"title"`
+	Slug        string `db:"slug" json:"slug"`
+	Description string `db:"description" json:"description"`
+	CoverURL    string `db:"cover_url" json:"cover_url"`
+	Status      string `db:"status" json:"status"`
+	SortOrder   int    `db:"sort_order" json:"sort_order"`
+	PhotoCount  int    `db:"photo_count" json:"photo_count"`
+	AuthorID    int    `db:"author_id" json:"author_id"`
+	CreatedAt   int64  `db:"created_at" json:"created_at"`
+	UpdatedAt   int64  `db:"updated_at" json:"updated_at"`
 }
 
 type Option struct {
@@ -156,6 +175,7 @@ type AIProvider struct {
 	IsActive    bool    `db:"is_active" json:"is_active"`
 	IsDefault   bool    `db:"is_default" json:"is_default"`
 	SortOrder   int     `db:"sort_order" json:"sort_order"`
+	Extra       *string `db:"extra" json:"extra,omitempty"`
 	CreatedAt   int64   `db:"created_at" json:"created_at"`
 	UpdatedAt   int64   `db:"updated_at" json:"updated_at"`
 }
@@ -164,6 +184,7 @@ type AIConversation struct {
 	ID           int    `db:"id" json:"id"`
 	UserID       int    `db:"user_id" json:"user_id"`
 	Title        string `db:"title" json:"title"`
+	ProviderID   *int   `db:"provider_id" json:"provider_id,omitempty"`
 	MessageCount int    `db:"message_count" json:"message_count"`
 	TotalTokens  int    `db:"total_tokens" json:"total_tokens"`
 	CreatedAt    int64  `db:"created_at" json:"created_at"`
@@ -204,4 +225,13 @@ func GetOption(name string) string {
 	var val string
 	config.DB.Get(&val, "SELECT value FROM "+config.T("options")+" WHERE name = $1", name)
 	return val
+}
+
+func SetOption(name, value string) {
+	t := config.T("options")
+	result, _ := config.DB.Exec("UPDATE "+t+" SET value = $1 WHERE name = $2", value, name)
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		config.DB.Exec("INSERT INTO "+t+" (name, value, autoload, created_at, updated_at) VALUES ($1,$2,true,$3,$4)",
+			name, value, time.Now().Unix(), time.Now().Unix())
+	}
 }

@@ -1,0 +1,20 @@
+{
+  "name": "Flux",
+  "version": "1.0.0",
+  "description": "极简金融科技风 · 单一绿色强调 · 大量留白 · 受 Stripe Link 启发",
+  "author": "Utterlog Team",
+  "screenshot": "screenshot.png",
+  "colors": {
+    "primary": "#00C767",
+    "background": "#FFFFFF"
+  },
+  "layout": {
+    "maxWidth": "1440px",
+    "headerStyle": "flat"
+  },
+  "menuPositions": [
+    { "key": "header", "label": "顶部导航", "description": "顶部 Header 的导航链接" },
+    { "key": "footer", "label": "底部导航", "description": "Footer 的辅助链接" }
+  ],
+  "features": ["search", "darkMode"]
+}

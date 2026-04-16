@@ -56,3 +56,7 @@ export { ShoppingBag } from './ShoppingBag';
 export { Star } from './Star';
 export { MapPin } from './MapPin';
 export { Play } from './Play';
+
+// Network
+export { Network } from './Network';
+export { Palette } from './Palette';

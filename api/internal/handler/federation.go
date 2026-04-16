@@ -35,7 +35,7 @@ func GenerateFederationToken(c *gin.Context) {
 		"username": user.Username,
 		"nickname": user.NicknameStr(),
 		"email":    user.Email,
-		"avatar":   user.Avatar,
+		"avatar":   user.AvatarURL(),
 		"site":     config.C.AppURL,
 		"iat":      time.Now().Unix(),
 		"exp":      time.Now().Add(24 * time.Hour).Unix(),
@@ -51,7 +51,7 @@ func GenerateFederationToken(c *gin.Context) {
 		"token": signed,
 		"user": gin.H{
 			"id": user.ID, "username": user.Username, "nickname": user.NicknameStr(),
-			"email": user.Email, "avatar": user.Avatar, "site": config.C.AppURL,
+			"email": user.Email, "avatar": user.AvatarURL(), "site": config.C.AppURL,
 		},
 	})
 }
@@ -148,7 +148,7 @@ func FollowSite(c *gin.Context) {
 	followReq := gin.H{
 		"follower_site": config.C.AppURL,
 		"follower_name": user.NicknameStr(),
-		"follower_avatar": user.Avatar,
+		"follower_avatar": user.AvatarURL(),
 		"follower_url":  config.C.AppURL,
 	}
 	http.Post(req.SiteURL+"/api/v1/federation/follow", "application/json", jsonReader(followReq))

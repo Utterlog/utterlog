@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
-import { Menu, X } from '@/components/icons';
+import { useState, useEffect } from 'react';
 
-const navItems = [
+const API = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+
+const defaultNavItems = [
   { href: '/', label: '首页' },
   { href: '/moments', label: '说说' },
   { href: '/music', label: '音乐' },
@@ -18,6 +19,19 @@ const navItems = [
 
 export default function BlogHeader() {
   const pathname = usePathname();
+  const [navItems, setNavItems] = useState(defaultNavItems);
+
+  useEffect(() => {
+    fetch(`${API}/options`).then(r => r.json()).then(r => {
+      const data = r.data || r;
+      if (data.menu_header || data.menu_items) {
+        try {
+          const items = typeof data.menu_header || data.menu_items === 'string' ? JSON.parse(data.menu_header || data.menu_items) : data.menu_header || data.menu_items;
+          if (Array.isArray(items) && items.length > 0) setNavItems(items);
+        } catch {}
+      }
+    }).catch(() => {});
+  }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (href: string) => {
@@ -60,7 +74,7 @@ export default function BlogHeader() {
             className="md:hidden p-2 text-sub hover:text-main"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileMenuOpen ? <i className="fa-solid fa-xmark" style={{ fontSize: '20px' }} /> : <i className="fa-solid fa-bars" style={{ fontSize: '20px' }} />}
           </button>
         </div>
 

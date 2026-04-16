@@ -35,7 +35,7 @@ export default async function PostPage({ params }: PostPageProps) {
 
   if (!post) notFound();
 
-  let themeName = 'Utterlog2026';
+  let themeName = '2026';
   try { themeName = await getActiveTheme(); } catch {}
 
   const theme = getThemeComponents(themeName);

@@ -7,15 +7,21 @@ import (
 
 // Meta represents both categories and tags (type field distinguishes)
 type Meta struct {
-	ID          int     `db:"id" json:"id"`
-	Name        string  `db:"name" json:"name"`
-	Slug        string  `db:"slug" json:"slug"`
-	Type        string  `db:"type" json:"type"`
-	Description *string `db:"description" json:"description,omitempty"`
-	ParentID    *int    `db:"parent_id" json:"parent_id,omitempty"`
-	Count       int     `db:"count" json:"count"`
-	CreatedAt   int64   `db:"created_at" json:"created_at"`
-	UpdatedAt   int64   `db:"updated_at" json:"updated_at"`
+	ID             int     `db:"id" json:"id"`
+	Name           string  `db:"name" json:"name"`
+	Slug           string  `db:"slug" json:"slug"`
+	Type           string  `db:"type" json:"type"`
+	Icon           *string `db:"icon" json:"icon,omitempty"`
+	Color          *string `db:"color" json:"color,omitempty"`
+	Description    *string `db:"description" json:"description,omitempty"`
+	ParentID       *int    `db:"parent_id" json:"parent_id,omitempty"`
+	Count          int     `db:"count" json:"count"`
+	OrderNum       int     `db:"order_num" json:"order_num"`
+	SeoTitle       *string `db:"seo_title" json:"seo_title,omitempty"`
+	SeoDescription *string `db:"seo_description" json:"seo_description,omitempty"`
+	SeoKeywords    *string `db:"seo_keywords" json:"seo_keywords,omitempty"`
+	CreatedAt      int64   `db:"created_at" json:"created_at"`
+	UpdatedAt      int64   `db:"updated_at" json:"updated_at"`
 }
 
 func MetasByType(typ string) ([]Meta, error) {
@@ -42,18 +48,18 @@ func MetaBySlugAndType(slug, typ string) (*Meta, error) {
 func CreateMeta(m *Meta) (int, error) {
 	var id int
 	err := config.DB.QueryRow(fmt.Sprintf(
-		"INSERT INTO %s (name, slug, type, description, parent_id, count, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",
+		"INSERT INTO %s (name, slug, type, icon, description, parent_id, count, seo_keywords, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id",
 		config.T("metas")),
-		m.Name, m.Slug, m.Type, m.Description, m.ParentID, 0, m.CreatedAt, m.UpdatedAt,
+		m.Name, m.Slug, m.Type, m.Icon, m.Description, m.ParentID, 0, m.SeoKeywords, m.CreatedAt, m.UpdatedAt,
 	).Scan(&id)
 	return id, err
 }
 
 func UpdateMeta(id int, m *Meta) error {
 	_, err := config.DB.Exec(fmt.Sprintf(
-		"UPDATE %s SET name=$1, slug=$2, description=$3, parent_id=$4, updated_at=$5 WHERE id=$6",
+		"UPDATE %s SET name=$1, slug=$2, icon=$3, description=$4, parent_id=$5, seo_keywords=$6, updated_at=$7 WHERE id=$8",
 		config.T("metas")),
-		m.Name, m.Slug, m.Description, m.ParentID, m.UpdatedAt, id,
+		m.Name, m.Slug, m.Icon, m.Description, m.ParentID, m.SeoKeywords, m.UpdatedAt, id,
 	)
 	return err
 }

@@ -25,13 +25,15 @@ func CreateCategory(c *gin.Context) {
 	var req struct {
 		Name        string  `json:"name" binding:"required"`
 		Slug        string  `json:"slug"`
+		Icon        *string `json:"icon"`
 		Description *string `json:"description"`
 		ParentID    *int    `json:"parent_id"`
+		SeoKeywords *string `json:"seo_keywords"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil { util.BadRequest(c, "名称不能为空"); return }
 	now := time.Now().Unix()
 	slug := req.Slug; if slug == "" { slug = req.Name }
-	m := &model.Meta{Name: req.Name, Slug: slug, Type: "category", Description: req.Description, ParentID: req.ParentID, CreatedAt: now, UpdatedAt: now}
+	m := &model.Meta{Name: req.Name, Slug: slug, Type: "category", Icon: req.Icon, Description: req.Description, ParentID: req.ParentID, SeoKeywords: req.SeoKeywords, CreatedAt: now, UpdatedAt: now}
 	id, err := model.CreateMeta(m)
 	if err != nil { util.Error(c, 500, "CREATE_ERROR", err.Error()); return }
 	util.Success(c, gin.H{"id": id})
@@ -39,9 +41,16 @@ func CreateCategory(c *gin.Context) {
 
 func UpdateCategory(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	var req struct { Name string `json:"name"`; Slug string `json:"slug"`; Description *string `json:"description"`; ParentID *int `json:"parent_id"` }
+	var req struct {
+		Name        string  `json:"name"`
+		Slug        string  `json:"slug"`
+		Icon        *string `json:"icon"`
+		Description *string `json:"description"`
+		ParentID    *int    `json:"parent_id"`
+		SeoKeywords *string `json:"seo_keywords"`
+	}
 	c.ShouldBindJSON(&req)
-	m := &model.Meta{Name: req.Name, Slug: req.Slug, Description: req.Description, ParentID: req.ParentID, UpdatedAt: time.Now().Unix()}
+	m := &model.Meta{Name: req.Name, Slug: req.Slug, Icon: req.Icon, Description: req.Description, ParentID: req.ParentID, SeoKeywords: req.SeoKeywords, UpdatedAt: time.Now().Unix()}
 	model.UpdateMeta(id, m)
 	util.Success(c, gin.H{"id": id})
 }
@@ -52,7 +61,7 @@ func DeleteCategory(c *gin.Context) {
 	util.Success(c, nil)
 }
 
-// Tags — same as categories but type="tag"
+// Tags
 func ListTags(c *gin.Context) {
 	tags, _ := model.MetasByType("tag")
 	util.Success(c, tags)

@@ -1,25 +1,150 @@
 @import "tailwindcss";
 
+/* Scrollbar: reserve space, track matches background, thumb hidden until scroll */
+/* ===== Scrollbar: prevent layout shift ===== */
+
+/* Both blog and dashboard use fixed layout with internal scroll */
+html {
+  overflow: hidden;
+  height: 100%;
+}
+body {
+  height: 100%;
+  margin: 0;
+}
+
+/* Blog main: scrollbar always visible, footer sticks to bottom */
+.blog-main {
+  overflow-y: scroll !important;
+  background: inherit;
+}
+.blog-main::-webkit-scrollbar {
+  width: 10px;
+}
+.blog-main::-webkit-scrollbar-track {
+  background: inherit;
+}
+.blog-main::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 5px;
+}
+.blog-main::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.25);
+}
+
+/* Dashboard main area: always show scrollbar, no gutter gap */
+.dashboard-shell main.overflow-y-auto {
+  overflow-y: scroll !important;
+}
+
+/* Global scrollbar styling: thin, subtle, track matches background */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.2) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+  border-radius: 5px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.3);
+}
+
+/* Dashboard main scrollbar: track matches dashboard background */
+.dashboard-shell main::-webkit-scrollbar {
+  width: 10px;
+}
+.dashboard-shell main::-webkit-scrollbar-track {
+  background: var(--color-bg-main, #F5F7FA);
+}
+.dashboard-shell main::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 5px;
+  border: 2px solid var(--color-bg-main, #F5F7FA);
+}
+.dashboard-shell main::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.25);
+}
+/* Firefox */
+.dashboard-shell main {
+  scrollbar-color: rgba(0,0,0,0.12) var(--color-bg-main, #F5F7FA);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover, *:focus-within {
+  scrollbar-color: rgba(0,0,0,0.15) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 0.3s;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+}
+*:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.25);
+}
+
+/* PaperMono — code font */
+@font-face {
+  font-family: "PaperMono";
+  src: url("/static/fonts/PaperMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ========================================
    Theme Variables — CSS custom properties
    Overridden by [data-theme] selectors
    ======================================== */
 
-/* Steel (default) — 技术/冷静/克制 */
-:root,
-[data-theme="steel"] {
-  --color-primary: #5F7383;
-  --color-primary-hover: #4A5C6A;
-  --color-primary-active: #3B4A55;
-  --color-bg-main: #F5F7FA;
+/* Default — Azure 蔚蓝（与后台一致，也是官方 Azure 主题用色）*/
+:root {
+  --color-primary: #0052D9;
+  --color-primary-hover: #0044B8;
+  --color-primary-active: #003A9E;
+  --color-bg-main: #FFFFFF;
   --color-bg-card: #FFFFFF;
-  --color-bg-soft: #EDF2F6;
+  --color-bg-soft: #F5F7FA;
   --color-border: #E1E6EB;
   --color-divider: #EEF2F5;
-  --color-text-main: #1F2A33;
-  --color-text-sub: #6B7C8F;
-  --color-text-dim: #9AA7B2;
-  --color-focus-ring: #5F7383;
+  --color-text-main: #0D1A2D;
+  --color-text-sub: #5A6B7F;
+  --color-text-dim: #9AA5B0;
+  --color-focus-ring: #0052D9;
+}
+
+/* Steel — 已废弃，映射到 Azure 蓝色保持兼容 */
+[data-theme="steel"] {
+  --color-primary: #0052D9;
+  --color-primary-hover: #0044B8;
+  --color-primary-active: #003A9E;
+  --color-bg-main: #FFFFFF;
+  --color-bg-card: #FFFFFF;
+  --color-bg-soft: #F5F7FA;
+  --color-border: #E1E6EB;
+  --color-divider: #EEF2F5;
+  --color-text-main: #0D1A2D;
+  --color-text-sub: #5A6B7F;
+  --color-text-dim: #9AA5B0;
+  --color-focus-ring: #0052D9;
 }
 
 /* Blue — Icons8 Office L 风格天蓝 */
@@ -102,6 +227,23 @@
   --color-focus-ring: #0052D9;
 }
 
+/* Azure — 蔚蓝极简（Utterlog 官方默认主题，与后台一致）*/
+[data-theme="Azure"],
+[data-theme="azure"] {
+  --color-primary: #0052D9;
+  --color-primary-hover: #0044B8;
+  --color-primary-active: #003A9E;
+  --color-bg-main: #FFFFFF;
+  --color-bg-card: #FFFFFF;
+  --color-bg-soft: #F5F7FA;
+  --color-border: #E1E6EB;
+  --color-divider: #EEF2F5;
+  --color-text-main: #0D1A2D;
+  --color-text-sub: #5A6B7F;
+  --color-text-dim: #9AA5B0;
+  --color-focus-ring: #0052D9;
+}
+
 /* Dark — 深色 */
 [data-theme="dark"] {
   --color-primary: #7CA0C4;
@@ -127,7 +269,7 @@
   /* Fonts */
   --font-sans: "Noto Sans SC", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Noto Serif SC", "Source Han Serif SC", "Georgia", ui-serif, serif;
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-mono: "PaperMono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
   --font-logo: "Ubuntu", "Fugaz One", sans-serif;
 }
 
@@ -140,9 +282,13 @@
   margin: 0;
 }
 
-html, body {
+html {
   max-width: 100vw;
   overflow-x: hidden;
+}
+
+body {
+  max-width: 100vw;
 }
 
 body {
@@ -254,17 +400,24 @@ body {
 
 /* Action icon button — square with icon */
 .action-btn {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  max-width: 30px;
+  max-height: 30px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--color-border);
-  border-radius: 1px;
+  border-radius: 0;
   background: var(--color-bg-card);
   cursor: pointer;
   color: var(--color-text-sub);
   transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 .action-btn:hover {
   background: var(--color-bg-soft);
@@ -273,10 +426,30 @@ body {
 .action-btn.danger { color: #dc2626; }
 .action-btn.danger:hover { background: #fef2f2; }
 
-/* Sidebar nav item hover */
-nav a:not([class*="text-main"]):hover {
-  background-color: var(--color-bg-soft) !important;
+/* Archive category card — background icon hover */
+.archive-cat-card { transition: box-shadow 0.3s ease; }
+.archive-cat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.archive-cat-card:hover > i:first-child {
+  transform: translateY(-50%) scale(1.25);
+  opacity: 0.1;
 }
+.archive-cat-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0);
+  backdrop-filter: blur(0px);
+  transition: backdrop-filter 0.3s ease, background 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.archive-cat-card:hover::after {
+  backdrop-filter: blur(1.5px);
+  background: rgba(255,255,255,0.15);
+}
+
+/* (已删除旧 dashboard sidebar 的 nav a:hover 全局背景规则，
+   blog header 的导航不需要灰色 hover 背景，admin SPA 有自己的样式作用域) */
 
 .input {
   display: block;
@@ -322,7 +495,7 @@ nav a:not([class*="text-main"]):hover {
   border-collapse: collapse;
 }
 .table th {
-  padding: 0.75rem 1.5rem;
+  padding: 0.625rem 0.75rem;
   text-align: left;
   font-size: 0.75rem;
   font-weight: 500;
@@ -332,7 +505,7 @@ nav a:not([class*="text-main"]):hover {
   border-bottom: 1px solid var(--color-border);
 }
 .table td {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem;
   white-space: nowrap;
   font-size: 0.875rem;
   color: var(--color-text-main);
@@ -357,32 +530,250 @@ nav a:not([class*="text-main"]):hover {
   --claude-hover: #F2EDE7;
 }
 
-.blog-prose {
-  color: var(--color-text-main);
-  font-size: 1.0625rem;
-  line-height: 1.8;
+
+
+/* 评论 @昵称 悬浮卡片 */
+.reply-mention:hover .reply-mention-card { display: block !important; }
+
+/* 评论区礼仪提示 hover 提亮 */
+.comment-hint { transition: opacity 0.2s; }
+div:hover > .comment-hint { opacity: 0.75 !important; }
+
+/* 系统全局图片 blur 淡入（后台+前台通用） */
+.img-blur-in {
+  filter: blur(20px);
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out, filter 0.5s linear;
+}
+.img-blur-in.loaded {
+  filter: blur(0);
+  opacity: 1;
 }
 
-.blog-prose h1 { font-family: var(--font-serif); font-size: 1.875rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.5rem; }
-.blog-prose h2 { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-border); }
-.blog-prose h3 { font-family: var(--font-serif); font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
-.blog-prose h4 { font-family: var(--font-serif); font-size: 1.125rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
-.blog-prose p { margin-bottom: 1.5rem; }
-.blog-prose a { color: var(--color-primary); text-decoration: underline; text-underline-offset: 2px; transition: color 0.15s; }
-.blog-prose a:hover { color: var(--color-primary-active); }
-.blog-prose strong { font-weight: 600; color: var(--color-text-main); }
-.blog-prose blockquote { padding-left: 1rem; border-left: 3px solid color-mix(in srgb, var(--color-primary) 40%, transparent); color: var(--color-text-sub); font-style: italic; margin: 1.5rem 0; }
-.blog-prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.5rem; }
-.blog-prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1.5rem; }
-.blog-prose li { line-height: 1.625; margin-bottom: 0.25rem; }
-.blog-prose code:not(pre code) { background-color: var(--color-bg-soft); color: var(--color-primary-active); padding: 0.125rem 0.375rem; border-radius: 3px; font-size: 0.875rem; font-family: var(--font-mono); }
-.blog-prose pre { background-color: var(--color-bg-soft); border-radius: 1px; padding: 1rem; overflow-x: auto; margin: 1.5rem 0; font-size: 0.875rem; line-height: 1.625; }
-.blog-prose pre code { background-color: transparent; padding: 0; color: var(--color-text-main); font-family: var(--font-mono); }
-.blog-prose img { border-radius: 1px; margin: 1.5rem 0; max-width: 100%; }
-.blog-prose hr { margin: 2rem 0; border: none; border-top: 1px solid var(--color-border); }
-.blog-prose table { width: 100%; margin: 1.5rem 0; border-collapse: collapse; }
-.blog-prose th { background-color: var(--color-bg-soft); text-align: left; padding: 0.5rem 1rem; font-weight: 600; font-size: 0.875rem; border: 1px solid var(--color-border); }
-.blog-prose td { padding: 0.5rem 1rem; font-size: 0.875rem; border: 1px solid var(--color-border); }
+/* Blog image: lazy load with blur-fade effect */
+.blog-image {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  border-radius: 6px;
+  min-height: 80px;
+  cursor: zoom-in;
+  background: var(--color-bg-soft);
+}
+.blog-image img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  filter: blur(20px);
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out, filter 0.5s linear;
+}
+.blog-image.loaded img {
+  filter: blur(0);
+  opacity: 1;
+}
+
+/* Loading spinner */
+.blog-image-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  color: var(--color-text-dim);
+}
+.blog-image.loaded .blog-image-loader { display: none; }
+
+/* Post list hover — title changes to primary color */
+
+/* Image caption — bottom-right overlay inside image */
+.blog-image-caption {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  margin-bottom: 4px;
+  z-index: 3;
+  padding: 8px;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  cursor: default;
+  line-height: 1.4;
+  max-width: 70%;
+}
+
+/* ========================================
+   Image Grid Layout
+   ======================================== */
+.image-grid {
+  display: grid;
+  gap: 6px;
+  margin: 1.5rem 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.image-grid .blog-image {
+  margin: 0;
+  border-radius: 0;
+  min-height: 0;
+}
+.image-grid .blog-image img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+/* 1 image: centered, natural aspect ratio */
+.image-grid-1 {
+  max-width: 65%;
+  margin-left: auto;
+  margin-right: auto;
+}
+.image-grid-1 .blog-image img {
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+
+/* 2 images: side by side */
+.image-grid-2 { grid-template-columns: 1fr 1fr; }
+.image-grid-2 .blog-image img { aspect-ratio: 3 / 2; }
+
+/* 3 images: 3 columns */
+.image-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* 4 images: 2x2 */
+.image-grid-4 { grid-template-columns: 1fr 1fr; }
+
+/* 5 images: 2 on top (span 3 each) + 3 on bottom (span 2 each) */
+.image-grid-5 { grid-template-columns: repeat(6, 1fr); }
+.image-grid-5 .blog-image:nth-child(-n+2) { grid-column: span 3; }
+.image-grid-5 .blog-image:nth-child(n+3) { grid-column: span 2; }
+
+/* 6 images: 3x2 */
+.image-grid-6 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* 7+ images: 3 columns flowing */
+.image-grid-overflow { grid-template-columns: 1fr 1fr 1fr; }
+
+/* Responsive: mobile collapse */
+@media (max-width: 640px) {
+  .image-grid-3,
+  .image-grid-5,
+  .image-grid-6,
+  .image-grid-overflow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .image-grid-5 .blog-image { grid-column: span 1 !important; }
+  .image-grid-1 { max-width: 100%; }
+}
+@media (max-width: 400px) {
+  .image-grid { grid-template-columns: 1fr !important; }
+  .image-grid .blog-image img { aspect-ratio: 16 / 9; }
+  .image-grid-5 .blog-image { grid-column: span 1 !important; }
+}
+
+/* ========================================
+   EXIF Info Overlay
+   ======================================== */
+.blog-image-exif-trigger {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  z-index: 4;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 12px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.blog-image:hover .blog-image-exif-trigger { opacity: 1; }
+
+.blog-image-exif-panel {
+  position: absolute;
+  bottom: 44px;
+  left: 8px;
+  z-index: 5;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.6;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.blog-image-exif-panel .exif-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.blog-image-exif-panel .exif-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+  min-width: 48px;
+}
+.blog-image-exif-panel .exif-params {
+  display: flex;
+  gap: 10px;
+  margin: 4px 0;
+  padding: 4px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* Lightbox */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: lightbox-in 200ms ease-out;
+}
+@keyframes lightbox-in { from { opacity: 0; } to { opacity: 1; } }
+.lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.lightbox-close:hover { background: rgba(255, 255, 255, 0.2); }
+.lightbox-image {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  transition: transform 0.15s ease-out;
+  user-select: none;
+}
 
 /* ========================================
    Scrollbar

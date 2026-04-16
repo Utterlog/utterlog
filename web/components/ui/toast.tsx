@@ -1,6 +1,5 @@
 'use client';
 
-import { CheckCircle, AlertCircle, X, Info } from '@/components/icons';
 import { useEffect } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info';
@@ -13,15 +12,13 @@ interface ToastProps {
   duration?: number;
 }
 
-const icons = {
-  success: CheckCircle,
-  error: AlertCircle,
-  info: Info,
+const iconClasses = {
+  success: 'fa-solid fa-circle-check',
+  error: 'fa-solid fa-circle-exclamation',
+  info: 'fa-solid fa-circle-info',
 };
 
 export function Toast({ id, type, message, onClose, duration = 3000 }: ToastProps) {
-  const Icon = icons[type];
-
   const colorMap = {
     success: { bg: '#f0fdf4', text: '#166534', accent: '#16a34a' },
     error: { bg: '#fef2f2', text: '#991b1b', accent: '#dc2626' },
@@ -46,13 +43,13 @@ export function Toast({ id, type, message, onClose, duration = 3000 }: ToastProp
         animation: 'slideIn 0.2s ease-out',
       }}
     >
-      <Icon size={18} style={{ flexShrink: 0, color: c.icon }} />
+      <i className={iconClasses[type]} style={{ flexShrink: 0, fontSize: '18px', color: c.accent }} />
       <p style={{ flex: 1, fontSize: '13px', fontWeight: 500, margin: 0 }}>{message}</p>
       <button
         onClick={() => onClose(id)}
         style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, padding: '2px' }}
       >
-        <X size={14} style={{ color: c.text }} />
+        <i className="fa-solid fa-xmark" style={{ fontSize: '14px', color: c.text }} />
       </button>
     </div>
   );

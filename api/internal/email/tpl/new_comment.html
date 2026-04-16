@@ -1,0 +1,22 @@
+{{template "_head" .}}
+
+<p style="font-size:15px;line-height:1.7;color:#0d1a2d;margin:0 0 16px;">
+  📝 <b>{{.Author}}</b> 在《{{.PostTitle}}》发表了新评论
+</p>
+
+<div style="background:#f5f7fa;border-left:3px solid #0052d9;padding:14px 16px;margin:16px 0;font-size:13px;line-height:1.7;color:#0d1a2d;">
+  <div style="display:flex;justify-content:space-between;font-size:11px;color:#8ea0b4;margin-bottom:6px;">
+    <b style="color:#0d1a2d;font-weight:600;">{{.Author}}</b>
+    <span>{{.Email}}{{if .PostedAt}} · {{.PostedAt}}{{end}}</span>
+  </div>
+  {{.Content}}
+</div>
+
+<a href="{{.PostURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#fff;background:#0052d9;text-decoration:none;margin:14px 6px 0 0;">查看文章</a>
+<a href="{{.ManageCommentURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#0052d9;background:#fff;border:1px solid #0052d9;text-decoration:none;margin:14px 6px 0 0;">管理评论</a>
+
+<p style="font-size:12px;color:#8ea0b4;margin:20px 0 0;line-height:1.7;">
+  这封邮件由 <b>{{.Site.Title}}</b> 自动发送。关闭通知请到 <a href="{{.Site.AdminURL}}/settings" style="color:#0052d9;text-decoration:none;">后台 → 评论设置</a>。
+</p>
+
+{{template "_footer" .}}

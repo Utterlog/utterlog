@@ -136,7 +136,7 @@ func getIPCountry(ip string) string {
 	if country != "" { return country }
 
 	// Fetch from API
-	resp, err := http.Get("https://api.cnip.io/geoip?ip=" + ip)
+	resp, err := http.Get("https://api.ipx.ee/ip/" + ip)
 	if err != nil { return "" }
 	defer resp.Body.Close()
 	var geo struct { CountryCode string `json:"country_code"` }

@@ -77,12 +77,34 @@ func GetUserIDFromToken(tokenStr string) (int, error) {
 	return strToInt(claims.Subject), nil
 }
 
+// GenerateShortToken creates a short-lived token with custom type
+func GenerateShortToken(userID int, tokenType string, ttl time.Duration) (string, error) {
+	exp := time.Now().Add(ttl)
+	claims := TokenClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "utterlog-api",
+			Subject:   intToStr(userID),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(exp),
+			ID:        uuid.New().String(),
+		},
+		Type: tokenType,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(config.C.JWTSecret))
+}
+
 func intToStr(i int) string {
 	return fmt.Sprintf("%d", i)
 }
 
-func strToInt(s string) int {
+func StrToInt(s string) int {
 	var i int
 	fmt.Sscanf(s, "%d", &i)
 	return i
+}
+
+// keep unexported alias for internal use
+func strToInt(s string) int {
+	return StrToInt(s)
 }

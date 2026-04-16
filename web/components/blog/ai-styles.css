@@ -1,0 +1,25 @@
+/* AI 系统核心组件样式 — 不可禁用，自带样式 */
+
+/* AI 摘要 */
+.blog-ai-summary {
+  position: relative;
+  margin: 0 0 2rem;
+  padding: 1.25rem 1.5rem;
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--color-bg-card));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 15%, var(--color-border));
+  border-radius: 8px;
+}
+.blog-ai-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.blog-ai-summary-body {
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  color: var(--color-text-sub);
+}

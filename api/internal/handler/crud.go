@@ -71,27 +71,44 @@ func UpdateOptions(c *gin.Context) {
 
 // Test email
 func TestEmail(c *gin.Context) {
-	smtpHost := model.GetOption("smtp_host")
-	if smtpHost == "" {
-		util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 SMTP 服务")
-		return
+	var req struct {
+		To string `json:"to"`
 	}
+	c.ShouldBindJSON(&req)
 
-	userID := middleware.GetUserID(c)
-	u, _ := model.UserByID(userID)
-	if u == nil {
-		util.Error(c, 404, "NOT_FOUND", "用户不存在")
-		return
-	}
+	provider := model.GetOption("email_provider")
+	if provider == "" { provider = "smtp" }
 
 	cfg := util.EmailConfig{
-		Host:       smtpHost,
-		Port:       model.GetOption("smtp_port"),
-		User:       model.GetOption("smtp_user"),
-		Pass:       model.GetOption("smtp_pass"),
-		Encryption: model.GetOption("smtp_encryption"),
-		From:       model.GetOption("email_from"),
-		FromName:   model.GetOption("email_from_name"),
+		Provider:        provider,
+		Host:            model.GetOption("smtp_host"),
+		Port:            model.GetOption("smtp_port"),
+		User:            model.GetOption("smtp_user"),
+		Pass:            model.GetOption("smtp_pass"),
+		Encryption:      model.GetOption("smtp_encryption"),
+		From:            model.GetOption("email_from"),
+		FromName:        model.GetOption("email_from_name"),
+		ResendAPIKey:    model.GetOption("resend_api_key"),
+		SendflareAPIKey: model.GetOption("sendflare_api_key"),
+	}
+
+	// Validate provider config
+	switch provider {
+	case "smtp":
+		if cfg.Host == "" { util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 SMTP 服务"); return }
+	case "resend":
+		if cfg.ResendAPIKey == "" { util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 Resend API Key"); return }
+	case "sendflare":
+		if cfg.SendflareAPIKey == "" { util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 Sendflare API Key"); return }
+	}
+
+	// Determine recipient
+	toAddr := req.To
+	if toAddr == "" {
+		userID := middleware.GetUserID(c)
+		u, _ := model.UserByID(userID)
+		if u == nil { util.Error(c, 404, "NOT_FOUND", "用户不存在"); return }
+		toAddr = u.Email
 	}
 
 	siteName := model.GetOption("site_title")
@@ -100,15 +117,16 @@ func TestEmail(c *gin.Context) {
 	body := fmt.Sprintf(`<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px;">
 		<h2>%s</h2>
 		<p>这是一封测试邮件，如果您收到了此邮件，说明邮件服务配置正确。</p>
+		<p style="color:#999;font-size:12px;">当前服务商：%s</p>
 		<p style="color:#999;font-size:12px;">— %s</p>
-	</div>`, siteName+" 测试邮件", siteName)
+	</div>`, siteName+" 测试邮件", provider, siteName)
 
-	if err := util.SendEmail(cfg, u.Email, siteName+" — 测试邮件", body); err != nil {
+	if err := util.SendEmail(cfg, toAddr, siteName+" — 测试邮件", body); err != nil {
 		util.Error(c, 500, "EMAIL_SEND_FAILED", fmt.Sprintf("发送失败: %v", err))
 		return
 	}
 
-	util.Success(c, gin.H{"message": "测试邮件已发送到 " + u.Email})
+	util.Success(c, gin.H{"message": "测试邮件已发送到 " + toAddr})
 }
 
 // System status
@@ -172,6 +190,7 @@ func SystemStatus(c *gin.Context) {
 			"version":   getPGVersion(),
 			"connected": dbOK,
 		},
+		"redis": getRedisInfo(),
 		"counts": gin.H{
 			"posts":    postCount,
 			"comments": commentCount,
@@ -242,8 +261,11 @@ func measureCPU() int {
 
 func getLoadAvg() string {
 	out, err := exec.Command("sh", "-c", "uptime | sed 's/.*load average[s]*: *//'").Output()
-	if err != nil { return "0, 0, 0" }
-	return strings.TrimSpace(string(out))
+	if err != nil { return "0 0 0" }
+	// Normalize: remove commas, ensure space-separated
+	s := strings.TrimSpace(string(out))
+	s = strings.ReplaceAll(s, ",", "")
+	return s
 }
 
 type sysMemInfo struct {
@@ -288,17 +310,48 @@ func getPGVersion() string {
 	return v
 }
 
+func getRedisInfo() gin.H {
+	if config.RDB == nil {
+		return gin.H{"enabled": false}
+	}
+	info := gin.H{"enabled": true, "connected": true}
+	result, err := config.RDB.Info(config.Ctx, "server").Result()
+	if err != nil {
+		info["connected"] = false
+		return info
+	}
+	for _, line := range strings.Split(result, "\n") {
+		if strings.HasPrefix(line, "redis_version:") {
+			info["version"] = strings.TrimSpace(strings.TrimPrefix(line, "redis_version:"))
+		} else if strings.HasPrefix(line, "uptime_in_seconds:") {
+			info["uptime"] = strings.TrimSpace(strings.TrimPrefix(line, "uptime_in_seconds:"))
+		}
+	}
+	// Memory usage
+	memResult, err := config.RDB.Info(config.Ctx, "memory").Result()
+	if err == nil {
+		for _, line := range strings.Split(memResult, "\n") {
+			if strings.HasPrefix(line, "used_memory_human:") {
+				info["memory"] = strings.TrimSpace(strings.TrimPrefix(line, "used_memory_human:"))
+			}
+		}
+	}
+	return info
+}
+
 func getHostname() string {
 	out, _ := exec.Command("hostname").Output()
 	return strings.TrimSpace(string(out))
 }
 
 func getLocalIP() string {
-	out, err := exec.Command("sh", "-c", "hostname -I 2>/dev/null | awk '{print $1}' || ipconfig getifaddr en0 2>/dev/null").Output()
+	out, err := exec.Command("sh", "-c", "hostname -i 2>/dev/null | awk '{print $1}' || hostname -I 2>/dev/null | awk '{print $1}' || ipconfig getifaddr en0 2>/dev/null").Output()
 	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
 		out, _ = exec.Command("sh", "-c", "ifconfig | grep 'inet ' | grep -v 127.0.0.1 | head -1 | awk '{print $2}'").Output()
 	}
-	return strings.TrimSpace(string(out))
+	ip := strings.TrimSpace(string(out))
+	ip = strings.TrimPrefix(ip, "addr:")
+	return ip
 }
 
 var cachedCountry string
@@ -306,7 +359,7 @@ var countryOnce sync.Once
 
 func getServerCountry() string {
 	countryOnce.Do(func() {
-		resp, err := http.Get("https://api.cnip.io/geoip")
+		resp, err := http.Get("https://api.ipx.ee/ip")
 		if err != nil { cachedCountry = ""; return }
 		defer resp.Body.Close()
 		var geo struct { CountryCode string `json:"country_code"` }
@@ -350,13 +403,27 @@ func ListComments(c *gin.Context) {
 	search := c.Query("search")
 	postID, _ := strconv.Atoi(c.Query("post_id"))
 	userID, _ := strconv.Atoi(c.Query("user_id"))
-	comments, total, _ := model.CommentsList(page, perPage, status, search, postID, userID)
+	order := c.DefaultQuery("order", "desc")
+	topLevel := c.Query("top_level") == "true"
+	excludeAdmin := c.Query("exclude_admin") == "1" || c.Query("exclude_admin") == "true"
+	comments, total, _ := model.CommentsList(page, perPage, status, search, order, postID, userID, topLevel, excludeAdmin)
 	util.Paginate(c, model.FormatComments(comments), total, page, perPage)
 }
 
 func DeleteCommentHandler(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
+
+	// Get post_id before deleting, so we can decrement comment_count
+	var postID int
+	config.DB.Get(&postID, "SELECT COALESCE(post_id, 0) FROM "+config.T("comments")+" WHERE id = $1", id)
+
 	model.DeleteComment(id)
+
+	// Decrement post comment_count
+	if postID > 0 {
+		config.DB.Exec(fmt.Sprintf("UPDATE %s SET comment_count = GREATEST(comment_count - 1, 0) WHERE id = $1", config.T("posts")), postID)
+	}
+
 	util.Success(c, nil)
 }
 

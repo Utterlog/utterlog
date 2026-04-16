@@ -21,6 +21,14 @@ type Config struct {
 	JWTSecret string
 	JWTTTL    int // access token TTL in seconds
 	AppURL    string
+	// Storage
+	StorageDriver string // "local" or "s3"
+	S3Endpoint    string
+	S3Bucket      string
+	S3AccessKey   string
+	S3SecretKey   string
+	S3Region      string
+	S3PublicURL   string // CDN public URL prefix
 }
 
 var C Config
@@ -39,9 +47,16 @@ func Load() {
 		DBPrefix:  getEnv("DB_PREFIX", "ul_"),
 		RedisAddr: getEnv("REDIS_HOST", "127.0.0.1") + ":" + getEnv("REDIS_PORT", "6379"),
 		RedisPass: getEnv("REDIS_PASSWORD", ""),
-		JWTSecret: getEnv("JWT_SECRET", "change-this-secret-key"),
-		JWTTTL:    86400,
-		AppURL:    getEnv("APP_URL", "http://localhost:8080"),
+		JWTSecret:     getEnv("JWT_SECRET", "change-this-secret-key"),
+		JWTTTL:        86400,
+		AppURL:        getEnv("APP_URL", "http://localhost:8080"),
+		StorageDriver: getEnv("STORAGE_DRIVER", "local"),
+		S3Endpoint:    getEnv("S3_ENDPOINT", ""),
+		S3Bucket:      getEnv("S3_BUCKET", ""),
+		S3AccessKey:   getEnv("S3_ACCESS_KEY", ""),
+		S3SecretKey:   getEnv("S3_SECRET_KEY", ""),
+		S3Region:      getEnv("S3_REGION", "auto"),
+		S3PublicURL:   getEnv("S3_PUBLIC_URL", ""),
 	}
 }
 

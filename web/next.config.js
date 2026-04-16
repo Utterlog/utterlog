@@ -1,20 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['pixi.js'],
   async rewrites() {
-    // Only proxy in development — production uses Nginx
-    if (process.env.NODE_ENV === 'development') {
-      return [
-        {
-          source: '/api/:path*',
-          destination: 'http://localhost:8080/api/:path*',
-        },
-        {
-          source: '/uploads/:path*',
-          destination: 'http://localhost:8080/uploads/:path*',
-        },
-      ];
-    }
-    return [];
+    const apiHost = process.env.INTERNAL_API_URL ? 'http://api:8080' : 'http://localhost:8080';
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${apiHost}/api/:path*`,
+      },
+      {
+        source: '/uploads/:path*',
+        destination: `${apiHost}/uploads/:path*`,
+      },
+    ];
   },
   images: {
     remotePatterns: [

@@ -1,14 +1,16 @@
 package handler
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
 	"io"
+	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,11 +19,13 @@ import (
 	"time"
 	"utterlog-go/config"
 	"utterlog-go/internal/model"
+	"utterlog-go/internal/storage"
 	"utterlog-go/internal/util"
 
 	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
 	"github.com/gin-gonic/gin"
+	goexif "github.com/rwcarlsen/goexif/exif"
 )
 
 var allowedExts = map[string]bool{
@@ -47,6 +51,96 @@ func detectCategory(mimeType, ext string) string {
 	return "other"
 }
 
+// extractExifFields extracts camera/lens/exposure info from EXIF, returns JSON string
+func extractExifFields(x *goexif.Exif) string {
+	fields := map[string]string{}
+
+	if tag, err := x.Get(goexif.Make); err == nil {
+		if v, e := tag.StringVal(); e == nil {
+			fields["make"] = strings.TrimSpace(v)
+		}
+	}
+	if tag, err := x.Get(goexif.Model); err == nil {
+		if v, e := tag.StringVal(); e == nil {
+			fields["model"] = strings.TrimSpace(v)
+		}
+	}
+	if tag, err := x.Get(goexif.LensModel); err == nil {
+		if v, e := tag.StringVal(); e == nil {
+			fields["lens"] = strings.TrimSpace(v)
+		}
+	}
+	if tag, err := x.Get(goexif.FocalLength); err == nil {
+		num, denom, e := tag.Rat2(0)
+		if e == nil && denom != 0 {
+			fields["focal_length"] = fmt.Sprintf("%.0fmm", float64(num)/float64(denom))
+		}
+	}
+	if tag, err := x.Get(goexif.FNumber); err == nil {
+		num, denom, e := tag.Rat2(0)
+		if e == nil && denom != 0 {
+			v := float64(num) / float64(denom)
+			if v == float64(int64(v)) {
+				fields["aperture"] = fmt.Sprintf("f/%.0f", v)
+			} else {
+				fields["aperture"] = fmt.Sprintf("f/%.1f", v)
+			}
+		}
+	}
+	if tag, err := x.Get(goexif.ExposureTime); err == nil {
+		num, denom, e := tag.Rat2(0)
+		if e == nil && denom != 0 {
+			if denom > num {
+				fields["shutter_speed"] = fmt.Sprintf("1/%d", denom/num)
+			} else {
+				fields["shutter_speed"] = fmt.Sprintf("%.1fs", float64(num)/float64(denom))
+			}
+		}
+	}
+	if tag, err := x.Get(goexif.ISOSpeedRatings); err == nil {
+		val, e := tag.Int(0)
+		if e == nil {
+			fields["iso"] = fmt.Sprintf("ISO %d", val)
+		}
+	}
+	if tm, err := x.DateTime(); err == nil {
+		fields["date_taken"] = tm.Format("2006-01-02 15:04:05")
+	}
+
+	if len(fields) == 0 {
+		return ""
+	}
+	b, _ := json.Marshal(fields)
+	return string(b)
+}
+
+// resolveFolder returns the folder name if valid, else ""
+func resolveFolder(folder string) string {
+	if storage.ValidFolders[folder] {
+		return folder
+	}
+	return ""
+}
+
+// resolveStorageForFolder returns the storage backend for a given folder,
+// respecting per-folder driver settings (folder_driver_<name> option).
+func resolveStorageForFolder(folder string) storage.Storage {
+	if folder != "" {
+		key := "folder_driver_" + folder
+		setting := model.GetOption(key)
+		if setting == "local" {
+			return storage.NewLocalStorage()
+		}
+		if setting == "cloud" {
+			if s := storage.NewS3IfConfigured(); s != nil {
+				return s
+			}
+		}
+	}
+	// Fall back to global default
+	return storage.Default
+}
+
 func UploadMedia(c *gin.Context) {
 	// Concurrency limit
 	select {
@@ -63,6 +157,11 @@ func UploadMedia(c *gin.Context) {
 	}
 	defer file.Close()
 
+	folder := resolveFolder(c.PostForm("folder"))
+	if folder == "" {
+		folder = resolveFolder(c.Query("folder"))
+	}
+
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	if ext != "" { ext = ext[1:] }
 	if !allowedExts[ext] {
@@ -77,11 +176,6 @@ func UploadMedia(c *gin.Context) {
 	if header.Size > int64(maxSizeMB)*1024*1024 {
 		util.BadRequest(c, fmt.Sprintf("文件大小超过 %dMB 限制", maxSizeMB)); return
 	}
-
-	// Generate path
-	dateDir := time.Now().Format("2006/01/02")
-	randBytes := make([]byte, 8)
-	rand.Read(randBytes)
 
 	// Check if we need to convert image format
 	convertFormat := model.GetOption("image_convert_format") // "", "webp", "jpg"
@@ -98,100 +192,246 @@ func UploadMedia(c *gin.Context) {
 	category := detectCategory(header.Header.Get("Content-Type"), ext)
 	finalExt := ext
 
+	stg := resolveStorageForFolder(folder)
+	driverName := config.C.StorageDriver
+	if _, isLocal := stg.(*storage.LocalStorage); isLocal {
+		driverName = "local"
+	} else if driverName == "" {
+		driverName = "local"
+	}
+
 	// Image processing (only for PNG/JPEG — WebP/AVIF/SVG/GIF/ICO pass through)
 	processable := map[string]bool{"jpg": true, "jpeg": true, "png": true}
 	if category == "image" && processable[ext] {
-		// Determine output format: only convert PNG/JPEG → webp/jpg/png
+		var exifJSON string
+		if !stripExif {
+			exifData, exifErr := goexif.Decode(file)
+			if exifErr == nil {
+				exifJSON = extractExifFields(exifData)
+			}
+			file.Seek(0, 0)
+		}
+
 		if convertFormat != "" && (convertFormat == "webp" || convertFormat == "jpg" || convertFormat == "png") {
 			finalExt = convertFormat
 		}
 
-		filename := dateDir + "/" + hex.EncodeToString(randBytes) + "." + finalExt
-		fullPath := filepath.Join("public/uploads", filename)
-		os.MkdirAll(filepath.Dir(fullPath), 0755)
+		filename := storage.GeneratePath(finalExt, folder)
 
-		// Decode image
 		img, _, decErr := image.Decode(file)
+		var buf bytes.Buffer
 		if decErr != nil {
 			file.Seek(0, 0)
-			saveRawFile(file, fullPath)
+			io.Copy(&buf, file)
 		} else {
-			// Resize if max width configured
 			if maxWidth > 0 && img.Bounds().Dx() > maxWidth {
 				img = imaging.Resize(img, maxWidth, 0, imaging.Lanczos)
 			}
-
-			// Strip EXIF: re-encoding inherently removes EXIF
 			_ = stripExif
-
-			// Encode to target format
-			dst, err := os.Create(fullPath)
-			if err != nil {
-				util.Error(c, 500, "SAVE_ERROR", "文件保存失败"); return
-			}
-			defer dst.Close()
-
 			switch finalExt {
 			case "webp":
-				webp.Encode(dst, img, &webp.Options{Quality: float32(quality)})
+				webp.Encode(&buf, img, &webp.Options{Quality: float32(quality)})
 			case "png":
-				png.Encode(dst, img)
-			default: // jpg
+				png.Encode(&buf, img)
+			default:
 				finalExt = "jpg"
-				jpeg.Encode(dst, img, &jpeg.Options{Quality: quality})
+				jpeg.Encode(&buf, img, &jpeg.Options{Quality: quality})
 			}
 		}
 
-		fi, _ := os.Stat(filepath.Join("public/uploads", filename))
-		finalSize := int64(0)
-		if fi != nil { finalSize = fi.Size() }
-
-		url := config.C.AppURL + "/uploads/" + filename
 		mimeMap := map[string]string{"jpg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
-		mime := mimeMap[finalExt]
-		if mime == "" { mime = "image/" + finalExt }
+		mimeType := mimeMap[finalExt]
+		if mimeType == "" { mimeType = "image/" + finalExt }
+
+		fileURL, uploadErr := stg.Upload(filename, &buf, mimeType)
+		if uploadErr != nil {
+			util.Error(c, 500, "SAVE_ERROR", "文件保存失败: "+uploadErr.Error()); return
+		}
+		finalSize := int64(buf.Len())
+
+		thumbs := gin.H{}
+		if img != nil {
+			baseName := strings.TrimSuffix(filename, "."+finalExt)
+			thumbs = generateThumbnailsToStorage(img, baseName, stg)
+		}
 
 		t := config.T("media")
 		var id int
 		config.DB.QueryRow(fmt.Sprintf(
-			"INSERT INTO %s (name, filename, url, mime_type, size, driver, category, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id", t),
-			header.Filename, filename, url, mime, finalSize, "local", category, time.Now().Unix(),
+			"INSERT INTO %s (name, filename, url, mime_type, size, driver, category, exif_data, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id", t),
+			header.Filename, filename, fileURL, mimeType, finalSize, driverName, category, exifJSON, time.Now().Unix(),
 		).Scan(&id)
 
 		util.Success(c, gin.H{
-			"id": id, "name": header.Filename, "url": url,
+			"id": id, "name": header.Filename, "url": fileURL,
 			"size": finalSize, "original_size": header.Size,
-			"mime_type": mime, "category": category,
+			"mime_type": mimeType, "category": category,
 			"compressed": finalSize < header.Size, "converted": finalExt != ext,
+			"thumbnails": thumbs, "folder": folder,
 		})
 		return
 	}
 
-	// Non-image file: save directly
-	filename := dateDir + "/" + hex.EncodeToString(randBytes) + "." + ext
-	fullPath := filepath.Join("public/uploads", filename)
-	os.MkdirAll(filepath.Dir(fullPath), 0755)
+	// Non-image: save directly via storage interface
+	filename := storage.GeneratePath(ext, folder)
+	mimeType := header.Header.Get("Content-Type")
 
-	dst, err := os.Create(fullPath)
-	if err != nil {
-		util.Error(c, 500, "SAVE_ERROR", "文件保存失败"); return
+	fileURL, uploadErr := stg.Upload(filename, file, mimeType)
+	if uploadErr != nil {
+		util.Error(c, 500, "SAVE_ERROR", "文件保存失败: "+uploadErr.Error()); return
 	}
-	defer dst.Close()
-	io.Copy(dst, file)
-
-	url := config.C.AppURL + "/uploads/" + filename
 
 	t := config.T("media")
 	var id int
 	config.DB.QueryRow(fmt.Sprintf(
 		"INSERT INTO %s (name, filename, url, mime_type, size, driver, category, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id", t),
-		header.Filename, filename, url, header.Header.Get("Content-Type"), header.Size, "local", category, time.Now().Unix(),
+		header.Filename, filename, fileURL, mimeType, header.Size, driverName, category, time.Now().Unix(),
 	).Scan(&id)
 
 	util.Success(c, gin.H{
-		"id": id, "name": header.Filename, "url": url,
-		"size": header.Size, "mime_type": header.Header.Get("Content-Type"), "category": category,
+		"id": id, "name": header.Filename, "url": fileURL,
+		"size": header.Size, "mime_type": mimeType,
+		"category": category, "folder": folder,
 	})
+}
+
+// DownloadFromURL downloads a remote file (e.g. streaming music cover/audio) and saves to storage
+func DownloadFromURL(c *gin.Context) {
+	var req struct {
+		URL    string `json:"url" form:"url"`
+		Folder string `json:"folder" form:"folder"`
+		Name   string `json:"name" form:"name"`
+	}
+	if err := c.ShouldBind(&req); err != nil || req.URL == "" {
+		util.BadRequest(c, "url 不能为空"); return
+	}
+
+	folder := resolveFolder(req.Folder)
+
+	// Validate URL
+	parsed, err := url.ParseRequestURI(req.URL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		util.BadRequest(c, "无效的 URL"); return
+	}
+
+	// Download
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(req.URL)
+	if err != nil {
+		util.Error(c, 500, "DOWNLOAD_FAILED", "下载失败: "+err.Error()); return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		util.Error(c, 500, "DOWNLOAD_FAILED", fmt.Sprintf("远程服务器返回 %d", resp.StatusCode)); return
+	}
+
+	// Determine extension from Content-Type or URL
+	ct := resp.Header.Get("Content-Type")
+	ext := ""
+	if ct != "" {
+		exts, _ := mime.ExtensionsByType(ct)
+		if len(exts) > 0 {
+			ext = strings.TrimPrefix(exts[0], ".")
+			// Normalize
+			if ext == "jfif" || ext == "jpe" { ext = "jpg" }
+		}
+	}
+	if ext == "" {
+		// Try from URL path
+		urlPath := parsed.Path
+		if e := filepath.Ext(urlPath); e != "" {
+			ext = strings.ToLower(strings.TrimPrefix(e, "."))
+		}
+	}
+	if ext == "" { ext = "bin" }
+
+	// Max 100MB for downloads
+	maxSizeMB := 100
+	if v := model.GetOption("max_upload_size"); v != "" {
+		if n, err2 := strconv.Atoi(v); err2 == nil && n > 0 { maxSizeMB = n * 2 }
+	}
+	limited := io.LimitReader(resp.Body, int64(maxSizeMB)*1024*1024)
+
+	var buf bytes.Buffer
+	written, copyErr := io.Copy(&buf, limited)
+	if copyErr != nil {
+		util.Error(c, 500, "SAVE_ERROR", "读取失败: "+copyErr.Error()); return
+	}
+
+	stg := resolveStorageForFolder(folder)
+	driverName := config.C.StorageDriver
+	if _, isLocal := stg.(*storage.LocalStorage); isLocal {
+		driverName = "local"
+	} else if driverName == "" {
+		driverName = "local"
+	}
+
+	filename := storage.GeneratePath(ext, folder)
+	fileURL, uploadErr := stg.Upload(filename, &buf, ct)
+	if uploadErr != nil {
+		util.Error(c, 500, "SAVE_ERROR", "保存失败: "+uploadErr.Error()); return
+	}
+
+	name := req.Name
+	if name == "" {
+		name = filepath.Base(parsed.Path)
+		if name == "" || name == "/" { name = "download." + ext }
+	}
+
+	category := detectCategory(ct, ext)
+
+	t := config.T("media")
+	var id int
+	config.DB.QueryRow(fmt.Sprintf(
+		"INSERT INTO %s (name, filename, url, mime_type, size, driver, category, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id", t),
+		name, filename, fileURL, ct, written, driverName, category, time.Now().Unix(),
+	).Scan(&id)
+
+	util.Success(c, gin.H{
+		"id": id, "name": name, "url": fileURL,
+		"size": written, "mime_type": ct, "category": category, "folder": folder,
+	})
+}
+
+// Thumbnail sizes
+var thumbSizes = []struct {
+	Name   string
+	Width  int
+	Height int
+}{
+	{"large", 1200, 630},
+	{"medium", 480, 300},
+	{"small", 300, 300},
+}
+
+// generateThumbnails creates 3 WebP thumbnails from the source image (local only, legacy)
+func generateThumbnails(src image.Image, baseName string) gin.H {
+	return generateThumbnailsToStorage(src, baseName, storage.Default)
+}
+
+// generateThumbnailsToStorage creates 3 WebP thumbnails and uploads via the given storage backend
+func generateThumbnailsToStorage(src image.Image, baseName string, stg storage.Storage) gin.H {
+	result := gin.H{}
+	quality := 80
+	if v := model.GetOption("image_quality"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 { quality = n }
+	}
+
+	for _, size := range thumbSizes {
+		thumbFilename := baseName + "-" + size.Name + ".webp"
+		thumb := imaging.Fill(src, size.Width, size.Height, imaging.Center, imaging.Lanczos)
+
+		var buf bytes.Buffer
+		webp.Encode(&buf, thumb, &webp.Options{Quality: float32(quality)})
+
+		thumbURL, err := stg.Upload(thumbFilename, &buf, "image/webp")
+		if err != nil {
+			continue
+		}
+		result[size.Name] = thumbURL
+	}
+	return result
 }
 
 func saveRawFile(src io.ReadSeeker, path string) {
@@ -205,14 +445,26 @@ func ListMedia(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "20"))
 	category := c.Query("category")
+	excludeCategory := c.Query("exclude_category")
 	t := config.T("media")
 
-	where := ""
+	conditions := []string{}
 	args := []interface{}{}
 	idx := 1
 	if category != "" {
-		where = fmt.Sprintf("WHERE category = $%d", idx)
-		args = append(args, category); idx++
+		conditions = append(conditions, fmt.Sprintf("category = $%d", idx))
+		args = append(args, category)
+		idx++
+	}
+	if excludeCategory != "" {
+		conditions = append(conditions, fmt.Sprintf("category != $%d", idx))
+		args = append(args, excludeCategory)
+		idx++
+	}
+
+	where := ""
+	if len(conditions) > 0 {
+		where = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
 	var total int
@@ -245,7 +497,176 @@ func DeleteMedia(c *gin.Context) {
 	config.DB.Get(&filename, "SELECT filename FROM "+t+" WHERE id = $1", id)
 	if filename != "" {
 		os.Remove(filepath.Join("public/uploads", filename))
+		// Also remove thumbnails
+		ext := filepath.Ext(filename)
+		baseName := strings.TrimSuffix(filename, ext)
+		for _, size := range thumbSizes {
+			os.Remove(filepath.Join("public/uploads", baseName+"-"+size.Name+".webp"))
+		}
 	}
 	config.DB.Exec("DELETE FROM "+t+" WHERE id = $1", id)
 	util.Success(c, nil)
+}
+
+// GetMediaExif returns EXIF data for given image URLs (batch query)
+func GetMediaExif(c *gin.Context) {
+	urls := c.Query("urls")
+	if urls == "" {
+		util.BadRequest(c, "urls parameter required")
+		return
+	}
+
+	urlList := strings.Split(urls, ",")
+	if len(urlList) > 50 {
+		util.BadRequest(c, "maximum 50 URLs per request")
+		return
+	}
+
+	t := config.T("media")
+	result := map[string]interface{}{}
+
+	for _, u := range urlList {
+		u = strings.TrimSpace(u)
+		if u == "" {
+			continue
+		}
+		var exifData string
+		err := config.DB.Get(&exifData,
+			fmt.Sprintf("SELECT COALESCE(exif_data, '') FROM %s WHERE url = $1", t), u)
+		if err == nil && exifData != "" {
+			var parsed map[string]string
+			if json.Unmarshal([]byte(exifData), &parsed) == nil && len(parsed) > 0 {
+				result[u] = parsed
+			}
+		}
+	}
+
+	util.Success(c, result)
+}
+
+// UploadBranding handles logo/favicon uploads with fixed filenames, no processing
+func UploadBranding(c *gin.Context) {
+	purpose := c.PostForm("purpose") // "logo", "dark-logo", "favicon"
+	if purpose != "logo" && purpose != "dark-logo" && purpose != "favicon" {
+		util.BadRequest(c, "purpose 必须为 logo、dark-logo 或 favicon")
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		util.BadRequest(c, "未收到文件")
+		return
+	}
+	defer file.Close()
+
+	brandingExts := map[string]bool{
+		"png": true, "jpg": true, "jpeg": true, "gif": true,
+		"webp": true, "avif": true, "ico": true, "svg": true,
+	}
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	if ext != "" {
+		ext = ext[1:]
+	}
+	if !brandingExts[ext] {
+		util.BadRequest(c, "不支持的图片格式，请使用 PNG/JPG/GIF/WebP/AVIF/ICO/SVG")
+		return
+	}
+
+	if header.Size > 5*1024*1024 {
+		util.BadRequest(c, "文件大小不能超过 5MB")
+		return
+	}
+
+	// Fixed filename: logo.ext / dark-logo.ext / favicon.ext
+	filename := purpose + "." + ext
+
+	// Remove old files with same purpose but different extension
+	oldExts := []string{"png", "jpg", "jpeg", "gif", "webp", "avif", "ico", "svg"}
+	for _, oe := range oldExts {
+		old := filepath.Join("public", purpose+"."+oe)
+		if old != filepath.Join("public", filename) {
+			os.Remove(old)
+		}
+	}
+
+	// Save file directly to public root — no compression, no conversion
+	fullPath := filepath.Join("public", filename)
+	out, err := os.Create(fullPath)
+	if err != nil {
+		util.Error(c, 500, "SAVE_FAILED", "保存文件失败")
+		return
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, file); err != nil {
+		util.Error(c, 500, "SAVE_FAILED", "写入文件失败")
+		return
+	}
+
+	// Build URL — root path, e.g. domain.com/logo.png
+	url := config.C.AppURL + "/" + filename
+
+	util.Success(c, gin.H{
+		"url":      url,
+		"filename": filename,
+		"purpose":  purpose,
+	})
+}
+
+// MediaStats returns file count and total size per storage driver
+func MediaStats(c *gin.Context) {
+	t := config.T("media")
+	type driverStat struct {
+		Driver string `db:"driver" json:"driver"`
+		Files  int    `db:"files" json:"files"`
+		Size   int64  `db:"size" json:"size"`
+	}
+	var stats []driverStat
+	config.DB.Select(&stats, fmt.Sprintf(
+		"SELECT COALESCE(driver,'local') as driver, COUNT(*) as files, COALESCE(SUM(size),0) as size FROM %s GROUP BY driver", t))
+
+	// Total
+	var totalFiles int
+	var totalSize int64
+	byDriver := map[string]driverStat{}
+	for _, s := range stats {
+		totalFiles += s.Files
+		totalSize += s.Size
+		byDriver[s.Driver] = s
+	}
+
+	util.Success(c, gin.H{
+		"files": totalFiles, "size": totalSize,
+		"drivers": byDriver,
+	})
+}
+
+// TestStorageConnection tests S3/R2 connectivity
+func TestStorageConnection(c *gin.Context) {
+	var req struct {
+		Driver    string `json:"driver"`
+		Endpoint  string `json:"endpoint"`
+		Region    string `json:"region"`
+		Bucket    string `json:"bucket"`
+		AccessKey string `json:"access_key"`
+		SecretKey string `json:"secret_key"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.BadRequest(c, "参数错误")
+		return
+	}
+	if req.Driver != "s3" && req.Driver != "r2" {
+		util.BadRequest(c, "仅支持 S3/R2 驱动测试")
+		return
+	}
+	if req.Bucket == "" || req.AccessKey == "" || req.SecretKey == "" {
+		util.BadRequest(c, "Bucket、Access Key、Secret Key 不能为空")
+		return
+	}
+
+	if err := storage.TestConnection(req.Endpoint, req.Region, req.Bucket, req.AccessKey, req.SecretKey); err != nil {
+		util.Error(c, 400, "CONNECTION_FAILED", fmt.Sprintf("连接失败: %v", err))
+		return
+	}
+	util.Success(c, gin.H{"message": "连接成功"})
 }

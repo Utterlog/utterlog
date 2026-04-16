@@ -1,0 +1,22 @@
+{{template "_head" .}}
+
+<p style="font-size:15px;line-height:1.7;color:#0d1a2d;margin:0 0 16px;">
+  您的 <b>{{.Site.Title}}</b>{{if .Purpose}} {{.Purpose}}{{end}}验证码为：
+</p>
+
+<div style="background:#eaf3ff;padding:28px 16px;text-align:center;margin:20px auto;max-width:300px;font-family:-apple-system,'SF Pro Display',sans-serif;font-size:36px;font-weight:600;letter-spacing:8px;color:#0d1a2d;">
+  {{.Code}}
+</div>
+
+<p style="font-size:13px;line-height:1.8;color:#5a6b7f;margin:0 0 12px;">
+  此验证码将于 <b>{{if .ExpireMins}}{{.ExpireMins}}{{else}}10{{end}} 分钟后过期</b>，并且仅可使用一次。请勿与他人分享。
+</p>
+
+<div style="height:1px;background:#e1e6eb;margin:24px 0;"></div>
+
+<p style="font-size:12px;line-height:1.7;color:#8ea0b4;">
+  如果您并未请求此验证码，请忽略本邮件。
+  本邮件由 <a href="{{.Site.URL}}" style="color:#0052d9;font-weight:500;text-decoration:none;">{{.Site.Title}}</a> 发送，访问站点：<a href="{{.Site.URL}}" style="color:#0052d9;font-weight:500;text-decoration:none;">{{.Site.Domain}}</a>。
+</p>
+
+{{template "_footer" .}}

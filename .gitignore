@@ -1,8 +1,14 @@
+# ============================================================
+# Utterlog .gitignore
+# ============================================================
+
 # OS
 .DS_Store
 Thumbs.db
+.AppleDouble
+.LSOverride
 
-# Claude/deployment config
+# Claude / local dev
 .claude/
 DEPLOY.md
 DEVELOPMENT.md
@@ -18,48 +24,74 @@ deploy.sh
 node_modules/
 vendor/
 
-# Environment
+# Environment (never commit real secrets)
 .env
 .env.local
 .env.*.local
+!.env.example
+!**/.env.example
 
 # Build
 .next/
 dist/
 build/
+out/
 
-# Uploads
+# Uploads (user data) — both the real dir and dev-only symlink to project-root uploads/
 uploads/
 api/public/uploads
+api/public/uploads/
+!api/public/uploads/.gitkeep
 
-# Go binary
+# Go binaries (compiled artifacts — built in CI / deploy)
 api/utterlog-go
+api/utterlog-api
+api/utterlog-hub-linux
 api/api
+api/utterlog
 
-# Cache
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Cache / logs
 *.cache
-.phpunit.result.cache
-
-# Logs
 *.log
 logs/
 storage/
+.phpunit.result.cache
 
-# Docker volumes
-data/
+# Docker volumes (user data)
 pgdata/
 redisdata/
+data/
 
-# Package locks (keep package-lock.json)
+# Database / WordPress dumps (not part of source)
+*.sql
+*.sql.zip
+*.sql.gz
+*.xml
+!api/schema.sql
+
+# Backups (user data)
+backups/
+api/backups/
+
+# Package locks (keep package-lock.json for npm; exclude others)
 yarn.lock
 pnpm-lock.yaml
 
-# Reference files (not part of the project)
-Lared/
-Westlife/
-LiMhy_v3.0_正式版/
-blog-main/
-global-ai-bridge/
-HeoMusic-main/
-wordpress-ai-assistant/
-xtools/
+# Legacy / reference dirs (not part of source) — root-anchored so `web/themes/Westlife/` etc. are still tracked
+/community/
+/v2/
+/id/
+/Lared/
+/Westlife/
+/LiMhy_v3.0_正式版/
+/blog-main/
+/global-ai-bridge/
+/HeoMusic-main/
+/wordpress-ai-assistant/
+/xtools/
+
+# Misc
+PaperMono-Regular.woff2

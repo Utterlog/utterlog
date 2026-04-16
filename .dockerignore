@@ -1,0 +1,9 @@
+.git
+.claude
+pgdata
+redisdata
+node_modules
+.next
+*.md
+PaperMono-Regular.woff2
+WordPress.*.xml

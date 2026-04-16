@@ -27,6 +27,20 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	// Check if 2FA is enabled
+	if user.TOTPEnabled {
+		tempToken, err := Generate2FATempToken(user.ID)
+		if err != nil {
+			util.Error(c, http.StatusInternalServerError, "TOKEN_ERROR", "生成临时 Token 失败")
+			return
+		}
+		util.Success(c, gin.H{
+			"require_2fa": true,
+			"temp_token":  tempToken,
+		})
+		return
+	}
+
 	tokenData := util.TokenData{
 		Username: user.Username,
 		Email:    user.Email,
@@ -56,7 +70,7 @@ func Login(c *gin.Context) {
 			"username": user.Username,
 			"email":    user.Email,
 			"nickname": user.NicknameStr(),
-			"avatar":   user.Avatar,
+			"avatar":   resolveDisplayAvatar(user.Email),
 			"role":     user.Role,
 		},
 	})
@@ -74,7 +88,7 @@ func Me(c *gin.Context) {
 		"username": user.Username,
 		"email":    user.Email,
 		"nickname": user.NicknameStr(),
-		"avatar":   user.Avatar,
+		"avatar":   resolveDisplayAvatar(user.Email),
 		"role":     user.Role,
 	})
 }
