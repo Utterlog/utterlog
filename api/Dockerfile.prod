@@ -1,0 +1,56 @@
+# ============================================================
+# Utterlog API — production multi-stage build
+# ------------------------------------------------------------
+# Output: a ~25MB alpine image running a stripped static Go binary
+# with the admin SPA embedded inside. No Go toolchain, no Node at
+# runtime.
+# ============================================================
+
+# --- Stage 1: build admin SPA (Vite → dist/) ---
+FROM node:22-alpine AS admin-builder
+WORKDIR /app/admin
+COPY admin/package.json admin/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY admin/ ./
+RUN npm run build
+
+# --- Stage 2: compile Go binary with embedded admin ---
+FROM golang:1.26-alpine AS go-builder
+RUN apk add --no-cache gcc musl-dev libwebp-dev git
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+# Remove dev admin/ content, replace with built dist from stage 1
+RUN rm -rf admin && mkdir -p admin
+COPY --from=admin-builder /app/admin/dist ./admin/dist
+
+# Build: stripped (-s -w), no symbols, static CGO disabled where possible
+# (webp needs CGO so we keep it on but strip)
+RUN CGO_ENABLED=1 go build \
+    -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD 2>/dev/null || echo prod)" \
+    -trimpath \
+    -o /out/utterlog-api .
+
+# --- Stage 3: runtime ---
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates libwebp tzdata curl \
+    && adduser -D -u 1000 utterlog
+
+WORKDIR /app
+COPY --from=go-builder /out/utterlog-api ./utterlog-api
+COPY schema.sql ./schema.sql
+COPY public ./public
+
+# Ensure uploads directory exists and is writable
+RUN mkdir -p public/uploads && chown -R utterlog:utterlog /app
+
+USER utterlog
+EXPOSE 8080
+
+HEALTHCHECK --interval=5s --timeout=3s --start-period=30s --retries=5 \
+  CMD curl -fsS http://127.0.0.1:8080/api/v1/install/status >/dev/null || exit 1
+
+CMD ["./utterlog-api"]

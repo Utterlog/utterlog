@@ -1,0 +1,110 @@
+# ============================================================
+# Utterlog — production deployment
+# ------------------------------------------------------------
+# Exposes ONE port (${UTTERLOG_PORT:-9527}) bound to 127.0.0.1 only.
+# Everything else (web / postgres / redis) is internal.
+#
+# Architecture:
+#   Your nginx / caddy  ──→  127.0.0.1:${UTTERLOG_PORT}  (utterlog-api)
+#                                    │
+#                                    ├─→  /admin/*      (embedded SPA)
+#                                    ├─→  /api/*        (Go handlers)
+#                                    ├─→  /uploads/*    (local files)
+#                                    └─→  /*            (reverse proxy to web container)
+#
+# Start:  docker compose -f docker-compose.prod.yml up -d --build
+# Better: make deploy   (runs scripts/deploy.sh with port auto-detect + healthcheck)
+# ============================================================
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-utterlog}
+      POSTGRES_USER: ${DB_USER:-utterlog}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required in .env}
+      POSTGRES_HOST_AUTH_METHOD: md5
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-utterlog} -d ${DB_NAME:-utterlog}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    # Bind to loopback ONLY — user's nginx/caddy does the public-facing termination.
+    # No conflict with existing services on 80/443.
+    ports:
+      - "127.0.0.1:${UTTERLOG_PORT:-9527}:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-utterlog}
+      - DB_USER=${DB_USER:-utterlog}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required in .env}
+      - DB_PREFIX=${DB_PREFIX:-ul_}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required in .env}
+      - APP_URL=${APP_URL:-http://127.0.0.1:${UTTERLOG_PORT:-9527}}
+      - STORAGE_DRIVER=${STORAGE_DRIVER:-local}
+      - S3_ENDPOINT=${S3_ENDPOINT:-}
+      - S3_BUCKET=${S3_BUCKET:-}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-}
+      - S3_REGION=${S3_REGION:-auto}
+      - S3_PUBLIC_URL=${S3_PUBLIC_URL:-}
+      # Tell Go to reverse-proxy non-/admin non-/api requests to web container
+      - WEB_PROXY_TARGET=http://web:3000
+    volumes:
+      - uploads:/app/public/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started   # start in parallel; reverse proxy retries
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.prod
+      args:
+        # Browser-facing API URL — goes through the API reverse proxy since
+        # they share the same host (single entry point).
+        NEXT_PUBLIC_API_URL: /api/v1
+        NEXT_PUBLIC_SITE_URL: ${APP_URL:-}
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+    restart: unless-stopped
+    # No `ports:` — web is only reachable from inside the docker network,
+    # via the Go reverse proxy. No public exposure.
+    environment:
+      - NODE_ENV=production
+      # Server-side (middleware / SSR) API URL — goes to api container directly
+      # over the docker network, not through reverse proxy (faster, no loop).
+      - INTERNAL_API_URL=http://api:8080/api/v1
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:

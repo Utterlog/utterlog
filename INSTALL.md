@@ -2,149 +2,135 @@
 
 ## 要求
 
-- Docker + Docker Compose
-- 开放端口：3000（Web）、8080（API）
+- **Docker** + Docker Compose plugin
+- **1GB+ RAM**（生产模式 ~600MB 实际占用）
+- **一个高位端口可用**（默认 9527，被占则自动顺延）
+- 可选：自己的 nginx / Caddy 做 TLS 反代（推荐，跟已有服务共存）
 
-## 快速安装（推荐）
+## 生产部署（3 步）
 
 ```bash
 # 1. 克隆
-git clone https://github.com/Utterlog/utterlog.git
-cd utterlog
+git clone https://github.com/Utterlog/utterlog.git && cd utterlog
 
-# 2. 准备环境变量
-cp .env.example .env
-# 编辑 .env，修改 DB_PASSWORD 和 JWT_SECRET
+# 2. 部署（自动生成 .env + 随机密码 + 找空闲端口 + 构建 + 启动 + 健康检查）
+make deploy
 
-# 3. 启动（首次约 3-5 分钟：API 容器会自动安装 Node 依赖并构建 admin SPA）
-docker compose up -d --build
-
-# 4. 完成安装
-# 打开浏览器访问 http://localhost:3000
-# 系统会自动跳转到 /install 向导
-# 按步骤：创建管理员 → 填写站点信息 → 完成
+# 3. 部署完成后脚本会打印:
+#    - 访问地址（127.0.0.1:9527 或自动选的端口）
+#    - DB_PASSWORD / JWT_SECRET（首次生成，保存好）
+#    - 使用 Docker 日志、停止命令等
 ```
 
-就这样。
+就这些。首次运行因为要构建镜像 + `npm run build` + `go build`，需要 3-5 分钟。
 
-## 发生了什么
+### 部署后做什么
 
-1. **Postgres 容器首启** — 根据 `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` 自动创建数据库
-2. **API 容器启动** —
-   - 检测到 `api/admin/dist/` 为空 → 进入 `api/admin/` 执行 `npm ci && npm run build` 生成 SPA
-   - 启动 Go 后端，加载 embedded admin SPA 到 `/admin/*`
-   - 连接数据库，检测到 `ul_users` 表不存在（全新安装）→ 自动加载 `api/schema.sql`
-3. **Web 中间件** — 请求根路径时检查 `/install/status`，未安装则跳转 `/install`
-4. **安装向导** — 三步：欢迎 → 管理员 → 站点信息
+1. **验证**：`curl http://127.0.0.1:9527` 应返回 HTML（/install 向导）
+2. **配置反代**：编辑 `deploy/nginx.conf.example` 或 `deploy/Caddyfile.example`，替换域名和端口，丢到你的 nginx/caddy 配置里 reload
+3. **SSH 隧道试访问**（如果先不想配反代）：
+   ```bash
+   ssh -L 9527:127.0.0.1:9527 your-vps
+   # 本地浏览器打开 http://localhost:9527
+   ```
+4. **浏览器打开你的域名** → 跳转 `/install` 向导 → 创建管理员 → 填站点信息 → 完成
+
+## 架构
+
+```
+用户浏览器
+   │
+   ▼
+你的 nginx/caddy (80/443, 你原本的)
+   │
+   ▼
+127.0.0.1:9527 (Utterlog API 容器, 仅本机可见)
+   │
+   ├─ /admin/*     → 内嵌 Vite SPA (管理后台)
+   ├─ /api/v1/*    → Go 后端 (数据/认证/业务)
+   ├─ /uploads/*   → 本地文件
+   └─ 其他         → 反代到 web 容器 (Next.js 博客 SSR)
+                     │
+                     └─ web 容器: 无公网端口, 仅 docker 内部通信
+```
+
+**公网端口:** 0 个新增（你已有的 80/443 继续由你的 nginx 管）
+**内部绑定:** 1 个（127.0.0.1:9527）
+
+## 常用命令
+
+```bash
+make deploy          # 一键部署 / 重新部署
+make deploy-fast     # 重新部署但跳过镜像构建
+make logs            # 所有容器日志
+make logs-api        # 只看 API 日志
+make ps              # 查看容器状态
+make stop            # 停止服务
+make down            # 停止并删除容器（保留数据）
+make clean           # 删除数据（危险，会删库）
+```
 
 ## 故障排查
 
-- **API 容器反复重启**：`docker compose logs api --tail=80` 看错误
-  - `package utterlog-go/internal/storage is not in std` → 代码不完整，`git pull` 拉最新 main
-  - `no matching files found` (go:embed) → admin/dist 没构建，进容器执行 `cd /app/admin && npm ci && npm run build`
-- **schema.sql 未加载**：容器日志应有 `Schema loaded from api/schema.sql`；若没有且数据库空，手动 `docker compose exec postgres psql -U $DB_USER -d $DB_NAME < api/schema.sql`
-- **pgvector 扩展缺失**：镜像是 `pgvector/pgvector:pg18` 默认可用，若手动装 Postgres 需 `CREATE EXTENSION vector;`
+### `docker` 找不到
+脚本检查依赖并退出。先装 Docker：[docs.docker.com/engine/install](https://docs.docker.com/engine/install/)
 
-## 目录结构
+### 端口 9527 被占
+脚本自动扫描 9527-9576 找空闲端口，找到后写回 `.env`。想固定用其他端口，改 `.env` 里的 `UTTERLOG_PORT=`。
 
+### API 180 秒没起来
+```bash
+make logs-api
 ```
-utterlog/
-├── api/                 Go 后端
-│   ├── schema.sql       数据库 schema（全新安装自动加载）
-│   └── .env.example
-├── web/                 Next.js 前端
-│   └── .env.example
-├── docker-compose.yml   容器编排
-├── .env.example         顶层环境变量模板
-└── INSTALL.md           本文件
+常见原因：
+- 数据库连接失败 → 检查 postgres 容器是否 healthy：`make ps`
+- `schema.sql` 没加载 → 手动 `docker compose -f docker-compose.prod.yml exec postgres psql -U $DB_USER -d $DB_NAME < api/schema.sql`
+- pgvector 扩展缺失 → 不会发生（用的是 `pgvector/pgvector:pg18` 镜像）
+
+### 想用自己的 Postgres / Redis
+删掉 `docker-compose.prod.yml` 里的 `postgres` 和 `redis` 服务，改 `.env` 里的 `DB_HOST` / `REDIS_HOST` 指向外部实例。
+
+### 完全重置
+```bash
+make clean   # 会确认 yes 再执行；删除所有容器 + 数据卷
 ```
 
-## 更新 schema.sql（开发者）
+## 裸机部署（无 Docker）
 
-如果修改了 DB 结构，需要重新生成 schema.sql：
+不推荐，但可行。需要：
+- PostgreSQL 15+（带 pgvector 扩展）
+- Redis 7+
+- Go 1.26+（编译用）
+- Node.js 22+（编译 admin SPA + 跑 Next.js）
 
 ```bash
-./scripts/dump-schema.sh
+# 1. 数据库
+createdb utterlog
+psql utterlog -c 'CREATE EXTENSION vector;'
+psql utterlog < api/schema.sql
+
+# 2. 构建 admin SPA
+cd api/admin && npm ci && npm run build && cd ..
+
+# 3. 构建 Go binary
+go build -o utterlog-api .
+
+# 4. 构建 Next.js
+cd ../web && npm ci && npm run build
+
+# 5. 启动（分别用 systemd unit 管理更好）
+cd ../api && ./utterlog-api &
+cd ../web && npm start &
+```
+
+## 更新 schema（开发者）
+
+改了 DB 结构后：
+
+```bash
+make schema            # = bash scripts/dump-schema.sh
 git add api/schema.sql
-git commit -m "chore: update schema"
+git commit -m "schema: <描述>"
 ```
 
-脚本会从运行中的 Postgres 容器导出最新 schema，覆盖 `api/schema.sql`。
-
-## 裸机安装（无 Docker）
-
-1. 安装 PostgreSQL 15+ 和 Redis 7+
-2. 创建数据库和用户：
-   ```sql
-   CREATE DATABASE utterlog;
-   CREATE USER utterlog WITH PASSWORD 'your-password';
-   GRANT ALL ON DATABASE utterlog TO utterlog;
-   ```
-3. 加载 schema：
-   ```bash
-   psql -U utterlog -d utterlog < api/schema.sql
-   ```
-4. 编辑 `api/.env` 和 `web/.env.local` 填入正确的连接信息
-5. 启动后端：
-   ```bash
-   cd api && go run .
-   ```
-6. 启动前端：
-   ```bash
-   cd web && npm install && npm run dev
-   ```
-7. 访问 http://localhost:3000 完成安装向导
-
-## 修改配置
-
-安装完成后，所有可配置项均在后台「设置」中修改，不需要改 env 文件：
-
-- 站点信息、SEO、主题
-- S3/R2 云存储
-- 邮件 SMTP
-- Telegram Bot
-- AI 提供商
-
-只有**数据库连接**和 **JWT Secret** 需要在 `.env` 中修改（修改后需重启服务）。
-
-## 安装完成后再次进入向导
-
-如果需要重置安装（谨慎！会删除所有数据）：
-
-```bash
-# 停止服务并删除数据库卷
-docker compose down -v
-rm -rf pgdata
-
-# 重新启动
-docker compose up -d
-# 访问 http://localhost:3000 会再次进入向导
-```
-
-## 故障排查
-
-### 向导卡在"等待 schema 加载"
-
-- 确认 `api/schema.sql` 文件存在且不为空
-- 查看 API 日志：`docker compose logs api | grep -i schema`
-- 确认 API 容器有读取 `schema.sql` 的权限
-
-### 向导显示"无法连接后端 API"
-
-- 确认 API 服务正在运行：`docker compose ps`
-- 确认 `NEXT_PUBLIC_API_URL` 指向正确地址
-- 浏览器控制台查看具体错误
-
-### 重置管理员密码
-
-如果忘记密码，直接进数据库改：
-
-```bash
-docker compose exec postgres psql -U utterlog -d utterlog
-
-# 生成 bcrypt 哈希（在 api 容器里）
-docker compose exec api go run -exec "cmd" -e 'package main; import ("fmt";"golang.org/x/crypto/bcrypt"); func main() { h,_:=bcrypt.GenerateFromPassword([]byte("new-password"), 10); fmt.Println(string(h)) }'
-
-# 在 psql 里：
-UPDATE ul_users SET password = '$2a$10$...' WHERE role = 'admin';
-```
+新安装会在首次启动时自动加载 `schema.sql`。

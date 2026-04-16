@@ -12,7 +12,7 @@ Thumbs.db
 .claude/
 DEPLOY.md
 DEVELOPMENT.md
-deploy.sh
+/deploy.sh
 
 # IDE
 .idea/
@@ -92,6 +92,9 @@ pnpm-lock.yaml
 /HeoMusic-main/
 /wordpress-ai-assistant/
 /xtools/
+
+# WordPress sync plugin — tracked in a separate repo, not part of main source
+/wordpress-plugin/
 
 # Misc
 PaperMono-Regular.woff2

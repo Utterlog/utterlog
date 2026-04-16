@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"utterlog-go/config"
 	"utterlog-go/internal/handler"
 	"utterlog-go/internal/middleware"
@@ -395,6 +396,14 @@ func main() {
 		// Search management
 		authed.POST("/search/rebuild", handler.RebuildEmbeddings)
 
+	}
+
+	// Reverse-proxy fallback: anything not handled above (/, /posts/:slug, _next/*,
+	// RSC, static blog pages) is forwarded to the Next.js container. Enabled when
+	// WEB_PROXY_TARGET env is set (production single-entry-point mode).
+	if proxy := webProxyHandler(); proxy != nil {
+		log.Printf("Web proxy enabled → %s", os.Getenv("WEB_PROXY_TARGET"))
+		r.NoRoute(proxy)
 	}
 
 	port := config.C.Port

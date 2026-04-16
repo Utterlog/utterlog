@@ -1,0 +1,47 @@
+# ============================================================
+# Utterlog — Caddy reverse proxy snippet
+# ------------------------------------------------------------
+# Usage:
+#   1. Replace `blog.example.com` with your domain.
+#   2. Replace port 9527 with whatever `make deploy` printed.
+#   3. Append to /etc/caddy/Caddyfile, then:
+#        sudo systemctl reload caddy
+#
+# TLS is automatic — Caddy requests Let's Encrypt on first visit.
+# ============================================================
+
+blog.example.com {
+    encode gzip zstd
+
+    # Long-cache immutable chunks
+    @static path /_next/static/* /admin/assets/*
+    handle @static {
+        header Cache-Control "public, max-age=31536000, immutable"
+        reverse_proxy 127.0.0.1:9527
+    }
+
+    # Everything else → Utterlog
+    handle {
+        reverse_proxy 127.0.0.1:9527 {
+            # Pass through real client info
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Host {host}
+            # SSE / streaming support
+            flush_interval -1
+        }
+    }
+
+    # Security headers
+    header {
+        Referrer-Policy "strict-origin-when-cross-origin"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        -Server
+    }
+
+    # Upload size — 100MB for media
+    request_body {
+        max_size 100MB
+    }
+}
