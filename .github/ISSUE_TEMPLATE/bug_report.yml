@@ -1,0 +1,59 @@
+name: Bug 报告
+description: 报告一个 Bug
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽可能完整填写，方便定位问题。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么
+      description: 清晰描述你看到的现象
+      placeholder: 我点击 X 按钮，页面 Y 没有出现
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 一步步怎么触发
+      placeholder: |
+        1. 访问 /posts/foo
+        2. 点击段落旁的加号
+        3. 观察：没有弹窗
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      placeholder: 应当弹出点评输入框
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / Commit
+      description: git log -1 或部署的 tag
+      placeholder: 例如 main @ 2832a91
+    validations:
+      required: true
+  - type: dropdown
+    id: deploy
+    attributes:
+      label: 部署方式
+      options:
+        - Docker Compose
+        - 裸机（Go binary + Postgres + Redis）
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志
+      description: docker compose logs api / web 摘要 / 浏览器控制台报错
+      render: shell

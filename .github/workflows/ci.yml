@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api:
+    name: Go API build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: true
+          cache-dependency-path: api/go.sum
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: api/admin/package-lock.json
+
+      - name: Build admin SPA (required by go:embed)
+        working-directory: api/admin
+        run: |
+          npm ci
+          npm run build
+
+      - name: go vet
+        working-directory: api
+        run: go vet ./...
+
+      - name: go build
+        working-directory: api
+        run: go build ./...
+
+  web:
+    name: Next.js web build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install deps
+        working-directory: web
+        run: npm ci
+
+      - name: Type check
+        working-directory: web
+        run: npx tsc --noEmit --skipLibCheck
+
+      - name: Build
+        working-directory: web
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+          INTERNAL_API_URL: http://api:8080/api/v1
+        run: npm run build
