@@ -1,0 +1,22 @@
+name: Auto-assign
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened, ready_for_review]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  assign-author:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign issue / PR to its author
+        uses: pozil/auto-assign-issue@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          assignees: ${{ github.event.issue.user.login || github.event.pull_request.user.login }}
+          numOfAssignee: 1

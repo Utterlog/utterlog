@@ -57,7 +57,7 @@ api/utterlog
 *.cache
 *.log
 logs/
-storage/
+/storage/
 .phpunit.result.cache
 
 # Docker volumes (user data)
