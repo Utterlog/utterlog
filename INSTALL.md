@@ -7,22 +7,43 @@
 - **一个高位端口可用**（默认 9527，被占则自动顺延）
 - 可选：自己的 nginx / Caddy 做 TLS 反代（推荐，跟已有服务共存）
 
-## 生产部署（3 步）
+## 生产部署
+
+3 种部署方式，任选其一：
+
+### 方式 A：全自动（推荐新手）
 
 ```bash
-# 1. 克隆
 git clone https://github.com/Utterlog/utterlog.git && cd utterlog
-
-# 2. 部署（自动生成 .env + 随机密码 + 找空闲端口 + 构建 + 启动 + 健康检查）
 make deploy
-
-# 3. 部署完成后脚本会打印:
-#    - 访问地址（127.0.0.1:9527 或自动选的端口）
-#    - DB_PASSWORD / JWT_SECRET（首次生成，保存好）
-#    - 使用 Docker 日志、停止命令等
+# 脚本自动生成 .env（含随机 24 字符 DB_PASSWORD + 48 字符 JWT_SECRET）
+# 完成后打印密码，务必保存（也在 .env 里）
 ```
 
-就这些。首次运行因为要构建镜像 + `npm run build` + `go build`，需要 3-5 分钟。
+随机源 = 内核 `/dev/urandom`（密码管理器同款熵源），每个部署都不同。
+
+### 方式 B：交互式（部署时提示你输入）
+
+```bash
+git clone https://github.com/Utterlog/utterlog.git && cd utterlog
+make deploy-interactive
+# 提示:
+#   DB_PASSWORD (24-char random by default): <按回车 = 自动生成 | 或键入自定义>
+#   JWT_SECRET  (48-char random by default): <同上>
+```
+
+### 方式 C：手动编辑（完全自己掌控）
+
+```bash
+git clone https://github.com/Utterlog/utterlog.git && cd utterlog
+cp .env.example .env
+$EDITOR .env   # 自己填 DB_PASSWORD 和 JWT_SECRET
+make deploy    # 检测到 .env 已存在，不会覆盖
+```
+
+### 三种方式都会做的事
+
+脚本统一做：找空闲端口（9527 被占则顺延）→ 构建镜像 → 启动容器 → 健康检查 → 打印访问地址和反代提示。首次约 3-5 分钟。
 
 ### 部署后做什么
 

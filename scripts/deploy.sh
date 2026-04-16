@@ -57,24 +57,58 @@ rand_str() {
 }
 
 GENERATED=0
+INTERACTIVE=0
+# Parse flags
+for arg in "$@"; do
+  case "$arg" in
+    --interactive|-i) INTERACTIVE=1 ;;
+  esac
+done
+
 if [ ! -f .env ]; then
   if [ ! -f .env.example ]; then
     err ".env.example not found — is this an Utterlog checkout?"
     exit 1
   fi
-  log "Generating .env from .env.example with random secrets ..."
-  DB_PASSWORD_GEN=$(rand_str 24)
-  JWT_SECRET_GEN=$(rand_str 48)
-  cp .env.example .env
-  # Replace placeholder values with generated ones
-  if command -v sed >/dev/null 2>&1; then
-    # BSD/GNU sed compatibility via .bak trick
-    sed -i.bak "s|^DB_PASSWORD=.*|DB_PASSWORD=$DB_PASSWORD_GEN|" .env
-    sed -i.bak "s|^JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET_GEN|" .env
+
+  if [ "$INTERACTIVE" -eq 1 ] && [ -t 0 ]; then
+    # --- Interactive mode: prompt user ---
+    log "Interactive setup. Press Enter to auto-generate, or type your own value."
+    echo
+    suggested_db=$(rand_str 24)
+    suggested_jwt=$(rand_str 48)
+    printf "  DB_PASSWORD (24-char random by default): "
+    read -r USER_DB_PASSWORD
+    [ -z "$USER_DB_PASSWORD" ] && USER_DB_PASSWORD="$suggested_db"
+    printf "  JWT_SECRET  (48-char random by default): "
+    read -r USER_JWT_SECRET
+    [ -z "$USER_JWT_SECRET" ] && USER_JWT_SECRET="$suggested_jwt"
+    cp .env.example .env
+    sed -i.bak "s|^DB_PASSWORD=.*|DB_PASSWORD=$USER_DB_PASSWORD|" .env
+    sed -i.bak "s|^JWT_SECRET=.*|JWT_SECRET=$USER_JWT_SECRET|" .env
     rm -f .env.bak
+    DB_PASSWORD_GEN="$USER_DB_PASSWORD"
+    JWT_SECRET_GEN="$USER_JWT_SECRET"
+    GENERATED=1
+    ok ".env created"
+  else
+    # --- Auto mode: generate randoms ---
+    log "Generating .env with cryptographically random secrets (/dev/urandom)..."
+    log "  — each deploy produces unique values; no shared defaults."
+    log "  — run 'make deploy-interactive' if you prefer to supply your own."
+    DB_PASSWORD_GEN=$(rand_str 24)
+    JWT_SECRET_GEN=$(rand_str 48)
+    cp .env.example .env
+    if command -v sed >/dev/null 2>&1; then
+      sed -i.bak "s|^DB_PASSWORD=.*|DB_PASSWORD=$DB_PASSWORD_GEN|" .env
+      sed -i.bak "s|^JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET_GEN|" .env
+      rm -f .env.bak
+    fi
+    GENERATED=1
+    ok ".env created with auto-generated credentials"
   fi
-  GENERATED=1
-  ok ".env created with auto-generated credentials"
+else
+  ok ".env exists — using your configured values (not regenerating)"
 fi
 
 # Source .env

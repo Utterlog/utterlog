@@ -6,8 +6,9 @@
 help:
 	@echo "Utterlog deployment targets:"
 	@echo ""
-	@echo "  make deploy          — one-command production deploy (auto-gen .env, find port, build, start, health-check)"
-	@echo "  make deploy-fast     — redeploy without rebuilding images"
+	@echo "  make deploy              — one-command deploy (auto-generate .env with crypto-strong secrets)"
+	@echo "  make deploy-interactive  — prompt for DB_PASSWORD / JWT_SECRET (press Enter to auto-gen)"
+	@echo "  make deploy-fast         — redeploy without rebuilding images"
 	@echo "  make logs            — tail all container logs"
 	@echo "  make logs-api        — tail api logs only"
 	@echo "  make logs-web        — tail web logs only"
@@ -23,6 +24,10 @@ help:
 .PHONY: deploy
 deploy:
 	@bash scripts/deploy.sh
+
+.PHONY: deploy-interactive
+deploy-interactive:
+	@bash scripts/deploy.sh --interactive
 
 .PHONY: deploy-fast
 deploy-fast:
