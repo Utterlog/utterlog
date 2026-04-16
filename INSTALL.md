@@ -2,23 +2,51 @@
 
 ## 要求
 
-- **Docker** + Docker Compose plugin
-- **1GB+ RAM**（生产模式 ~600MB 实际占用）
-- **一个高位端口可用**（默认 9527，被占则自动顺延）
-- 可选：自己的 nginx / Caddy 做 TLS 反代（推荐，跟已有服务共存）
+**运行时（跑 Utterlog）：**
+- Docker + Docker Compose plugin
+- **512MB-1GB RAM**（用预构建镜像模式）或 **2GB+ RAM**（本地构建模式）
+- 一个高位端口可用（默认 9527，被占则自动顺延）
+- 可选：自己的 nginx / Caddy 做 TLS 反代（推荐）
+
+**两种镜像来源，按内存选：**
+
+| VPS 内存 | 推荐命令 | 说明 |
+|---|---|---|
+| ≥ 2GB | `make deploy` | 本地构建镜像（随时改代码即时生效） |
+| < 2GB | `make deploy-pull` | 直接拉 ghcr.io 预构建镜像（5 倍速度，无编译负担） |
+
+预构建镜像由 GitHub Actions 自动构建推送，支持 `linux/amd64` + `linux/arm64`。
 
 ## 生产部署
 
 3 种部署方式，任选其一：
 
-### 方式 A：全自动（推荐新手）
+### 方式 A：全自动 + 预构建镜像（推荐新手，低内存 VPS 友好）
 
 ```bash
 git clone https://github.com/Utterlog/utterlog.git && cd utterlog
-make deploy
-# 脚本自动生成 .env（含随机 24 字符 DB_PASSWORD + 48 字符 JWT_SECRET）
+make deploy-pull
+# 脚本:
+#   1. 自动生成 .env（含随机 24 字符 DB_PASSWORD + 48 字符 JWT_SECRET）
+#   2. 从 ghcr.io/utterlog 拉预构建的 linux/amd64 或 linux/arm64 镜像
+#   3. 启动，健康检查，打印凭据
 # 完成后打印密码，务必保存（也在 .env 里）
 ```
+
+**优势**：
+- 不需要 Go toolchain / Node / npm
+- 512MB VPS 也能跑（不会 OOM）
+- 镜像已在 GitHub 6GB runner 上构建好，本地秒拉
+- 后续更新：`make update` 拉最新镜像并重启
+
+### 方式 A+：全自动 + 本地构建（需要 2GB+ RAM）
+
+```bash
+make deploy
+# 本地走多阶段 Dockerfile 构建，首次 3-5 分钟
+```
+
+适合：改了代码想立即验证 / 不想依赖 ghcr.io / 私有 fork。
 
 随机源 = 内核 `/dev/urandom`（密码管理器同款熵源），每个部署都不同。
 

@@ -60,12 +60,14 @@ GENERATED=0
 INTERACTIVE=0
 TLS_MODE=0
 NO_BUILD=0
+PULL_MODE=0
 # Parse flags
 for arg in "$@"; do
   case "$arg" in
     --interactive|-i) INTERACTIVE=1 ;;
     --tls)            TLS_MODE=1 ;;
     --no-build)       NO_BUILD=1 ;;
+    --pull)           PULL_MODE=1 ;;
   esac
 done
 
@@ -179,13 +181,21 @@ fi
 # ============================================================
 # Step 4: build & start containers
 # ============================================================
-COMPOSE="docker compose -f docker-compose.prod.yml"
-
-if [ "$NO_BUILD" -eq 1 ]; then
+if [ "$PULL_MODE" -eq 1 ]; then
+  # Pull pre-built images from GHCR — skips all local compilation
+  COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml"
+  log "Pulling pre-built images from ghcr.io/utterlog ..."
+  $COMPOSE pull
+  log "Starting containers ..."
+  $COMPOSE up -d
+elif [ "$NO_BUILD" -eq 1 ]; then
+  COMPOSE="docker compose -f docker-compose.prod.yml"
   log "Starting containers (no rebuild) ..."
   $COMPOSE up -d
 else
-  log "Building & starting containers (first run ~3-5 min) ..."
+  COMPOSE="docker compose -f docker-compose.prod.yml"
+  log "Building & starting containers locally (first run ~3-5 min, needs 2GB+ RAM) ..."
+  log "  Tip: use 'make deploy-pull' instead to skip local build (pulls from ghcr.io)"
   $COMPOSE up -d --build
 fi
 

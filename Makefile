@@ -6,10 +6,13 @@
 help:
 	@echo "Utterlog deployment targets:"
 	@echo ""
-	@echo "  make deploy              — for VPS with existing nginx/1Panel/caddy (binds 127.0.0.1 only)"
-	@echo "  make deploy-tls          — for bare VPS: bundled Caddy auto-TLS (needs DOMAIN=your.site)"
+	@echo "  make deploy              — build locally + deploy (needs 2GB+ RAM during build)"
+	@echo "  make deploy-pull         — pull pre-built images from ghcr.io (for low-RAM VPS, ~5x faster)"
+	@echo "  make deploy-tls          — build + deploy + bundled Caddy auto-TLS (needs DOMAIN=your.site)"
+	@echo "  make deploy-pull-tls     — pull + deploy + TLS"
 	@echo "  make deploy-interactive  — prompt for DB_PASSWORD / JWT_SECRET (press Enter to auto-gen)"
 	@echo "  make deploy-fast         — redeploy without rebuilding images"
+	@echo "  make update              — pull latest ghcr.io images and restart"
 	@echo "  make logs            — tail all container logs"
 	@echo "  make logs-api        — tail api logs only"
 	@echo "  make logs-web        — tail web logs only"
@@ -37,6 +40,20 @@ deploy-tls:
 .PHONY: deploy-fast
 deploy-fast:
 	@bash scripts/deploy.sh --no-build
+
+.PHONY: deploy-pull
+deploy-pull:
+	@bash scripts/deploy.sh --pull
+
+.PHONY: deploy-pull-tls
+deploy-pull-tls:
+	@bash scripts/deploy.sh --pull --tls
+
+.PHONY: update
+update:
+	@echo "==> Pulling latest pre-built images from ghcr.io ..."
+	docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
+	docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d
 
 .PHONY: logs
 logs:

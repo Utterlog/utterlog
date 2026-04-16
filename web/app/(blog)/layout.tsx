@@ -6,6 +6,13 @@ import { ThemeProvider } from '@/lib/theme-context';
 import { SlotHead, SlotFooter } from '@/lib/slots';
 import PageViewTracker from '@/components/blog/PageViewTracker';
 
+// Force runtime rendering for all blog routes. Utterlog is a CMS — content is
+// created in the admin AFTER deploy, so there's nothing to pre-render at build
+// time. Without this, Next.js 16 tries to statically generate pages like /feeds
+// at build, calls the API (which isn't running yet), retries 3x, fails.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function generateMetadata(): Promise<Metadata> {
   let title = 'Utterlog!';
   let subtitle = '';

@@ -1,0 +1,31 @@
+# ============================================================
+# Utterlog — pull pre-built images from GHCR
+# ------------------------------------------------------------
+# Overlay that replaces local `build:` directives with pre-built
+# images from GitHub Container Registry. Skips all compilation on
+# the deploy host (no Go toolchain, no npm install, no Rust for
+# swc). Ideal for low-memory VPS (~512MB) that would OOM during
+# local build.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
+#   docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d
+#
+# Or via Makefile:
+#   make deploy-pull          # pull + up
+#   make deploy-pull-tls      # same but enables bundled Caddy
+#
+# Images are built by .github/workflows/docker-publish.yml on every
+# push to main and tagged as `latest` + `sha-<shortsha>`.
+# ============================================================
+
+services:
+  api:
+    image: ghcr.io/utterlog/utterlog-api:${UTTERLOG_IMAGE_TAG:-latest}
+    build: !reset null     # disable local build
+    pull_policy: always
+
+  web:
+    image: ghcr.io/utterlog/utterlog-web:${UTTERLOG_IMAGE_TAG:-latest}
+    build: !reset null
+    pull_policy: always

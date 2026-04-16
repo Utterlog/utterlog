@@ -1,143 +1,173 @@
 # Utterlog
 
-A modern, self-hosted blogging platform built with Go + Next.js. Features a theme system, AI assistant, federation, and storyboard-style moments.
+现代化自托管博客平台 · Go + Next.js · 单端口部署 · 内嵌管理后台 · 联盟身份
 
-## Features
+## 特性
 
-- **Theme System** — Switchable themes (Utterlog2026, Lared, Westlife), user-uploadable themes
-- **Storyboard Moments** — Scattered card layout for micro-posts with image upload, keyword tags
-- **RSS Subscriptions** — Follow sites, aggregate feeds into a storyboard view
-- **Comment System** — Threaded comments with Gravatar, country flags, browser/OS detection
-- **AI Assistant** — Built-in AI chat with multi-provider support
-- **Music Player** — 4 skins: Fullscreen, VinylCard, MiniBar, FloatingCard
-- **Federation** — Cross-site following, mutual follow, webhook notifications
-- **Telegram Bot** — Publish moments, moderate comments, receive notifications
-- **Media Management** — Local/S3/R2 storage, WebP conversion, TinyPNG compression
+- **主题系统** — 内置 5 套主题（Azure / Flux / 2026 / Chred / Westlife），每套独立组件和样式；支持用户上传自定义主题；每主题可带自己的页脚图标按钮配置
+- **段落级点评** — 文章任意段落悬浮加号即可点评，不占评论区，支持 Utterlog 联盟身份跨站发表
+- **AI Agent** — 内置工具集（AI 摘要、AI 阅读助手、段落点评生成、批量批处理）；多 provider 支持（OpenAI / Claude / DeepSeek / Gemini 等）
+- **评论系统** — 带邮箱验证、水印验证码、Gravatar / Utterlog 头像可选、浏览器 / OS / 国家旗标识、关注标记
+- **联盟身份（Utterlog Network）** — OAuth 2.0 跨站登录、联盟头像同步、跨站关注 / 评论 / 点评、Webhook 联邦
+- **存储集** — 媒体库 + 相册 + 图书 / 电影 / 游戏 / 好物 / 音乐 / 视频，每类独立管理页
+- **说说** — 微博式零散卡片流，支持图片上传、关键词、EXIF 自动解析、地图展示
+- **RSS 订阅** — 聚合关注站点 RSS，看板式阅读流
+- **安全** — Passkey 登录 / 2FA / IP 封禁 / CC 限流 / 地理封锁
+- **媒体处理** — 本地 / S3 / R2 / Cloudflare 存储，自动 WebP 转换 + EXIF 读取
+- **搜索** — pgvector 语义搜索，embedding 自动生成
 
-## Tech Stack
+## 技术栈
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 16, React 19.2, Tailwind v4, TypeScript 6.0 |
-| Backend | Go 1.26.2, PostgreSQL 18, Redis 8 |
-| Runtime | Node.js 25 |
+| 层 | 技术 |
+|---|---|
+| 博客前端 | Next.js 16 + React 19 + TypeScript 6 |
+| 管理后台 | Vite + React + React Router + Zustand + TanStack Query（`go:embed` 内嵌进 Go 二进制） |
+| 后端 API | Go 1.26 + Gin + sqlx |
+| 数据库 | PostgreSQL 18（含 pgvector 扩展） |
+| 缓存 | Redis 7 |
+| 部署 | Docker Compose + 可选内置 Caddy |
 
-## Project Structure
+## 项目结构
 
 ```
 utterlog/
-├── web/                     # Frontend (Next.js)
-│   ├── app/
-│   │   ├── (blog)/          # Blog pages (theme-aware)
-│   │   ├── dashboard/       # Admin dashboard
-│   │   ├── moments/         # Storyboard moments
-│   │   └── feeds/           # RSS subscription feed
-│   ├── themes/
-│   │   ├── Utterlog2026/    # Default theme
-│   │   ├── Lared/           # Minimal, red accent
-│   │   └── Westlife/        # Elegant, blue accent
-│   ├── plugins/             # Plugin directory
-│   ├── components/
-│   │   ├── blog/            # Comments, posts, pagination
-│   │   ├── layout/          # Dashboard sidebar, header
-│   │   ├── ui/              # Button, Input, Toggle, Modal...
-│   │   └── icons/           # Custom SVG icons
-│   └── lib/                 # API clients, stores, theme loader
-│
-├── api/                     # Backend (Go)
+├── api/                          Go 后端
+│   ├── main.go                   入口 + 路由注册
+│   ├── web_proxy.go              内部反代到 Next.js 的 ReverseProxy
+│   ├── admin.go                  embedded admin SPA 路由
+│   ├── admin_embed.go            //go:embed all:admin/dist
+│   ├── admin/                    管理后台 SPA（Vite + React）
+│   │   ├── src/
+│   │   │   ├── pages/            37 个后台页面（Posts / Comments / Annotations / ...）
+│   │   │   ├── components/       共用 UI + FooterIconsEditor / VisitorMap 等
+│   │   │   └── lib/              API client + stores + utils
+│   │   ├── package.json
+│   │   └── dist/                 Vite build 产物（运行时嵌入 Go binary）
 │   ├── internal/
-│   │   ├── handler/         # HTTP handlers
-│   │   ├── model/           # Data models
-│   │   └── middleware/      # Auth, CORS, rate limiting
-│   ├── config/              # Configuration
-│   └── main.go
+│   │   ├── handler/              HTTP handlers（文章、评论、点评、AI、安全、联盟等）
+│   │   ├── model/                数据模型 + 头像解析
+│   │   ├── middleware/           Auth / CORS / CC 保护 / 地理封锁
+│   │   ├── storage/              本地 / S3 / R2 抽象
+│   │   └── email/                模板 + SMTP/Resend/Sendflare 适配
+│   ├── config/                   读 env / DB / Redis 初始化 + schema 自动导入
+│   ├── schema.sql                全新安装自动加载的 DB schema
+│   ├── public/                   logo / favicon / 主题 screenshot / uploads
+│   ├── Dockerfile                开发镜像（bind-mount + go run）
+│   ├── Dockerfile.prod           生产多阶段（stripped binary，25MB）
+│   └── Makefile                  go build / release 等
 │
-└── uploads/                 # Shared upload directory
+├── web/                          Next.js 博客前端
+│   ├── app/
+│   │   ├── (blog)/               博客路由群（/ / about / archives / tags / links / music / ...）
+│   │   ├── install/              首次安装向导（三步）
+│   │   ├── api/revalidate/       服务器端缓存失效 API
+│   │   └── login/                登录页（跳转 /admin/login）
+│   ├── themes/
+│   │   ├── Azure/                默认 · 蔚蓝极简
+│   │   ├── Flux/                 金融科技风
+│   │   ├── 2026/                 Utterlog 官方
+│   │   ├── Chred/                红色商务
+│   │   └── Westlife/             生活暖色
+│   ├── plugins/                  analytics / copyright
+│   ├── components/
+│   │   ├── blog/                 AISummary / AnnotationProvider / ImageGrid / MusicPlayer / ...
+│   │   ├── editor/               MarkdownEditor
+│   │   ├── layout/               GlobalMiniPlayer（仅博客共用）
+│   │   └── ui/                   Button / Modal / Toast / ...
+│   ├── lib/                      API client / theme loader / slots / stores
+│   ├── middleware.ts             /install 重定向逻辑
+│   ├── public/                   favicon / emoji / 主题 screenshot
+│   ├── Dockerfile                开发镜像
+│   └── Dockerfile.prod           生产多阶段（next standalone，150MB）
+│
+├── scripts/                      部署脚本
+│   ├── deploy.sh                 一键部署（端口探测 + 密码生成 + healthcheck）
+│   ├── find-free-port.sh         端口扫描（ss/netstat/python3 三级兜底）
+│   └── dump-schema.sh            导出 schema.sql
+│
+├── deploy/                       反代配置示例
+│   ├── 1panel.md                 1Panel / 宝塔 / AAPanel 图形化配置指南
+│   ├── nginx.conf.example        nginx + TLS
+│   ├── Caddyfile.example         Caddy + 自动 TLS
+│   ├── caddy/Caddyfile           内置 Caddy sidecar 模板（make deploy-tls 用）
+│   └── README.md                 决策树
+│
+├── docker-compose.yml            开发编排
+├── docker-compose.prod.yml       生产编排（单端口 127.0.0.1 + 可选 Caddy）
+├── Makefile                      make deploy / deploy-tls / logs / ...
+├── INSTALL.md                    安装指南
+└── .env.example
 ```
 
-## Quick Install (Docker)
+## 快速部署
+
+3 种场景，每种一行命令：
 
 ```bash
-git clone https://github.com/<you>/utterlog.git
-cd utterlog
-cp .env.example .env          # edit DB_PASSWORD and JWT_SECRET
-docker compose up -d
+git clone https://github.com/Utterlog/utterlog.git && cd utterlog
 ```
 
-Open **http://localhost:3000** — you'll be auto-redirected to `/install` for a 3-step wizard (admin → site info → done). Postgres creates the DB, the API auto-loads `api/schema.sql` on first boot.
+| 你的 VPS | 部署命令 |
+|---|---|
+| 有 1Panel / 宝塔 / AAPanel | `make deploy` → 然后 GUI 反代（见 [deploy/1panel.md](deploy/1panel.md)） |
+| 有自建 nginx / Caddy | `make deploy` → 复制 [deploy/nginx.conf.example](deploy/nginx.conf.example) 或 [deploy/Caddyfile.example](deploy/Caddyfile.example) |
+| 纯净 VPS，啥都没有 | `DOMAIN=blog.yoursite.com make deploy-tls` → 自带 Caddy，自动 Let's Encrypt |
 
-See [INSTALL.md](./INSTALL.md) for bare-metal install, troubleshooting, and schema regeneration.
+脚本做：自动生成 `.env`（随机密码）→ 找空闲端口（默认 9527）→ 构建镜像 → 启动容器 → 健康检查 → 打印访问地址和凭据。
 
-## Manual (no Docker)
+首次运行 3-5 分钟，之后 `make deploy-fast` 跳过构建秒级重启。
 
-### Prerequisites
-- Go 1.21+ · Node.js 18+ · PostgreSQL 15+ · Redis (optional)
+## 架构
 
-### Backend
+```
+用户浏览器
+   │
+   ▼
+你的 nginx / 1Panel / Caddy
+   │
+   ▼
+127.0.0.1:9527 (Utterlog API 容器)
+   │
+   ├─ /admin/*        → 内嵌 Vite SPA（管理后台）
+   ├─ /api/v1/*       → Go handlers（数据 / 认证 / 业务）
+   ├─ /uploads/*      → 本地文件
+   ├─ /themes/*       → 主题预览 SVG
+   └─ 其他            → 内部反代到 web 容器（Next.js SSR 博客）
+                        │
+                        └─ web:3000（仅 docker 内部网络，无公网端口）
+```
+
+- **公网仅暴露一个端口**（你原本的 nginx/caddy 的 443），Utterlog 自己绑 loopback
+- **生产内存 ~600MB**（1GB VPS 舒适跑）
+- **单二进制 + 静态前端**（Go binary 25MB，Next.js standalone 150MB）
+
+## 常用命令
 
 ```bash
-cd api
-cp .env.example .env     # Edit database credentials
-psql -U <user> -d utterlog < schema.sql
-go run main.go           # http://localhost:8080
+make deploy              # 部署（自动生成密码）
+make deploy-interactive  # 部署（交互式输入密码）
+make deploy-tls          # 部署 + 内置 Caddy 自动 TLS
+make deploy-fast         # 重新部署，跳过镜像构建
+make logs                # 实时日志
+make logs-api            # 只看 API 日志
+make ps                  # 容器状态
+make stop                # 停止
+make down                # 停止并删除容器（保留数据）
+make clean               # 彻底删除（含数据，需确认）
+make schema              # 导出当前 DB schema 到 api/schema.sql
 ```
 
-### Frontend
+## 相关仓库
 
-```bash
-cd web
-npm install
-cp .env.example .env.local
-npm run dev              # http://localhost:3000
-```
+- **[utterlog](https://github.com/Utterlog/utterlog)** — 主项目（本仓库）
+- **[utterlog-sync](https://github.com/Utterlog/utterlog-sync)** — WordPress 导入 / 同步插件
 
-### Environment
+## 文档
 
-```env
-# web/.env.local
-NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+- [INSTALL.md](./INSTALL.md) — 安装指南（三种场景 + 裸机部署 + 故障排查）
+- [deploy/README.md](./deploy/README.md) — 反代配置决策树
+- [deploy/1panel.md](./deploy/1panel.md) — 1Panel / 宝塔 / AAPanel 图形化指南
 
-# api/.env
-APP_URL=http://localhost:8080
-PORT=8080
-DB_HOST=localhost
-DB_NAME=utterlog
-DB_USER=your_user
-```
-
-## Themes
-
-Themes live in `web/themes/{ThemeName}/`:
-
-```
-themes/MyTheme/
-├── theme.json    # Manifest
-├── index.ts      # Component exports
-├── Layout.tsx
-├── Header.tsx
-├── Footer.tsx
-├── HomePage.tsx
-├── PostPage.tsx
-└── PostCard.tsx
-```
-
-Switch themes from Dashboard > Themes.
-
-## Deployment
-
-Use Nginx to reverse proxy both services under one domain:
-
-```
-yourdomain.com/          → Next.js (port 3000)
-yourdomain.com/api/      → Go API (port 8080)
-yourdomain.com/uploads/  → Static uploads directory
-```
-
-Frontend `.env` for production:
-```env
-NEXT_PUBLIC_API_URL=/api/v1
-```
-
-## License
+## 许可
 
 MIT
