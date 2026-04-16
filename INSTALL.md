@@ -9,15 +9,15 @@
 
 ```bash
 # 1. 克隆
-git clone https://github.com/<your-user>/utterlog.git
+git clone https://github.com/Utterlog/utterlog.git
 cd utterlog
 
 # 2. 准备环境变量
 cp .env.example .env
 # 编辑 .env，修改 DB_PASSWORD 和 JWT_SECRET
 
-# 3. 启动
-docker compose up -d
+# 3. 启动（首次约 3-5 分钟：API 容器会自动安装 Node 依赖并构建 admin SPA）
+docker compose up -d --build
 
 # 4. 完成安装
 # 打开浏览器访问 http://localhost:3000
@@ -30,9 +30,20 @@ docker compose up -d
 ## 发生了什么
 
 1. **Postgres 容器首启** — 根据 `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` 自动创建数据库
-2. **API 容器启动** — 连接数据库，检测到 `ul_users` 表不存在（全新安装），自动加载 `api/schema.sql`
+2. **API 容器启动** —
+   - 检测到 `api/admin/dist/` 为空 → 进入 `api/admin/` 执行 `npm ci && npm run build` 生成 SPA
+   - 启动 Go 后端，加载 embedded admin SPA 到 `/admin/*`
+   - 连接数据库，检测到 `ul_users` 表不存在（全新安装）→ 自动加载 `api/schema.sql`
 3. **Web 中间件** — 请求根路径时检查 `/install/status`，未安装则跳转 `/install`
 4. **安装向导** — 三步：欢迎 → 管理员 → 站点信息
+
+## 故障排查
+
+- **API 容器反复重启**：`docker compose logs api --tail=80` 看错误
+  - `package utterlog-go/internal/storage is not in std` → 代码不完整，`git pull` 拉最新 main
+  - `no matching files found` (go:embed) → admin/dist 没构建，进容器执行 `cd /app/admin && npm ci && npm run build`
+- **schema.sql 未加载**：容器日志应有 `Schema loaded from api/schema.sql`；若没有且数据库空，手动 `docker compose exec postgres psql -U $DB_USER -d $DB_NAME < api/schema.sql`
+- **pgvector 扩展缺失**：镜像是 `pgvector/pgvector:pg18` 默认可用，若手动装 Postgres 需 `CREATE EXTENSION vector;`
 
 ## 目录结构
 
