@@ -3,14 +3,14 @@
 # find-free-port.sh — find the first available TCP port
 #
 # Usage:  find-free-port.sh [START_PORT] [MAX_TRIES]
-# Default: START_PORT=9527, MAX_TRIES=50
+# Default: START_PORT=9260, MAX_TRIES=50
 #
 # Writes the chosen port to stdout. Exits non-zero if none free.
 # Uses whichever tool is available: ss, netstat, or python3.
 # ============================================================
 set -euo pipefail
 
-start="${1:-9527}"
+start="${1:-9260}"
 max_tries="${2:-50}"
 end=$((start + max_tries - 1))
 

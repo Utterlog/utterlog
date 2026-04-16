@@ -3,7 +3,7 @@
 # ------------------------------------------------------------
 # Usage:
 #   1. Replace `blog.example.com` with your domain.
-#   2. Replace the port 9527 with whatever `make deploy` printed.
+#   2. Replace the port 9260 with whatever `make deploy` printed.
 #   3. Drop this into /etc/nginx/sites-available/ or conf.d/, then:
 #        sudo nginx -t && sudo systemctl reload nginx
 #
@@ -41,7 +41,7 @@ server {
 
     # --- Main reverse proxy to Utterlog ---
     location / {
-        proxy_pass http://127.0.0.1:9527;
+        proxy_pass http://127.0.0.1:9260;
 
         proxy_http_version 1.1;
         proxy_set_header Host              $host;
@@ -60,14 +60,14 @@ server {
 
     # --- Long-cache for Next.js static chunks ---
     location /_next/static/ {
-        proxy_pass http://127.0.0.1:9527;
+        proxy_pass http://127.0.0.1:9260;
         proxy_cache_valid 200 1y;
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
 
     # --- Long-cache for embedded admin SPA assets ---
     location /admin/assets/ {
-        proxy_pass http://127.0.0.1:9527;
+        proxy_pass http://127.0.0.1:9260;
         proxy_cache_valid 200 1y;
         add_header Cache-Control "public, max-age=31536000, immutable";
     }

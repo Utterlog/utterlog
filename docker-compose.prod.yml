@@ -1,7 +1,7 @@
 # ============================================================
 # Utterlog — production deployment
 # ------------------------------------------------------------
-# Exposes ONE port (${UTTERLOG_PORT:-9527}) bound to 127.0.0.1 only.
+# Exposes ONE port (${UTTERLOG_PORT:-9260}) bound to 127.0.0.1 only.
 # Everything else (web / postgres / redis) is internal.
 #
 # Architecture:
@@ -53,7 +53,7 @@ services:
     # Bind to loopback ONLY — user's nginx/caddy does the public-facing termination.
     # No conflict with existing services on 80/443.
     ports:
-      - "127.0.0.1:${UTTERLOG_PORT:-9527}:8080"
+      - "127.0.0.1:${UTTERLOG_PORT:-9260}:8080"
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -65,7 +65,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required in .env}
-      - APP_URL=${APP_URL:-http://127.0.0.1:${UTTERLOG_PORT:-9527}}
+      - APP_URL=${APP_URL:-http://127.0.0.1:${UTTERLOG_PORT:-9260}}
       - STORAGE_DRIVER=${STORAGE_DRIVER:-local}
       - S3_ENDPOINT=${S3_ENDPOINT:-}
       - S3_BUCKET=${S3_BUCKET:-}

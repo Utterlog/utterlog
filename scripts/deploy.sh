@@ -149,7 +149,7 @@ set +a
 # ============================================================
 # Step 3: find a free port (starting from UTTERLOG_PORT)
 # ============================================================
-START_PORT="${UTTERLOG_PORT:-9527}"
+START_PORT="${UTTERLOG_PORT:-9260}"
 log "Checking port $START_PORT availability ..."
 
 if ! NEW_PORT=$(bash scripts/find-free-port.sh "$START_PORT" 50); then
@@ -285,8 +285,8 @@ ${C_GREEN}${C_BOLD}============================================================$
                                  (bundled Caddy takes 80/443)
 
   ${C_BOLD}SSH tunnel to test locally (before domain setup):${C_RESET}
-    ssh -L 9527:127.0.0.1:$UTTERLOG_PORT your-vps
-    # then open http://localhost:9527 in your local browser
+    ssh -L 9260:127.0.0.1:$UTTERLOG_PORT your-vps
+    # then open http://localhost:9260 in your local browser
 
 EOF
 fi

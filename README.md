@@ -122,11 +122,11 @@ git pull && bash scripts/deploy.sh
 
 ## 反代
 
-Utterlog 只绑 `127.0.0.1:9527`，公网不可见。需要反代：
+Utterlog 只绑 `127.0.0.1:9260`，公网不可见。需要反代：
 
 | 你的 VPS | 怎么做 |
 |---|---|
-| 有 1Panel / 宝塔 | GUI 加反向代理，指向 `127.0.0.1:9527` → [deploy/1panel.md](deploy/1panel.md) |
+| 有 1Panel / 宝塔 | GUI 加反向代理，指向 `127.0.0.1:9260` → [deploy/1panel.md](deploy/1panel.md) |
 | 有自建 nginx / Caddy | 复制 [deploy/nginx.conf.example](deploy/nginx.conf.example) 或 [deploy/Caddyfile.example](deploy/Caddyfile.example) |
 | 啥都没有 | 改用 `DOMAIN=blog.你域名 make deploy-tls`（自带 Caddy + 自动 TLS） |
 
@@ -139,7 +139,7 @@ Utterlog 只绑 `127.0.0.1:9527`，公网不可见。需要反代：
 你的 nginx / 1Panel / Caddy
    │
    ▼
-127.0.0.1:9527 (Utterlog API 容器)
+127.0.0.1:9260 (Utterlog API 容器)
    │
    ├─ /admin/*        → 内嵌 Vite SPA（管理后台）
    ├─ /api/v1/*       → Go handlers（数据 / 认证 / 业务）

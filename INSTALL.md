@@ -41,15 +41,15 @@ git pull && bash scripts/deploy.sh
 `make deploy` 自动做完以下所有事:
 1. 检测你的 VPS 内存（≥2GB 本地构建 / <2GB 从 ghcr.io 拉预构建镜像）
 2. 生成 `.env`（含随机 24 字符 DB_PASSWORD + 48 字符 JWT_SECRET）
-3. 找空闲端口（默认 9527，被占则自动顺延）
+3. 找空闲端口（默认 9260，被占则自动顺延）
 4. 启动所有容器
 5. 健康检查
 6. 打印访问地址 + 凭据 + 下一步提示
 
 成功后看到：
 ```
-Access URL: http://127.0.0.1:9527  (loopback only, not public)
-Point your reverse proxy at 127.0.0.1:9527
+Access URL: http://127.0.0.1:9260  (loopback only, not public)
+Point your reverse proxy at 127.0.0.1:9260
 ```
 
 ---
@@ -60,7 +60,7 @@ Utterlog 只绑本机（`127.0.0.1`），公网看不到。你需要用已有反
 
 | 你的情况 | 怎么配 |
 |---|---|
-| **1Panel / 宝塔 / AAPanel** | 面板里加反向代理，域名 + `http://127.0.0.1:9527` → 见 [deploy/1panel.md](deploy/1panel.md) |
+| **1Panel / 宝塔 / AAPanel** | 面板里加反向代理，域名 + `http://127.0.0.1:9260` → 见 [deploy/1panel.md](deploy/1panel.md) |
 | **自建 nginx** | 复制 [deploy/nginx.conf.example](deploy/nginx.conf.example) 片段 |
 | **自建 Caddy** | 复制 [deploy/Caddyfile.example](deploy/Caddyfile.example) |
 | **纯净 VPS 啥都没有** | 换 `DOMAIN=blog.你域名 make deploy-tls` —— 自带 Caddy 自动 TLS |
