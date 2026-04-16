@@ -60,7 +60,7 @@ GENERATED=0
 INTERACTIVE=0
 TLS_MODE=0
 NO_BUILD=0
-PULL_MODE=0
+PULL_MODE=-1   # -1 = auto-detect, 0 = force build, 1 = force pull
 # Parse flags
 for arg in "$@"; do
   case "$arg" in
@@ -68,8 +68,32 @@ for arg in "$@"; do
     --tls)            TLS_MODE=1 ;;
     --no-build)       NO_BUILD=1 ;;
     --pull)           PULL_MODE=1 ;;
+    --build)          PULL_MODE=0 ;;
   esac
 done
+
+# Auto-detect deployment strategy based on available RAM.
+# Building images locally needs ~2GB RAM (Node + Go + Next.js build).
+# Below that, pulling pre-built images from GHCR is faster and safer.
+if [ "$PULL_MODE" -eq -1 ]; then
+  if [ -r /proc/meminfo ]; then
+    total_kb=$(awk '/^MemTotal:/{print $2}' /proc/meminfo)
+    total_mb=$((total_kb / 1024))
+    if [ "$total_mb" -lt 1800 ]; then
+      PULL_MODE=1
+      log "Detected ${total_mb}MB RAM → using pre-built images from ghcr.io (safer on small VPS)"
+    else
+      PULL_MODE=0
+      log "Detected ${total_mb}MB RAM → building images locally (faster iteration on code changes)"
+    fi
+  elif [ "$(uname)" = "Darwin" ]; then
+    # macOS dev machine — always plenty of RAM
+    PULL_MODE=0
+  else
+    # Unknown platform — play safe, pull
+    PULL_MODE=1
+  fi
+fi
 
 if [ ! -f .env ]; then
   if [ ! -f .env.example ]; then

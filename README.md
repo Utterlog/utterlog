@@ -101,21 +101,25 @@ utterlog/
 
 ## 快速部署
 
-3 种场景，每种一行命令：
+**两条命令：**
 
 ```bash
 git clone https://github.com/Utterlog/utterlog.git && cd utterlog
+make deploy        # 初次部署
+make update        # 以后每次更新
 ```
 
-| 你的 VPS | 部署命令 |
+`make deploy` 自动检测你的 VPS 内存 → ≥2GB 本地构建，<2GB 从 `ghcr.io/utterlog` 拉预构建镜像。其他（生成随机密码、找空闲端口、健康检查、打印凭据）都自动处理。
+
+## 反代
+
+Utterlog 只绑 `127.0.0.1:9527`，公网不可见。需要反代：
+
+| 你的 VPS | 怎么做 |
 |---|---|
-| 有 1Panel / 宝塔 / AAPanel | `make deploy` → 然后 GUI 反代（见 [deploy/1panel.md](deploy/1panel.md)） |
-| 有自建 nginx / Caddy | `make deploy` → 复制 [deploy/nginx.conf.example](deploy/nginx.conf.example) 或 [deploy/Caddyfile.example](deploy/Caddyfile.example) |
-| 纯净 VPS，啥都没有 | `DOMAIN=blog.yoursite.com make deploy-tls` → 自带 Caddy，自动 Let's Encrypt |
-
-脚本做：自动生成 `.env`（随机密码）→ 找空闲端口（默认 9527）→ 构建镜像 → 启动容器 → 健康检查 → 打印访问地址和凭据。
-
-首次运行 3-5 分钟，之后 `make deploy-fast` 跳过构建秒级重启。
+| 有 1Panel / 宝塔 | GUI 加反向代理，指向 `127.0.0.1:9527` → [deploy/1panel.md](deploy/1panel.md) |
+| 有自建 nginx / Caddy | 复制 [deploy/nginx.conf.example](deploy/nginx.conf.example) 或 [deploy/Caddyfile.example](deploy/Caddyfile.example) |
+| 啥都没有 | 改用 `DOMAIN=blog.你域名 make deploy-tls`（自带 Caddy + 自动 TLS） |
 
 ## 架构
 
@@ -144,18 +148,13 @@ git clone https://github.com/Utterlog/utterlog.git && cd utterlog
 ## 常用命令
 
 ```bash
-make deploy              # 部署（自动生成密码）
-make deploy-interactive  # 部署（交互式输入密码）
-make deploy-tls          # 部署 + 内置 Caddy 自动 TLS
-make deploy-fast         # 重新部署，跳过镜像构建
-make logs                # 实时日志
-make logs-api            # 只看 API 日志
-make ps                  # 容器状态
-make stop                # 停止
-make down                # 停止并删除容器（保留数据）
-make clean               # 彻底删除（含数据，需确认）
-make schema              # 导出当前 DB schema 到 api/schema.sql
+make help      # 看命令列表（默认只显示 2 条核心）
+make logs      # 看日志
+make ps        # 容器状态
+make stop      # 停止
 ```
+
+高级命令 `make help-advanced` 查看（TLS / 交互式 / 开发模式 / 数据清理等）。
 
 ## 相关仓库
 
