@@ -1,3 +1,16 @@
+# ============================================================
+# Utterlog — development (single-port, mirrors production)
+# ------------------------------------------------------------
+# 跟生产架构一致：只暴露一个端口 ${UTTERLOG_PORT:-9260}，
+# 浏览器访问 http://localhost:9260：
+#   /admin/*    → embed Vite SPA
+#   /api/*      → Go handlers
+#   /uploads/*  → 本地文件
+#   /*          → 反代到内网 web:3000 (Next.js dev server, hot reload)
+#
+# 启动: make dev   或   docker compose up -d --build
+# ============================================================
+
 services:
   postgres:
     image: pgvector/pgvector:pg18
@@ -8,16 +21,18 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-change-this-db-password}
       POSTGRES_HOST_AUTH_METHOD: md5
       POSTGRES_INITDB_ARGS: "--auth-host=md5"
-    ports:
-      - "${DB_PORT:-5432}:5432"
+    # 仅内网访问，需调试时临时取消注释
+    # ports:
+    #   - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    # 仅内网访问，需调试时临时取消注释
+    # ports:
+    #   - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - ./redisdata:/data
 
@@ -26,8 +41,9 @@ services:
       context: ./api
       dockerfile: Dockerfile
     restart: unless-stopped
+    # 唯一对外端口，绑 127.0.0.1 不公网暴露
     ports:
-      - "${API_PORT:-8080}:8080"
+      - "127.0.0.1:${UTTERLOG_PORT:-9260}:8080"
     volumes:
       - ./api:/app
       - ./api/public/uploads:/app/public/uploads
@@ -43,7 +59,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - JWT_SECRET=${JWT_SECRET:-change-this-to-a-long-random-string-at-least-32-chars}
-      - APP_URL=${APP_URL:-http://localhost:8080}
+      - APP_URL=${APP_URL:-http://localhost:${UTTERLOG_PORT:-9260}}
       - STORAGE_DRIVER=${STORAGE_DRIVER:-local}
       - S3_ENDPOINT=${S3_ENDPOINT:-}
       - S3_BUCKET=${S3_BUCKET:-}
@@ -51,10 +67,14 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY:-}
       - S3_REGION=${S3_REGION:-auto}
       - S3_PUBLIC_URL=${S3_PUBLIC_URL:-}
+      # 让 Go 反代非 /admin 非 /api 的请求到 Next.js 容器
+      - WEB_PROXY_TARGET=http://web:3000
     depends_on:
       postgres:
         condition: service_started
       redis:
+        condition: service_started
+      web:
         condition: service_started
 
   web:
@@ -62,17 +82,16 @@ services:
       context: ./web
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "${WEB_PORT:-3000}:3000"
+    # 不暴露端口，仅供 api 容器内网反代访问
     volumes:
       - ./web:/app
       - /app/node_modules
       - /app/.next
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+      # 同源相对路径，浏览器走 9260 → api 反代 → web，无跨域
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api/v1}
+      # SSR/middleware 走容器内网直连，绕过反代
       - INTERNAL_API_URL=${INTERNAL_API_URL:-http://api:8080/api/v1}
-    depends_on:
-      - api
 
 volumes:
   api_go_cache:
