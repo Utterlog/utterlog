@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 6ycODpwHtO1bZBhD1SW8boycnYV0UzGzOtWvhb4mYmFUwbeXNdEA2DwrQYRE4Sy
+-- \restrict 6ycODpwHtO1bZBhD1SW8boycnYV0UzGzOtWvhb4mYmFUwbeXNdEA2DwrQYRE4Sy  -- psql meta-command, removed for lib/pq compatibility
 
 -- Dumped from database version 18.3 (Debian 18.3-1.pgdg12+1)
 -- Dumped by pg_dump version 18.3 (Debian 18.3-1.pgdg12+1)
@@ -13,7 +13,7 @@ SET idle_in_transaction_session_timeout = 0;
 SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
+-- SELECT pg_catalog.set_config('search_path', '', false);  -- Disabled: would persist on pooled connections, causing "relation does not exist" for unqualified table names. CREATE statements below use schema-qualified names so this is unnecessary.
 SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
@@ -3206,5 +3206,5 @@ ALTER TABLE ONLY public.ul_relationships
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 6ycODpwHtO1bZBhD1SW8boycnYV0UzGzOtWvhb4mYmFUwbeXNdEA2DwrQYRE4Sy
+-- \unrestrict 6ycODpwHtO1bZBhD1SW8boycnYV0UzGzOtWvhb4mYmFUwbeXNdEA2DwrQYRE4Sy  -- psql meta-command, removed for lib/pq compatibility
 
