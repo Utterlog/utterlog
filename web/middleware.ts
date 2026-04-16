@@ -24,29 +24,40 @@ export async function middleware(req: NextRequest) {
   }
 
   const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
-
-  let installed = true; // fail open — don't block if API is down
-  try {
-    const r = await fetch(apiUrl + '/install/status', {
-      signal: AbortSignal.timeout(2000),
-      cache: 'no-store',
-    });
-    if (r.ok) {
-      const j = await r.json();
-      installed = j?.data?.installed ?? true;
-    }
-  } catch {
-    // API unreachable — let the user see the normal error rather than redirect loop
-    installed = true;
-  }
-
   const isInstallPage = pathname === '/install' || pathname.startsWith('/install/');
 
-  if (!installed && !isInstallPage) {
-    return NextResponse.redirect(new URL('/install', req.url));
+  // Fail CLOSED: on a fresh deploy, if the API is unreachable we assume NOT
+  // installed and send the user to /install. The install page itself handles
+  // "API unreachable" in its own UI (retry / troubleshooting hints), which is
+  // a much better UX than silently showing a broken blog.
+  let installed = false;
+  let apiReachable = false;
+  try {
+    const r = await fetch(apiUrl + '/install/status', {
+      signal: AbortSignal.timeout(3000),
+      cache: 'no-store',
+    });
+    apiReachable = r.ok;
+    if (r.ok) {
+      const j = await r.json();
+      installed = j?.data?.installed === true;
+    }
+  } catch {
+    apiReachable = false;
   }
-  if (installed && isInstallPage) {
-    return NextResponse.redirect(new URL('/', req.url));
+
+  // If we're already on /install, let it through so the user can see the wizard
+  // (which can probe the API on its own and show better errors).
+  if (isInstallPage) {
+    if (apiReachable && installed) {
+      return NextResponse.redirect(new URL('/', req.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Not on /install. If not installed OR API down → send to /install.
+  if (!installed) {
+    return NextResponse.redirect(new URL('/install', req.url));
   }
 
   return NextResponse.next();
