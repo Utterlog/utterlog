@@ -101,15 +101,24 @@ utterlog/
 
 ## 快速部署
 
-**两条命令：**
+**一行命令：**
 
 ```bash
-git clone https://github.com/Utterlog/utterlog.git && cd utterlog
-make deploy        # 初次部署
-make update        # 以后每次更新
+curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh | bash
 ```
 
-`make deploy` 自动检测你的 VPS 内存 → ≥2GB 本地构建，<2GB 从 `ghcr.io/utterlog` 拉预构建镜像。其他（生成随机密码、找空闲端口、健康检查、打印凭据）都自动处理。
+自动 HTTPS（内置 Caddy）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh | DOMAIN=blog.yoursite.com bash
+```
+
+脚本自动：检查 Docker → clone 仓库 → 按内存选本地构建或拉预构建镜像 → 生成随机密码 → 找空闲端口 → 启动 → 健康检查 → 打印凭据和反代提示。
+
+**日后更新**（在 utterlog 目录下）：
+```bash
+git pull && bash scripts/deploy.sh
+```
 
 ## 反代
 

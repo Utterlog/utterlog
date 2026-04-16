@@ -9,15 +9,33 @@
 
 ---
 
-## 两条命令部署
+## 一行部署
 
 ```bash
-# 初次部署
-git clone https://github.com/Utterlog/utterlog.git && cd utterlog
-make deploy
+curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh | bash
+```
 
-# 以后更新
+就这一条。脚本自动：
+- 检查 Docker
+- 克隆仓库到当前目录的 `utterlog/`
+- 跑 `scripts/deploy.sh`（生成密码 / 找端口 / 拉镜像 / 健康检查 / 打印凭据）
+
+**想同时开启自动 HTTPS？** 带上 `DOMAIN`：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh | DOMAIN=blog.yoursite.com bash
+```
+
+## 日后更新（两种等价方式）
+
+```bash
+cd utterlog
+
+# 如果有 make:
 make update
+
+# 如果没 make:
+git pull && bash scripts/deploy.sh
 ```
 
 `make deploy` 自动做完以下所有事:
