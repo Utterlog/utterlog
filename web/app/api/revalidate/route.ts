@@ -26,7 +26,9 @@ export async function POST(req: Request) {
     }
 
     for (const p of paths) revalidatePath(p, 'layout');
-    for (const t of tags) revalidateTag(t);
+    // Next.js 16 requires a second `profile` arg on revalidateTag — { expire: 0 }
+    // triggers immediate invalidation for the given tag.
+    for (const t of tags) revalidateTag(t, { expire: 0 });
 
     return NextResponse.json(
       { success: true, message: 'Cache cleared', paths, tags },
