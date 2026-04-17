@@ -1,80 +1,53 @@
-# Utterlog
+# web/ — Utterlog 博客前端
 
-A modern, self-hosted blogging platform with a theme system, AI assistant, and federation support.
+Next.js 16 + React 19 + TypeScript 6 渲染的博客前端。**不是独立产品** — 配合根目录的 [api/](../api) 一起跑，由 Go API 反代到本服务。
 
-## Features
+> 项目整体介绍、部署、特性，看根目录 [README.md](../README.md)。本文档只讲 web 子模块开发。
 
-- **Theme System** - Switchable themes (Utterlog2026, Lared, Westlife), plugin architecture
-- **Moments (Storyboard)** - Scattered card layout for micro-posts with image upload
-- **RSS Subscriptions** - Follow sites, aggregate feeds into storyboard view
-- **Comment System** - Threaded comments with Gravatar, country flags, browser/OS detection
-- **AI Assistant** - Built-in AI chat with multi-provider support
-- **Music Player** - 4 skins (Fullscreen, VinylCard, MiniBar, FloatingCard)
-- **Federation** - Cross-site following, mutual follow detection, webhook notifications
-- **Telegram Bot** - Publish moments, moderate comments, receive notifications
-- **Media Management** - Local/S3/R2 storage, image processing, TinyPNG integration
-
-## Tech Stack
-
-- **Frontend**: Next.js 16 + React 19 + Tailwind v4
-- **Backend**: Go (Gin) + PostgreSQL 17 + Redis
-- **CDN**: Cloudflare + bluecdn.com (fonts, icons, gravatar, favicon proxy)
-
-## Project Structure
+## 角色
 
 ```
-utterlog-admin/
-  app/                   # Next.js app router
-    (blog)/              # Blog frontend (theme-aware)
-    dashboard/           # Admin dashboard
-    moments/             # Moments storyboard page
-    feeds/               # RSS subscription page
-  themes/                # Theme directory
-    Utterlog2026/        # Default theme
-    Lared/               # Minimal content-focused theme
-    Westlife/            # Elegant card-based theme
-  plugins/               # Plugin directory (extensible)
-  components/
-    blog/                # Shared blog components
-    layout/              # Dashboard layout components
-    ui/                  # UI component library
-    icons/               # Custom SVG icons
-  lib/
-    api.ts               # Authenticated API client
-    blog-api.ts          # Public blog API (SSR)
-    theme.ts             # Theme loader & registry
-    store.ts             # Zustand stores
-utterlog-go/             # Go backend
+浏览器
+  ↓
+Go API (:8080)        ← 唯一对外端口（生产 9260）
+  ├─ /admin/*    embed 后台 SPA
+  ├─ /api/*      Go handlers
+  └─ /*          反代到 → web 容器 (Next.js, 本目录)
 ```
 
-## Themes
+web 仅在 docker 内网可达，**不直接暴露公网端口**。SSR 走 `INTERNAL_API_URL`（容器名直连），客户端 fetch 走 `NEXT_PUBLIC_API_URL=/api/v1`（同源相对路径，无 CORS）。
 
-Each theme lives in `themes/{ThemeName}/` with:
-- `theme.json` - Manifest (name, version, description, colors)
-- Component exports: Header, Footer, Layout, HomePage, PostPage, PostCard
+## 目录关键点
 
-Switch themes from Dashboard > Themes.
+| 路径 | 内容 |
+|------|------|
+| [app/(blog)/](app/(blog)) | 博客所有公开页（首页 / 文章 / 归档 / 标签 / 链接 / 音乐 / 说说） |
+| [app/install/](app/install) | 首次安装向导（三步） |
+| [app/feed/](app/feed) | RSS 聚合阅读 |
+| [themes/](themes) | 5 套主题（Azure / Flux / 2026 / Chred / Westlife），每套独立组件 + 样式 |
+| [plugins/](plugins) | 第三方扩展加载点，见 [plugins/README.md](plugins/README.md) |
+| [middleware.ts](middleware.ts) | API 不可达时强制跳 `/install` 的 fail-closed 中间件 |
+| [lib/api.ts](lib/api.ts) | 客户端 API 封装（带 token 刷新） |
+| [lib/blog-api.ts](lib/blog-api.ts) | SSR 调用，走 INTERNAL_API_URL |
 
-## Development
+## 单独开发本子模块
+
+通常用根目录 `make dev` 一起跑就够了。需要单独跑 web（连远程 API）时：
 
 ```bash
-# Frontend
-cd utterlog-admin
+cd web
 npm install
-npm run dev          # http://localhost:3000
-
-# Backend
-cd utterlog-go
-go run main.go       # http://localhost:8080
+NEXT_PUBLIC_API_URL=https://your-api.com/api/v1 \
+INTERNAL_API_URL=https://your-api.com/api/v1 \
+npm run dev   # http://localhost:3000
 ```
 
-## Environment
+## 主题开发
 
-```bash
-# utterlog-admin/.env.local
-NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
-```
+每套主题在 `themes/{Name}/`：
 
-## License
+- `theme.json` — 清单（name / version / colors）
+- 必须导出：`Header` / `Footer` / `Layout` / `HomePage` / `PostPage` / `PostCard`
+- 可选：`PageFooterIcons`（自定义页脚图标按钮）
 
-MIT
+后台 → 主题管理切换，或上传 zip 自定义主题。
