@@ -49,10 +49,22 @@ curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh |
 
 脚本自动：检查 Docker → clone → 按内存选本地构建 / 拉 GHCR 镜像 → 生成随机密码 → 找空闲端口（默认 9260）→ 启动 → 健康检查 → 打印凭据。
 
-**日后更新**（在 utterlog 目录下）：
+**日后更新**（**不需要装 make**，重跑一行安装命令就是升级）：
 
 ```bash
-make update
+curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | bash
+```
+
+在 `utterlog/` 的上一级目录执行。脚本检测到目录已存在 → `git pull` → 重新部署。升级后浏览器 **⌘+Shift+R** 硬刷清缓存。
+
+等价写法（任选其一）：
+
+```bash
+# 无 make，进目录手动
+cd utterlog && git pull && bash scripts/deploy.sh
+
+# 装了 make 的快捷方式
+cd utterlog && make update
 ```
 
 ## 🔌 反代
@@ -63,7 +75,7 @@ Utterlog 仅绑 `127.0.0.1:9260`，公网不可见，需反代：
 |---|---|
 | 有 1Panel / 宝塔 / AAPanel | GUI 加反向代理，指向 `127.0.0.1:9260` → [deploy/1panel.md](deploy/1panel.md) |
 | 有自建 nginx / Caddy | 复制 [deploy/nginx.conf.example](deploy/nginx.conf.example) 或 [deploy/Caddyfile.example](deploy/Caddyfile.example) |
-| 啥反代都没有 | `DOMAIN=blog.你域名 make deploy-tls`（自带 Caddy + 自动 TLS） |
+| 啥反代都没有 | `DOMAIN=blog.你域名 bash scripts/deploy.sh --tls`（无 make；有 make 用 `make deploy-tls`）—— 自带 Caddy + 自动 TLS |
 
 ## 🏗 架构
 
