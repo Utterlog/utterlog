@@ -111,4 +111,6 @@ fi
 
 log "Running scripts/deploy.sh ..."
 echo
-bash scripts/deploy.sh "${DEPLOY_ARGS[@]}"
+# Note: ${ARR[@]+"${ARR[@]}"} expands safely under `set -u` even when empty.
+# Plain "${DEPLOY_ARGS[@]}" would error with "unbound variable" on empty arrays.
+bash scripts/deploy.sh ${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"}
