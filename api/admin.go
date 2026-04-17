@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
+	"utterlog-go/internal/handler"
 )
 
 // adminDistFS holds the compiled Vite output. Populated by the embed directive in admin_embed.go
@@ -32,6 +34,16 @@ func ServeAdmin(distFS embed.FS) gin.HandlerFunc {
 		rel := strings.TrimPrefix(c.Param("filepath"), "/")
 		if rel == "" || rel == "/" {
 			rel = "index.html"
+		}
+
+		// Install gate: if no admin account exists yet, redirect HTML page
+		// loads to the install wizard. Static assets (.js/.css/.svg/etc) are
+		// not redirected — only the SPA shell, which is what the user sees.
+		// Once installed, this branch is skipped on every request (cheap
+		// query: SELECT count(*) FROM ul_users WHERE role='admin' LIMIT 1).
+		if isHTMLRequest(rel, c.Request.Header.Get("Accept")) && !handler.IsInstalled() {
+			c.Redirect(http.StatusFound, "/install")
+			return
 		}
 
 		// Try exact file (or SPA fallback)
@@ -91,6 +103,24 @@ p { font-size: 13px; line-height: 1.8; color: #5a7a94; }
 </div>
 </body>
 </html>`
+
+// isHTMLRequest returns true when the request is for the SPA shell — either
+// the bare path (e.g. /admin/, /admin/login, /admin/posts) or any URL whose
+// Accept header prefers HTML. Used by the install gate to avoid 302-ing
+// hashed JS/CSS asset requests.
+func isHTMLRequest(rel, acceptHeader string) bool {
+	// Anything under assets/ or with a known asset extension → static, never HTML
+	if strings.HasPrefix(rel, "assets/") {
+		return false
+	}
+	switch filepath.Ext(rel) {
+	case ".js", ".css", ".map", ".svg", ".png", ".jpg", ".jpeg", ".gif",
+		".webp", ".avif", ".ico", ".woff", ".woff2", ".ttf", ".json":
+		return false
+	}
+	// Otherwise treat as HTML (SPA shell or explicit text/html accept)
+	return rel == "index.html" || strings.Contains(acceptHeader, "text/html")
+}
 
 // readAdminAsset reads a file from the embedded admin dist, picking the best
 // pre-compressed variant based on the client's Accept-Encoding header.
