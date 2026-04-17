@@ -309,64 +309,70 @@ body {
 
 /* ========================================
    Admin Base Components
+   ------------------------------------------
+   Wrapped in @layer components so Tailwind v4's Preflight (in @layer base)
+   cannot override button backgrounds via its generic `button { background:
+   transparent }` reset. Cascade order: base → components → utilities.
    ======================================== */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background-color 0.15s, box-shadow 0.15s;
-  border-radius: 1px;
-  border: none;
-  outline: none;
-  cursor: pointer;
-}
-.btn:focus-visible {
-  box-shadow: 0 0 0 2px var(--color-bg-card), 0 0 0 4px var(--color-focus-ring);
-}
-.btn:disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 0.15s, box-shadow 0.15s;
+    border-radius: 1px;
+    border: none;
+    outline: none;
+    cursor: pointer;
+  }
+  .btn:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-bg-card), 0 0 0 4px var(--color-focus-ring);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
 
-.btn-primary {
-  background-color: var(--color-primary);
-  color: #fff;
-}
-.btn-primary:hover {
-  background-color: var(--color-primary-hover);
-}
-.btn-primary:active {
-  background-color: var(--color-primary-active);
-}
+  .btn-primary {
+    background-color: var(--color-primary);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background-color: var(--color-primary-hover);
+  }
+  .btn-primary:active {
+    background-color: var(--color-primary-active);
+  }
 
-.btn-secondary {
-  background-color: var(--color-bg-soft);
-  color: var(--color-text-main);
-  border: 1px solid var(--color-border);
-}
-.btn-secondary:hover {
-  background-color: var(--color-divider);
-}
+  .btn-secondary {
+    background-color: var(--color-bg-soft);
+    color: var(--color-text-main);
+    border: 1px solid var(--color-border);
+  }
+  .btn-secondary:hover {
+    background-color: var(--color-divider);
+  }
 
-.btn-danger {
-  background-color: #dc2626;
-  color: #fff;
-}
-.btn-danger:hover {
-  background-color: #b91c1c;
-}
+  .btn-danger {
+    background-color: #dc2626;
+    color: #fff;
+  }
+  .btn-danger:hover {
+    background-color: #b91c1c;
+  }
 
-.btn-ghost {
-  background-color: transparent;
-  color: var(--color-text-sub);
-}
-.btn-ghost:hover {
-  background-color: var(--color-bg-soft);
-  color: var(--color-text-main);
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--color-text-sub);
+  }
+  .btn-ghost:hover {
+    background-color: var(--color-bg-soft);
+    color: var(--color-text-main);
+  }
 }
 
 /* Action icon button — square with icon */
