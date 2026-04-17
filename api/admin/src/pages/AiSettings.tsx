@@ -26,10 +26,33 @@ const defaultProvider: Provider = {
   temperature: 0.7, max_tokens: 4096, timeout: 30, is_active: true, is_default: false, sort_order: 0,
 };
 
-const settingsTabs = ['提供商', '聊天配置', '文章设置', '博主资料', '系统提示词', '数据权限', '批量任务'];
+const settingsTabs = [
+  { id: '提供商',     label: '提供商',     icon: 'fa-regular fa-server' },
+  { id: '聊天配置',   label: '聊天配置',   icon: 'fa-regular fa-message' },
+  { id: '文章设置',   label: '文章设置',   icon: 'fa-regular fa-pen-to-square' },
+  { id: '博主资料',   label: '博主资料',   icon: 'fa-regular fa-user-pen' },
+  { id: '系统提示词', label: '系统提示词', icon: 'fa-regular fa-terminal' },
+  { id: '数据权限',   label: '数据权限',   icon: 'fa-regular fa-shield-halved' },
+  { id: '批量任务',   label: '批量任务',   icon: 'fa-regular fa-list-check' },
+];
 
-const cardStyle: React.CSSProperties = { padding: '28px', marginBottom: '20px' };
-const sectionTitleStyle: React.CSSProperties = { fontSize: '15px', fontWeight: 600, marginBottom: '20px' };
+// Align with Settings.tsx: 28px padding, 24px bottom margin between cards
+const cardStyle: React.CSSProperties = { padding: '28px', marginBottom: '24px' };
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: '15px', fontWeight: 600, marginBottom: '20px',
+  display: 'flex', alignItems: 'center', gap: '8px',
+};
+
+// Lightweight icon-prefixed section title — matches Settings.tsx visual style
+function SectionTitle({ icon, children, as = 'h3' }: { icon: string; children: React.ReactNode; as?: 'h2' | 'h3' }) {
+  const Tag = as as any;
+  return (
+    <Tag style={sectionTitleStyle}>
+      <i className={icon} style={{ fontSize: '14px', color: 'var(--color-primary)' }} />
+      {children}
+    </Tag>
+  );
+}
 
 // AI option keys prefix
 const AI_PREFIX = 'ai_';
@@ -234,15 +257,23 @@ export default function AiSettingsPage() {
   return (
     <div>
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--color-border)', marginBottom: '24px', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--color-border)', marginBottom: '28px', overflowX: 'auto' }}>
         {settingsTabs.map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{
-            padding: '10px 20px', fontSize: '13px', fontWeight: activeTab === tab ? 600 : 400,
-            color: activeTab === tab ? 'var(--color-primary)' : 'var(--color-text-sub)',
-            borderTop: 'none', borderLeft: 'none', borderRight: 'none',
-            borderBottom: activeTab === tab ? '2px solid var(--color-primary)' : '2px solid transparent',
-            background: 'none', cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
-          }}>{tab}</button>
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '10px 18px', fontSize: '13px', fontWeight: activeTab === tab.id ? 600 : 400,
+              color: activeTab === tab.id ? 'var(--color-primary)' : 'var(--color-text-sub)',
+              borderTop: 'none', borderLeft: 'none', borderRight: 'none',
+              borderBottom: activeTab === tab.id ? '2px solid var(--color-primary)' : '2px solid transparent',
+              background: 'none', cursor: 'pointer', transition: 'all 0.15s',
+              whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px',
+            }}
+          >
+            <i className={tab.icon} style={{ fontSize: '13px' }} />
+            {tab.label}
+          </button>
         ))}
       </div>
 
@@ -250,7 +281,7 @@ export default function AiSettingsPage() {
       {activeTab === '提供商' && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={sectionTitleStyle}>AI 提供商</h2>
+            <SectionTitle icon="fa-regular fa-server" as="h2">AI 提供商</SectionTitle>
             <Button onClick={() => setEditing({ ...defaultProvider })}><i className="fa-regular fa-plus" style={{ fontSize: '14px' }} /> 添加</Button>
           </div>
           <div className="space-y-2">
@@ -332,7 +363,7 @@ export default function AiSettingsPage() {
       {/* ── 聊天配置 ── */}
       {activeTab === '聊天配置' && (
         <div className="card" style={cardStyle}>
-          <h3 style={sectionTitleStyle}>前端聊天气泡</h3>
+          <SectionTitle icon="fa-regular fa-comment-dots">前端聊天气泡</SectionTitle>
           <div className="space-y-4">
             <Toggle label="允许访客（未登录）使用 AI 聊天" checked={config.ai_chat_guest === 'true'} onChange={e => updateConfig('ai_chat_guest', String(e.target.checked))} />
             <Select label="气泡位置" value={config.ai_chat_position} onChange={e => updateConfig('ai_chat_position', e.target.value)}>
@@ -356,7 +387,7 @@ export default function AiSettingsPage() {
         <>
           {/* 功能开关 */}
           <div className="card" style={cardStyle}>
-            <h3 style={sectionTitleStyle}>AI 自动化功能</h3>
+            <SectionTitle icon="fa-regular fa-bolt">AI 自动化功能</SectionTitle>
             <p className="text-xs text-dim" style={{ marginTop: '-12px', marginBottom: '20px' }}>开启后，发布或更新文章时 AI 将自动执行对应任务</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               {[
@@ -368,8 +399,8 @@ export default function AiSettingsPage() {
               ].map(item => (
                 <label key={item.key} style={{
                   flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-                  padding: '16px 8px', textAlign: 'center',
-                  border: `1.5px solid ${config[item.key] === 'true' ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  padding: '16px 8px', textAlign: 'center', borderRadius: 0,
+                  border: `1px solid ${config[item.key] === 'true' ? 'var(--color-primary)' : 'var(--color-border)'}`,
                   background: config[item.key] === 'true' ? 'color-mix(in srgb, var(--color-primary) 5%, transparent)' : 'transparent',
                   cursor: 'pointer', transition: 'all 0.15s',
                 }}>
@@ -385,7 +416,7 @@ export default function AiSettingsPage() {
           {/* 摘要设置 */}
           {config.ai_summary_auto === 'true' && (
             <div className="card" style={cardStyle}>
-              <h3 style={sectionTitleStyle}>摘要设置</h3>
+              <SectionTitle icon="fa-regular fa-align-left">摘要设置</SectionTitle>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <Input label="摘要最大长度" type="number" value={config.ai_summary_max_length} onChange={e => updateConfig('ai_summary_max_length', e.target.value)} style={{ maxWidth: '200px' }} />
                 <div>
@@ -399,7 +430,7 @@ export default function AiSettingsPage() {
           {/* 特色图设置 */}
           {config.ai_image_auto === 'true' && (
             <div className="card" style={cardStyle}>
-              <h3 style={sectionTitleStyle}>特色图设置</h3>
+              <SectionTitle icon="fa-regular fa-image">特色图设置</SectionTitle>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <Select label="图片生成模型" value={config.ai_image_model} onChange={e => updateConfig('ai_image_model', e.target.value)}>
                   <option value="">使用默认图片提供商</option>
@@ -445,7 +476,7 @@ export default function AiSettingsPage() {
 
           {/* 提示词配置 */}
           <div className="card" style={cardStyle}>
-            <h3 style={sectionTitleStyle}>自定义提示词</h3>
+            <SectionTitle icon="fa-regular fa-terminal">自定义提示词</SectionTitle>
             <p className="text-xs text-dim" style={{ marginTop: '-12px', marginBottom: '20px' }}>自定义每个 AI 功能的指令，留空使用内置默认提示词</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               {[
@@ -480,7 +511,7 @@ export default function AiSettingsPage() {
       {/* ── 博主资料 ── */}
       {activeTab === '博主资料' && (
         <div className="card" style={cardStyle}>
-          <h3 style={sectionTitleStyle}>博主资料 & AI 记忆</h3>
+          <SectionTitle icon="fa-regular fa-user-pen">博主资料 & AI 记忆</SectionTitle>
           <p className="text-xs text-dim mb-5">AI 会根据这些信息了解你的写作风格和偏好，提供更个性化的回复</p>
           <div className="space-y-4">
             <Input label="博主昵称" value={config.ai_blogger_name} onChange={e => updateConfig('ai_blogger_name', e.target.value)} placeholder="你的名字或笔名" />
@@ -504,7 +535,7 @@ export default function AiSettingsPage() {
       {/* ── 系统提示词 ── */}
       {activeTab === '系统提示词' && (
         <div className="card" style={cardStyle}>
-          <h3 style={sectionTitleStyle}>AI 系统提示词</h3>
+          <SectionTitle icon="fa-regular fa-scroll">AI 系统提示词</SectionTitle>
           <div className="space-y-4">
             <div>
               <Textarea label="聊天系统提示词" rows={8} value={config.ai_system_prompt} onChange={e => updateConfig('ai_system_prompt', e.target.value)} style={{ fontFamily: 'monospace' }} />
@@ -520,7 +551,7 @@ export default function AiSettingsPage() {
       {/* ── 数据权限 ── */}
       {activeTab === '数据权限' && (
         <div className="card" style={cardStyle}>
-          <h3 style={sectionTitleStyle}>AI 数据访问权限</h3>
+          <SectionTitle icon="fa-regular fa-shield-halved">AI 数据访问权限</SectionTitle>
           <p className="text-xs text-dim mb-5">控制 AI 可以访问哪些站点数据作为上下文</p>
           <div className="space-y-1">
             {[

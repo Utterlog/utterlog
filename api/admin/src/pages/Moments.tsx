@@ -248,8 +248,12 @@ export default function MomentsPage() {
                 ))}
               </div>
             )}
-            <label className="btn btn-secondary text-sm" style={{ cursor: imgUploading ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', opacity: imgUploading ? 0.6 : 1 }}>
-              <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} /> {imgUploading ? '上传中...' : '上传图片'}
+            <label
+              className="btn btn-secondary btn-toolbar-square"
+              title={imgUploading ? '上传中...' : '上传图片'}
+              style={{ cursor: imgUploading ? 'wait' : 'pointer', opacity: imgUploading ? 0.6 : 1 }}
+            >
+              <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />
               <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleImgUpload} disabled={imgUploading} />
             </label>
           </div>

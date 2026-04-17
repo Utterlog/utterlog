@@ -346,8 +346,12 @@ export default function SettingsPage() {
                         </div>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <input className="input text-sm" style={{ flex: 1, fontSize: '12px' }} placeholder={item.placeholder} {...register(item.field)} />
-                          <label className="btn btn-secondary text-sm" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, fontSize: '12px', padding: '0 10px' }}>
-                            <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '12px' }} />
+                          <label
+                            className="btn btn-secondary"
+                            title="上传图片"
+                            style={{ cursor: 'pointer', flexShrink: 0, width: 40, minWidth: 40, height: 40, minHeight: 40, padding: 0 }}
+                          >
+                            <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />
                             <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.avif,.ico,.svg" style={{ display: 'none' }} onChange={(e) => handleBrandingUpload(e, item.purpose, item.field)} />
                           </label>
                         </div>
@@ -415,7 +419,8 @@ export default function SettingsPage() {
                     ].map(d => (
                       <label key={d.value} style={{
                         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-                        padding: '16px 12px', border: `1.5px solid ${emailProvider === d.value ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                        padding: '16px 12px', borderRadius: 0,
+                        border: `1px solid ${emailProvider === d.value ? 'var(--color-primary)' : 'var(--color-border)'}`,
                         background: emailProvider === d.value ? 'color-mix(in srgb, var(--color-primary) 5%, transparent)' : 'transparent',
                         cursor: 'pointer', transition: 'all 0.15s',
                       }}>
@@ -724,8 +729,9 @@ export default function SettingsPage() {
                       ] as const).map(opt => (
                         <label key={opt.value} style={{
                           flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                          padding: '12px 8px', border: `1px solid ${watch('comment_captcha_mode') === opt.value ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                          background: watch('comment_captcha_mode') === opt.value ? 'var(--color-bg-soft)' : 'var(--color-bg-card)',
+                          padding: '12px 8px', borderRadius: 0,
+                          border: `1px solid ${watch('comment_captcha_mode') === opt.value ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                          background: watch('comment_captcha_mode') === opt.value ? 'color-mix(in srgb, var(--color-primary) 5%, transparent)' : 'transparent',
                           cursor: 'pointer', transition: 'all 0.15s',
                         }}>
                           <input type="radio" value={opt.value} {...register('comment_captcha_mode')} style={{ display: 'none' }} />
@@ -806,7 +812,8 @@ export default function SettingsPage() {
                     ].map(d => (
                       <label key={d.value} style={{
                         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-                        padding: '16px 12px', border: `1.5px solid ${mediaDriver === d.value ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                        padding: '16px 12px', borderRadius: 0,
+                        border: `1px solid ${mediaDriver === d.value ? 'var(--color-primary)' : 'var(--color-border)'}`,
                         background: mediaDriver === d.value ? 'color-mix(in srgb, var(--color-primary) 5%, transparent)' : 'transparent',
                         cursor: 'pointer', transition: 'all 0.15s',
                       }}>
@@ -1005,9 +1012,9 @@ export default function SettingsPage() {
                         const val = watch('image_display_effect', 'fade');
                         return (
                           <label key={effect.value} className="cursor-pointer" style={{
-                            padding: '12px 10px', textAlign: 'center', borderRadius: '4px',
-                            border: `2px solid ${val === effect.value ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                            background: val === effect.value ? 'rgba(var(--color-primary-rgb, 0,0,0), 0.04)' : 'transparent',
+                            padding: '12px 10px', textAlign: 'center', borderRadius: 0,
+                            border: `1px solid ${val === effect.value ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                            background: val === effect.value ? 'color-mix(in srgb, var(--color-primary) 5%, transparent)' : 'transparent',
                             transition: 'all 0.15s',
                           }}>
                             <input type="radio" value={effect.value} {...register('image_display_effect')} style={{ display: 'none' }} />

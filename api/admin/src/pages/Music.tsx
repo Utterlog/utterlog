@@ -149,7 +149,9 @@ export default function MusicPage() {
                 style={{ paddingLeft: '32px' }}
               />
             </div>
-            <Button onClick={doSearch} loading={searching}>搜索</Button>
+            <Button className="btn-toolbar-square" title="搜索" onClick={doSearch} loading={searching}>
+              <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
+            </Button>
           </div>
 
           {searchResults.length > 0 && (

@@ -5,60 +5,69 @@ import NotificationBell from '@/components/layout/NotificationBell';
 import { useAuthStore } from '@/lib/store';
 import { optionsApi } from '@/lib/api';
 
-// Route-to-title map — displayed in header + document.title
-const pageTitleMap: Record<string, string> = {
-  '/': '仪表盘',
-  '/posts': '文章管理',
-  '/posts/create': '新建文章',
-  '/posts/categories': '文章分类',
-  '/posts/tags': '文章标签',
-  '/pages': '页面管理',
-  '/pages/create': '新建页面',
-  '/moments': '说说管理',
-  '/comments': '评论管理',
-  '/follows': '关注管理',
-  '/links': '友链管理',
-  '/media': '媒体库',
-  '/albums': '相册管理',
-  '/music': '音乐管理',
-  '/music/playlists': '歌单管理',
-  '/playlists': '歌单管理',
-  '/movies': '电影管理',
-  '/videos': '视频管理',
-  '/books': '图书管理',
-  '/games': '游戏管理',
-  '/goods': '好物管理',
-  '/analytics': '数据统计',
-  '/security': '安全设置',
-  '/themes': '主题管理',
-  '/plugins': '插件管理',
-  '/tools': '工具',
-  '/backup': '备份恢复',
-  '/settings': '系统设置',
-  '/profile': '个人资料',
-  '/utterlog': 'Utterlog 网络',
-  '/ai': 'AI 助手',
-  '/ai/logs': 'AI 调用日志',
-  '/ai-settings': 'AI 设置',
+// Route-to-title map — displayed in header + document.title.
+// Icons reuse the sidebar FontAwesome classes for visual consistency.
+type PageMeta = { label: string; en: string; icon: string };
+const pageTitleMap: Record<string, PageMeta> = {
+  '/':               { label: '仪表盘',        en: 'Dashboard',       icon: 'fa-solid fa-gauge' },
+  '/posts':          { label: '文章管理',      en: 'Posts',           icon: 'fa-solid fa-pen-to-square' },
+  '/posts/create':   { label: '新建文章',      en: 'New Post',        icon: 'fa-regular fa-plus' },
+  '/posts/categories': { label: '文章分类',    en: 'Categories',      icon: 'fa-regular fa-folder' },
+  '/posts/tags':     { label: '文章标签',      en: 'Tags',            icon: 'fa-regular fa-tag' },
+  '/pages':          { label: '页面管理',      en: 'Pages',           icon: 'fa-regular fa-file-lines' },
+  '/pages/create':   { label: '新建页面',      en: 'New Page',        icon: 'fa-regular fa-file-plus' },
+  '/moments':        { label: '说说管理',      en: 'Moments',         icon: 'fa-solid fa-comment-dots' },
+  '/comments':       { label: '评论管理',      en: 'Comments',        icon: 'fa-regular fa-comments' },
+  '/follows':        { label: '关注管理',      en: 'Follows',         icon: 'fa-solid fa-user-group' },
+  '/links':          { label: '友链管理',      en: 'Links',           icon: 'fa-solid fa-link' },
+  '/media':          { label: '媒体库',        en: 'Media',           icon: 'fa-regular fa-images' },
+  '/albums':         { label: '相册管理',      en: 'Albums',          icon: 'fa-regular fa-rectangle-history' },
+  '/music':          { label: '音乐管理',      en: 'Music',           icon: 'fa-regular fa-music' },
+  '/music/playlists': { label: '歌单管理',     en: 'Playlists',       icon: 'fa-regular fa-list-music' },
+  '/playlists':      { label: '歌单管理',      en: 'Playlists',       icon: 'fa-regular fa-list-music' },
+  '/movies':         { label: '电影管理',      en: 'Movies',          icon: 'fa-regular fa-film' },
+  '/videos':         { label: '视频管理',      en: 'Videos',          icon: 'fa-regular fa-video' },
+  '/books':          { label: '图书管理',      en: 'Books',           icon: 'fa-regular fa-book' },
+  '/games':          { label: '游戏管理',      en: 'Games',           icon: 'fa-regular fa-gamepad' },
+  '/goods':          { label: '好物管理',      en: 'Goods',           icon: 'fa-regular fa-bag-shopping' },
+  '/analytics':      { label: '数据统计',      en: 'Analytics',       icon: 'fa-solid fa-chart-line' },
+  '/security':       { label: '安全设置',      en: 'Security',        icon: 'fa-solid fa-shield-halved' },
+  '/themes':         { label: '主题管理',      en: 'Themes',          icon: 'fa-solid fa-palette' },
+  '/plugins':        { label: '插件管理',      en: 'Plugins',         icon: 'fa-solid fa-plug' },
+  '/tools':          { label: '工具',          en: 'Tools',           icon: 'fa-solid fa-screwdriver-wrench' },
+  '/backup':         { label: '备份恢复',      en: 'Backup',          icon: 'fa-solid fa-database' },
+  '/settings':       { label: '系统设置',      en: 'Settings',        icon: 'fa-solid fa-gear' },
+  '/profile':        { label: '个人资料',      en: 'Profile',         icon: 'fa-regular fa-user' },
+  '/utterlog':       { label: 'Utterlog 网络', en: 'Network',         icon: 'fa-solid fa-globe' },
+  '/ai':             { label: 'AI 助手',       en: 'AI Assistant',    icon: 'fa-solid fa-wand-magic-sparkles' },
+  '/ai/logs':        { label: 'AI 调用日志',   en: 'AI Logs',         icon: 'fa-regular fa-list-timeline' },
+  '/ai-settings':    { label: 'AI 设置',       en: 'AI Settings',     icon: 'fa-solid fa-sliders' },
 };
 
-function resolveTitle(pathname: string): string {
+const EMPTY: PageMeta = { label: '', en: '', icon: '' };
+
+function resolveTitle(pathname: string): PageMeta {
   // Exact match first
   if (pageTitleMap[pathname]) return pageTitleMap[pathname];
   // Dynamic segments
-  if (pathname.startsWith('/posts/edit/')) return '编辑文章';
-  if (pathname.startsWith('/pages/edit/')) return '编辑页面';
+  if (pathname.startsWith('/posts/edit/')) return { label: '编辑文章', en: 'Edit Post', icon: 'fa-regular fa-pen' };
+  if (pathname.startsWith('/pages/edit/')) return { label: '编辑页面', en: 'Edit Page', icon: 'fa-regular fa-pen' };
   if (pathname.startsWith('/comments/')) {
     const s = pathname.split('/')[2];
-    const map: Record<string, string> = { pending: '待审核评论', spam: '垃圾评论', trash: '回收站', mine: '我的评论' };
-    return map[s] || '评论管理';
+    const map: Record<string, PageMeta> = {
+      pending: { label: '待审核评论', en: 'Pending Comments', icon: 'fa-regular fa-clock' },
+      spam:    { label: '垃圾评论',   en: 'Spam',             icon: 'fa-regular fa-ban' },
+      trash:   { label: '回收站',     en: 'Trash',            icon: 'fa-regular fa-trash' },
+      mine:    { label: '我的评论',   en: 'My Comments',      icon: 'fa-regular fa-user-pen' },
+    };
+    return map[s] || { label: '评论管理', en: 'Comments', icon: 'fa-regular fa-comments' };
   }
   // Longest-prefix fallback
   const sorted = Object.keys(pageTitleMap).sort((a, b) => b.length - a.length);
   for (const p of sorted) {
     if (p !== '/' && pathname.startsWith(p)) return pageTitleMap[p];
   }
-  return '';
+  return EMPTY;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -71,7 +80,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const pageTitle = resolveTitle(pathname);
+  const pageMeta = resolveTitle(pathname);
+  const pageTitle = pageMeta.label;
+  const pageEn = pageMeta.en;
+  const pageIcon = pageMeta.icon;
 
   useEffect(() => {
     optionsApi.list().then((r: any) => {
@@ -141,8 +153,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             padding: '0 20px', borderBottom: '1px solid var(--color-border)', flexShrink: 0,
           }}
         >
-          {/* Left: current page title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          {/* Left: current page icon + title (中文 + English) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            {pageIcon && (
+              <i className={pageIcon} style={{ fontSize: 15, color: 'var(--color-primary)', flexShrink: 0 }} />
+            )}
             <h1 style={{
               fontSize: 15, fontWeight: 600, margin: 0,
               color: 'var(--color-text-main)',
@@ -150,6 +165,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }}>
               {pageTitle || '管理后台'}
             </h1>
+            {pageEn && (
+              <span style={{
+                fontSize: 12, fontWeight: 400,
+                color: 'var(--color-text-dim)',
+                letterSpacing: '0.02em',
+                flexShrink: 0,
+              }}>
+                · {pageEn}
+              </span>
+            )}
           </div>
 
           {/* Right: actions + user */}

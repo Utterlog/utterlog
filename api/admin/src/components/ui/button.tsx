@@ -1,5 +1,13 @@
-
 import { ButtonHTMLAttributes, forwardRef } from 'react';
+
+// Unified with global .btn CSS classes so every <Button> in the admin inherits
+// the same radius / min-height / padding as any raw .btn usage. Variants map
+// directly to .btn-primary / .btn-secondary / .btn-danger / .btn-ghost, and
+// the .card .btn { border-radius: 0 } rule continues to square-off buttons
+// inside cards without any per-site change here.
+//
+// Size only nudges font-size / padding — the box (radius, border, appearance)
+// still comes from .btn so the whole admin looks consistent.
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -7,52 +15,21 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
-const sizeStyles = {
-  sm: { padding: '6px 12px', fontSize: '13px' },
-  md: { padding: '8px 16px', fontSize: '13px' },
-  lg: { padding: '10px 20px', fontSize: '14px' },
-};
-
-const variantStyles = {
-  primary: {
-    backgroundColor: 'var(--color-primary)',
-    color: '#fff',
-    border: 'none',
-  },
-  secondary: {
-    backgroundColor: 'var(--color-bg-soft)',
-    color: 'var(--color-text-main)',
-    border: '1px solid var(--color-border)',
-  },
-  danger: {
-    backgroundColor: '#dc2626',
-    color: '#fff',
-    border: 'none',
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    color: 'var(--color-text-sub)',
-    border: 'none',
-  },
+const sizeStyle: Record<'sm' | 'md' | 'lg', React.CSSProperties> = {
+  sm: { padding: '6px 12px', fontSize: '12px', minHeight: '32px' },
+  md: {}, // inherit .btn defaults (48px min-height, .625rem 1rem padding, 14px)
+  lg: { padding: '.75rem 1.25rem', fontSize: '14px', minHeight: '52px' },
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', loading, children, disabled, style, ...props }, ref) => {
-    const vs = variantStyles[variant];
-    const ss = sizeStyles[size];
-
+  ({ variant = 'primary', size = 'md', loading, children, disabled, style, className = '', ...props }, ref) => {
+    const classes = `btn btn-${variant}${className ? ' ' + className : ''}`;
     return (
       <button
         ref={ref}
         disabled={disabled || loading}
-        style={{
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-          fontWeight: 500, borderRadius: '1px', cursor: 'pointer',
-          transition: 'background-color 0.15s, opacity 0.15s',
-          opacity: disabled || loading ? 0.5 : 1,
-          pointerEvents: disabled || loading ? 'none' : 'auto',
-          ...vs, ...ss, ...style,
-        }}
+        className={classes}
+        style={{ ...sizeStyle[size], ...style }}
         {...props}
       >
         {loading ? (

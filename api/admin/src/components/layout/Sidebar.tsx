@@ -74,12 +74,19 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             onClick={() => toggleExpand(item.to)}
             style={{
               display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-              padding: '10px 14px', fontSize: 13, background: 'none', border: 'none',
+              padding: '15px 14px', fontSize: 13, background: 'none', border: 'none',
               color: 'var(--color-text-sub)', cursor: 'pointer',
             }}
           >
-            <i className={item.icon} style={{ fontSize: 14, width: 16, textAlign: 'center' }} />
-            <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
+            <i className={item.icon} style={{ fontSize: 14, width: 16, textAlign: 'center', flexShrink: 0 }} />
+            <span style={{ flex: 1, textAlign: 'left', display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+              <span>{item.label}</span>
+              {item.sub && (
+                <span style={{ fontSize: 10, color: 'var(--color-text-dim)', fontWeight: 400, letterSpacing: '0.02em' }}>
+                  {item.sub}
+                </span>
+              )}
+            </span>
             <i className={`fa-solid fa-chevron-${expanded ? 'down' : 'right'}`} style={{ fontSize: 10 }} />
           </button>
           {expanded && item.children!.map((child) => (
@@ -109,7 +116,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
         end={item.to === '/'}
         style={({ isActive }) => ({
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '10px 14px', fontSize: 13,
+          padding: '8px 14px', fontSize: 13,
           color: isActive ? 'var(--color-primary)' : 'var(--color-text-sub)',
           background: isActive ? 'var(--color-bg-soft)' : 'transparent',
           borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
@@ -118,8 +125,17 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
         })}
         title={collapsed ? item.label : undefined}
       >
-        <i className={item.icon} style={{ fontSize: 14, width: 16, textAlign: 'center' }} />
-        {!collapsed && <span>{item.label}</span>}
+        <i className={item.icon} style={{ fontSize: 14, width: 16, textAlign: 'center', flexShrink: 0 }} />
+        {!collapsed && (
+          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+            <span>{item.label}</span>
+            {item.sub && (
+              <span style={{ fontSize: 10, color: 'var(--color-text-dim)', fontWeight: 400, letterSpacing: '0.02em' }}>
+                {item.sub}
+              </span>
+            )}
+          </span>
+        )}
       </NavLink>
     );
   };

@@ -172,8 +172,10 @@ export default function PostsPage() {
   useEffect(() => {
     setToolbar(
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Input placeholder="检索标题 / 摘要 / 正文" value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchPosts())} style={{ width: '200px', height: '32px', fontSize: '12px' }} />
-        <Button onClick={() => { setPage(1); fetchPosts(); }} style={{ flexShrink: 0, height: '32px', fontSize: '12px', padding: '0 10px' }}><i className="fa-regular fa-magnifying-glass" style={{ fontSize: '13px' }} /> 搜索</Button>
+        <Input placeholder="检索标题 / 摘要 / 正文" value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchPosts())} style={{ width: '240px' }} />
+        <Button className="btn-toolbar-square" title="搜索" onClick={() => { setPage(1); fetchPosts(); }}>
+          <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
+        </Button>
         <div style={{ display: 'flex', gap: '4px' }}>
           {([
             { key: '', label: '全部' },
@@ -181,12 +183,14 @@ export default function PostsPage() {
             { key: 'draft', label: '草稿' },
             { key: 'private', label: '私密' },
           ] as const).map(s => (
-            <Button key={s.key} variant={status === s.key ? 'primary' : 'secondary'} onClick={() => { setStatus(s.key); setPage(1); }} style={{ flexShrink: 0, height: '32px', fontSize: '12px', padding: '0 10px' }}>
+            <Button key={s.key} className="btn-toolbar" variant={status === s.key ? 'primary' : 'secondary'} onClick={() => { setStatus(s.key); setPage(1); }}>
               {s.label}
             </Button>
           ))}
         </div>
-        <Button onClick={() => navigate('/posts/create')} style={{ flexShrink: 0, height: '32px', fontSize: '12px', padding: '0 10px' }}><i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />新建文章</Button>
+        <Button className="btn-toolbar" onClick={() => navigate('/posts/create')}>
+          <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />新建文章
+        </Button>
       </div>
     );
     return () => setToolbar(null);

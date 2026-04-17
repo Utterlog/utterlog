@@ -151,7 +151,7 @@ export function FormRowInputC({
     <div style={{
       display: 'grid', gridTemplateColumns: `${LABEL_WIDTH} 1fr`,
       borderBottom: last ? 'none' : ROW_BORDER,
-      minHeight: 44,
+      minHeight: 56,
     }}>
       {/* Label cell */}
       <div style={{
@@ -171,7 +171,7 @@ export function FormRowInputC({
           {...(register || {})}
           {...(register ? {} : { value: value ?? '', onChange: (e) => onChange?.(e.target.value) })}
           style={{
-            width: '100%', padding: '6px 10px', fontSize: 13,
+            width: '100%', height: 40, padding: '0 12px', fontSize: 13,
             background: 'var(--color-bg-card)',
             border: '1px solid var(--color-border)',
             color: 'var(--color-text-main)',
@@ -221,7 +221,7 @@ export function FormRowTextareaC({
           {...(register || {})}
           {...(register ? {} : { value: value ?? '', onChange: (e) => onChange?.(e.target.value) })}
           style={{
-            width: '100%', padding: '8px 10px', fontSize: 13,
+            width: '100%', minHeight: 80, padding: '10px 12px', fontSize: 13,
             background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
             color: 'var(--color-text-main)', outline: 'none', resize: 'vertical',
             fontFamily: 'inherit', lineHeight: 1.6,
@@ -251,7 +251,7 @@ export function FormRowSelectC({
     <div style={{
       display: 'grid', gridTemplateColumns: `${LABEL_WIDTH} 1fr`,
       borderBottom: last ? 'none' : ROW_BORDER,
-      minHeight: 44,
+      minHeight: 56,
     }}>
       <div style={{
         padding: '10px 14px',
@@ -267,7 +267,7 @@ export function FormRowSelectC({
           {...(register || {})}
           {...(register ? {} : { value: value ?? '', onChange: (e) => onChange?.(e.target.value) })}
           style={{
-            padding: '6px 10px', fontSize: 13,
+            height: 40, padding: '0 12px', fontSize: 13,
             background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
             color: 'var(--color-text-main)', outline: 'none', cursor: 'pointer',
           }}

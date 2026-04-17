@@ -262,8 +262,12 @@ export default function LinksPage() {
                 </div>
               )}
               <input className="input focus-ring" style={{ flex: 1 }} value={form.logo} onChange={e => setForm({ ...form, logo: e.target.value })} placeholder="留空自动获取 favicon" />
-              <label className="btn btn-secondary text-sm" style={{ cursor: avatarUploading ? 'wait' : 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {avatarUploading ? '上传中...' : '上传'}
+              <label
+                className="btn btn-secondary btn-toolbar-square"
+                title={avatarUploading ? '上传中...' : '上传头像'}
+                style={{ cursor: avatarUploading ? 'wait' : 'pointer' }}
+              >
+                <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} disabled={avatarUploading} />
               </label>
             </div>

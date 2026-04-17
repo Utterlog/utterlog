@@ -103,11 +103,11 @@ export default function Themes() {
           )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary" onClick={fetchList} disabled={loading} title="刷新列表">
-            <i className="fa-regular fa-arrows-rotate" style={{ fontSize: 12 }} /> 刷新
+          <button className="btn btn-secondary btn-icon" onClick={fetchList} disabled={loading} title="刷新列表">
+            <i className="fa-regular fa-arrows-rotate" style={{ fontSize: 16 }} />
           </button>
-          <button className="btn" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-            <i className="fa-regular fa-upload" style={{ fontSize: 12 }} /> 上传主题
+          <button className="btn btn-primary btn-icon" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="上传主题 .zip">
+            <i className="fa-regular fa-upload" style={{ fontSize: 16 }} />
           </button>
           <input
             ref={fileInputRef}
