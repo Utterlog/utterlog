@@ -108,7 +108,7 @@ export default function Login() {
               />
             </div>
 
-            <button type="submit" className="btn" disabled={submitting} style={{ width: '100%', justifyContent: 'center' }}>
+            <button type="submit" className="btn btn-primary" disabled={submitting} style={{ width: '100%', justifyContent: 'center' }}>
               {submitting ? '登录中...' : '登录'}
             </button>
           </>
@@ -147,7 +147,7 @@ export default function Login() {
               >
                 返回
               </button>
-              <button type="submit" className="btn" disabled={submitting} style={{ flex: 2, justifyContent: 'center' }}>
+              <button type="submit" className="btn btn-primary" disabled={submitting} style={{ flex: 2, justifyContent: 'center' }}>
                 {submitting ? '验证中...' : '验证'}
               </button>
             </div>
