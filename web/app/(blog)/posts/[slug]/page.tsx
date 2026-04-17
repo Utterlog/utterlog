@@ -35,7 +35,7 @@ export default async function PostPage({ params }: PostPageProps) {
 
   if (!post) notFound();
 
-  let themeName = '2026';
+  let themeName = 'Azure';
   try { themeName = await getActiveTheme(); } catch {}
 
   const theme = getThemeComponents(themeName);

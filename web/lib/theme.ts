@@ -84,11 +84,11 @@ const manifestRegistry: Record<string, ThemeManifest> = {
 };
 
 export function getThemeComponents(themeName: string): ThemeComponents {
-  return themeRegistry[themeName] || themeRegistry['2026'];
+  return themeRegistry[themeName] || themeRegistry['Azure'];
 }
 
 export function getThemeManifest(themeName: string): ThemeManifest {
-  return manifestRegistry[themeName] || manifestRegistry['2026'];
+  return manifestRegistry[themeName] || manifestRegistry['Azure'];
 }
 
 export function getAllManifests(): Record<string, ThemeManifest> {

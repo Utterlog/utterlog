@@ -45,7 +45,7 @@ export async function getThemeContextData(): Promise<ThemeContextData> {
     }
   }
 
-  const themeName = opts.active_theme || '2026';
+  const themeName = opts.active_theme || 'Azure';
   const manifest = getThemeManifest(themeName);
 
   // Resolve owner avatar based on avatar_source

@@ -80,7 +80,7 @@ export function useThemeContext(): ThemeContextData {
       categories: [],
       tags: [],
       archiveStats: { post_count: 0, comment_count: 0, word_count: 0, days: 0, total_views: 0, heatmap: [] },
-      theme: { name: '2026' },
+      theme: { name: 'Azure' },
       options: {},
     };
   }

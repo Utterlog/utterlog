@@ -140,9 +140,9 @@ export async function getActiveTheme(): Promise<string> {
   try {
     const res = await fetchAPI<any>('/options');
     const data = res.data || res;
-    return data.active_theme || '2026';
+    return data.active_theme || 'Azure';
   } catch {
-    return '2026';
+    return 'Azure';
   }
 }
 

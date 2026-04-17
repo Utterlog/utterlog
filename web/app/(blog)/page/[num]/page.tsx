@@ -15,12 +15,12 @@ export default async function PaginatedPage({ params }: PageProps) {
   }
 
   let perPage = 10;
-  let themeName = '2026';
+  let themeName = 'Azure';
   try {
     const opts = await getOptions();
     const data = opts.data || opts;
     perPage = Number(data.posts_per_page) || 10;
-    themeName = data.active_theme || '2026';
+    themeName = data.active_theme || 'Azure';
   } catch {}
 
   let posts: any[] = [];
