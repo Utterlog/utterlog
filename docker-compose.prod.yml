@@ -27,7 +27,11 @@ services:
       POSTGRES_HOST_AUTH_METHOD: md5
       POSTGRES_INITDB_ARGS: "--auth-host=md5"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # PG 18 expects the mount at /var/lib/postgresql (NOT .../data) so it can
+      # place data in a version subdir (.../18/) and run pg_upgrade --link
+      # without crossing mount boundaries. /data path causes "unused mount" warning
+      # and the container exits unhealthy.
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-utterlog} -d ${DB_NAME:-utterlog}"]
       interval: 5s
