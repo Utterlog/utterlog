@@ -74,6 +74,7 @@ func main() {
 	auth.POST("/passkey/register/finish", middleware.Auth(), handler.PasskeyRegisterFinish)
 	auth.POST("/passkey/login/begin", handler.PasskeyLoginBegin)
 	auth.POST("/passkey/login/finish", handler.PasskeyLoginFinish)
+	auth.GET("/passkey/available", handler.PasskeyAvailable)
 
 	// ===================== Public Routes =====================
 	// Posts

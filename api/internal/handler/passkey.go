@@ -374,6 +374,16 @@ func PasskeyLoginFinish(c *gin.Context) {
 	})
 }
 
+// PasskeyAvailable reports whether ANY passkey is registered system-wide
+// (public, unauth). Used by the login page to decide whether to show the
+// "use passkey" button — hides it when nothing is registered to avoid a
+// dead option.
+func PasskeyAvailable(c *gin.Context) {
+	var exists bool
+	config.DB.Get(&exists, fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM %s)", config.T("passkeys")))
+	util.Success(c, gin.H{"available": exists})
+}
+
 // ListPasskeys returns registered passkeys for the authenticated user
 func ListPasskeys(c *gin.Context) {
 	userID := middleware.GetUserID(c)

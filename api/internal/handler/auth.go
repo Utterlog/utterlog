@@ -22,8 +22,13 @@ func Login(c *gin.Context) {
 	}
 
 	user, err := model.UserByEmail(req.Email)
-	if err != nil || !util.CheckPassword(req.Password, user.Password) {
-		util.Error(c, http.StatusUnauthorized, "INVALID_CREDENTIALS", "用户名或密码错误")
+	if err != nil {
+		util.Error(c, http.StatusUnauthorized, "USER_NOT_FOUND", "账号不存在")
+		return
+	}
+
+	if !util.CheckPassword(req.Password, user.Password) {
+		util.Error(c, http.StatusUnauthorized, "WRONG_PASSWORD", "密码错误")
 		return
 	}
 
