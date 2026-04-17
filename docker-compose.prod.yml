@@ -120,7 +120,10 @@ services:
       - "443:443"
       - "443:443/udp"   # HTTP/3
     environment:
-      - DOMAIN=${DOMAIN:?DOMAIN is required in tls mode — set DOMAIN=yoursite.com}
+      # Plain default (not :?) — Compose interpolates ALL services before
+      # profile filtering, so :? would error out for users who never enable
+      # the tls profile. Caddy itself fails on empty $DOMAIN at startup.
+      - DOMAIN=${DOMAIN:-}
     volumes:
       - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
