@@ -69,6 +69,7 @@ export default function SettingsPage() {
         // 评论
         allow_comments: s.allow_comments !== false,
         comment_moderation: s.comment_moderation ?? false,
+        comment_trust_returning: s.comment_trust_returning ?? true,
         comment_require_email: s.comment_require_email ?? true,
         comment_notify_admin: s.comment_notify_admin ?? true,
         comment_pagination: s.comment_pagination ?? false,
@@ -153,7 +154,7 @@ export default function SettingsPage() {
     general: ['site_title', 'site_subtitle', 'site_url', 'site_description', 'site_keywords', 'site_logo', 'site_logo_dark', 'site_favicon', 'site_since', 'site_icp', 'site_footer_code', 'analytics_code', 'posts_per_page', 'admin_email'],
     email: ['email_provider', 'email_from', 'email_from_name', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_encryption', 'resend_api_key', 'sendflare_api_key'],
     telegram: ['telegram_bot_token', 'telegram_chat_id', 'telegram_webhook_secret', 'tg_notify_comment', 'tg_notify_follow', 'tg_notify_publish', 'tg_daily_report', 'tg_comment_approve', 'tg_comment_reply', 'tg_publish_moment', 'tg_upload_media'],
-    comment: ['allow_comments', 'comment_moderation', 'comment_require_email', 'comment_notify_admin', 'comment_pagination', 'comment_per_page', 'comment_order', 'comment_captcha_mode', 'comment_captcha_difficulty'],
+    comment: ['allow_comments', 'comment_moderation', 'comment_trust_returning', 'comment_require_email', 'comment_notify_admin', 'comment_pagination', 'comment_per_page', 'comment_order', 'comment_captcha_mode', 'comment_captcha_difficulty'],
     media: ['media_driver', 's3_endpoint', 's3_region', 's3_bucket', 's3_access_key', 's3_secret_key', 's3_custom_domain', 'storage_limit_gb', 'max_upload_size', 'allowed_extensions', 'folder_driver_covers', 'folder_driver_books', 'folder_driver_movies', 'folder_driver_music', 'folder_driver_links', 'folder_driver_moments', 'folder_driver_albums', 'folder_driver_avatars'],
     image: ['image_convert_format', 'image_quality', 'image_max_width', 'image_strip_exif', 'tinypng_enabled', 'tinypng_api_key', 'random_image_enabled', 'random_image_api', 'image_animation', 'image_lazy_load', 'image_lightbox'],
   };
@@ -672,6 +673,11 @@ export default function SettingsPage() {
               <div className="space-y-5">
                 <Toggle label="允许评论" {...register('allow_comments')} />
                 <Toggle label="评论需要审核" {...register('comment_moderation')} />
+                <Toggle
+                  label="信任历史访客"
+                  description="评论者邮箱或浏览器指纹之前有过通过的评论，自动通过审核"
+                  {...register('comment_trust_returning')}
+                />
                 <Toggle label="评论需要填写邮箱" {...register('comment_require_email')} />
                 <Toggle label="新评论邮件通知管理员" {...register('comment_notify_admin')} />
 

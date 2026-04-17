@@ -101,10 +101,10 @@ body {
   background: rgba(0,0,0,0.25);
 }
 
-/* PaperMono — code font */
+/* PaperMono — code font (served from admin/public/fonts/, mounted at /admin/fonts/) */
 @font-face {
   font-family: "PaperMono";
-  src: url("/fonts/PaperMono-Regular.woff2") format("woff2");
+  src: url("/admin/fonts/PaperMono-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;

@@ -187,8 +187,11 @@ func CreateComment(c *gin.Context) {
 		status = "spam"
 	}
 
-	// Auto-approve if commenter has prior approved comment (email or visitor_id match)
-	if status == "pending" {
+	// Auto-approve if commenter has prior approved comment (email or visitor_id match).
+	// Gated by `comment_trust_returning` option — default ON (option absent means ""),
+	// admins can disable via Settings → 评论设置. Toggle stores "true"/"false" via
+	// UpdateOptions' fmt.Sprintf("%v", bool), so we treat anything except "false" as on.
+	if status == "pending" && model.GetOption("comment_trust_returning") != "false" {
 		var prevApproved int
 		config.DB.Get(&prevApproved, fmt.Sprintf(
 			"SELECT COUNT(*) FROM %s WHERE status = 'approved' AND (author_email = $1 OR (visitor_id = $2 AND visitor_id != '')) LIMIT 1", t),
