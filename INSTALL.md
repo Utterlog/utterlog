@@ -12,7 +12,7 @@
 ## 一行部署
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | bash
 ```
 
 就这一条。脚本自动：
@@ -23,7 +23,7 @@ curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh |
 **想同时开启自动 HTTPS？** 带上 `DOMAIN`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh | DOMAIN=blog.yoursite.com bash
+curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | DOMAIN=blog.yoursite.com bash
 ```
 
 ## 日后更新（两种等价方式）

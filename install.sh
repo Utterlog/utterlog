@@ -3,15 +3,15 @@
 # Utterlog — one-line installer
 # ------------------------------------------------------------
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | bash
 #
 # Or with TLS mode:
-#   curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh | \
+#   curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | \
 #     DOMAIN=blog.example.com bash
 #
 # What it does:
 #   1. Checks for Docker (offers to install if missing)
-#   2. Clones https://github.com/Utterlog/utterlog into ./utterlog
+#   2. Clones https://github.com/utterlog/utterlog into ./utterlog
 #   3. Runs scripts/deploy.sh (which handles the rest automatically)
 #
 # No need to install git, make, Node, Go, or anything else first —
@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-REPO_URL="${UTTERLOG_REPO:-https://github.com/Utterlog/utterlog.git}"
+REPO_URL="${UTTERLOG_REPO:-https://github.com/utterlog/utterlog.git}"
 INSTALL_DIR="${UTTERLOG_DIR:-$(pwd)/utterlog}"
 
 # Color helpers
@@ -92,7 +92,7 @@ else
   else
     log "Downloading tarball into $INSTALL_DIR ..."
     mkdir -p "$INSTALL_DIR"
-    curl -fsSL "https://github.com/Utterlog/utterlog/archive/refs/heads/main.tar.gz" \
+    curl -fsSL "https://github.com/utterlog/utterlog/archive/refs/heads/main.tar.gz" \
       | tar -xz --strip-components=1 -C "$INSTALL_DIR"
   fi
 fi

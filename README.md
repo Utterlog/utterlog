@@ -1,11 +1,11 @@
 # Utterlog
 
 <p>
-  <a href="https://github.com/Utterlog/utterlog/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Utterlog/utterlog/ci.yml?branch=main&style=flat-square&label=CI" alt="CI"></a>
-  <a href="https://github.com/Utterlog/utterlog/actions/workflows/docker-publish.yml"><img src="https://img.shields.io/github/actions/workflow/status/Utterlog/utterlog/docker-publish.yml?branch=main&style=flat-square&label=docker%20images&logo=docker&logoColor=white" alt="Docker images"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Utterlog/utterlog?style=flat-square" alt="License"></a>
-  <a href="https://github.com/Utterlog/utterlog/stargazers"><img src="https://img.shields.io/github/stars/Utterlog/utterlog?style=flat-square" alt="Stars"></a>
-  <img src="https://img.shields.io/github/go-mod/go-version/Utterlog/utterlog?filename=api/go.mod&style=flat-square&logo=go&logoColor=white" alt="Go">
+  <a href="https://github.com/utterlog/utterlog/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/utterlog/utterlog/ci.yml?branch=main&style=flat-square&label=CI" alt="CI"></a>
+  <a href="https://github.com/utterlog/utterlog/actions/workflows/docker-publish.yml"><img src="https://img.shields.io/github/actions/workflow/status/utterlog/utterlog/docker-publish.yml?branch=main&style=flat-square&label=docker%20images&logo=docker&logoColor=white" alt="Docker images"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/utterlog/utterlog?style=flat-square" alt="License"></a>
+  <a href="https://github.com/utterlog/utterlog/stargazers"><img src="https://img.shields.io/github/stars/utterlog/utterlog?style=flat-square" alt="Stars"></a>
+  <img src="https://img.shields.io/github/go-mod/go-version/utterlog/utterlog?filename=api/go.mod&style=flat-square&logo=go&logoColor=white" alt="Go">
   <img src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs" alt="Next.js">
   <img src="https://img.shields.io/badge/PostgreSQL-18-336791?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
   <img src="https://img.shields.io/badge/ghcr.io-utterlog-2496ED?style=flat-square&logo=docker&logoColor=white" alt="GHCR">
@@ -38,13 +38,13 @@
 **一行安装**（已有反代或公网域名暂未配 TLS）：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | bash
 ```
 
 **带自动 HTTPS**（无现成反代，内置 Caddy 自动签证书）：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Utterlog/utterlog/main/install.sh | DOMAIN=blog.yoursite.com bash
+curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | DOMAIN=blog.yoursite.com bash
 ```
 
 脚本自动：检查 Docker → clone → 按内存选本地构建 / 拉 GHCR 镜像 → 生成随机密码 → 找空闲端口（默认 9260）→ 启动 → 健康检查 → 打印凭据。
@@ -101,7 +101,7 @@ Utterlog 仅绑 `127.0.0.1:9260`，公网不可见，需反代：
 - [INSTALL.md](INSTALL.md) — 安装指南（三种场景 + 故障排查）
 - [deploy/README.md](deploy/README.md) — 反代决策树
 - [deploy/1panel.md](deploy/1panel.md) — 1Panel / 宝塔图形化指南
-- 相关项目：[utterlog-sync](https://github.com/Utterlog/utterlog-sync)（WordPress 导入插件）
+- 相关项目：[utterlog-sync](https://github.com/utterlog/utterlog-sync)（WordPress 导入插件）
 
 ## ⚖ License
 
