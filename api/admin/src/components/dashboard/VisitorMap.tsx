@@ -15,9 +15,9 @@ interface MapPoint {
 }
 
 // Mapbox access token — set via VITE_MAPBOX_TOKEN in build-time env.
-// Fall back to empty string; the map will fail to load but the rest of the
-// dashboard won't crash. Get a free token at https://account.mapbox.com/
-mapboxgl.accessToken = (import.meta as any).env?.VITE_MAPBOX_TOKEN || '';
+// Get a free token at https://account.mapbox.com/
+const mapboxToken = (import.meta as any).env?.VITE_MAPBOX_TOKEN || '';
+mapboxgl.accessToken = mapboxToken;
 (mapboxgl as any).config.API_URL = (import.meta as any).env?.VITE_MAPBOX_API_URL || 'https://api.mapbox.com';
 
 export default function VisitorMap({ period }: { period: string }) {
@@ -43,6 +43,9 @@ export default function VisitorMap({ period }: { period: string }) {
   // 初始化地图
   useEffect(() => {
     if (!mapRef.current) return;
+    // 没配 Mapbox token 就不初始化，避免 "An API access token is required" 异常
+    // 冒泡到 React 导致整个 Analytics 页白屏
+    if (!mapboxToken) return;
     // 清理旧实例（HMR 热更新时）
     if (mapObjRef.current) {
       mapObjRef.current.remove();
@@ -143,6 +146,26 @@ export default function VisitorMap({ period }: { period: string }) {
     };
     tryUpdate();
   }, [points, onlineUsers]);
+
+  // 没配 Mapbox token 的占位 UI — 提示如何启用
+  if (!mapboxToken) {
+    return (
+      <div style={{
+        border: '1px solid var(--color-border)', marginBottom: '20px',
+        height: '480px', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '10px',
+        background: 'var(--color-bg-soft)', color: 'var(--color-text-sub)',
+        textAlign: 'center', padding: '24px',
+      }}>
+        <i className="fa-sharp fa-light fa-earth-asia" style={{ fontSize: '32px', color: 'var(--color-text-dim)' }} />
+        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text-main)' }}>访客地图未启用</div>
+        <div style={{ fontSize: '12px', lineHeight: 1.7, maxWidth: '420px' }}>
+          设置 <code style={{ background: 'var(--color-bg-card)', padding: '1px 6px', fontFamily: 'ui-monospace, monospace' }}>VITE_MAPBOX_TOKEN</code> 环境变量后重建 admin SPA 即可显示地图。免费 token：
+          <a href="https://account.mapbox.com/" target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary)', marginLeft: 4 }}>account.mapbox.com</a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ border: '1px solid var(--color-border)', marginBottom: '20px', position: 'relative' }}>

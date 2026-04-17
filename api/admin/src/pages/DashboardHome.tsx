@@ -41,7 +41,7 @@ export default function DashboardPage() {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
   const [recentComments, setRecentComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sparkline, setSparkline] = useState<{ date: string; count: number; weekday: string }[]>([]);
+  const [sparkline, setSparkline] = useState<{ date: string; visits: number; visitors: number; weekday: string }[]>([]);
   const [networkConnected, setNetworkConnected] = useState(false);
   const [networkActivity, setNetworkActivity] = useState<NetworkActivity[]>([]);
   const [networkSites, setNetworkSites] = useState<NetworkSite[]>([]);
@@ -63,17 +63,20 @@ export default function DashboardPage() {
         words: d.total_words || 0, days: d.days || 0,
         categories: d.categories || 0, tags: d.tags || 0,
       });
-      // Fill all 7 days (today-6 ~ today), missing days = 0
-      const trendMap: Record<string, number> = {};
-      for (const t of (d.trend || [])) trendMap[t.date] = t.count;
-      const days7: { date: string; count: number; weekday: string }[] = [];
+      // Fill all 30 days (today-29 ~ today), missing days = zeros
+      const trendMap: Record<string, { visits: number; visitors: number }> = {};
+      for (const t of (d.trend || [])) {
+        trendMap[t.date] = { visits: t.visits ?? t.count ?? 0, visitors: t.visitors ?? 0 };
+      }
+      const days30: { date: string; visits: number; visitors: number; weekday: string }[] = [];
       const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-      for (let i = 6; i >= 0; i--) {
+      for (let i = 29; i >= 0; i--) {
         const day = new Date(); day.setDate(day.getDate() - i);
         const key = `${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-        days7.push({ date: key, count: trendMap[key] ?? 0, weekday: weekdays[day.getDay()] });
+        const v = trendMap[key] ?? { visits: 0, visitors: 0 };
+        days30.push({ date: key, visits: v.visits, visitors: v.visitors, weekday: weekdays[day.getDay()] });
       }
-      setSparkline(days7);
+      setSparkline(days30);
       setRecentPosts((postsRes.data?.posts || postsRes.data || []).filter((p: any) => p.id != null).slice(0, 5));
       setRecentComments((commentsRes.data?.comments || commentsRes.data || []).filter((c: any) => c.id != null && !c.user_id).slice(0, 5));
     } finally { setLoading(false); }
@@ -118,7 +121,7 @@ export default function DashboardPage() {
     pending: { text: '待审', cls: 'bg-amber-100 text-amber-700' },
   };
 
-  const maxS = Math.max(...sparkline.map(s => s.count), 1);
+  const maxS = Math.max(...sparkline.map(s => s.visits), 1);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -144,37 +147,55 @@ export default function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
           {/* Trend Chart */}
           <div className="card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <i className="fa-sharp fa-light fa-chart-column" style={{ fontSize: '15px', color: 'var(--color-primary)' }} />
-                <h2 className="text-main" style={{ fontSize: '15px', fontWeight: 600 }}>近 7 天访问趋势</h2>
+                <h2 className="text-main" style={{ fontSize: '15px', fontWeight: 600 }}>近 30 天访问趋势</h2>
               </div>
-              <span className="text-dim" style={{ fontSize: '12px' }}>数据每小时更新</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-text-sub)' }}>
+                  <span style={{ width: '10px', height: '10px', background: 'var(--color-primary)' }} />访客
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-text-sub)' }}>
+                  <span style={{ width: '10px', height: '10px', background: 'color-mix(in srgb, var(--color-primary) 25%, transparent)' }} />访问
+                </span>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '120px' }}>
               {sparkline.map((s, i) => {
-                const barH = Math.max(Math.round((s.count / maxS) * 108), 6);
+                const totalH = Math.max(Math.round((s.visits / maxS) * 108), s.visits > 0 ? 4 : 2);
+                // Visitors portion (dark, bottom) — proportional share of total bar height
+                const visitorRatio = s.visits > 0 ? s.visitors / s.visits : 0;
+                const visitorH = Math.round(totalH * visitorRatio);
                 return (
-                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                    <span className="text-dim" style={{ fontSize: '11px', fontWeight: 600 }}>{s.count || ''}</span>
-                    <div
-                      className="hover:bg-primary-active"
-                      style={{
-                        width: '100%',
-                        borderRadius: '1px',
-                        backgroundColor: 'color-mix(in srgb, var(--color-primary) 25%, transparent)',
-                        height: `${barH}px`,
-                        transition: 'background-color 0.15s',
-                        cursor: 'pointer',
-                      }}
-                    />
+                  <div
+                    key={i}
+                    title={`${s.date}  访问 ${s.visits} · 访客 ${s.visitors}`}
+                    style={{
+                      flex: 1, display: 'flex', flexDirection: 'column-reverse',
+                      height: `${totalH}px`, cursor: 'pointer',
+                    }}
+                  >
+                    {/* Bottom (visitors, dark) */}
+                    <div style={{
+                      height: `${visitorH}px`,
+                      backgroundColor: 'var(--color-primary)',
+                    }} />
+                    {/* Top (visits - visitors, light) */}
+                    <div style={{
+                      height: `${totalH - visitorH}px`,
+                      backgroundColor: 'color-mix(in srgb, var(--color-primary) 25%, transparent)',
+                    }} />
                   </div>
                 );
               })}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '11px', color: 'var(--color-text-dim)' }}>
+              {/* label every 5 days */}
               {sparkline.map((s, i) => (
-                <span key={i} className="text-dim" style={{ flex: 1, textAlign: 'center', fontSize: '12px' }}>{s.weekday}</span>
+                <span key={i} style={{ flex: 1, textAlign: 'center' }}>
+                  {(i === 0 || i === sparkline.length - 1 || i % 5 === 4) ? s.date : ''}
+                </span>
               ))}
             </div>
           </div>
@@ -448,85 +469,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Bottom Row: Status + Categories + System */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-        {/* Article Status */}
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <i className="fa-sharp fa-light fa-chart-pie" style={{ fontSize: '14px', color: 'var(--color-primary)' }} />
-            <h3 className="text-main" style={{ fontSize: '14px', fontWeight: 600 }}>文章状态</h3>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {[
-              { label: '已发布', pct: 70, color: '#16a34a' },
-              { label: '草稿', pct: 25, color: 'var(--color-text-dim)' },
-              { label: '待审核', pct: 5, color: '#d97706' },
-            ].map((item) => (
-              <div key={item.label}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span className="text-sub" style={{ fontSize: '13px' }}>{item.label}</span>
-                  <span className="text-main" style={{ fontSize: '13px', fontWeight: 600 }}>{item.pct}%</span>
-                </div>
-                <div className="bg-soft" style={{ height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: '3px', backgroundColor: item.color, width: `${item.pct}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Popular Categories */}
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <i className="fa-sharp fa-light fa-folder-open" style={{ fontSize: '14px', color: 'var(--color-primary)' }} />
-            <h3 className="text-main" style={{ fontSize: '14px', fontWeight: 600 }}>热门分类</h3>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {[
-              { label: '技术', pct: 45 },
-              { label: '生活', pct: 30 },
-              { label: '随笔', pct: 25 },
-            ].map((item) => (
-              <div key={item.label}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span className="text-sub" style={{ fontSize: '13px' }}>{item.label}</span>
-                  <span className="text-main" style={{ fontSize: '13px', fontWeight: 600 }}>{item.pct}%</span>
-                </div>
-                <div className="bg-soft" style={{ height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: '3px', backgroundColor: 'var(--color-primary)', opacity: 0.6, width: `${item.pct}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* System Info */}
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <i className="fa-sharp fa-light fa-server" style={{ fontSize: '14px', color: 'var(--color-primary)' }} />
-            <h3 className="text-main" style={{ fontSize: '14px', fontWeight: 600 }}>系统信息</h3>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-            {[
-              { label: '前端', value: 'Next.js 16' },
-              { label: '后端', value: 'Go' },
-              { label: '数据库', value: 'PostgreSQL 17' },
-              { label: '缓存', value: 'Redis 8' },
-            ].map((item, idx) => (
-              <div
-                key={item.label}
-                style={{
-                  display: 'flex', justifyContent: 'space-between', padding: '10px 0',
-                  borderBottom: idx < 3 ? '1px solid var(--color-divider)' : 'none',
-                }}
-              >
-                <span className="text-sub" style={{ fontSize: '13px' }}>{item.label}</span>
-                <span className="text-main" style={{ fontSize: '13px', fontWeight: 600 }}>{item.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -634,16 +634,18 @@ func DashboardStats(c *gin.Context) {
 	days := 0
 	if sinceTime > 0 { days = int((time.Now().Unix()-sinceTime)/86400) + 1 }
 
-	// 7-day trend
+	// 30-day trend — visits (PV, total requests) and visitors (UV, distinct IPs)
 	type dayCount struct {
-		Date  string `db:"date" json:"date"`
-		Count int    `db:"count" json:"count"`
+		Date     string `db:"date" json:"date"`
+		Count    int    `db:"count" json:"count"` // kept for backward-compat (same as visits)
+		Visits   int    `db:"visits" json:"visits"`
+		Visitors int    `db:"visitors" json:"visitors"`
 	}
 	var trend []dayCount
-	d7ago := time.Now().Add(-7 * 24 * time.Hour).Unix()
+	d30ago := time.Now().Add(-30 * 24 * time.Hour).Unix()
 	config.DB.Select(&trend, fmt.Sprintf(
-		"SELECT TO_CHAR(TO_TIMESTAMP(created_at), 'MM-DD') as date, COUNT(*) as count FROM %s WHERE created_at >= $1 GROUP BY date ORDER BY date",
-		t("access_logs")), d7ago)
+		"SELECT TO_CHAR(TO_TIMESTAMP(created_at), 'MM-DD') as date, COUNT(*) as count, COUNT(*) as visits, COUNT(DISTINCT ip) as visitors FROM %s WHERE created_at >= $1 GROUP BY date ORDER BY date",
+		t("access_logs")), d30ago)
 
 	// Today visits
 	todayStart := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Now().Location()).Unix()
