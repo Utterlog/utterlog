@@ -364,7 +364,7 @@ export default function DashboardPage() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/utterlog')}
             style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
             {networkConnected ? '管理' : '连接'} <i className="fa-regular fa-arrow-right" style={{ fontSize: '13px' }} />
@@ -381,11 +381,11 @@ export default function DashboardPage() {
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => navigate('/settings')}
+              onClick={() => navigate('/utterlog')}
               style={{ fontSize: '13px' }}
             >
               <i className="fa-regular fa-globe-nodes" style={{ fontSize: '15px' }} />
-              前往设置连接
+              前往连接
             </button>
           </div>
         ) : (
