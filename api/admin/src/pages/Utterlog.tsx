@@ -229,7 +229,17 @@ export default function UtterlogCenterPage() {
                   const authUrl = r.data?.auth_url || r.auth_url;
                   if (authUrl) window.open(authUrl, '_blank', 'width=600,height=700');
                   else toast.error('无法获取授权链接');
-                } catch { toast.error('请检查网络连接'); }
+                } catch (e: any) {
+                  // Distinguish "hub down" from generic network errors so users
+                  // know to retry later vs check their own connection.
+                  const code = e?.response?.data?.error?.code;
+                  const status = e?.response?.status;
+                  if (status === 502 || code === 'NOT_CONNECTED') {
+                    toast.error('Utterlog 联盟中心暂不可用，请稍后重试');
+                  } else {
+                    toast.error('请检查网络连接');
+                  }
+                }
                 finally { setBindingUtterlog(false); }
               }}>
                 <i className="fa-regular fa-globe" style={{ fontSize: '14px' }} /> {bindingUtterlog ? '跳转中...' : '绑定 Utterlog ID'}
