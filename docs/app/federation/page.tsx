@@ -8,7 +8,7 @@ export default function FederationPage() {
       <h1>联盟 (Federation)</h1>
       <p className="lede">
         Utterlog 是一个<strong>联邦式</strong>的博客系统：每个站点独立部署、独立存储，
-        通过 utterlog.io 中心站和 id.utterlog.com 账号中心互相发现、互相访问。
+        通过 utterlog.com 联盟中心站和 id.utterlog.com 账号中心互相发现、互相访问。
       </p>
 
       <h2>设计原则</h2>
@@ -29,7 +29,7 @@ export default function FederationPage() {
             <td>全部内容：文章、评论、媒体、用户</td>
           </tr>
           <tr>
-            <td><code>utterlog.io</code></td>
+            <td><code>utterlog.com</code></td>
             <td>联盟中心</td>
             <td>站点目录（友链广场）、RSS 聚合索引</td>
           </tr>
@@ -51,22 +51,22 @@ export default function FederationPage() {
         <li>同一读者随后访问 B 站点时，自动识别同一 Utterlog ID，评论立刻可发</li>
       </ol>
       <blockquote className="info">
-        关键：评论内容存在 A 站点，不在 id.utterlog.com，也不在 utterlog.io。中心站完全不碰内容层。
+        关键：评论内容存在 A 站点，不在 id.utterlog.com，也不在 utterlog.com。中心站完全不碰内容层。
       </blockquote>
 
       <h2>加入 / 退出联盟</h2>
       <p>
-        当前版本联盟加入是<strong>管理员在后台主动申请</strong>的：后台 →「联盟」→ 填站名/简介/分类 → 提交给 utterlog.io 中心站审核。
-        通过后你的站出现在 utterlog.io 的博客目录和 RSS 聚合里。
+        当前版本联盟加入是<strong>管理员在后台主动申请</strong>的：后台 →「联盟」→ 填站名/简介/分类 → 提交给 <a href="https://utterlog.com">utterlog.com</a> 中心站审核。
+        通过后你的站出现在 utterlog.com 的博客目录和 RSS 聚合里。
       </p>
       <p>
         <strong>退出</strong>：后台同一处点「退出联盟」即可。中心站收到请求后会删除目录条目。
-        你的读者依然可以直接访问 <code>blog.example.com</code>，只是在 utterlog.io 搜不到你了。
+        你的读者依然可以直接访问 <code>blog.example.com</code>，只是在 utterlog.com 搜不到你了。
       </p>
 
       <h2>自建联盟中心</h2>
       <p>
-        utterlog.io 本身也是个 Utterlog 实例（只是启用了「中心站」模式）。如果你想搭私有联盟（比如
+        utterlog.com 本身也是个 Utterlog 实例（启用了「中心站」模式）。如果你想搭私有联盟（比如
         公司内部博客群、学校论坛等），也可以 fork 源码自己跑一个。
       </p>
       <p>未来会写详细的「自建联盟中心」指南，暂时可参考 <a href="https://github.com/utterlog/utterlog/tree/main/hub" target="_blank" rel="noopener">hub/</a> 目录。</p>

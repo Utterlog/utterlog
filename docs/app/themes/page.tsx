@@ -82,11 +82,11 @@ export default function ThemesPage() {
 
       <h2>分享主题</h2>
       <p>
-        我们准备在 utterlog.io 做一个主题市场（等一批好主题出现后启用）。暂时可以：
+        我们准备在 utterlog.com 联盟中心站做一个主题市场（等一批好主题出现后启用）。暂时可以：
       </p>
       <ul>
         <li>在 GitHub 上新建 <code>utterlog-theme-&lt;name&gt;</code> 仓库</li>
-        <li>README 里贴上截图和 <code>utterlog.io/install-theme?url=...</code> 链接</li>
+        <li>README 里贴上截图和 <code>utterlog.com/install-theme?url=...</code> 链接</li>
         <li>开 issue 到 <a href="https://github.com/utterlog/utterlog/issues">utterlog/utterlog</a> 请求添加到官方目录</li>
       </ul>
 

@@ -6,13 +6,13 @@ export default function DocsHome() {
       <h1>欢迎使用 Utterlog</h1>
       <p className="lede">
         Utterlog 是一个去中心化的独立博客联盟。每个站点各自部署、各自掌控数据，
-        通过 utterlog.io 联盟互相发现、互关互访。
+        通过 <a href="https://utterlog.com">utterlog.com</a> 联盟互相发现、互关互访。
       </p>
 
       <h2>15 秒了解</h2>
       <ul>
         <li><b>自托管</b> — Go + PostgreSQL 单容器部署，所有数据存在你自己的服务器</li>
-        <li><b>联盟</b> — 通过 <a href="https://utterlog.io">utterlog.io</a> 中心站发现其它站点，互关、互评、RSS 聚合</li>
+        <li><b>联盟</b> — 通过 <a href="https://utterlog.com">utterlog.com</a> 中心站发现其它站点，互关、互评、RSS 聚合</li>
         <li><b>统一账号</b> — 读者用 <a href="https://id.utterlog.com">Utterlog ID</a> 在任一联盟站评论、订阅、收藏</li>
         <li><b>开源</b> — AGPL-3.0，你 Fork 后就是你自己的</li>
       </ul>

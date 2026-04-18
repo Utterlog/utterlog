@@ -134,7 +134,7 @@ export default function CommentCaptcha({ onVerified, onReset }: CommentCaptchaPr
           userSelect: 'none', transition: 'border-color 0.3s',
         }}
       >
-        <a href="https://utterlog.io/docs/captcha" target="_blank" rel="noopener noreferrer"
+        <a href="https://docs.utterlog.io/captcha" target="_blank" rel="noopener noreferrer"
           style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, textDecoration: 'none' }}
           title="Utterlog PoW Captcha"
         >

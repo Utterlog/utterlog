@@ -109,7 +109,7 @@ export default function LandingPage() {
           <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed mb-10">
             每个站点各自部署，自己掌控全部数据。
             <br className="hidden sm:inline" />
-            通过 utterlog.io 联盟互相发现、互关互访 — 没有任何一方能下架你的内容。
+            通过 utterlog.com 联盟互相发现、互关互访 — 没有任何一方能下架你的内容。
           </p>
 
           <div className="max-w-2xl mx-auto mb-8">
@@ -143,7 +143,7 @@ export default function LandingPage() {
             <FeatureCard
               icon="fa-solid fa-globe"
               title="联盟互通"
-              desc="自动发现、互关互评。utterlog.io 中心站提供友链广场、新站推荐与 RSS 订阅聚合。"
+              desc="自动发现、互关互评。utterlog.com 中心站提供友链广场、新站推荐与 RSS 订阅聚合。"
             />
             <FeatureCard
               icon="fa-solid fa-id-card"
@@ -236,7 +236,7 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-slate-200">
             <div className="p-8 border-r-0 md:border-r border-b md:border-b-0 border-slate-200">
-              <div className="font-mono text-xs text-brand mb-3">utterlog.io</div>
+              <div className="font-mono text-xs text-brand mb-3">utterlog.com</div>
               <h3 className="font-semibold text-slate-900 mb-2">联盟中心站</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
                 友链广场、新站发现、RSS 聚合、跨站搜索。你作为博主选择是否加入。
