@@ -390,25 +390,39 @@ func runUpgrade() {
 	// mounted socket — it talks to the HOST's docker daemon, not the
 	// api container's internals.
 	//
-	// Compose file selection is auto-detected:
-	//   - prod pull mode:  docker-compose.prod.yml + docker-compose.pull.yml
-	//   - slim installer:  docker-compose.yml (uses pre-built images directly)
-	//   - dev mode:        docker-compose.yml (rebuilds from source)
-	// The shell picks the first combo that exists so the same endpoint
-	// works for all three deployment styles.
+	// Compose file selection is auto-detected by looking at whether the
+	// active docker-compose.yml references the registry (→ slim install,
+	// pull works) or uses build: (→ dev source repo, rebuild from
+	// source). Prod overlay is tried only if the slim path isn't usable.
+	//
+	//   slim install       docker-compose.yml has image: registry.utterlog.io OR ghcr.io/utterlog
+	//   prod+pull overlay  docker-compose.prod.yml AND docker-compose.pull.yml exist
+	//   dev source repo    docker-compose.yml has build: directive → rebuild
 	script := `
 set -e
 cd "${UTTERLOG_INSTALL_DIR:-/opt/utterlog}"
-if [ -f docker-compose.prod.yml ] && [ -f docker-compose.pull.yml ]; then
+
+uses_registry_images() {
+  [ -f docker-compose.yml ] && grep -qE "image:[[:space:]]*(\\\${UTTERLOG_IMAGE_PREFIX|registry\\.utterlog\\.io|ghcr\\.io/utterlog)" docker-compose.yml
+}
+uses_local_build() {
+  [ -f docker-compose.yml ] && grep -qE "^[[:space:]]*build:" docker-compose.yml
+}
+
+if uses_registry_images; then
+  echo "[upgrade] slim install mode — single file with registry images"
+  docker compose pull
+  docker compose up -d --remove-orphans
+elif [ -f docker-compose.prod.yml ] && [ -f docker-compose.pull.yml ]; then
   echo "[upgrade] prod + pull overlay mode"
   docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
   docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans
-elif [ -f docker-compose.yml ]; then
-  echo "[upgrade] single-file compose mode"
-  docker compose pull
+elif uses_local_build; then
+  echo "[upgrade] dev source repo — rebuilding from source (no registry pull)"
+  docker compose build api web
   docker compose up -d --remove-orphans
 else
-  echo "[upgrade] ERROR: no docker-compose.yml found in $(pwd)"
+  echo "[upgrade] ERROR: cannot determine deployment mode under $(pwd)"
   exit 1
 fi
 `
