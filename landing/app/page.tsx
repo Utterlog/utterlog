@@ -74,7 +74,7 @@ export default function LandingPage() {
       {/* ===== Nav ===== */}
       <header className="border-b border-slate-200 bg-white sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/90">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-          <a href="#top" className="flex items-center gap-2.5">
+          <a href="/" className="flex items-center gap-2.5">
             <Logo className="w-7 h-7" />
             <span className="font-brand font-semibold text-slate-900">Utterlog</span>
           </a>
