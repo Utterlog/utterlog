@@ -46,11 +46,24 @@ function renderChangelog(md: string): string {
 // The full version + upgrade UI. Renders inline — meant to be dropped
 // into the Settings page's "系统更新" tab. Handles fetch, refresh,
 // one-click upgrade, progress polling, and changelog rendering.
+interface ReleaseItem {
+  id: number;
+  tag_name: string;
+  name: string;
+  body: string;
+  html_url: string;
+  published_at: string;
+  prerelease: boolean;
+}
+
 export default function SystemUpdatePanel() {
   const [info, setInfo] = useState<VersionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgradeStatus, setUpgradeStatus] = useState<UpgradeStatus | null>(null);
   const [upgrading, setUpgrading] = useState(false);
+  const [releases, setReleases] = useState<ReleaseItem[] | null>(null);
+  const [releasesErr, setReleasesErr] = useState('');
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function load(refresh = false) {
@@ -63,6 +76,24 @@ export default function SystemUpdatePanel() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadReleases(refresh = false) {
+    try {
+      const r = await api.get<any>(`/admin/system/releases${refresh ? '?refresh=1' : ''}`);
+      setReleases((r.data?.releases || []) as ReleaseItem[]);
+      setReleasesErr(r.data?.error || '');
+    } catch (e: any) {
+      setReleasesErr(e?.message || '加载更新历史失败');
+    }
+  }
+
+  function toggleExpand(id: number) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   }
 
   async function pollStatus() {
@@ -104,17 +135,23 @@ export default function SystemUpdatePanel() {
 
   useEffect(() => {
     load();
+    loadReleases();
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
+
+  function fmtDate(iso: string) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
 
   const cur = info?.current.version || '—';
   const lat = info?.latest?.version || '—';
   const updateAvailable = info?.update_available ?? false;
 
   return (
-    <div style={{ maxWidth: 720 }}>
+    <div>
       {/* Version card */}
       <div style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)', padding: '20px 24px', marginBottom: 16 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -201,7 +238,7 @@ export default function SystemUpdatePanel() {
       )}
 
       {/* Data preservation notice */}
-      <div style={{ border: '1px solid var(--color-border)', background: '#fefce8', padding: '14px 18px', fontSize: 12, color: '#713f12' }}>
+      <div style={{ border: '1px solid var(--color-border)', background: '#fefce8', padding: '14px 18px', fontSize: 12, color: '#713f12', marginBottom: 24 }}>
         <div style={{ fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
           <i className="fa-solid fa-shield-halved" />
           升级安全保证
@@ -212,6 +249,116 @@ export default function SystemUpdatePanel() {
           <li>上传文件和用户自定义主题 (<code>uploads/</code>) — 完整保留</li>
           <li>系统内置主题和代码 — 自动更新到最新版</li>
         </ul>
+      </div>
+
+      {/* ================= Release history / changelog ================= */}
+      <div style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+        <div style={{
+          padding: '14px 20px', borderBottom: '1px solid var(--color-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <i className="fa-solid fa-clock-rotate-left" style={{ color: 'var(--color-primary)' }} />
+            更新历史
+            {releases && <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 400 }}>最近 {releases.length} 个发布</span>}
+          </h3>
+          <button
+            className="btn"
+            style={{ fontSize: 12, padding: '4px 10px' }}
+            onClick={() => loadReleases(true)}
+          >
+            <i className="fa-solid fa-arrows-rotate" style={{ marginRight: 4 }} />
+            刷新
+          </button>
+        </div>
+
+        {releasesErr && (
+          <div style={{ padding: '10px 20px', background: '#fef2f2', borderBottom: '1px solid #fca5a5', color: '#991b1b', fontSize: 12 }}>
+            <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: 6 }} />
+            {releasesErr}
+            {' · '}
+            <a href="https://github.com/utterlog/utterlog/releases" target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>
+              在 GitHub 查看
+            </a>
+          </div>
+        )}
+
+        {releases === null ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', fontSize: 13, color: 'var(--color-text-dim)' }}>
+            <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 6 }} />
+            加载更新历史...
+          </div>
+        ) : releases.length === 0 ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', fontSize: 13, color: 'var(--color-text-dim)' }}>
+            还没有发布的 tag 版本。开发阶段的改动请看{' '}
+            <a
+              href="https://github.com/utterlog/utterlog/commits/main"
+              target="_blank" rel="noopener"
+              style={{ color: 'var(--color-primary)' }}
+            >
+              GitHub 提交历史 <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: 10 }} />
+            </a>
+          </div>
+        ) : (
+          <div>
+            {releases.map((rel) => {
+              const isOpen = expanded.has(rel.id);
+              const isCurrent = info?.current.version === rel.tag_name;
+              return (
+                <div key={rel.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <button
+                    onClick={() => toggleExpand(rel.id)}
+                    style={{
+                      width: '100%', padding: '14px 20px',
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      textAlign: 'left', color: 'var(--color-text)',
+                    }}
+                  >
+                    <i className={`fa-solid fa-chevron-${isOpen ? 'down' : 'right'}`} style={{ fontSize: 11, color: 'var(--color-text-muted)', width: 10 }} />
+                    <span style={{ fontFamily: 'ui-monospace,monospace', fontSize: 13, fontWeight: 600, color: 'var(--color-primary)' }}>
+                      {rel.tag_name}
+                    </span>
+                    {isCurrent && (
+                      <span style={{ fontSize: 10, padding: '1px 6px', background: '#16a34a', color: '#fff', fontWeight: 700 }}>
+                        CURRENT
+                      </span>
+                    )}
+                    {rel.prerelease && (
+                      <span style={{ fontSize: 10, padding: '1px 6px', background: '#f59e0b', color: '#fff', fontWeight: 700 }}>
+                        PRE-RELEASE
+                      </span>
+                    )}
+                    {rel.name && rel.name !== rel.tag_name && (
+                      <span style={{ fontSize: 13, color: 'var(--color-text-dim)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {rel.name}
+                      </span>
+                    )}
+                    {!rel.name || rel.name === rel.tag_name ? <span style={{ flex: 1 }} /> : null}
+                    <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'ui-monospace,monospace', whiteSpace: 'nowrap' }}>
+                      {fmtDate(rel.published_at)}
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div style={{ padding: '2px 20px 18px 42px', borderTop: '1px dashed var(--color-border)' }}>
+                      <div
+                        style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--color-text)' }}
+                        dangerouslySetInnerHTML={{ __html: renderChangelog(rel.body) || '<p style="color:var(--color-text-muted);font-size:12px">（无更新说明）</p>' }}
+                      />
+                      <a
+                        href={rel.html_url}
+                        target="_blank" rel="noopener"
+                        style={{ display: 'inline-block', marginTop: 10, fontSize: 11, color: 'var(--color-text-dim)' }}
+                      >
+                        在 GitHub 查看完整发布 <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: 9, marginLeft: 2 }} />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

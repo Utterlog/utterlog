@@ -379,6 +379,7 @@ func main() {
 		// release and triggers an in-place docker compose pull+up via
 		// the mounted docker socket. See internal/handler/system_version.go.
 		authed.GET("/admin/system/version", handler.SystemVersion)
+		authed.GET("/admin/system/releases", handler.SystemReleases)
 		authed.POST("/admin/system/upgrade", handler.SystemUpgrade)
 		authed.GET("/admin/system/upgrade/status", handler.SystemUpgradeStatus)
 

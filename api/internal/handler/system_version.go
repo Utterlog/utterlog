@@ -52,9 +52,20 @@ type versionCache struct {
 var verCache = &versionCache{}
 
 const (
-	ghReleasesURL = "https://api.github.com/repos/utterlog/utterlog/releases/latest"
-	cacheTTL      = 10 * time.Minute
+	ghReleasesURL     = "https://api.github.com/repos/utterlog/utterlog/releases/latest"
+	ghAllReleasesURL  = "https://api.github.com/repos/utterlog/utterlog/releases?per_page=20"
+	cacheTTL          = 10 * time.Minute
 )
+
+// Separate cache for the full release list (admin changelog view).
+type releasesCache struct {
+	mu       sync.Mutex
+	fetched  time.Time
+	items    []githubRelease
+	errorMsg string
+}
+
+var relCache = &releasesCache{}
 
 // SystemVersion returns current + latest version info.
 func SystemVersion(c *gin.Context) {
@@ -183,6 +194,85 @@ func fetchLatestRelease() {
 	verCache.release = &rel
 	verCache.errorMsg = ""
 	verCache.mu.Unlock()
+}
+
+// ============================================================
+// GET /api/v1/admin/system/releases
+//
+// Returns the 20 most recent GitHub releases for the admin changelog
+// view. Cached 10 min. On error returns an empty list + error field so
+// the UI can show a fallback "check GitHub" link.
+// ============================================================
+func SystemReleases(c *gin.Context) {
+	refresh := c.Query("refresh") == "1"
+
+	relCache.mu.Lock()
+	stale := refresh || relCache.items == nil || time.Since(relCache.fetched) > cacheTTL
+	relCache.mu.Unlock()
+
+	if stale {
+		fetchReleases()
+	}
+
+	relCache.mu.Lock()
+	items := relCache.items
+	errMsg := relCache.errorMsg
+	fetchedAt := relCache.fetched
+	relCache.mu.Unlock()
+
+	util.Success(c, gin.H{
+		"releases": items,
+		"checked_at": func() string {
+			if fetchedAt.IsZero() {
+				return ""
+			}
+			return fetchedAt.UTC().Format(time.RFC3339)
+		}(),
+		"error": errMsg,
+	})
+}
+
+func fetchReleases() {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, "GET", ghAllReleasesURL, nil)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "utterlog-api")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		relCache.mu.Lock()
+		relCache.fetched = time.Now()
+		relCache.errorMsg = "github API: " + err.Error()
+		relCache.mu.Unlock()
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		relCache.mu.Lock()
+		relCache.fetched = time.Now()
+		relCache.errorMsg = fmt.Sprintf("github API %d: %s", resp.StatusCode, string(body))
+		// keep existing items so UI shows stale data rather than a blank list
+		relCache.mu.Unlock()
+		return
+	}
+
+	var items []githubRelease
+	if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
+		relCache.mu.Lock()
+		relCache.fetched = time.Now()
+		relCache.errorMsg = "decode: " + err.Error()
+		relCache.mu.Unlock()
+		return
+	}
+
+	relCache.mu.Lock()
+	relCache.fetched = time.Now()
+	relCache.items = items
+	relCache.errorMsg = ""
+	relCache.mu.Unlock()
 }
 
 // ============================================================
