@@ -23,20 +23,48 @@ export default function InstallPage() {
 
       <h2>一行命令安装</h2>
       <pre><code>curl -fsSL https://utterlog.io/install.sh | bash</code></pre>
-      <p>脚本会依次：</p>
+      <p>脚本做的事：</p>
       <ol>
-        <li>检查 Docker + docker-compose-plugin（缺了会提示安装命令）</li>
-        <li>拉取 Utterlog 源（优先 git clone，失败降级为 tarball）到 <code>./utterlog/</code></li>
-        <li>生成 <code>.env</code>，随机化 <code>DB_PASSWORD</code> 和 <code>JWT_SECRET</code></li>
-        <li>自动检测 <code>9260</code> 端口占用，占用则顺延</li>
-        <li><code>docker compose up -d</code> 启动四个容器（api、web、postgres、redis）</li>
+        <li>检查 Docker + docker-compose-plugin</li>
+        <li>新建 <code>./utterlog/</code>，下载 2 个文件：<code>docker-compose.yml</code> + <code>.env.example</code></li>
+        <li>生成 <code>.env</code>，随机化 <code>DB_PASSWORD</code>（16 位）+ <code>JWT_SECRET</code>（48 位）</li>
+        <li><code>docker compose pull</code> — 从 <code>registry.utterlog.io</code> 拉 4 个预构建镜像</li>
+        <li><code>docker compose up -d</code> — 启动 postgres / redis / api / web</li>
       </ol>
-
       <blockquote className="info">
-        <strong>默认镜像源：</strong> <code>registry.utterlog.io</code>（CF 加速 + CN 反代节点）。
-        全球用户可切换到 GHCR：<br />
-        <code>REGISTRY=ghcr.io/utterlog curl -fsSL https://utterlog.io/install.sh | bash</code>
+        <strong>纯拉镜像，不编译</strong>。不 git clone（省 9000+ 文件）、不本地构建（省 ~4GB RAM、不需要 Go/Node 工具链）。
+        512MB 小 VPS 也能跑。预计 30 秒跑完（看网络拉镜像速度）。
       </blockquote>
+
+      <h3>环境变量</h3>
+      <table>
+        <thead><tr><th>变量</th><th>作用</th><th>默认</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>UTTERLOG_DIR</code></td>
+            <td>安装路径</td>
+            <td><code>./utterlog</code></td>
+          </tr>
+          <tr>
+            <td><code>UTTERLOG_IMAGE_PREFIX</code></td>
+            <td>镜像源（CN 友好默认 / GHCR 回退）</td>
+            <td><code>registry.utterlog.io/utterlog</code></td>
+          </tr>
+          <tr>
+            <td><code>UTTERLOG_IMAGE_TAG</code></td>
+            <td>镜像标签（回滚时锁定版本）</td>
+            <td><code>latest</code></td>
+          </tr>
+          <tr>
+            <td><code>UTTERLOG_PORT</code></td>
+            <td>API 本地绑定端口（仅 127.0.0.1）</td>
+            <td><code>9260</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <pre><code>UTTERLOG_IMAGE_PREFIX=ghcr.io/utterlog \
+UTTERLOG_DIR=/opt/utterlog \
+  curl -fsSL https://utterlog.io/install.sh | bash</code></pre>
 
       <h2>配置反向代理</h2>
       <p>

@@ -1,27 +1,40 @@
 #!/usr/bin/env bash
 # ============================================================
-# Utterlog — one-line installer (served from utterlog.io)
+# Utterlog — one-liner installer (pull-only, no source checkout)
 #
 # Usage:
 #   curl -fsSL https://utterlog.io/install.sh | bash
 #
-# Optional env vars:
-#   DOMAIN=blog.example.com   # enables bundled Caddy TLS mode
-#   REGISTRY=ghcr.io/utterlog # use GitHub Container Registry instead
-#   UTTERLOG_DIR=~/utterlog   # install path (default: ./utterlog)
+# What it does:
+#   1. Verify Docker + compose plugin
+#   2. Create ./utterlog/ and download 2 files:
+#      - docker-compose.yml  (pull-only, direct from registry)
+#      - .env.example
+#   3. Generate .env with random DB_PASSWORD (16 chars) + JWT_SECRET (48)
+#   4. docker compose pull   ← pulls prebuilt images from
+#                              registry.utterlog.io (CF-accelerated)
+#   5. docker compose up -d  ← starts services
+#
+# No git clone. No source download. No local compilation.
+# Happy-path finishes in ~30 seconds on a fresh server.
+#
+# Env overrides:
+#   UTTERLOG_DIR=/opt/utterlog             # install path
+#   UTTERLOG_IMAGE_PREFIX=ghcr.io/utterlog # switch to GHCR registry
+#   UTTERLOG_IMAGE_TAG=sha-xxxxxxx         # pin to a specific build
+#   UTTERLOG_PORT=9260                     # bind port (127.0.0.1 only)
 # ============================================================
 set -euo pipefail
 
-REPO_URL="${UTTERLOG_REPO:-https://github.com/utterlog/utterlog.git}"
 INSTALL_DIR="${UTTERLOG_DIR:-$(pwd)/utterlog}"
-REGISTRY="${REGISTRY:-registry.utterlog.io}"
+BASE_URL="${UTTERLOG_BASE_URL:-https://utterlog.io}"
 
-# Color helpers
+# -------- Color helpers --------
 if [ -t 1 ]; then
   C_BLUE=$'\e[34m'; C_GREEN=$'\e[32m'; C_YELLOW=$'\e[33m'
-  C_RED=$'\e[31m'; C_BOLD=$'\e[1m'; C_RESET=$'\e[0m'
+  C_RED=$'\e[31m'; C_BOLD=$'\e[1m'; C_DIM=$'\e[2m'; C_RESET=$'\e[0m'
 else
-  C_BLUE=; C_GREEN=; C_YELLOW=; C_RED=; C_BOLD=; C_RESET=
+  C_BLUE=; C_GREEN=; C_YELLOW=; C_RED=; C_BOLD=; C_DIM=; C_RESET=
 fi
 log()  { printf "%s==>%s %s\n" "$C_BLUE$C_BOLD" "$C_RESET" "$*"; }
 ok()   { printf "%s✓%s %s\n" "$C_GREEN$C_BOLD" "$C_RESET" "$*"; }
@@ -30,104 +43,109 @@ err()  { printf "%s✗%s %s\n" "$C_RED$C_BOLD" "$C_RESET" "$*" >&2; }
 
 cat <<BANNER
 
-${C_BOLD}  Utterlog — one-line installer${C_RESET}
+${C_BOLD}  Utterlog — one-liner installer${C_RESET}
   ${C_BOLD}═══════════════════════════════════════${C_RESET}
-  Docs:     https://utterlog.io
-  GitHub:   https://github.com/utterlog/utterlog
-  Registry: ${REGISTRY}
+  ${C_DIM}Docs:     https://docs.utterlog.io${C_RESET}
+  ${C_DIM}Registry: ${UTTERLOG_IMAGE_PREFIX:-registry.utterlog.io/utterlog}${C_RESET}
 
 BANNER
 
-# --- Step 1: Docker ---
+# -------- 1. Docker sanity --------
 if ! command -v docker >/dev/null 2>&1; then
   err "Docker is not installed."
-  echo "  Install Docker first:"
-  echo "    curl -fsSL https://get.docker.com | sh"
-  echo "    sudo usermod -aG docker \$USER   # log out and back in"
+  echo "  Install first:  curl -fsSL https://get.docker.com | sh"
   exit 1
 fi
 if ! docker compose version >/dev/null 2>&1; then
   err "docker compose plugin is not installed."
-  echo "    Debian/Ubuntu: sudo apt install -y docker-compose-plugin"
-  echo "    RHEL/CentOS:   sudo yum install -y docker-compose-plugin"
+  echo "  Debian/Ubuntu:  sudo apt install -y docker-compose-plugin"
+  echo "  RHEL/CentOS:    sudo yum install -y docker-compose-plugin"
   exit 1
 fi
 ok "Docker $(docker --version | awk '{print $3}' | tr -d ',')"
 
-# --- Step 2: git (optional) ---
-USE_GIT=1
-if ! command -v git >/dev/null 2>&1; then
-  warn "git not found — will download tarball instead"
-  USE_GIT=0
-fi
-
-# --- Step 3: clone or download ---
-# Kill any interactive prompt: we never want to ask the user for git
-# credentials — this is a headless installer. If auth is needed, we fail
-# and fall through to anonymous tarball download.
-export GIT_TERMINAL_PROMPT=0
-GIT_NO_CRED=(-c credential.helper= -c core.askPass=true)
-
-# Tarball fallback — always works, no auth, public HTTPS download.
-download_tarball() {
-  log "Downloading tarball from GitHub..."
-  mkdir -p "$INSTALL_DIR"
-  if ! curl -fsSL "https://github.com/utterlog/utterlog/archive/refs/heads/main.tar.gz" \
-       | tar -xz --strip-components=1 -C "$INSTALL_DIR"; then
-    err "Tarball download failed. Check your internet connection."
-    exit 1
-  fi
-}
-
-# Try to update an existing checkout in place. Returns 0 on success.
-try_update_inplace() {
-  [ ! -d "$INSTALL_DIR/.git" ] && return 1
-  [ "$USE_GIT" -eq 1 ] || return 1
-  # Force canonical remote — overrides any fork / old URL left behind.
-  (cd "$INSTALL_DIR" && git remote set-url origin "$REPO_URL") 2>/dev/null || return 1
-  # ff-only + disabled credential helpers. If auth is needed, this fails
-  # fast (no stdin prompt) and the caller backs up + re-clones.
-  (cd "$INSTALL_DIR" && git "${GIT_NO_CRED[@]}" pull --ff-only 2>&1) || return 1
-  return 0
-}
-
-if [ -d "$INSTALL_DIR" ]; then
-  warn "$INSTALL_DIR already exists"
-  if try_update_inplace; then
-    ok "Updated existing checkout to latest main"
-  else
-    BAK="${INSTALL_DIR}.bak-$(date +%s)"
-    warn "Couldn't update in place (likely: remote points at a private fork, dirty working tree, or auth-required remote). Moving aside to $BAK and refetching."
-    mv "$INSTALL_DIR" "$BAK"
-    # Fall through to clone/tarball below.
-  fi
-fi
-
-if [ ! -d "$INSTALL_DIR" ]; then
-  if [ "$USE_GIT" -eq 1 ]; then
-    log "Cloning Utterlog into $INSTALL_DIR..."
-    if ! git "${GIT_NO_CRED[@]}" clone --depth 1 "$REPO_URL" "$INSTALL_DIR" 2>&1; then
-      warn "git clone failed (auth or network) — falling back to tarball."
-      rm -rf "$INSTALL_DIR"
-      download_tarball
-    fi
-  else
-    download_tarball
-  fi
-fi
-ok "Code ready at $INSTALL_DIR"
-
-# --- Step 4: run deploy ---
+# -------- 2. Prepare install dir --------
+mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
+log "Install dir: $(pwd)"
 
-DEPLOY_ARGS=()
-if [ -n "${DOMAIN:-}" ]; then
-  DEPLOY_ARGS+=(--tls)
-  log "DOMAIN=$DOMAIN detected → enabling TLS mode"
+# -------- 3. Fetch compose + env template --------
+log "Downloading docker-compose.yml and .env.example from $BASE_URL ..."
+curl -fsSL "$BASE_URL/docker-compose.yml" -o docker-compose.yml
+curl -fsSL "$BASE_URL/.env.example" -o .env.example
+ok "Compose files ready ($(wc -c < docker-compose.yml) bytes)"
+
+# -------- 4. Generate .env with random secrets --------
+rand_str() {
+  local len="${1:-32}"
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c "$len"
+  else
+    LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$len"
+  fi
+  echo
+}
+
+if [ ! -f .env ]; then
+  DB_PASS=$(rand_str 16)
+  JWT=$(rand_str 48)
+  cp .env.example .env
+  # Replace empty DB_PASSWORD= / JWT_SECRET= with generated values
+  sed -i.bak "s|^DB_PASSWORD=.*|DB_PASSWORD=$DB_PASS|" .env
+  sed -i.bak "s|^JWT_SECRET=.*|JWT_SECRET=$JWT|" .env
+  # Write install dir so the one-click-update feature (admin UI) can
+  # find the compose file after the api container restarts itself.
+  grep -q '^UTTERLOG_INSTALL_DIR=' .env \
+    || echo "UTTERLOG_INSTALL_DIR=$INSTALL_DIR" >> .env
+  # Apply registry override if user set one.
+  if [ -n "${UTTERLOG_IMAGE_PREFIX:-}" ]; then
+    grep -q '^UTTERLOG_IMAGE_PREFIX=' .env \
+      && sed -i.bak "s|^UTTERLOG_IMAGE_PREFIX=.*|UTTERLOG_IMAGE_PREFIX=$UTTERLOG_IMAGE_PREFIX|" .env \
+      || echo "UTTERLOG_IMAGE_PREFIX=$UTTERLOG_IMAGE_PREFIX" >> .env
+  fi
+  rm -f .env.bak
+  ok ".env created with random credentials"
+else
+  warn ".env already exists — keeping your configured values"
 fi
-# Let deploy.sh know which registry to pull from
-export REGISTRY
 
-log "Running scripts/deploy.sh..."
-echo
-bash scripts/deploy.sh ${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"}
+# -------- 5. Pull prebuilt images --------
+log "Pulling Utterlog images (postgres/redis/api/web)..."
+if ! docker compose pull 2>&1; then
+  err "Failed to pull images. Check your internet connection or set UTTERLOG_IMAGE_PREFIX=ghcr.io/utterlog to try the GitHub mirror."
+  exit 1
+fi
+ok "Images pulled"
+
+# -------- 6. Start --------
+log "Starting services..."
+docker compose up -d
+
+# Wait for api to come up
+log "Waiting for API to become healthy..."
+for i in $(seq 1 60); do
+  if curl -fsS "http://127.0.0.1:${UTTERLOG_PORT:-9260}/api/v1/install/status" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+PORT="${UTTERLOG_PORT:-9260}"
+cat <<DONE
+
+  ${C_GREEN}${C_BOLD}✓ Utterlog is running${C_RESET}
+
+  Local:     ${C_BOLD}http://127.0.0.1:$PORT${C_RESET}
+  Next step: open ${C_BOLD}http://127.0.0.1:$PORT/install${C_RESET} in your browser
+             to create the admin account.
+
+  ${C_DIM}- Install dir:  $INSTALL_DIR${C_RESET}
+  ${C_DIM}- Credentials:  $INSTALL_DIR/.env  (keep this file safe)${C_RESET}
+  ${C_DIM}- Logs:         docker compose -f $INSTALL_DIR/docker-compose.yml logs -f${C_RESET}
+  ${C_DIM}- Upgrade:      admin → 版本 → 一键升级${C_RESET}
+  ${C_DIM}                or: curl -fsSL https://utterlog.io/update.sh | bash${C_RESET}
+
+  Point your nginx / caddy reverse proxy at 127.0.0.1:$PORT to expose
+  Utterlog on a public domain. See docs.utterlog.io/install for examples.
+
+DONE
