@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
+import { Modal } from '@/components/ui/modal';
 
 interface VersionInfo {
   current: { version: string; built_at: string };
@@ -64,6 +65,7 @@ export default function SystemUpdatePanel() {
   const [releases, setReleases] = useState<ReleaseItem[] | null>(null);
   const [releasesErr, setReleasesErr] = useState('');
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function load(refresh = false) {
@@ -119,8 +121,15 @@ export default function SystemUpdatePanel() {
     }
   }
 
-  async function doUpgrade() {
-    if (!confirm('即将拉取最新镜像并重建容器（约 30-60 秒）。\n期间后台短暂不可访问，但数据、配置、上传文件全部保留。\n\n继续？')) return;
+  // The button just opens the confirm modal. Real work happens in
+  // `runUpgrade` after the user clicks "确认升级" — this way the native
+  // browser confirm() is gone and we get a styled modal matching Plan A.
+  function doUpgrade() {
+    setConfirmOpen(true);
+  }
+
+  async function runUpgrade() {
+    setConfirmOpen(false);
     setUpgrading(true);
     try {
       await api.post('/admin/system/upgrade');
@@ -403,6 +412,67 @@ export default function SystemUpdatePanel() {
           </div>
         )}
       </div>
+
+      {/* Upgrade confirm dialog — styled modal, replaces native confirm() */}
+      <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} title="确认一键升级" size="sm">
+        <div>
+          <div style={{
+            width: 44, height: 44, margin: '0 auto 14px',
+            background: 'var(--color-primary-soft, #E6EEFB)',
+            color: 'var(--color-primary)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 20,
+          }}>
+            <i className="fa-solid fa-cloud-arrow-down" />
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--color-text)', lineHeight: 1.7, textAlign: 'center', marginBottom: 6 }}>
+            即将升级到 <b style={{ color: 'var(--color-primary)', fontFamily: 'ui-monospace,monospace' }}>{lat}</b>
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--color-text-dim)', lineHeight: 1.7, textAlign: 'center', marginBottom: 16 }}>
+            拉取最新镜像并重建容器，约需 30-60 秒。
+            <br />
+            期间后台短暂不可访问，数据、配置、上传文件全部保留。
+          </div>
+
+          <div style={{
+            background: '#fefce8', border: '1px solid #fde68a',
+            padding: '10px 14px', fontSize: 12, color: '#713f12',
+            lineHeight: 1.6, marginBottom: 18,
+          }}>
+            <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: 6 }} />
+            升级过程中请勿刷新或关闭此页面。
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={() => setConfirmOpen(false)}
+              style={{
+                height: 38, padding: '0 18px',
+                background: 'var(--color-surface, #fff)', color: 'var(--color-text)',
+                border: '1px solid var(--color-border)',
+                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              onClick={runUpgrade}
+              style={{
+                height: 38, padding: '0 18px',
+                background: 'var(--color-primary)', color: '#fff',
+                border: '1px solid var(--color-primary)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <i className="fa-solid fa-cloud-arrow-down" />
+              确认升级
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
