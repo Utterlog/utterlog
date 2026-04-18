@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
+	"strings"
 	"utterlog-go/config"
 	"utterlog-go/internal/handler"
 	"utterlog-go/internal/middleware"
@@ -13,29 +15,84 @@ import (
 
 func main() {
 	config.Load()
-	config.InitDB()
-	config.InitRedis()
-	storage.Init()
-	handler.InitStatsSync()
+	dbErr := config.InitDB()
+	if dbErr == nil {
+		config.InitRedis()
+		storage.Init()
+		handler.InitStatsSync()
+	}
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(middleware.Logger(), middleware.CORS(), gin.Recovery())
 	r.MaxMultipartMemory = 64 << 20 // 64MB max upload
 
+	// Admin SPA is always available.
+	adminHandler := ServeAdmin(adminDistFS)
+	r.GET("/admin", func(c *gin.Context) { c.Redirect(301, "/admin/") })
+	r.GET("/admin/*filepath", adminHandler)
+
+	// Single-page install wizard — lives at /install under the root
+	// domain so a fresh deployment's entrypoint is just <domain>/install.
+	// Works in both setup-only and full mode; redirects to /admin/login
+	// once an admin user exists.
+	r.GET("/install", handler.InstallPage)
+	// Favicon is served from an embedded SVG so it works in setup-only
+	// mode (before /public/ static routes are registered).
+	r.GET("/favicon.svg", handler.FaviconSVG)
+
+	// Setup + install APIs are always live (no DB required for the
+	// setup endpoints; install/status is nil-safe).
+	setup := r.Group("/api/v1/setup")
+	setup.GET("/status", handler.SetupStatus)
+	setup.POST("/test-db", handler.TestDBConnection)
+	setup.POST("/test-redis", handler.TestRedisConnection)
+	setup.POST("/save", handler.SaveSetupConfig)
+	r.GET("/api/v1/install/status", handler.InstallStatus)
+
+	// DB missing → serve ONLY the install surface. Everything else returns
+	// 503 so callers know the hub isn't fully booted yet.
+	if dbErr != nil {
+		log.Printf("Boot mode: setup-only (DB unreachable). Visit /install to configure.")
+		r.NoRoute(func(c *gin.Context) {
+			p := c.Request.URL.Path
+			if strings.HasPrefix(p, "/admin") ||
+				strings.HasPrefix(p, "/install") ||
+				strings.HasPrefix(p, "/api/v1/setup") ||
+				strings.HasPrefix(p, "/api/v1/install") {
+				return // handled by explicit routes above
+			}
+			// Any other URL on a fresh deploy — send the browser to /install.
+			if c.Request.Method == http.MethodGet && strings.Contains(c.Request.Header.Get("Accept"), "text/html") {
+				c.Redirect(http.StatusFound, "/install")
+				return
+			}
+			c.JSON(503, gin.H{
+				"success": false,
+				"error":   gin.H{"code": "SETUP_REQUIRED", "message": "请先完成 /install 安装向导"},
+			})
+		})
+		port := config.C.Port
+		log.Printf("Utterlog Go server (setup mode) listening on :%s", port)
+		if err := r.Run(":" + port); err != nil {
+			log.Fatalf("Server failed: %v", err)
+		}
+		return
+	}
+
+	// ---- Full mode from here on ----
+
 	// Static files
 	r.Static("/uploads", "./public/uploads")
 	r.Static("/themes", "./public/themes") // theme preview assets (screenshot.svg etc.)
 
-	// Branding files at root (logo, dark-logo, favicon)
+	// Branding files at root (logo, dark-logo). /favicon.svg is the
+	// canonical favicon — served from the embedded Utterlog SVG above.
+	// Legacy PNG favicons can be fetched via /favicon.png explicitly.
 	r.GET("/logo.:ext", func(c *gin.Context) { c.File("./public/logo." + c.Param("ext")) })
 	r.GET("/dark-logo.:ext", func(c *gin.Context) { c.File("./public/dark-logo." + c.Param("ext")) })
-	r.GET("/favicon.:ext", func(c *gin.Context) { c.File("./public/favicon." + c.Param("ext")) })
-
-	// Admin SPA — embedded Vite build at api/admin/dist, served at /admin/*
-	adminHandler := ServeAdmin(adminDistFS)
-	r.GET("/admin", func(c *gin.Context) { c.Redirect(301, "/admin/") })
-	r.GET("/admin/*filepath", adminHandler)
+	r.GET("/favicon.png", func(c *gin.Context) { c.File("./public/favicon.png") })
+	r.GET("/favicon.ico", func(c *gin.Context) { c.File("./public/favicon.png") })
 
 	api := r.Group("/api/v1")
 
@@ -50,8 +107,9 @@ func main() {
 	})
 
 	// ===================== Install Wizard (public, unauth) =====================
+	// Note: /api/v1/install/status is registered at the top so it's also
+	// reachable in setup-only mode.
 	install := api.Group("/install")
-	install.GET("/status", handler.InstallStatus)
 	install.POST("/create-admin", handler.InstallCreateAdmin)
 	install.POST("/finish", handler.InstallFinish)
 

@@ -11,7 +11,18 @@ import (
 
 var DB *sqlx.DB
 
-func InitDB() {
+// InitDB connects to Postgres and runs migrations. Returns error instead of
+// exiting so the caller can fall back to "setup-only mode" (serving the
+// install wizard) when config is missing or DB is unreachable.
+func InitDB() error {
+	// Missing required config → skip connection and let caller enter setup
+	// mode. We don't treat this as an error spam because fresh installs
+	// genuinely have no credentials yet.
+	if C.DBUser == "" || C.DBName == "" {
+		log.Println("DB not configured (DB_USER or DB_NAME empty) — entering setup-only mode")
+		return fmt.Errorf("db not configured")
+	}
+
 	var dsn string
 	if C.DBPass != "" {
 		dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -24,7 +35,9 @@ func InitDB() {
 	var err error
 	DB, err = sqlx.Connect("postgres", dsn)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Printf("Database connection failed: %v — entering setup-only mode", err)
+		DB = nil
+		return err
 	}
 	DB.SetMaxOpenConns(25)
 	DB.SetMaxIdleConns(5)
@@ -136,6 +149,8 @@ func InitDB() {
 
 	// Media: EXIF data storage
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS exif_data TEXT DEFAULT ''", T("media")))
+
+	return nil
 }
 
 // T returns table name with prefix

@@ -18,7 +18,11 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-utterlog}
       POSTGRES_USER: ${DB_USER:-utterlog}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-this-db-password}
+      # No literal fallback: every deploy must have its own random
+      # DB_PASSWORD in .env. Run `bash scripts/deploy.sh` (or curl
+      # install.sh) to auto-generate it. Compose refuses to start with
+      # an empty password so nobody ships the same default.
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Run 'bash scripts/deploy.sh' to generate a random DB_PASSWORD into .env}
       POSTGRES_HOST_AUTH_METHOD: md5
       POSTGRES_INITDB_ARGS: "--auth-host=md5"
     # 仅内网访问，需调试时临时取消注释
@@ -53,12 +57,12 @@ services:
       - DB_PORT=5432
       - DB_NAME=${DB_NAME:-utterlog}
       - DB_USER=${DB_USER:-utterlog}
-      - DB_PASSWORD=${DB_PASSWORD:-change-this-db-password}
+      - DB_PASSWORD=${DB_PASSWORD:?Run 'bash scripts/deploy.sh' to generate a random DB_PASSWORD into .env}
       - DB_PREFIX=${DB_PREFIX:-ul_}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - JWT_SECRET=${JWT_SECRET:-change-this-to-a-long-random-string-at-least-32-chars}
+      - JWT_SECRET=${JWT_SECRET:?Run 'bash scripts/deploy.sh' to generate a random JWT_SECRET into .env}
       - APP_URL=${APP_URL:-http://localhost:${UTTERLOG_PORT:-9260}}
       - STORAGE_DRIVER=${STORAGE_DRIVER:-local}
       - S3_ENDPOINT=${S3_ENDPOINT:-}

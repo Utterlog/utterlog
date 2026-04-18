@@ -105,9 +105,9 @@ if [ ! -f .env ]; then
     # --- Interactive mode: prompt user ---
     log "Interactive setup. Press Enter to auto-generate, or type your own value."
     echo
-    suggested_db=$(rand_str 24)
+    suggested_db=$(rand_str 16)
     suggested_jwt=$(rand_str 48)
-    printf "  DB_PASSWORD (24-char random by default): "
+    printf "  DB_PASSWORD (16-char random by default): "
     read -r USER_DB_PASSWORD
     [ -z "$USER_DB_PASSWORD" ] && USER_DB_PASSWORD="$suggested_db"
     printf "  JWT_SECRET  (48-char random by default): "
@@ -126,7 +126,7 @@ if [ ! -f .env ]; then
     log "Generating .env with cryptographically random secrets (/dev/urandom)..."
     log "  — each deploy produces unique values; no shared defaults."
     log "  — run 'make deploy-interactive' if you prefer to supply your own."
-    DB_PASSWORD_GEN=$(rand_str 24)
+    DB_PASSWORD_GEN=$(rand_str 16)
     JWT_SECRET_GEN=$(rand_str 48)
     cp .env.example .env
     if command -v sed >/dev/null 2>&1; then

@@ -222,12 +222,14 @@ func GenericList(table string, page, perPage int, orderBy string) ([]map[string]
 }
 
 func GetOption(name string) string {
+	if config.DB == nil { return "" }
 	var val string
 	config.DB.Get(&val, "SELECT value FROM "+config.T("options")+" WHERE name = $1", name)
 	return val
 }
 
 func SetOption(name, value string) {
+	if config.DB == nil { return }
 	t := config.T("options")
 	result, _ := config.DB.Exec("UPDATE "+t+" SET value = $1 WHERE name = $2", value, name)
 	if rows, _ := result.RowsAffected(); rows == 0 {
