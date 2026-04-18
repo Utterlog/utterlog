@@ -128,18 +128,19 @@ func currentVersion() gin.H {
 }
 
 // isNewer returns true when latest is considered newer than current.
-// For sha-<short> builds vs semver tags we just check inequality; for
-// semver-on-both-sides a lexicographic compare is "good enough" for
-// monotonic 1.x releases. Pre-releases already have prerelease flag
-// surfaced separately.
+// - Current == "dev" or starts with "sha-" (untagged build): any tagged
+//   semver release counts as newer. This lets dev/local installs see
+//   the update badge so the feature is visible while testing.
+// - Both semver: lexicographic compare works for monotonic 1.x tags;
+//   pre-release gating is surfaced via the prerelease flag separately.
 func isNewer(current, latest string) bool {
 	c := strings.TrimPrefix(current, "v")
 	l := strings.TrimPrefix(latest, "v")
-	if c == "" || c == "dev" || l == "" {
+	if c == "" || l == "" {
 		return false
 	}
-	// If current is a sha (starts with "sha-"), any tagged release counts as newer.
-	if strings.HasPrefix(c, "sha-") {
+	if c == "dev" || strings.HasPrefix(c, "sha-") {
+		// Any tagged semver release is "newer" than a dev/sha build.
 		return !strings.HasPrefix(l, "sha-")
 	}
 	return l > c
