@@ -77,7 +77,7 @@ export default async function ChangelogPage() {
     <main className="min-h-screen bg-slate-50">
       {/* Nav (mirrors landing header for consistency) */}
       <header className="border-b border-slate-200 bg-white sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2.5">
             <svg viewBox="0 0 24 24" className="w-7 h-7" aria-hidden>
               <path d="M12 0c9.601 0 12 2.399 12 12 0 9.601-2.399 12-12 12-9.601 0-12-2.399-12-12C0 2.399 2.399 0 12 0z" fill="#0052D9" />
@@ -164,7 +164,7 @@ export default async function ChangelogPage() {
       </section>
 
       <footer className="border-t border-slate-200 bg-white py-10">
-        <div className="max-w-4xl mx-auto px-5 sm:px-8 text-center text-[12px] text-slate-500">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 text-center text-[12px] text-slate-500">
           <a href="/" className="hover:text-slate-900">utterlog.io</a>
           <span className="mx-3 text-slate-300">·</span>
           <a href="https://docs.utterlog.io" className="hover:text-slate-900">docs.utterlog.io</a>
