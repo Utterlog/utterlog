@@ -16,7 +16,9 @@ RUN apk add --no-cache \
     libwebp-dev \
     nodejs \
     npm \
-    bash
+    bash \
+    docker-cli \
+    docker-cli-compose
 
 WORKDIR /app
 

@@ -389,11 +389,28 @@ func runUpgrade() {
 	// container is recreated. The shell uses `docker compose` via the
 	// mounted socket — it talks to the HOST's docker daemon, not the
 	// api container's internals.
+	//
+	// Compose file selection is auto-detected:
+	//   - prod pull mode:  docker-compose.prod.yml + docker-compose.pull.yml
+	//   - slim installer:  docker-compose.yml (uses pre-built images directly)
+	//   - dev mode:        docker-compose.yml (rebuilds from source)
+	// The shell picks the first combo that exists so the same endpoint
+	// works for all three deployment styles.
 	script := `
 set -e
 cd "${UTTERLOG_INSTALL_DIR:-/opt/utterlog}"
-docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
-docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans
+if [ -f docker-compose.prod.yml ] && [ -f docker-compose.pull.yml ]; then
+  echo "[upgrade] prod + pull overlay mode"
+  docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
+  docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans
+elif [ -f docker-compose.yml ]; then
+  echo "[upgrade] single-file compose mode"
+  docker compose pull
+  docker compose up -d --remove-orphans
+else
+  echo "[upgrade] ERROR: no docker-compose.yml found in $(pwd)"
+  exit 1
+fi
 `
 	cmd := exec.Command("nohup", "bash", "-c", script)
 	cmd.Stdout, _ = os.OpenFile(upgrade.logPath, os.O_APPEND|os.O_WRONLY, 0o644)

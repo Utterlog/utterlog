@@ -52,6 +52,12 @@ services:
       - ./api:/app
       - ./api/public/uploads:/app/public/uploads
       - api_go_cache:/go/pkg/mod
+      # One-click update feature — admin → 设置 → 系统更新 → 一键升级
+      # shells out to `docker compose` via the host socket. The install
+      # dir is mounted 1:1 so the shell's `cd $UTTERLOG_INSTALL_DIR`
+      # works both inside the container and from the host daemon's view.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${UTTERLOG_INSTALL_DIR:-/Users/gentpan/projects/utterlog}:${UTTERLOG_INSTALL_DIR:-/Users/gentpan/projects/utterlog}:ro
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -73,6 +79,9 @@ services:
       - S3_PUBLIC_URL=${S3_PUBLIC_URL:-}
       # 让 Go 反代非 /admin 非 /api 的请求到 Next.js 容器
       - WEB_PROXY_TARGET=http://web:3000
+      # One-click update needs to know the host project path so the
+      # shell-out can `cd` there before running `docker compose`.
+      - UTTERLOG_INSTALL_DIR=${UTTERLOG_INSTALL_DIR:-/Users/gentpan/projects/utterlog}
     depends_on:
       postgres:
         condition: service_started
