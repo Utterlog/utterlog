@@ -150,6 +150,36 @@ export default function SystemUpdatePanel() {
   const lat = info?.latest?.version || '—';
   const updateAvailable = info?.update_available ?? false;
 
+  // Status color: blue when an update is available, green when up-to-date.
+  const statusColor = updateAvailable ? '#0052D9' : '#16a34a';
+  const statusColorDark = updateAvailable ? '#003DA6' : '#15803d';
+  const statusColorSoft = updateAvailable ? 'rgba(0,82,217,0.08)' : 'rgba(22,163,74,0.08)';
+
+  // Primary button = main action (upgrade / "up-to-date"). Blue or green.
+  const primaryBtnStyle: React.CSSProperties = {
+    height: 40, padding: '0 20px',
+    display: 'inline-flex', alignItems: 'center', gap: 8,
+    background: statusColor, color: '#fff',
+    border: `1px solid ${statusColor}`,
+    fontSize: 14, fontWeight: 600,
+    cursor: upgrading || loading ? 'not-allowed' : (updateAvailable ? 'pointer' : 'default'),
+    opacity: upgrading || loading ? 0.6 : 1,
+    transition: 'background-color 0.15s, border-color 0.15s',
+    fontFamily: 'inherit',
+  };
+  // Secondary button = refresh check. Always outlined gray.
+  const secondaryBtnStyle: React.CSSProperties = {
+    height: 40, padding: '0 16px',
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    background: 'var(--color-surface, #fff)', color: 'var(--color-text)',
+    border: '1px solid var(--color-border)',
+    fontSize: 13,
+    cursor: loading || upgrading ? 'not-allowed' : 'pointer',
+    opacity: loading || upgrading ? 0.5 : 1,
+    transition: 'border-color 0.15s, color 0.15s',
+    fontFamily: 'inherit',
+  };
+
   return (
     <div>
       {/* Version card */}
@@ -157,7 +187,7 @@ export default function SystemUpdatePanel() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div>
             <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 4 }}>当前版本</div>
-            <div style={{ fontSize: 18, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>{cur}</div>
+            <div style={{ fontSize: 18, fontWeight: 600, fontFamily: 'ui-monospace, monospace', color: updateAvailable ? 'var(--color-text)' : statusColor }}>{cur}</div>
             {info?.current.built_at && (
               <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>
                 构建于 {info.current.built_at}
@@ -166,7 +196,7 @@ export default function SystemUpdatePanel() {
           </div>
           <div>
             <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 4 }}>最新版本</div>
-            <div style={{ fontSize: 18, fontWeight: 600, fontFamily: 'ui-monospace, monospace', color: updateAvailable ? 'var(--color-primary)' : 'var(--color-text)' }}>
+            <div style={{ fontSize: 18, fontWeight: 600, fontFamily: 'ui-monospace, monospace', color: statusColor }}>
               {lat}
             </div>
             {info?.latest?.published_at && (
@@ -180,20 +210,31 @@ export default function SystemUpdatePanel() {
         <div style={{ marginTop: 18, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           {updateAvailable ? (
             <button
-              className="btn btn-primary btn-lg"
-              disabled={upgrading || loading}
+              type="button"
               onClick={doUpgrade}
+              disabled={upgrading || loading}
+              style={primaryBtnStyle}
+              onMouseEnter={(e) => { if (!upgrading && !loading) e.currentTarget.style.background = statusColorDark; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = statusColor; }}
             >
-              <i className={`fa-solid ${upgrading ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-down'}`} style={{ marginRight: 8 }} />
+              <i className={`fa-solid ${upgrading ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-down'}`} />
               {upgrading ? '升级中…' : '一键升级到 ' + lat}
             </button>
           ) : (
-            <span style={{ padding: '8px 14px', background: 'var(--color-success-soft, #f0fdf4)', color: '#166534', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <i className="fa-solid fa-circle-check" /> 当前已是最新版本
-            </span>
+            <button type="button" disabled style={primaryBtnStyle}>
+              <i className="fa-solid fa-circle-check" />
+              当前已是最新版本
+            </button>
           )}
-          <button className="btn" onClick={() => load(true)} disabled={loading || upgrading}>
-            <i className="fa-solid fa-arrows-rotate" style={{ marginRight: 6 }} />
+          <button
+            type="button"
+            onClick={() => load(true)}
+            disabled={loading || upgrading}
+            style={secondaryBtnStyle}
+            onMouseEnter={(e) => { if (!loading && !upgrading) { e.currentTarget.style.borderColor = statusColor; e.currentTarget.style.color = statusColor; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text)'; }}
+          >
+            <i className={`fa-solid ${loading ? 'fa-spinner fa-spin' : 'fa-arrows-rotate'}`} />
             刷新检查
           </button>
           <div style={{ flex: 1 }} />
@@ -263,6 +304,7 @@ export default function SystemUpdatePanel() {
             {releases && <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 400 }}>最近 {releases.length} 个发布</span>}
           </h3>
           <button
+            type="button"
             className="btn"
             style={{ fontSize: 12, padding: '4px 10px' }}
             onClick={() => loadReleases(true)}
@@ -307,6 +349,7 @@ export default function SystemUpdatePanel() {
               return (
                 <div key={rel.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <button
+                    type="button"
                     onClick={() => toggleExpand(rel.id)}
                     style={{
                       width: '100%', padding: '14px 20px',
