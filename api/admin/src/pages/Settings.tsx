@@ -6,6 +6,7 @@ import { Button, Input, Toggle } from '@/components/ui';
 import api from '@/lib/api';
 import { useForm } from 'react-hook-form';
 import { FormSectionC, FormRowInputC, FormRowTextareaC } from '@/components/form/FormC';
+import VersionBadge from '@/components/VersionBadge';
 
 // Shared style constants
 const cardStyle = { padding: '28px', marginBottom: '20px' } as const;
@@ -265,6 +266,7 @@ export default function SettingsPage() {
     { id: 'comment', label: '评论设置', icon: 'fa-regular fa-comments' },
     { id: 'media', label: '存储设置', icon: 'fa-regular fa-database' },
     { id: 'image', label: '图片处理', icon: 'fa-regular fa-image' },
+    { id: 'update', label: '系统更新', icon: 'fa-solid fa-cloud-arrow-down' },
   ];
 
   if (loading) {
@@ -1073,13 +1075,41 @@ export default function SettingsPage() {
 
           {/* ==================== 安全设置 ==================== */}
 
-          {/* Save button */}
-          <div style={{ paddingTop: '24px', borderTop: '1px solid var(--color-border)', marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={handleSubmit(onSubmit)} loading={saving}>
-              <i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} />
-              保存设置
-            </Button>
-          </div>
+          {/* ==================== 系统更新 ==================== */}
+          {activeTab === 'update' && (
+            <div style={{ maxWidth: 620 }}>
+              <div style={sectionTitleStyle as React.CSSProperties}>
+                <i className="fa-solid fa-cloud-arrow-down" style={{ marginRight: 8, color: 'var(--color-primary)' }} />
+                系统更新
+              </div>
+              <p className="text-dim" style={{ fontSize: 13, lineHeight: 1.7, marginBottom: 20 }}>
+                Utterlog 通过 GitHub Releases 推送新版本。下方卡片会实时比对你当前运行的版本和最新发布；有新版时点进去一键升级即可。
+                升级过程保留所有数据、配置和用户上传，详见升级页说明。
+              </p>
+              <VersionBadge variant="full" />
+              <div style={{ marginTop: 24, padding: '14px 18px', background: 'var(--color-bg-soft, #fafafa)', border: '1px solid var(--color-border)', fontSize: 12, color: 'var(--color-text-dim)', lineHeight: 1.8 }}>
+                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>
+                  <i className="fa-regular fa-circle-info" style={{ marginRight: 6 }} />
+                  其它升级方式
+                </div>
+                · 命令行：<code style={{ fontFamily: 'ui-monospace,monospace', fontSize: 11, background: 'var(--color-bg-card, #fff)', padding: '1px 5px', border: '1px solid var(--color-border)' }}>curl -fsSL https://utterlog.io/update.sh | bash</code>
+                <br />
+                · 看所有历史版本：<a href="https://utterlog.io/changelog" target="_blank" rel="noopener" style={{ color: 'var(--color-primary)' }}>utterlog.io/changelog</a>
+                <br />
+                · 文档：<a href="https://docs.utterlog.io/update/" target="_blank" rel="noopener" style={{ color: 'var(--color-primary)' }}>docs.utterlog.io/update</a>
+              </div>
+            </div>
+          )}
+
+          {/* Save button — only shows on editable tabs (not read-only "update" tab) */}
+          {activeTab !== 'update' && (
+            <div style={{ paddingTop: '24px', borderTop: '1px solid var(--color-border)', marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+              <Button onClick={handleSubmit(onSubmit)} loading={saving}>
+                <i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} />
+                保存设置
+              </Button>
+            </div>
+          )}
         </form>
       </div>
     </div>

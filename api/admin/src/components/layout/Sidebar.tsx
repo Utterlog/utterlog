@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import SystemStatusPanel from './SystemStatusPanel';
+import VersionBadge from '@/components/VersionBadge';
 
 interface MenuItem {
   to: string;
@@ -172,7 +173,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
         {!collapsed && (
           <>
             <span style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Ubuntu', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif", letterSpacing: '-0.01em' }}>Utterlog!</span>
-            <span style={{ fontSize: 9, padding: '1px 5px', background: 'var(--color-primary)', color: '#fff', fontWeight: 600 }}>v1.0</span>
+            <VersionBadge variant="compact" />
           </>
         )}
         <button
