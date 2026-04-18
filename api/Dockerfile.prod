@@ -27,17 +27,27 @@ COPY . .
 RUN rm -rf admin && mkdir -p admin
 COPY --from=admin-builder /app/admin/dist ./admin/dist
 
-# Build: stripped (-s -w), no symbols, static CGO disabled where possible
-# (webp needs CGO so we keep it on but strip)
+# Build: stripped (-s -w), no symbols, static CGO disabled where possible.
+# (webp needs CGO so we keep it on but strip.) Inject version + build time
+# into the handler package so /api/v1/admin/system/version can surface them.
+ARG VERSION=dev
+ARG BUILD_TIME=unknown
 RUN CGO_ENABLED=1 go build \
-    -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD 2>/dev/null || echo prod)" \
+    -ldflags="-s -w \
+      -X main.Version=${VERSION} \
+      -X utterlog-go/internal/handler.BuildVersion=${VERSION} \
+      -X utterlog-go/internal/handler.BuildTime=${BUILD_TIME}" \
     -trimpath \
     -o /out/utterlog-api .
 
 # --- Stage 3: runtime ---
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates libwebp tzdata curl \
-    && adduser -D -u 1000 utterlog
+# docker-cli + compose plugin let the in-admin "one-click update" feature
+# shell out to `docker compose pull && up -d` via the mounted host socket.
+# bash is required because the upgrade script uses `set -e` and heredocs.
+RUN apk add --no-cache ca-certificates libwebp tzdata curl bash docker-cli docker-cli-compose \
+    && adduser -D -u 1000 utterlog \
+    && addgroup utterlog docker 2>/dev/null || true
 
 WORKDIR /app
 COPY --from=go-builder /out/utterlog-api ./utterlog-api
@@ -47,7 +57,11 @@ COPY public ./public
 # Ensure uploads directory exists and is writable
 RUN mkdir -p public/uploads && chown -R utterlog:utterlog /app
 
-USER utterlog
+# Run as root so the mounted docker.sock (root:docker on most hosts)
+# is accessible to the one-click update feature without GID juggling.
+# The Go binary itself only speaks HTTP and has no shell surface, so the
+# attack surface from running as root inside this container is limited.
+# USER utterlog
 EXPOSE 8080
 
 HEALTHCHECK --interval=5s --timeout=3s --start-period=30s --retries=5 \

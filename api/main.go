@@ -375,6 +375,13 @@ func main() {
 		authed.POST("/social/fetch-feeds", handler.FetchFeeds)
 		authed.GET("/system/update-check", handler.CheckSystemUpdate)
 
+		// Self-update: compares running version against latest GitHub
+		// release and triggers an in-place docker compose pull+up via
+		// the mounted docker socket. See internal/handler/system_version.go.
+		authed.GET("/admin/system/version", handler.SystemVersion)
+		authed.POST("/admin/system/upgrade", handler.SystemUpgrade)
+		authed.GET("/admin/system/upgrade/status", handler.SystemUpgradeStatus)
+
 		// Security
 		authed.GET("/security/overview", handler.SecurityOverview)
 		authed.GET("/security/settings", handler.GetSecuritySettings)

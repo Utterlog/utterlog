@@ -48,6 +48,7 @@ const menuItems: MenuItem[] = [
   { to: '/themes', icon: 'fa-solid fa-palette', label: '主题', sub: 'Themes' },
   { to: '/plugins', icon: 'fa-solid fa-plug', label: '插件', sub: 'Plugins' },
   { to: '/tools', icon: 'fa-solid fa-screwdriver-wrench', label: '工具', sub: 'Tools' },
+  { to: '/system/update', icon: 'fa-solid fa-cloud-arrow-down', label: '版本', sub: 'Update' },
   { to: '/settings', icon: 'fa-solid fa-gear', label: '设置', sub: 'Settings' },
 ];
 

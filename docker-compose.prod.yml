@@ -79,8 +79,16 @@ services:
       - S3_PUBLIC_URL=${S3_PUBLIC_URL:-}
       # Tell Go to reverse-proxy non-/admin non-/api requests to web container
       - WEB_PROXY_TARGET=http://web:3000
+      # One-click update needs to know the host install path (where the
+      # docker-compose.yml lives) so its shell-out can `cd` there.
+      - UTTERLOG_INSTALL_DIR=${UTTERLOG_INSTALL_DIR:-/opt/utterlog}
     volumes:
       - uploads:/app/public/uploads
+      # Socket mount enables the admin "one-click update" feature. The API
+      # shells out to `docker compose pull && up -d` via this socket, and
+      # needs to see the same docker-compose.yml path that the host uses.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${UTTERLOG_INSTALL_DIR:-/opt/utterlog}:${UTTERLOG_INSTALL_DIR:-/opt/utterlog}:ro
     depends_on:
       postgres:
         condition: service_healthy

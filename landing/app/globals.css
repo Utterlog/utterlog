@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #0052D9;
+  --color-primary-hover: #003DA6;
+  --color-primary-soft: #E6EEFB;
+  --color-text: #0f172a;
+  --color-text-dim: #475569;
+  --color-text-muted: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-surface: #ffffff;
+  --color-bg: #f8fafc;
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Selection color matches brand */
+::selection {
+  background: var(--color-primary);
+  color: #fff;
+}

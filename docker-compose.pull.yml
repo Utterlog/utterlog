@@ -1,31 +1,31 @@
 # ============================================================
-# Utterlog — pull pre-built images from GHCR
+# Utterlog — pull pre-built images (overlay for docker-compose.prod.yml)
 # ------------------------------------------------------------
-# Overlay that replaces local `build:` directives with pre-built
-# images from GitHub Container Registry. Skips all compilation on
-# the deploy host (no Go toolchain, no npm install, no Rust for
-# swc). Ideal for low-memory VPS (~512MB) that would OOM during
-# local build.
+# Replaces local `build:` directives with pre-built images from the
+# Utterlog registry. Skips all compilation on the deploy host —
+# ideal for low-memory VPS and for CN users who benefit from the
+# Cloudflare-accelerated utterlog.io mirror.
 #
 # Usage:
 #   docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
 #   docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d
 #
-# Or via Makefile:
-#   make deploy-pull          # pull + up
-#   make deploy-pull-tls      # same but enables bundled Caddy
+# Image source selection (set in .env or exported env):
+#   UTTERLOG_IMAGE_PREFIX=registry.utterlog.io/utterlog   # default (CF-accelerated)
+#   UTTERLOG_IMAGE_PREFIX=ghcr.io/utterlog                # fallback (GitHub)
+#   UTTERLOG_IMAGE_TAG=latest                             # or a specific sha-xxxxxxx / v1.2.3
 #
 # Images are built by .github/workflows/docker-publish.yml on every
-# push to main and tagged as `latest` + `sha-<shortsha>`.
+# push to main and pushed to BOTH registries simultaneously.
 # ============================================================
 
 services:
   api:
-    image: ghcr.io/utterlog/utterlog-api:${UTTERLOG_IMAGE_TAG:-latest}
+    image: ${UTTERLOG_IMAGE_PREFIX:-registry.utterlog.io/utterlog}/utterlog-api:${UTTERLOG_IMAGE_TAG:-latest}
     build: !reset null     # disable local build
     pull_policy: always
 
   web:
-    image: ghcr.io/utterlog/utterlog-web:${UTTERLOG_IMAGE_TAG:-latest}
+    image: ${UTTERLOG_IMAGE_PREFIX:-registry.utterlog.io/utterlog}/utterlog-web:${UTTERLOG_IMAGE_TAG:-latest}
     build: !reset null
     pull_policy: always

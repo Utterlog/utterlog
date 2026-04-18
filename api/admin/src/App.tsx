@@ -86,6 +86,7 @@ const Security = lazy(() => import('@/pages/Security'));
 const Themes = lazy(() => import('@/pages/Themes'));
 const Plugins = lazy(() => import('@/pages/Plugins'));
 const Tools = lazy(() => import('@/pages/Tools'));
+const SystemUpdate = lazy(() => import('@/pages/SystemUpdate'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const Profile = lazy(() => import('@/pages/Profile'));
 const Backup = lazy(() => import('@/pages/Backup'));
@@ -193,6 +194,7 @@ export default function App() {
         <Route path="/themes" element={<Themes />} />
         <Route path="/plugins" element={<Plugins />} />
         <Route path="/tools" element={<Tools />} />
+        <Route path="/system/update" element={<SystemUpdate />} />
         <Route path="/backup" element={<Backup />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/profile" element={<Profile />} />
