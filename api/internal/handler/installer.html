@@ -880,16 +880,45 @@
     done.push('schema'); // DB init runs as part of server boot
 
     // 3) Create admin
+    // The first call often lands while the api is still finishing boot
+    // (gin routes registered but DB pool cold, or reverse proxy returning
+    // transient 502s). Confirm /install/status reports schema=true before
+    // firing, and auto-retry network + 5xx errors with short backoff.
     drawProgress('admin', done);
-    const ad = await api('/api/v1/install/create-admin', 'POST', {
+
+    await pollUntil(async () => {
+      try {
+        const r = await fetch('/api/v1/install/status', { cache: 'no-store' });
+        if (!r.ok) return false;
+        const j = await r.json();
+        return !!(j && j.data && j.data.checks && j.data.checks.schema);
+      } catch (_) { return false; }
+    }, 30_000, 800);
+
+    let ad;
+    let lastError = '';
+    const adminBody = {
       username: state.admin.username.trim(),
       email: state.admin.email.trim(),
       password: state.admin.password,
       nickname: state.admin.nickname.trim(),
-    });
+    };
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      ad = await api('/api/v1/install/create-admin', 'POST', adminBody);
+      const errCode = ad.json && ad.json.error && ad.json.error.code;
+      const errMsg  = ad.json && ad.json.error && ad.json.error.message;
+      if (ad.ok && ad.json && ad.json.success) break;
+      // ALREADY_INSTALLED = previous attempt actually succeeded. Treat as OK.
+      if (errCode === 'ALREADY_INSTALLED') { ad = { ok: true, json: { success: true } }; break; }
+      // DUPLICATE / bad request — real user error, don't retry.
+      if (ad.status === 400 || errCode === 'DUPLICATE') break;
+      lastError = errMsg || `HTTP ${ad.status || 0}`;
+      await new Promise(r => setTimeout(r, 1500 * attempt));  // 1.5s, 3s, 4.5s, 6s
+    }
+
     if (!ad.ok || !(ad.json && ad.json.success)) {
-      const msg = (ad.json && ad.json.error && ad.json.error.message) || '创建管理员失败';
-      alert.innerHTML = `<div class="alert alert-err">${msg}</div>`;
+      const msg = (ad.json && ad.json.error && ad.json.error.message) || lastError || '创建管理员失败';
+      alert.innerHTML = `<div class="alert alert-err">${msg}<br/><small style="opacity:0.7">已重试多次。请查看容器日志：docker compose logs api --tail=50</small></div>`;
       btn.disabled = false; back.disabled = false;
       return;
     }
