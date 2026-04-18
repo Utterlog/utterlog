@@ -33,6 +33,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
           href="https://icons.bluecdn.com/fontawesome-pro/css/all.min.css"
         />
+        {/* Ubuntu — Utterlog brand font, self-hosted from /fonts/ */}
+        <link rel="preload" as="font" type="font/woff2" href="/fonts/ubuntu-500.woff2" crossOrigin="" />
+        <link rel="stylesheet" href="/fonts/ubuntu.css" />
       </head>
       <body>{children}</body>
     </html>

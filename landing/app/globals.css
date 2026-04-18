@@ -21,6 +21,12 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Utterlog brand wordmark — Ubuntu font only for the logo text, not body. */
+.font-brand {
+  font-family: 'Ubuntu', -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  letter-spacing: -0.01em;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 
 /* Selection color matches brand */

@@ -180,7 +180,7 @@ export default function Login() {
             <path d="M12 0c9.601 0 12 2.399 12 12 0 9.601-2.399 12-12 12-9.601 0-12-2.399-12-12C0 2.399 2.399 0 12 0z" fill="var(--color-primary)" />
             <path d="M17.008 17.29H11.44a5.57 5.57 0 0 1-5.562-5.567A5.57 5.57 0 0 1 11.44 6.16a5.57 5.57 0 0 1 5.567 5.563Z" fill="white" />
           </svg>
-          <h1 style={{ fontSize: 18, fontWeight: 700, margin: '12px 0 4px' }}>Utterlog</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 700, margin: '12px 0 4px', fontFamily: "'Ubuntu', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif", letterSpacing: '-0.01em' }}>Utterlog</h1>
           <p style={{ fontSize: 12, color: 'var(--color-text-dim)', margin: 0 }}>
             {needTotp ? '请输入动态验证码' : '管理后台登录'}
           </p>

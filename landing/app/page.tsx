@@ -76,7 +76,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
           <a href="#top" className="flex items-center gap-2.5">
             <Logo className="w-7 h-7" />
-            <span className="font-semibold text-slate-900">Utterlog</span>
+            <span className="font-brand font-semibold text-slate-900">Utterlog</span>
           </a>
           <nav className="flex items-center gap-1 sm:gap-2 text-[13.5px]">
             <a href="#features" className="hidden sm:inline px-3 py-2 text-slate-600 hover:text-slate-900">特性</a>
@@ -311,7 +311,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-2.5">
             <Logo className="w-6 h-6" />
             <span className="text-slate-400 text-sm">
-              <span className="text-slate-200 font-medium">Utterlog</span>
+              <span className="text-slate-200 font-medium font-brand">Utterlog</span>
               <span className="mx-2 text-slate-600">·</span>
               去中心化独立博客联盟
             </span>
