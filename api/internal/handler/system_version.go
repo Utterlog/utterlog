@@ -286,6 +286,7 @@ type upgradeState struct {
 	startedAt time.Time
 	finished  bool
 	success   bool
+	noop      bool // true when the script exited successfully without doing anything (dev mode)
 	message   string
 	logPath   string
 }
@@ -335,6 +336,7 @@ func SystemUpgradeStatus(c *gin.Context) {
 	running := upgrade.running
 	finished := upgrade.finished
 	success := upgrade.success
+	noop := upgrade.noop
 	msg := upgrade.message
 	startedAt := upgrade.startedAt
 	logPath := upgrade.logPath
@@ -352,6 +354,7 @@ func SystemUpgradeStatus(c *gin.Context) {
 		"running":    running,
 		"finished":   finished,
 		"success":    success,
+		"noop":       noop,
 		"message":    msg,
 		"started_at": startedAt.UTC().Format(time.RFC3339),
 		"log_tail":   tail,
@@ -479,13 +482,28 @@ esac
 	// and the admin page reads the fresh version. For dev/noop paths
 	// the shell exits quickly and we mark finished here.
 	waitErr := cmd.Wait()
+
+	// Detect "dev source repo — noop" by scanning the log for the
+	// marker our shell emits when it takes the skip path. This lets
+	// the UI distinguish "really upgraded" from "did nothing (dev)".
+	isNoop := false
+	if b, err := os.ReadFile(upgrade.logPath); err == nil {
+		if strings.Contains(string(b), "done (noop)") {
+			isNoop = true
+		}
+	}
+
 	upgrade.mu.Lock()
 	upgrade.running = false
 	upgrade.finished = true
 	upgrade.success = waitErr == nil
+	upgrade.noop = isNoop
 	if waitErr != nil {
 		upgrade.message = waitErr.Error()
 		appendLog("upgrade shell exited with error: " + waitErr.Error())
+	} else if isNoop {
+		upgrade.message = "dev 源代码模式 — 本次未执行实际升级。开发流程请用 git pull + 重启容器。"
+		appendLog("upgrade shell completed (noop — dev source repo)")
 	} else {
 		appendLog("upgrade shell completed successfully")
 	}
