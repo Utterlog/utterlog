@@ -390,48 +390,75 @@ func runUpgrade() {
 	// mounted socket — it talks to the HOST's docker daemon, not the
 	// api container's internals.
 	//
-	// Compose file selection is auto-detected by looking at whether the
-	// active docker-compose.yml references the registry (→ slim install,
-	// pull works) or uses build: (→ dev source repo, rebuild from
-	// source). Prod overlay is tried only if the slim path isn't usable.
+	// Compose file selection priority:
+	//   1. UTTERLOG_COMPOSE_MODE env explicit (slim|overlay|dev|noop)
+	//   2. docker-compose.yml references a registry image → slim install
+	//   3. overlay files (docker-compose.prod.yml + .pull.yml) present
+	//      AND docker-compose.yml doesn't have build: → prod overlay
+	//   4. docker-compose.yml has build: → dev source repo, noop (dev
+	//      workflow is `git pull + docker compose restart`, not a
+	//      registry pull)
+	//   5. error
 	//
-	//   slim install       docker-compose.yml has image: registry.utterlog.io OR ghcr.io/utterlog
-	//   prod+pull overlay  docker-compose.prod.yml AND docker-compose.pull.yml exist
-	//   dev source repo    docker-compose.yml has build: directive → rebuild
+	// Plain-grep patterns (no ${...} / curly braces) avoid POSIX ERE's
+	// treatment of { as a quantifier delimiter — that was the bug that
+	// caused the earlier "Invalid contents of {}" fall-through.
 	script := `
 set -e
 cd "${UTTERLOG_INSTALL_DIR:-/opt/utterlog}"
 
 uses_registry_images() {
-  [ -f docker-compose.yml ] && grep -qE "image:[[:space:]]*(\\\${UTTERLOG_IMAGE_PREFIX|registry\\.utterlog\\.io|ghcr\\.io/utterlog)" docker-compose.yml
+  [ -f docker-compose.yml ] || return 1
+  grep -q 'registry\.utterlog\.io' docker-compose.yml && return 0
+  grep -q 'ghcr\.io/utterlog'       docker-compose.yml && return 0
+  grep -q 'UTTERLOG_IMAGE_PREFIX'   docker-compose.yml && return 0
+  return 1
 }
 uses_local_build() {
-  [ -f docker-compose.yml ] && grep -qE "^[[:space:]]*build:" docker-compose.yml
+  [ -f docker-compose.yml ] && grep -qE '^[[:space:]]*build:' docker-compose.yml
 }
 
-if uses_registry_images; then
-  echo "[upgrade] slim install mode — single file with registry images"
-  docker compose pull
-  docker compose up -d --remove-orphans
-elif [ -f docker-compose.prod.yml ] && [ -f docker-compose.pull.yml ]; then
-  echo "[upgrade] prod + pull overlay mode"
-  docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
-  docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans
-elif uses_local_build; then
-  echo "[upgrade] dev source repo — rebuilding from source (no registry pull)"
-  docker compose build api web
-  docker compose up -d --remove-orphans
-else
-  echo "[upgrade] ERROR: cannot determine deployment mode under $(pwd)"
-  exit 1
+MODE="${UTTERLOG_COMPOSE_MODE:-}"
+if [ -z "$MODE" ]; then
+  if uses_registry_images; then
+    MODE=slim
+  elif [ -f docker-compose.prod.yml ] && [ -f docker-compose.pull.yml ] && ! uses_local_build; then
+    MODE=overlay
+  elif uses_local_build; then
+    MODE=dev
+  else
+    MODE=error
+  fi
 fi
+
+case "$MODE" in
+  slim)
+    echo "[upgrade] slim install mode — single file with registry images"
+    docker compose pull
+    docker compose up -d --remove-orphans
+    ;;
+  overlay)
+    echo "[upgrade] prod overlay mode — docker-compose.prod.yml + docker-compose.pull.yml"
+    docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
+    docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans
+    ;;
+  dev)
+    echo "[upgrade] dev source repo detected — one-click upgrade skipped."
+    echo "[upgrade] Dev workflow: 'git pull' + rebuild + 'docker compose restart api'"
+    echo "[upgrade] Set UTTERLOG_COMPOSE_MODE=slim to force a registry pull anyway."
+    echo "[upgrade] done (noop)"
+    ;;
+  *)
+    echo "[upgrade] ERROR: cannot determine deployment mode under $(pwd)"
+    echo "[upgrade] Set UTTERLOG_COMPOSE_MODE=slim|overlay|dev to override."
+    exit 1
+    ;;
+esac
 `
 	cmd := exec.Command("nohup", "bash", "-c", script)
 	cmd.Stdout, _ = os.OpenFile(upgrade.logPath, os.O_APPEND|os.O_WRONLY, 0o644)
 	cmd.Stderr = cmd.Stdout
 
-	// Detach — don't wait. The parent (this api process) will be killed
-	// when docker recreates the api container.
 	if err := cmd.Start(); err != nil {
 		appendLog("failed to start upgrade: " + err.Error())
 		upgrade.mu.Lock()
@@ -444,6 +471,23 @@ fi
 	}
 
 	appendLog(fmt.Sprintf("upgrade shell detached (pid %d). API will restart momentarily.", cmd.Process.Pid))
-	// We intentionally do NOT wait here — the api container itself will
-	// be replaced by compose up, killing this goroutine.
+
+	// Wait for the shell to finish so the UI can poll /upgrade/status
+	// and see success=true. For real upgrades the api container gets
+	// recreated by `compose up -d` and this goroutine dies with it —
+	// that's fine, the new container boots with a clean upgrade state
+	// and the admin page reads the fresh version. For dev/noop paths
+	// the shell exits quickly and we mark finished here.
+	waitErr := cmd.Wait()
+	upgrade.mu.Lock()
+	upgrade.running = false
+	upgrade.finished = true
+	upgrade.success = waitErr == nil
+	if waitErr != nil {
+		upgrade.message = waitErr.Error()
+		appendLog("upgrade shell exited with error: " + waitErr.Error())
+	} else {
+		appendLog("upgrade shell completed successfully")
+	}
+	upgrade.mu.Unlock()
 }
