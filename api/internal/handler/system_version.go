@@ -286,7 +286,6 @@ type upgradeState struct {
 	startedAt time.Time
 	finished  bool
 	success   bool
-	noop      bool // true when the script exited successfully without doing anything (dev mode)
 	message   string
 	logPath   string
 }
@@ -336,7 +335,6 @@ func SystemUpgradeStatus(c *gin.Context) {
 	running := upgrade.running
 	finished := upgrade.finished
 	success := upgrade.success
-	noop := upgrade.noop
 	msg := upgrade.message
 	startedAt := upgrade.startedAt
 	logPath := upgrade.logPath
@@ -354,7 +352,6 @@ func SystemUpgradeStatus(c *gin.Context) {
 		"running":    running,
 		"finished":   finished,
 		"success":    success,
-		"noop":       noop,
 		"message":    msg,
 		"started_at": startedAt.UTC().Format(time.RFC3339),
 		"log_tail":   tail,
@@ -393,67 +390,48 @@ func runUpgrade() {
 	// mounted socket — it talks to the HOST's docker daemon, not the
 	// api container's internals.
 	//
-	// Compose file selection priority:
-	//   1. UTTERLOG_COMPOSE_MODE env explicit (slim|overlay|dev|noop)
-	//   2. docker-compose.yml references a registry image → slim install
-	//   3. overlay files (docker-compose.prod.yml + .pull.yml) present
-	//      AND docker-compose.yml doesn't have build: → prod overlay
-	//   4. docker-compose.yml has build: → dev source repo, noop (dev
-	//      workflow is `git pull + docker compose restart`, not a
-	//      registry pull)
-	//   5. error
+	// One-click upgrade is a real operation on real deployments:
+	// always docker compose pull + up -d. No dev/noop shortcuts. If the
+	// user's compose file isn't pullable (e.g. it points at build:
+	// directives or unreachable images) the pull fails naturally and
+	// the error surfaces to the UI.
 	//
-	// Plain-grep patterns (no ${...} / curly braces) avoid POSIX ERE's
-	// treatment of { as a quantifier delimiter — that was the bug that
-	// caused the earlier "Invalid contents of {}" fall-through.
+	// Two compose layouts supported:
+	//   overlay  docker-compose.prod.yml + docker-compose.pull.yml
+	//            (the advanced / multi-file prod pattern)
+	//   slim     docker-compose.yml         (single-file slim install,
+	//            how curl install.sh | bash sets things up — the 90%
+	//            case)
+	// Set UTTERLOG_COMPOSE_MODE=overlay|slim to override auto-detection.
 	script := `
 set -e
 cd "${UTTERLOG_INSTALL_DIR:-/opt/utterlog}"
 
-uses_registry_images() {
-  [ -f docker-compose.yml ] || return 1
-  grep -q 'registry\.utterlog\.io' docker-compose.yml && return 0
-  grep -q 'ghcr\.io/utterlog'       docker-compose.yml && return 0
-  grep -q 'UTTERLOG_IMAGE_PREFIX'   docker-compose.yml && return 0
-  return 1
-}
-uses_local_build() {
-  [ -f docker-compose.yml ] && grep -qE '^[[:space:]]*build:' docker-compose.yml
-}
-
 MODE="${UTTERLOG_COMPOSE_MODE:-}"
 if [ -z "$MODE" ]; then
-  if uses_registry_images; then
-    MODE=slim
-  elif [ -f docker-compose.prod.yml ] && [ -f docker-compose.pull.yml ] && ! uses_local_build; then
+  if [ -f docker-compose.prod.yml ] && [ -f docker-compose.pull.yml ]; then
     MODE=overlay
-  elif uses_local_build; then
-    MODE=dev
+  elif [ -f docker-compose.yml ]; then
+    MODE=slim
   else
-    MODE=error
+    echo "[upgrade] ERROR: no docker-compose files found under $(pwd)"
+    exit 1
   fi
 fi
 
 case "$MODE" in
-  slim)
-    echo "[upgrade] slim install mode — single file with registry images"
-    docker compose pull
-    docker compose up -d --remove-orphans
-    ;;
   overlay)
-    echo "[upgrade] prod overlay mode — docker-compose.prod.yml + docker-compose.pull.yml"
+    echo "[upgrade] overlay mode — docker-compose.prod.yml + docker-compose.pull.yml"
     docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
     docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans
     ;;
-  dev)
-    echo "[upgrade] dev source repo detected — one-click upgrade skipped."
-    echo "[upgrade] Dev workflow: 'git pull' + rebuild + 'docker compose restart api'"
-    echo "[upgrade] Set UTTERLOG_COMPOSE_MODE=slim to force a registry pull anyway."
-    echo "[upgrade] done (noop)"
+  slim)
+    echo "[upgrade] slim install mode — single file"
+    docker compose pull
+    docker compose up -d --remove-orphans
     ;;
   *)
-    echo "[upgrade] ERROR: cannot determine deployment mode under $(pwd)"
-    echo "[upgrade] Set UTTERLOG_COMPOSE_MODE=slim|overlay|dev to override."
+    echo "[upgrade] ERROR: unknown UTTERLOG_COMPOSE_MODE=$MODE"
     exit 1
     ;;
 esac
@@ -483,27 +461,13 @@ esac
 	// the shell exits quickly and we mark finished here.
 	waitErr := cmd.Wait()
 
-	// Detect "dev source repo — noop" by scanning the log for the
-	// marker our shell emits when it takes the skip path. This lets
-	// the UI distinguish "really upgraded" from "did nothing (dev)".
-	isNoop := false
-	if b, err := os.ReadFile(upgrade.logPath); err == nil {
-		if strings.Contains(string(b), "done (noop)") {
-			isNoop = true
-		}
-	}
-
 	upgrade.mu.Lock()
 	upgrade.running = false
 	upgrade.finished = true
 	upgrade.success = waitErr == nil
-	upgrade.noop = isNoop
 	if waitErr != nil {
 		upgrade.message = waitErr.Error()
 		appendLog("upgrade shell exited with error: " + waitErr.Error())
-	} else if isNoop {
-		upgrade.message = "dev 源代码模式 — 本次未执行实际升级。开发流程请用 git pull + 重启容器。"
-		appendLog("upgrade shell completed (noop — dev source repo)")
 	} else {
 		appendLog("upgrade shell completed successfully")
 	}

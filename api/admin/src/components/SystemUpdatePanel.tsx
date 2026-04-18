@@ -22,7 +22,6 @@ interface UpgradeStatus {
   running: boolean;
   finished: boolean;
   success: boolean;
-  noop: boolean;
   message: string;
   started_at: string;
   log_tail: string;
@@ -107,17 +106,7 @@ export default function SystemUpdatePanel() {
         clearInterval(pollRef.current!);
         pollRef.current = null;
         if (r.data.success) {
-          if (r.data.noop) {
-            // Dev source-repo path — no registry pull happened, version
-            // number won't change. Show an amber info toast so the user
-            // doesn't confuse this with a real upgrade.
-            toast(r.data.message || 'dev 模式 — 本次未执行实际升级', {
-              icon: 'ℹ️',
-              duration: 5000,
-            });
-          } else {
-            toast.success('升级完成，正在刷新版本信息...');
-          }
+          toast.success('升级完成，正在刷新版本信息...');
           setTimeout(() => {
             load(true);
             setUpgrading(false);
