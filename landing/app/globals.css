@@ -27,6 +27,25 @@ html, body {
   letter-spacing: -0.01em;
 }
 
+/* Changelog release-body rendering (simple markdown-ish). */
+.changelog-body h2, .changelog-body h3, .changelog-body h4, .changelog-body h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 16px 0 6px;
+}
+.changelog-body p { margin: 6px 0; }
+.changelog-body ul { margin: 8px 0 12px; padding-left: 22px; list-style: disc; }
+.changelog-body li { margin: 3px 0; }
+.changelog-body code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  background: #f1f5f9;
+  padding: 1px 5px;
+  border: 1px solid #e2e8f0;
+}
+.changelog-body a { color: var(--color-primary); text-decoration: underline; }
+
 *, *::before, *::after { box-sizing: border-box; }
 
 /* Selection color matches brand */

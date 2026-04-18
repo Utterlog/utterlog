@@ -62,34 +62,57 @@ if ! command -v git >/dev/null 2>&1; then
 fi
 
 # --- Step 3: clone or download ---
+# Kill any interactive prompt: we never want to ask the user for git
+# credentials — this is a headless installer. If auth is needed, we fail
+# and fall through to anonymous tarball download.
+export GIT_TERMINAL_PROMPT=0
+GIT_NO_CRED=(-c credential.helper= -c core.askPass=true)
+
+# Tarball fallback — always works, no auth, public HTTPS download.
+download_tarball() {
+  log "Downloading tarball from GitHub..."
+  mkdir -p "$INSTALL_DIR"
+  if ! curl -fsSL "https://github.com/utterlog/utterlog/archive/refs/heads/main.tar.gz" \
+       | tar -xz --strip-components=1 -C "$INSTALL_DIR"; then
+    err "Tarball download failed. Check your internet connection."
+    exit 1
+  fi
+}
+
+# Try to update an existing checkout in place. Returns 0 on success.
+try_update_inplace() {
+  [ ! -d "$INSTALL_DIR/.git" ] && return 1
+  [ "$USE_GIT" -eq 1 ] || return 1
+  # Force canonical remote — overrides any fork / old URL left behind.
+  (cd "$INSTALL_DIR" && git remote set-url origin "$REPO_URL") 2>/dev/null || return 1
+  # ff-only + disabled credential helpers. If auth is needed, this fails
+  # fast (no stdin prompt) and the caller backs up + re-clones.
+  (cd "$INSTALL_DIR" && git "${GIT_NO_CRED[@]}" pull --ff-only 2>&1) || return 1
+  return 0
+}
+
 if [ -d "$INSTALL_DIR" ]; then
   warn "$INSTALL_DIR already exists"
-  if [ -d "$INSTALL_DIR/.git" ] && [ "$USE_GIT" -eq 1 ]; then
-    # An existing checkout may point at a fork / old remote. Reset the
-    # origin to the canonical repo before pulling so we don't prompt for
-    # credentials against a private remote.
-    current_remote=$(cd "$INSTALL_DIR" && git config --get remote.origin.url 2>/dev/null || echo "")
-    if [ -n "$current_remote" ] && [ "$current_remote" != "$REPO_URL" ]; then
-      warn "Existing remote ($current_remote) differs from canonical $REPO_URL — resetting."
-      (cd "$INSTALL_DIR" && git remote set-url origin "$REPO_URL")
-    fi
-    log "Pulling latest code..."
-    if ! (cd "$INSTALL_DIR" && git pull --ff-only 2>&1); then
-      err "git pull failed. Check network or remove $INSTALL_DIR and re-run."
-      exit 1
-    fi
+  if try_update_inplace; then
+    ok "Updated existing checkout to latest main"
   else
-    log "Using existing directory (no update)"
+    BAK="${INSTALL_DIR}.bak-$(date +%s)"
+    warn "Couldn't update in place (likely: remote points at a private fork, dirty working tree, or auth-required remote). Moving aside to $BAK and refetching."
+    mv "$INSTALL_DIR" "$BAK"
+    # Fall through to clone/tarball below.
   fi
-else
+fi
+
+if [ ! -d "$INSTALL_DIR" ]; then
   if [ "$USE_GIT" -eq 1 ]; then
     log "Cloning Utterlog into $INSTALL_DIR..."
-    git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
+    if ! git "${GIT_NO_CRED[@]}" clone --depth 1 "$REPO_URL" "$INSTALL_DIR" 2>&1; then
+      warn "git clone failed (auth or network) — falling back to tarball."
+      rm -rf "$INSTALL_DIR"
+      download_tarball
+    fi
   else
-    log "Downloading tarball into $INSTALL_DIR..."
-    mkdir -p "$INSTALL_DIR"
-    curl -fsSL "https://github.com/utterlog/utterlog/archive/refs/heads/main.tar.gz" \
-      | tar -xz --strip-components=1 -C "$INSTALL_DIR"
+    download_tarball
   fi
 fi
 ok "Code ready at $INSTALL_DIR"

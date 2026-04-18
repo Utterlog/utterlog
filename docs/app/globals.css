@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #0052D9;
+  --color-primary-hover: #003DA6;
+  --color-primary-soft: #E6EEFB;
+  --color-text: #0f172a;
+  --color-text-dim: #475569;
+  --color-text-muted: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-surface: #ffffff;
+  --color-bg: #f8fafc;
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+::selection {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* Utterlog brand wordmark — Ubuntu font only for the logo text. */
+.font-brand {
+  font-family: 'Ubuntu', -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* ==========================================================
+ * Prose — typography for doc pages. Hand-rolled (not Tailwind
+ * typography plugin) so it matches Plan A (square corners,
+ * brand blue, system font stack).
+ * ========================================================== */
+.prose {
+  max-width: 780px;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--color-text);
+}
+
+.prose > *:first-child { margin-top: 0; }
+.prose > *:last-child { margin-bottom: 0; }
+
+.prose h1 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  color: #0f172a;
+}
+.prose .lede {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--color-text-dim);
+  margin: 0 0 40px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+.prose h2 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 44px 0 14px;
+  color: #0f172a;
+  scroll-margin-top: 80px;
+}
+.prose h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 30px 0 10px;
+  color: #0f172a;
+  scroll-margin-top: 80px;
+}
+.prose h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 24px 0 8px;
+}
+.prose p { margin: 0 0 16px; }
+.prose ul, .prose ol {
+  margin: 0 0 20px;
+  padding-left: 26px;
+}
+.prose ul { list-style: disc; }
+.prose ol { list-style: decimal; }
+.prose li { margin: 4px 0; }
+.prose li > ul, .prose li > ol { margin: 4px 0; }
+
+.prose a {
+  color: var(--color-primary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+.prose a:hover { border-bottom-color: var(--color-primary); }
+
+.prose code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 13px;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.prose pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 16px 20px;
+  margin: 18px 0 24px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  border-left: 3px solid var(--color-primary);
+}
+.prose pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.prose blockquote {
+  margin: 20px 0;
+  padding: 12px 18px;
+  background: #fefce8;
+  border-left: 3px solid #eab308;
+  color: #713f12;
+  font-size: 14px;
+}
+.prose blockquote.info {
+  background: var(--color-primary-soft);
+  border-left-color: var(--color-primary);
+  color: #1e3a8a;
+}
+.prose blockquote.warn {
+  background: #fef2f2;
+  border-left-color: #dc2626;
+  color: #991b1b;
+}
+.prose blockquote p:last-child { margin-bottom: 0; }
+
+.prose table {
+  width: 100%;
+  margin: 20px 0 28px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.prose th, .prose td {
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  vertical-align: top;
+}
+.prose th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.prose td code { font-size: 12px; }
+
+.prose hr {
+  margin: 36px 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.prose kbd {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid #cbd5e1;
+  border-bottom-width: 2px;
+  background: #fff;
+  color: #334155;
+}

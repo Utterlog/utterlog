@@ -80,8 +80,8 @@ export default function LandingPage() {
           </a>
           <nav className="flex items-center gap-1 sm:gap-2 text-[13.5px]">
             <a href="#features" className="hidden sm:inline px-3 py-2 text-slate-600 hover:text-slate-900">特性</a>
-            <a href="#install" className="hidden sm:inline px-3 py-2 text-slate-600 hover:text-slate-900">安装</a>
-            <a href="#federation" className="hidden sm:inline px-3 py-2 text-slate-600 hover:text-slate-900">联盟</a>
+            <a href="https://docs.utterlog.io" className="hidden sm:inline px-3 py-2 text-slate-600 hover:text-slate-900">文档</a>
+            <a href="/changelog" className="hidden sm:inline px-3 py-2 text-slate-600 hover:text-slate-900">更新</a>
             <a href="https://github.com/utterlog/utterlog" target="_blank" rel="noopener" className="px-3 py-2 text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
               <i className="fa-brands fa-github" />
               <span className="hidden sm:inline">GitHub</span>
@@ -317,12 +317,13 @@ export default function LandingPage() {
             </span>
           </div>
           <nav className="flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-slate-400">
+            <a href="https://docs.utterlog.io" className="hover:text-white">文档</a>
+            <a href="/changelog" className="hover:text-white">更新</a>
             <a href="https://github.com/utterlog/utterlog" target="_blank" rel="noopener" className="hover:text-white flex items-center gap-1.5">
               <i className="fa-brands fa-github" /> GitHub
             </a>
             <a href="https://id.utterlog.com" target="_blank" rel="noopener" className="hover:text-white">id.utterlog.com</a>
             <a href="https://utterlog.com" target="_blank" rel="noopener" className="hover:text-white">utterlog.com</a>
-            <a href="/install.sh" className="hover:text-white">install.sh</a>
             <a href="https://github.com/utterlog/utterlog/blob/main/LICENSE" target="_blank" rel="noopener" className="hover:text-white">AGPL-3.0</a>
           </nav>
         </div>
