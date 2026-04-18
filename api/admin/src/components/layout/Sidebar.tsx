@@ -12,7 +12,14 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { to: '/', icon: 'fa-solid fa-gauge', label: '概览', sub: 'Dashboard' },
-  { to: '/posts', icon: 'fa-solid fa-pen-to-square', label: '文章', sub: 'Posts' },
+  {
+    to: '/posts', icon: 'fa-solid fa-pen-to-square', label: '文章', sub: 'Posts',
+    children: [
+      { to: '/posts', label: '全部文章', icon: 'fa-regular fa-file-lines' },
+      { to: '/posts/categories', label: '分类', icon: 'fa-regular fa-folder' },
+      { to: '/posts/tags', label: '标签', icon: 'fa-regular fa-tag' },
+    ],
+  },
   { to: '/pages', icon: 'fa-regular fa-file-lines', label: '页面', sub: 'Pages' },
   { to: '/moments', icon: 'fa-solid fa-comment-dots', label: '说说', sub: 'Moments' },
   {

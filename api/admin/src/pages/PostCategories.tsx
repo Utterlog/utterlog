@@ -26,7 +26,13 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     setToolbar(
-      <Button onClick={openCreate} style={{ height: '32px', fontSize: '12px', padding: '0 10px' }}><i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />新建分类</Button>
+      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+        <div style={{ marginLeft: 'auto' }}>
+          <Button className="btn-toolbar" onClick={openCreate}>
+            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />新建分类
+          </Button>
+        </div>
+      </div>
     );
     return () => setToolbar(null);
   }, []);

@@ -171,11 +171,8 @@ export default function PostsPage() {
 
   useEffect(() => {
     setToolbar(
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Input placeholder="检索标题 / 摘要 / 正文" value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchPosts())} style={{ width: '240px' }} />
-        <Button className="btn-toolbar-square" title="搜索" onClick={() => { setPage(1); fetchPosts(); }}>
-          <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
-        </Button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+        {/* 左侧：状态筛选 + 新建文章 */}
         <div style={{ display: 'flex', gap: '4px' }}>
           {([
             { key: '', label: '全部' },
@@ -191,6 +188,14 @@ export default function PostsPage() {
         <Button className="btn-toolbar" onClick={() => navigate('/posts/create')}>
           <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />新建文章
         </Button>
+
+        {/* 右侧：搜索框 */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <Input placeholder="检索标题 / 摘要 / 正文" value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchPosts())} style={{ width: '240px' }} />
+          <Button className="btn-square" title="搜索" onClick={() => { setPage(1); fetchPosts(); }}>
+            <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
+          </Button>
+        </div>
       </div>
     );
     return () => setToolbar(null);

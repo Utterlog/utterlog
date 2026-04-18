@@ -350,9 +350,9 @@ export default function AiSettingsPage() {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '8px' }}>
-                  <Button variant="secondary" onClick={testConnection} loading={testing}>测试连接</Button>
-                  <Button variant="secondary" onClick={() => setEditing(null)}>取消</Button>
-                  <Button onClick={saveProvider} loading={saving}>保存</Button>
+                  <Button className="btn-dialog" variant="secondary" onClick={testConnection} loading={testing}>测试连接</Button>
+                  <Button className="btn-dialog" variant="secondary" onClick={() => setEditing(null)}>取消</Button>
+                  <Button className="btn-dialog" onClick={saveProvider} loading={saving}>保存</Button>
                 </div>
               </div>
             )}
@@ -377,7 +377,7 @@ export default function AiSettingsPage() {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '16px' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
           </div>
         </div>
       )}
@@ -527,7 +527,7 @@ export default function AiSettingsPage() {
             </Select>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '16px' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
           </div>
         </div>
       )}
@@ -543,7 +543,7 @@ export default function AiSettingsPage() {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '16px' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
           </div>
         </div>
       )}
@@ -572,7 +572,7 @@ export default function AiSettingsPage() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '8px', paddingTop: '16px', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
           </div>
         </div>
       )}

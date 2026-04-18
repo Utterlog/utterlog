@@ -135,10 +135,12 @@ export default function MomentsPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
         <span className="text-dim" style={{ fontSize: '13px' }}>共 {moments.length} 条说说</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" onClick={() => setShowTagManager(!showTagManager)}>
-            <i className="fa-regular fa-tags" style={{ fontSize: '16px' }} />关键词管理
+          <Button variant="secondary" onClick={() => setShowTagManager(!showTagManager)} style={{ width: 88, minWidth: 88 }}>
+            <i className="fa-regular fa-tags" style={{ fontSize: '14px' }} />关键词
           </Button>
-          <Button onClick={openCreate}><i className="fa-regular fa-plus" style={{ fontSize: '16px' }} />发布说说</Button>
+          <Button onClick={openCreate} style={{ width: 88, minWidth: 88 }}>
+            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />发布
+          </Button>
         </div>
       </div>
 

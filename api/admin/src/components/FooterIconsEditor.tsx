@@ -197,7 +197,7 @@ export default function FooterIconsEditor() {
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-        <button className="btn" onClick={handleSave} disabled={saving}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? '保存中...' : '保存'}
         </button>
       </div>

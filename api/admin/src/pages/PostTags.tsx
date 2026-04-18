@@ -35,14 +35,18 @@ export default function TagsPage() {
 
   useEffect(() => {
     setToolbar(
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Input placeholder="搜索标签..." value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchTags())} style={{ width: '220px' }} />
-        <Button className="btn-toolbar-square" variant="secondary" title="搜索" onClick={() => { setPage(1); fetchTags(); }}>
-          <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
-        </Button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+        {/* 左: 新建 */}
         <Button className="btn-toolbar" onClick={openCreate}>
           <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />新建标签
         </Button>
+        {/* 右: 搜索 */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <Input placeholder="搜索标签..." value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchTags())} style={{ width: '220px' }} />
+          <Button className="btn-square" variant="secondary" title="搜索" onClick={() => { setPage(1); fetchTags(); }}>
+            <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
+          </Button>
+        </div>
       </div>
     );
     return () => setToolbar(null);

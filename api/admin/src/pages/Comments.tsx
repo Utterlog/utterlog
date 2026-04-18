@@ -535,7 +535,9 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
             className="input"
             style={{ width: '220px', fontSize: '13px' }}
           />
-          <Button onClick={() => { setPage(1); fetchComments(); }} style={{ flexShrink: 0, width: '36px', height: '36px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} /></Button>
+          <Button className="btn-square" title="搜索" onClick={() => { setPage(1); fetchComments(); }}>
+            <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
+          </Button>
         </div>
       </div>
 

@@ -103,11 +103,12 @@ export default function Themes() {
           )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-icon" onClick={fetchList} disabled={loading} title="刷新列表">
-            <i className="fa-regular fa-arrows-rotate" style={{ fontSize: 16 }} />
+          <button className="btn btn-secondary btn-square" onClick={fetchList} disabled={loading} title="刷新列表">
+            <i className="fa-regular fa-arrows-rotate" style={{ fontSize: 14 }} />
           </button>
-          <button className="btn btn-primary btn-icon" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="上传主题 .zip">
-            <i className="fa-regular fa-upload" style={{ fontSize: 16 }} />
+          <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="上传主题 .zip">
+            <i className="fa-regular fa-upload" style={{ fontSize: 14 }} />
+            {uploading ? '上传中...' : '上传主题'}
           </button>
           <input
             ref={fileInputRef}
@@ -148,8 +149,10 @@ export default function Themes() {
                 className="card"
                 style={{
                   overflow: 'hidden', position: 'relative', padding: 0,
+                  borderRadius: 0,
                   borderColor: isActive ? 'var(--color-primary)' : 'var(--color-border)',
-                  borderWidth: isActive ? 2 : 1,
+                  borderWidth: 1,
+                  display: 'flex', flexDirection: 'column',
                 }}
               >
                 <div style={{
@@ -193,7 +196,7 @@ export default function Themes() {
                   </div>
                 )}
 
-                <div style={{ padding: '14px 16px' }}>
+                <div style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0, color: 'var(--color-text-main)' }}>
                       {theme.name}
@@ -211,17 +214,30 @@ export default function Themes() {
                     }}>{theme.description}</p>
                   )}
 
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  {/* marginTop:auto pushes the action row to the bottom of
+                      the card so every theme's button lines up regardless
+                      of how long the description is. */}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
                     {isActive ? (
-                      <button className="btn btn-secondary" disabled style={{ flex: 1, fontSize: 12, padding: '6px 10px' }}>
-                        当前主题
+                      <button
+                        className="btn btn-sm"
+                        disabled
+                        style={{
+                          flex: 1,
+                          background: 'color-mix(in srgb, var(--color-primary) 10%, transparent)',
+                          color: 'var(--color-primary)',
+                          borderColor: 'var(--color-primary)',
+                          opacity: 1,
+                        }}
+                      >
+                        <i className="fa-solid fa-check" style={{ fontSize: 12 }} /> 当前主题
                       </button>
                     ) : (
                       <button
-                        className="btn"
+                        className="btn btn-primary btn-sm"
                         disabled={activating === theme.id}
                         onClick={() => handleActivate(theme.id)}
-                        style={{ flex: 1, fontSize: 12, padding: '6px 10px', justifyContent: 'center' }}
+                        style={{ flex: 1 }}
                       >
                         {activating === theme.id ? '切换中...' : '启用'}
                       </button>

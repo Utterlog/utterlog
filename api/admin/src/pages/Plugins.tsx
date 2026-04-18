@@ -84,11 +84,12 @@ export default function Plugins() {
           共 {plugins.length} 个插件 · 启用中 <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{active.length}</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-icon" onClick={fetchList} disabled={loading} title="刷新列表">
-            <i className="fa-regular fa-arrows-rotate" style={{ fontSize: 16 }} />
+          <button className="btn btn-secondary btn-square" onClick={fetchList} disabled={loading} title="刷新列表">
+            <i className="fa-regular fa-arrows-rotate" style={{ fontSize: 14 }} />
           </button>
-          <button className="btn btn-primary btn-icon" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="上传插件 .zip">
-            <i className="fa-regular fa-upload" style={{ fontSize: 16 }} />
+          <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="上传插件 .zip">
+            <i className="fa-regular fa-upload" style={{ fontSize: 14 }} />
+            {uploading ? '上传中...' : '上传插件'}
           </button>
           <input
             ref={fileInputRef}
@@ -180,11 +181,32 @@ export default function Plugins() {
                     </a>
                   )}
 
-                  <Toggle
-                    checked={enabled}
-                    disabled={toggling === plugin.id}
-                    onChange={() => handleToggle(plugin.id, enabled)}
-                  />
+                  {enabled ? (
+                    <button
+                      className="btn btn-sm"
+                      disabled={toggling === plugin.id}
+                      onClick={() => handleToggle(plugin.id, true)}
+                      title="点击禁用"
+                      style={{
+                        minWidth: 84,
+                        background: 'color-mix(in srgb, var(--color-primary) 10%, transparent)',
+                        color: 'var(--color-primary)',
+                        borderColor: 'var(--color-primary)',
+                      }}
+                    >
+                      <i className="fa-solid fa-check" style={{ fontSize: 11 }} />
+                      {toggling === plugin.id ? '切换中...' : '已启用'}
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={toggling === plugin.id}
+                      onClick={() => handleToggle(plugin.id, false)}
+                      style={{ minWidth: 84 }}
+                    >
+                      {toggling === plugin.id ? '切换中...' : '启用'}
+                    </button>
+                  )}
 
                   {!plugin.builtin && (
                     <button

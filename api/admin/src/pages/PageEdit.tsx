@@ -113,8 +113,8 @@ export default function EditPostPage() {
         <div style={{ width: '280px', flexShrink: 0, overflowY: 'auto', overflowX: 'hidden', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)' }}>
           <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', gap: '6px' }}>
-              <Button onClick={handleSave} loading={submitting} style={{ flex: 1 }}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '13px' }} /> 保存</Button>
-              <Button variant="secondary" onClick={() => navigate('/pages')}>返回</Button>
+              <Button onClick={handleSave} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '13px' }} /> 保存</Button>
+              <Button variant="secondary" onClick={() => navigate('/pages')} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>返回</Button>
             </div>
           </div>
 
@@ -123,13 +123,17 @@ export default function EditPostPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-sub)', marginBottom: '6px', fontWeight: 500 }}>别名 (Slug)</label>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="留空自动分配" className="input" style={{ flex: 1, fontSize: '12px', padding: '6px 10px' }} />
-                  <button className="btn btn-secondary" style={{ fontSize: '11px', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '3px' }} onClick={async () => {
-                    if (!title) return;
-                    try { const r: any = await api.post('/ai/slug', { title, content }); if (r.success && r.data?.slug) { setSlug(r.data.slug); toast.success('Slug 已生成'); } } catch { toast.error('AI 服务不可用'); }
-                  }}>
-                    <i className="fa-regular fa-sparkles" style={{ fontSize: '11px' }} /> AI
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'stretch' }}>
+                  <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="留空自动分配" className="input" style={{ flex: 1, fontSize: '12px' }} />
+                  <button
+                    className="btn btn-secondary btn-toolbar-square"
+                    title="AI 生成 Slug"
+                    onClick={async () => {
+                      if (!title) return;
+                      try { const r: any = await api.post('/ai/slug', { title, content }); if (r.success && r.data?.slug) { setSlug(r.data.slug); toast.success('Slug 已生成'); } } catch { toast.error('AI 服务不可用'); }
+                    }}
+                  >
+                    <i className="fa-regular fa-sparkles" style={{ fontSize: 14 }} />
                   </button>
                 </div>
               </div>

@@ -165,9 +165,10 @@ export default function Login() {
     }}>
       <form
         onSubmit={needTotp ? handle2FA : handleSubmit}
+        className="login-form"
         style={{
           width: '100%', maxWidth: 380, background: 'var(--color-bg-card)',
-          border: '1px solid var(--color-border)', borderRadius: 8, padding: '32px 28px',
+          border: '1px solid var(--color-border)', borderRadius: 0, padding: '32px 28px',
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -289,7 +290,7 @@ export default function Login() {
           <div style={{
             position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
             zIndex: 51, width: 380, maxWidth: '90vw',
-            background: 'var(--color-bg-card)', borderRadius: 8,
+            background: 'var(--color-bg-card)', borderRadius: 0,
             boxShadow: '0 12px 40px rgba(0,0,0,0.15)', padding: 28,
           }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>找回密码</h2>

@@ -43,19 +43,31 @@ export default function MediaPage() {
   };
 
   const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setUploading(true);
-    try {
-      await mediaApi.upload(file);
-      toast.success('上传成功');
-      fetchFiles();
-    } catch {
-      toast.error('上传失败');
-    } finally {
-      setUploading(false);
+    // Upload sequentially so each file's progress is surfaced via toast,
+    // and so a failure on one doesn't abort the rest. Parallel would be
+    // faster but messier for feedback + risks local disk thrash on big
+    // batches.
+    let ok = 0, fail = 0;
+    for (const file of files) {
+      try {
+        await mediaApi.upload(file);
+        ok++;
+      } catch {
+        fail++;
+      }
     }
+    if (ok > 0 && fail === 0) toast.success(`上传成功 · ${ok} 个文件`);
+    else if (ok > 0 && fail > 0) toast(`成功 ${ok} 个，失败 ${fail} 个`, { icon: '!' });
+    else toast.error('上传失败');
+    fetchFiles();
+    setUploading(false);
+    // Allow re-selecting the same files right after (browser won't fire
+    // change again otherwise).
+    e.target.value = '';
   }, []);
 
   const handleDelete = async () => {
@@ -92,7 +104,7 @@ export default function MediaPage() {
         </div>
         {/* Only show storage selector if multiple drivers configured */}
         <label className="cursor-pointer flex-shrink-0">
-          <input type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.zip,.rar,.7z" onChange={handleUpload} className="hidden" />
+          <input type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.zip,.rar,.7z" onChange={handleUpload} className="hidden" />
           <span className="btn-primary btn inline-flex items-center">
             <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px', marginRight: '6px' }} />
             {uploading ? '上传中...' : '上传文件'}

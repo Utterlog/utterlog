@@ -201,13 +201,15 @@ export default function CreatePostPage() {
           {/* Publish */}
           <div style={sectionStyle}>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
-              <Button onClick={() => handleSave('publish')} loading={submitting} style={{ flex: 1 }}>
+              <Button onClick={() => handleSave('publish')} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
                 发布
               </Button>
-              <Button variant="secondary" onClick={() => handleSave('draft')} loading={submitting}>
+              <Button variant="secondary" onClick={() => handleSave('draft')} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
                 <i className="fa-regular fa-floppy-disk" style={{ fontSize: '13px' }} /> 保存
               </Button>
-              <Button variant="secondary" onClick={() => navigate(-1)}>返回</Button>
+              <Button variant="secondary" onClick={() => navigate(-1)} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
+                返回
+              </Button>
             </div>
             {aiFlags.polish && <button onClick={() => setShowAiModal(true)} style={{
               width: '100%', padding: '7px', fontSize: '12px', fontWeight: 500,
@@ -239,29 +241,38 @@ export default function CreatePostPage() {
                     }}>×</button>
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="留空自动回退为正文首图" className="input" style={{ flex: 1, fontSize: '12px', padding: '6px 10px' }} />
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'stretch' }}>
+                  <input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="留空自动回退为正文首图" className="input" style={{ flex: 1, fontSize: '12px' }} />
                   {aiFlags.image && (
-                  <button
-                    className="btn btn-secondary"
-                    disabled={coverAiLoading}
-                    style={{ fontSize: '11px', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '3px', opacity: coverAiLoading ? 0.5 : 1 }}
-                    onClick={async () => {
-                      if (!title) { toast.error('请先填写标题'); return; }
-                      setCoverAiLoading(true);
-                      try {
-                        const r: any = await api.post('/ai/cover', { title, content: content.slice(0, 500) });
-                        if (r.data?.url || r.url) { setCoverUrl(r.data?.url || r.url); toast.success('封面已生成'); }
-                        else toast.error('生成失败');
-                      } catch { toast.error('AI 服务不可用'); }
-                      setCoverAiLoading(false);
-                    }}
-                  >
-                    {coverAiLoading ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: '11px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '11px' }} />} AI
-                  </button>
+                    <button
+                      className="btn btn-secondary btn-toolbar-square"
+                      title="AI 生成封面"
+                      disabled={coverAiLoading}
+                      style={{ opacity: coverAiLoading ? 0.5 : 1 }}
+                      onClick={async () => {
+                        if (!title) { toast.error('请先填写标题'); return; }
+                        setCoverAiLoading(true);
+                        try {
+                          const r: any = await api.post('/ai/cover', { title, content: content.slice(0, 500) });
+                          if (r.data?.url || r.url) { setCoverUrl(r.data?.url || r.url); toast.success('封面已生成'); }
+                          else toast.error('生成失败');
+                        } catch { toast.error('AI 服务不可用'); }
+                        setCoverAiLoading(false);
+                      }}
+                    >
+                      {coverAiLoading
+                        ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: 14 }} />
+                        : <i className="fa-regular fa-sparkles" style={{ fontSize: 14 }} />}
+                    </button>
                   )}
-                  <button onClick={() => coverFileRef.current?.click()} className="btn btn-secondary" style={{ fontSize: '11px', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    {coverUploading ? '...' : <><i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '11px' }} /> 上传</>}
+                  <button
+                    onClick={() => coverFileRef.current?.click()}
+                    className="btn btn-secondary btn-toolbar-square"
+                    title={coverUploading ? '上传中...' : '上传封面'}
+                  >
+                    {coverUploading
+                      ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: 14 }} />
+                      : <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: 14 }} />}
                   </button>
                   <input ref={coverFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCoverUpload} />
                 </div>
