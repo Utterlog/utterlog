@@ -6,7 +6,7 @@ import { Button, Input, Toggle } from '@/components/ui';
 import api from '@/lib/api';
 import { useForm } from 'react-hook-form';
 import { FormSectionC, FormRowInputC, FormRowTextareaC } from '@/components/form/FormC';
-import VersionBadge from '@/components/VersionBadge';
+import SystemUpdatePanel from '@/components/SystemUpdatePanel';
 
 // Shared style constants
 const cardStyle = { padding: '28px', marginBottom: '20px' } as const;
@@ -14,10 +14,34 @@ const sectionTitleStyle = { fontSize: '15px', fontWeight: 600, marginBottom: '24
 const subSectionStyle = 'p-5 space-y-4 border border-line';
 const subTitleRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } as const;
 
+// Tab IDs recognized on #hash so deep links like /settings#update land
+// directly on the right pane. Keep in sync with `tabs` below.
+const VALID_TABS = new Set(['general', 'email', 'telegram', 'comment', 'media', 'image', 'update']);
+
+function initialTabFromHash(): string {
+  if (typeof window === 'undefined') return 'general';
+  const h = window.location.hash.replace(/^#/, '');
+  return VALID_TABS.has(h) ? h : 'general';
+}
+
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState<string>(initialTabFromHash);
+
+  // Respond to hash changes (e.g. VersionBadge link from sidebar) and
+  // update the URL when the user clicks a tab so refresh/bookmark work.
+  useEffect(() => {
+    const onHash = () => setActiveTab(initialTabFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  useEffect(() => {
+    const currentHash = window.location.hash.replace(/^#/, '');
+    if (activeTab !== currentHash) {
+      history.replaceState(null, '', `#${activeTab}`);
+    }
+  }, [activeTab]);
 
   const { register, handleSubmit, reset, getValues, watch, setValue } = useForm();
   const emailProvider = watch('email_provider', 'smtp');
@@ -1077,24 +1101,24 @@ export default function SettingsPage() {
 
           {/* ==================== 系统更新 ==================== */}
           {activeTab === 'update' && (
-            <div style={{ maxWidth: 620 }}>
+            <div>
               <div style={sectionTitleStyle as React.CSSProperties}>
                 <i className="fa-solid fa-cloud-arrow-down" style={{ marginRight: 8, color: 'var(--color-primary)' }} />
                 系统更新
               </div>
               <p className="text-dim" style={{ fontSize: 13, lineHeight: 1.7, marginBottom: 20 }}>
-                Utterlog 通过 GitHub Releases 推送新版本。下方卡片会实时比对你当前运行的版本和最新发布；有新版时点进去一键升级即可。
-                升级过程保留所有数据、配置和用户上传，详见升级页说明。
+                Utterlog 通过 GitHub Releases 推送新版本。下方会实时比对你当前运行的版本和最新发布；
+                有新版本时点「一键升级」即可。升级过程保留所有数据、配置和用户上传。
               </p>
-              <VersionBadge variant="full" />
-              <div style={{ marginTop: 24, padding: '14px 18px', background: 'var(--color-bg-soft, #fafafa)', border: '1px solid var(--color-border)', fontSize: 12, color: 'var(--color-text-dim)', lineHeight: 1.8 }}>
+              <SystemUpdatePanel />
+              <div style={{ marginTop: 24, padding: '14px 18px', background: 'var(--color-bg-soft, #fafafa)', border: '1px solid var(--color-border)', fontSize: 12, color: 'var(--color-text-dim)', lineHeight: 1.8, maxWidth: 720 }}>
                 <div style={{ fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>
                   <i className="fa-regular fa-circle-info" style={{ marginRight: 6 }} />
                   其它升级方式
                 </div>
                 · 命令行：<code style={{ fontFamily: 'ui-monospace,monospace', fontSize: 11, background: 'var(--color-bg-card, #fff)', padding: '1px 5px', border: '1px solid var(--color-border)' }}>curl -fsSL https://utterlog.io/update.sh | bash</code>
                 <br />
-                · 看所有历史版本：<a href="https://utterlog.io/changelog" target="_blank" rel="noopener" style={{ color: 'var(--color-primary)' }}>utterlog.io/changelog</a>
+                · 历史版本：<a href="https://utterlog.io/changelog" target="_blank" rel="noopener" style={{ color: 'var(--color-primary)' }}>utterlog.io/changelog</a>
                 <br />
                 · 文档：<a href="https://docs.utterlog.io/update/" target="_blank" rel="noopener" style={{ color: 'var(--color-primary)' }}>docs.utterlog.io/update</a>
               </div>

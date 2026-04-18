@@ -26,9 +26,9 @@ interface UpgradeStatus {
   log_tail: string;
 }
 
-// Simple markdown-lite renderer for GitHub release body: just linebreaks +
-// - bullets. Good enough for our changelog lines, no XSS risk since we
-// escape HTML entities first.
+// Simple markdown-lite renderer for GitHub release body: linebreaks +
+// bullets. Good enough for our changelog lines. HTML entities escaped
+// before mapping so there's no XSS risk from the release-notes body.
 function renderChangelog(md: string): string {
   if (!md) return '';
   const escaped = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -43,7 +43,10 @@ function renderChangelog(md: string): string {
     .join('');
 }
 
-export default function SystemUpdate() {
+// The full version + upgrade UI. Renders inline — meant to be dropped
+// into the Settings page's "系统更新" tab. Handles fetch, refresh,
+// one-click upgrade, progress polling, and changelog rendering.
+export default function SystemUpdatePanel() {
   const [info, setInfo] = useState<VersionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgradeStatus, setUpgradeStatus] = useState<UpgradeStatus | null>(null);
@@ -80,8 +83,8 @@ export default function SystemUpdate() {
           setUpgrading(false);
         }
       }
-    } catch (e: any) {
-      // API might be restarting — that's expected. Keep polling.
+    } catch (_) {
+      // api likely restarting — keep polling
     }
   }
 
@@ -111,14 +114,7 @@ export default function SystemUpdate() {
   const updateAvailable = info?.update_available ?? false;
 
   return (
-    <div style={{ maxWidth: 820, padding: 24 }}>
-      <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>版本与更新</h2>
-        <p style={{ color: 'var(--color-text-dim)', fontSize: 13, margin: '6px 0 0' }}>
-          检测 Utterlog 的最新发布版本，一键升级到最新版。数据、配置、上传文件和用户自定义主题不会被清空。
-        </p>
-      </div>
-
+    <div style={{ maxWidth: 720 }}>
       {/* Version card */}
       <div style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)', padding: '20px 24px', marginBottom: 16 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -144,7 +140,7 @@ export default function SystemUpdate() {
           </div>
         </div>
 
-        <div style={{ marginTop: 18, display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ marginTop: 18, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           {updateAvailable ? (
             <button
               className="btn btn-primary btn-lg"

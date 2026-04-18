@@ -44,7 +44,7 @@ export default function VersionBadge({ variant = 'compact' }: Props) {
   if (variant === 'compact') {
     return (
       <Link
-        to="/system/update"
+        to="/settings#update"
         title={hasUpdate ? `有新版本：${info?.latest?.version}` : `当前版本：${current}`}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -75,7 +75,7 @@ export default function VersionBadge({ variant = 'compact' }: Props) {
   // full variant for Settings card
   return (
     <Link
-      to="/system/update"
+      to="/settings#update"
       style={{
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 14px',
