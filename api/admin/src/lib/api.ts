@@ -92,18 +92,20 @@ export const postsApi = {
   delete: (id: number) => api.delete(`/posts/${id}`),
 };
 
-// Categories API
+// Categories / Tags — the admin management pages want the full set,
+// not the generic 20-row page. Imported WordPress tags can easily run
+// 100+ per site, so bump per_page to 500 by default (still allow
+// caller overrides).
 export const categoriesApi = {
-  list: () => api.get('/categories'),
+  list: () => api.get('/categories?per_page=500'),
   create: (data: any) => api.post('/categories', data),
   update: (id: number, data: any) => api.put(`/categories/${id}`, data),
   delete: (id: number) => api.delete(`/categories/${id}`),
 };
 
-// Tags API
 export const tagsApi = {
   list: (params?: { page?: number; limit?: number; search?: string }) =>
-    api.get('/tags', { params }),
+    api.get('/tags', { params: { per_page: 500, ...(params || {}) } }),
   create: (data: any) => api.post('/tags', data),
   update: (id: number, data: any) => api.put(`/tags/${id}`, data),
   delete: (id: number) => api.delete(`/tags/${id}`),
