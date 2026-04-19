@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 	"utterlog-go/config"
 	"utterlog-go/internal/middleware"
@@ -408,9 +409,16 @@ func runFeedFetch(limit int) (fetched, newItems int) {
 
 		now := time.Now().Unix()
 		for _, item := range items {
-			result, _ := config.DB.Exec(fmt.Sprintf(
+			result, ierr := config.DB.Exec(fmt.Sprintf(
 				"INSERT INTO %s (subscription_id, title, link, description, pub_date, guid, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING",
 				t("feed_items")), sub.ID, item.Title, item.Link, item.Description, item.PubDate, item.GUID, now)
+			// result is nil on driver error; previous code blindly
+			// called RowsAffected() and panicked out the whole
+			// /fetch-feeds request when a single row overflowed the
+			// pub_date INTEGER column.
+			if ierr != nil || result == nil {
+				continue
+			}
 			if rows, _ := result.RowsAffected(); rows > 0 {
 				newItems++
 			}
@@ -611,17 +619,54 @@ func fetchRSSFeed(feedURL string) ([]rssItem, error) {
 	var rss rssXML
 	if err := xml.NewDecoder(resp.Body).Decode(&rss); err != nil { return nil, err }
 
+	now := time.Now().Unix()
 	var items []rssItem
 	for _, item := range rss.Channel.Items {
-		pubDate := time.Now().Unix()
-		if t, err := time.Parse(time.RFC1123Z, item.PubDate); err == nil { pubDate = t.Unix() }
-		guid := item.GUID; if guid == "" { guid = item.Link }
+		pubDate := parseRSSDate(item.PubDate, now)
+		guid := item.GUID
+		if guid == "" {
+			guid = item.Link
+		}
 		items = append(items, rssItem{
 			Title: item.Title, Link: item.Link, Description: item.Description,
 			PubDate: pubDate, GUID: guid,
 		})
 	}
 	return items, nil
+}
+
+// parseRSSDate tries the handful of formats real feeds use in the wild,
+// falling back to "now" so we never store the Go zero time (-62135596800)
+// which overflows the pub_date INTEGER column. Also clamps: RSS from the
+// year 0001 or the far future both get coerced to now.
+func parseRSSDate(s string, fallback int64) int64 {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return fallback
+	}
+	formats := []string{
+		time.RFC1123Z,                     // RFC 822 with numeric TZ
+		time.RFC1123,                      // RFC 822 with named TZ
+		time.RFC3339,                      // Atom / modern
+		"2006-01-02T15:04:05Z07:00",       // Atom shorthand
+		"Mon, 2 Jan 2006 15:04:05 MST",    // lax RFC1123
+		"Mon, 2 Jan 2006 15:04:05 -0700",  // lax RFC1123Z
+		"2006-01-02 15:04:05",             // bare
+	}
+	for _, f := range formats {
+		if t, err := time.Parse(f, s); err == nil {
+			ts := t.Unix()
+			// Clamp: int32 min is -2^31 (~1901), max is 2^31-1 (~2038).
+			// pub_date column is INTEGER so anything outside that range
+			// fails at the driver. Feeds with year-0001 dates (common
+			// for auto-generated placeholders) trip this.
+			if ts < 0 || ts > 2147483000 {
+				return fallback
+			}
+			return ts
+		}
+	}
+	return fallback
 }
 
 func jsonReader(data interface{}) io.Reader {
