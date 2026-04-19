@@ -222,7 +222,7 @@ export default function UtterlogCenterPage() {
               <p className="text-dim" style={{ fontSize: '13px', lineHeight: 1.8, marginBottom: '14px' }}>
                 绑定 Utterlog ID 后，头像和昵称在所有 Utterlog 联盟站点间共享，使用统一身份评论和互动。
               </p>
-              <button type="button" className="btn btn-primary" style={{ fontSize: '13px' }} disabled={bindingUtterlog} onClick={async () => {
+              <button type="button" className="btn btn-primary" style={{ fontSize: '13px', width: '100%', justifyContent: 'center' }} disabled={bindingUtterlog} onClick={async () => {
                 setBindingUtterlog(true);
                 try {
                   const r: any = await networkApi.oauthAuthorize();
