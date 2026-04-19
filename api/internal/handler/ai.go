@@ -951,24 +951,50 @@ func AIBatchDelete(c *gin.Context) {
 var aiLastError string
 
 func callAI(prompt string, maxTokens int) string {
-	var provider model.AIProvider
-	err := config.DB.Get(&provider, "SELECT * FROM "+config.T("ai_providers")+" WHERE type='text' AND is_active=true ORDER BY is_default DESC LIMIT 1")
-	if err != nil {
-		aiLastError = "no active provider: " + err.Error()
+	// Try every active provider in default-first order. First one that
+	// returns non-empty content wins. This gives users a real fallback
+	// when their preferred provider (e.g. aliyun dashscope from an
+	// overseas server) is slow or blocked — the generator doesn't have
+	// to stall every single post waiting 90s on the timeout.
+	var providers []model.AIProvider
+	err := config.DB.Select(&providers, "SELECT * FROM "+config.T("ai_providers")+" WHERE type='text' AND is_active=true ORDER BY is_default DESC, sort_order ASC, id ASC")
+	if err != nil || len(providers) == 0 {
+		if err != nil {
+			aiLastError = "no active provider: " + err.Error()
+		} else {
+			aiLastError = "no active provider configured"
+		}
 		return ""
 	}
 
+	var attemptErrs []string
+	for _, p := range providers {
+		content, errStr := callOneProvider(p, prompt, maxTokens)
+		if content != "" {
+			aiLastError = ""
+			return content
+		}
+		attemptErrs = append(attemptErrs, fmt.Sprintf("[%s] %s", p.Name, errStr))
+	}
+	aiLastError = strings.Join(attemptErrs, " · ")
+	return ""
+}
+
+// callOneProvider hits a single provider. Returns (content, errDescription)
+// — empty content always accompanied by a non-empty error string.
+func callOneProvider(p model.AIProvider, prompt string, maxTokens int) (string, string) {
 	body, _ := json.Marshal(map[string]interface{}{
-		"model": provider.Model, "messages": []map[string]string{{"role": "user", "content": prompt}},
+		"model": p.Model, "messages": []map[string]string{{"role": "user", "content": prompt}},
 		"max_tokens": maxTokens, "temperature": 0.3,
 	})
-	req, _ := http.NewRequest("POST", provider.Endpoint, bytes.NewReader(body))
+	req, _ := http.NewRequest("POST", p.Endpoint, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+provider.APIKey)
-	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
+	req.Header.Set("Authorization", "Bearer "+p.APIKey)
+	// 90s timeout — providers like aliyun dashscope with qwen3-max can
+	// take 40-60s cold. 30s was below their typical TTFB for long prompts.
+	resp, err := (&http.Client{Timeout: 90 * time.Second}).Do(req)
 	if err != nil {
-		aiLastError = "http: " + err.Error()
-		return ""
+		return "", "http: " + err.Error()
 	}
 	defer resp.Body.Close()
 
@@ -978,33 +1004,27 @@ func callAI(prompt string, maxTokens int) string {
 		if len(preview) > 200 {
 			preview = preview[:200]
 		}
-		aiLastError = fmt.Sprintf("provider HTTP %d: %s", resp.StatusCode, preview)
-		return ""
+		return "", fmt.Sprintf("HTTP %d: %s", resp.StatusCode, preview)
 	}
 
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawBody, &result); err != nil {
-		aiLastError = "decode: " + err.Error()
-		return ""
+		return "", "decode: " + err.Error()
 	}
 	if choices, ok := result["choices"].([]interface{}); ok && len(choices) > 0 {
 		if msg, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{}); ok {
 			content := fmt.Sprintf("%v", msg["content"])
 			if strings.TrimSpace(content) == "" {
-				aiLastError = "empty content in choices[0].message"
-				return ""
+				return "", "empty content in choices[0].message"
 			}
-			aiLastError = ""
-			return content
+			return content, ""
 		}
 	}
-	// Fall-through: shape didn't match OpenAI-compatible schema
 	preview := string(rawBody)
 	if len(preview) > 200 {
 		preview = preview[:200]
 	}
-	aiLastError = "unexpected response shape: " + preview
-	return ""
+	return "", "unexpected response shape: " + preview
 }
 
 // AIQuery executes a read-only SQL query for AI data access (admin only)
