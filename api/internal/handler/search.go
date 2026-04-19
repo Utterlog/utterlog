@@ -202,7 +202,7 @@ func generateAISummary(postID int) {
 		return
 	}
 
-	prompt := fmt.Sprintf("用一句简洁的中文总结以下文章，不超过80字，直接输出总结内容，不要任何前缀，不要使用任何emoji：\n\n标题：%s", p.Title)
+	prompt := fmt.Sprintf("用中文总结以下文章，100-200字之间，直接输出总结内容，不要任何前缀、Markdown 标记或emoji。内容需完整概括文章要点，不要只写一句话：\n\n标题：%s", p.Title)
 	if p.Excerpt != nil && *p.Excerpt != "" {
 		prompt += "\n摘要：" + *p.Excerpt
 	}
@@ -215,7 +215,9 @@ func generateAISummary(postID int) {
 		prompt += "\n内容：" + text
 	}
 
-	result := callAI(prompt, 120)
+	// 400 tokens ≈ 250-300 汉字 — leaves headroom over the 200-char
+	// target so the model doesn't truncate mid-sentence.
+	result := callAI(prompt, 400)
 	if result == "" {
 		return
 	}
