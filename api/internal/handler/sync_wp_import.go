@@ -304,6 +304,13 @@ func importComments(jobID, siteUUID string, items []map[string]interface{}) (int
 			clientHints,
 			siteUUID).Scan(&id)
 		if err != nil {
+			// Don't swallow insert failures — surface once per batch so
+			// bugs like missing UNIQUE constraints are visible. Using
+			// fmt.Printf so it lands in container stdout regardless of
+			// the configured logger.
+			if skipNoPostMap == 0 && imported == 0 {
+				fmt.Printf("[sync/comments job=%s] insert err on src=%d post=%d: %v\n", jobID, srcID, postID, err)
+			}
 			continue
 		}
 		syncMapSet(jobID, "comment", srcID, id)

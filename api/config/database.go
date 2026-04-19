@@ -237,8 +237,13 @@ func InitDB() error {
 		DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS source_site_uuid VARCHAR(64) DEFAULT ''", T(table)))
 		// Partial UNIQUE so only synced rows participate; native UL
 		// content (source_site_uuid='') isn't constrained.
+		//
+		// Name must NOT collide with pre-existing idx_<table>_source
+		// indexes on ul_comments / ul_media — CREATE UNIQUE INDEX IF
+		// NOT EXISTS is a no-op on a name match and will silently
+		// leave us without the constraint ON CONFLICT needs.
 		DB.Exec(fmt.Sprintf(
-			"CREATE UNIQUE INDEX IF NOT EXISTS idx_%s_source ON %s (source_site_uuid, source_type, source_id) WHERE source_site_uuid != ''",
+			"CREATE UNIQUE INDEX IF NOT EXISTS idx_%s_sync_provenance ON %s (source_site_uuid, source_type, source_id) WHERE source_site_uuid != ''",
 			table, T(table),
 		))
 	}
