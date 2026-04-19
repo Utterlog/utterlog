@@ -3,10 +3,34 @@ package handler
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 	"utterlog-go/config"
 )
+
+// excerptStripRE drops HTML tags, markdown code fences, shortcodes, and
+// leading markdown syntax from a post body so what's left reads as
+// prose. The order matters: kill block-level markers first (code
+// fences), then HTML tags, then inline markers.
+var excerptStripRE = regexp.MustCompile("(?s)```.*?```|<[^>]+>|\\[/?[a-zA-Z][^\\]]*\\]|[#*_`>~]")
+
+// deriveExcerptFromContent returns up to `limit` runes of clean prose
+// from a post body. Used when WordPress's post_excerpt was empty — no
+// excerpt at all is worse than a content-derived one.
+func deriveExcerptFromContent(content string, limit int) string {
+	s := excerptStripRE.ReplaceAllString(content, " ")
+	s = strings.ReplaceAll(s, "\r", " ")
+	s = strings.ReplaceAll(s, "\n", " ")
+	// Collapse any run of whitespace to one space.
+	fields := strings.Fields(s)
+	s = strings.Join(fields, " ")
+	runes := []rune(strings.TrimSpace(s))
+	if len(runes) > limit {
+		return string(runes[:limit]) + "…"
+	}
+	return string(runes)
+}
 
 // decodeURLSlug handles the case where the source (WordPress) sent a
 // percent-encoded slug — historically WP stored non-ASCII slugs that
@@ -128,7 +152,14 @@ func importPostsOrPages(jobID, siteUUID, postType string, items []map[string]int
 			publishedAtUnix = now
 		}
 
-		excerpt := itemStr(item, "excerpt")
+		excerpt := strings.TrimSpace(itemStr(item, "excerpt"))
+		// If WP didn't provide a manual excerpt, derive one from content so
+		// list views (homepage cards, search results) aren't blank. Strip
+		// markdown / HTML / shortcodes, collapse whitespace, take the first
+		// ~200 runes — matching what users write as excerpts by hand.
+		if excerpt == "" && content != "" {
+			excerpt = deriveExcerptFromContent(content, 200)
+		}
 		password := itemStr(item, "password")
 		coverURL := itemStr(item, "featured_image_url") // will be rewritten post-finish
 		template := itemStr(item, "template")
