@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { linksApi, mediaApi } from '@/lib/api';
+import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button, Input, Modal, ConfirmDialog, EmptyState } from '@/components/ui';
 
@@ -17,6 +18,22 @@ export default function LinksPage() {
   const [newGroupName, setNewGroupName] = useState('');
   const [editingGroup, setEditingGroup] = useState<{ old: string; new: string } | null>(null);
   const [customGroups, setCustomGroups] = useState<string[]>([]);
+  const [refreshingFeeds, setRefreshingFeeds] = useState(false);
+
+  const refreshFeeds = async () => {
+    setRefreshingFeeds(true);
+    try {
+      const r: any = await api.post('/social/fetch-feeds');
+      const d = r?.data || r;
+      const fetched = d?.fetched ?? 0;
+      const newItems = d?.new_items ?? 0;
+      toast.success(`已刷新 ${fetched} 个订阅，新增 ${newItems} 条`);
+    } catch {
+      toast.error('刷新失败');
+    } finally {
+      setRefreshingFeeds(false);
+    }
+  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,6 +157,10 @@ export default function LinksPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <span className="text-dim" style={{ fontSize: '13px' }}>共 {links.length} 条友链</span>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <Button variant="secondary" onClick={refreshFeeds} loading={refreshingFeeds} disabled={refreshingFeeds}>
+            <i className="fa-regular fa-arrows-rotate" style={{ marginRight: 6 }} />
+            手动刷新订阅
+          </Button>
           <Button variant="secondary" onClick={() => setShowGroupModal(true)}>分类管理</Button>
           <Button onClick={openCreate}><i className="fa-regular fa-plus" style={{ fontSize: '16px' }} /> 添加友链</Button>
         </div>
