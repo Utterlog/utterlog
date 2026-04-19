@@ -393,6 +393,7 @@ func main() {
 		authed.GET("/admin/system/releases", handler.SystemReleases)
 		authed.POST("/admin/system/upgrade", handler.SystemUpgrade)
 		authed.GET("/admin/system/upgrade/status", handler.SystemUpgradeStatus)
+		authed.POST("/admin/system/rebuild-stats", handler.SystemRebuildStats)
 
 		// WordPress sync — admin management (create/list/delete sites,
 		// view job history, trigger rollback). The per-site token is
