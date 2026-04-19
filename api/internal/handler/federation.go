@@ -433,6 +433,16 @@ func runFeedFetch(limit int) (fetched, newItems int) {
 			"INSERT INTO %s (user_id, type, title, content, created_at) VALUES (1,'feed','关注动态更新',$1,$2)",
 			t("notifications")), fmt.Sprintf("发现 %d 条新内容", newItems), time.Now().Unix())
 	}
+
+	// Cap the feed items table at 100 newest rows globally. Anything
+	// older drops out so the subscription table stays lean and the
+	// /feeds page always surfaces the freshest 100. Uses pub_date so
+	// a late-arriving sync still respects the actual publish order.
+	config.DB.Exec(fmt.Sprintf(`
+		DELETE FROM %s WHERE id IN (
+		  SELECT id FROM %s ORDER BY pub_date DESC NULLS LAST, id DESC OFFSET 100
+		)
+	`, t("feed_items"), t("feed_items")))
 	return
 }
 
