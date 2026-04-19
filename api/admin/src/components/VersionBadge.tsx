@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '@/lib/api';
 
 interface VersionPayload {
-  current: { version: string };
+  current: { version: string; commit?: string };
   latest: { version: string; name: string } | null;
   update_available: boolean;
   checked_at: string;
@@ -38,7 +38,12 @@ export default function VersionBadge({ variant = 'compact' }: Props) {
   }, []);
 
   const current = info?.current.version || 'v1.0';
-  const shortVer = current.replace(/^sha-/, '').slice(0, 7);
+  // Prefer the real release label (v1.0.2). Only fall back to commit
+  // SHA if the build was truly untagged (VERSION="dev"). The compact
+  // pill is narrow so version names over 10 chars get truncated.
+  const shortVer = current === 'dev' && info?.current.commit
+    ? info.current.commit.slice(0, 7)
+    : current.length > 10 ? current.slice(0, 10) : current;
   const hasUpdate = !!info?.update_available;
 
   if (variant === 'compact') {

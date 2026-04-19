@@ -16,9 +16,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// BuildVersion is populated at link time via -ldflags "-X main.Version=...".
-// For dev builds it stays empty and the endpoint reports "dev".
+// BuildVersion is populated at link time via -ldflags "-X ...BuildVersion=".
+// Expected to be a release tag like "v1.0.2" (or "dev" for local runs).
 var BuildVersion = ""
+
+// BuildCommit is the 7-char git SHA of the build, injected via -ldflags.
+// Displayed as small subtitle in the admin UI so devs can trace the
+// exact build without the ugly "sha-" prefix dominating the version line.
+var BuildCommit = ""
 
 // BuildTime is an optional UTC RFC3339 string also injected via ldflags.
 var BuildTime = ""
@@ -120,8 +125,17 @@ func currentVersion() gin.H {
 	if v == "" {
 		v = "dev"
 	}
+	// Legacy images that only have "sha-xxxxxxx" in BuildVersion —
+	// split it into a friendlier version + commit pair so the UI
+	// can render "dev · 6a60b01" instead of "sha-6a60b01".
+	commit := BuildCommit
+	if commit == "" && strings.HasPrefix(v, "sha-") {
+		commit = strings.TrimPrefix(v, "sha-")
+		v = "dev"
+	}
 	return gin.H{
 		"version":    v,
+		"commit":     commit,
 		"built_at":   BuildTime,
 		"go_version": fmt.Sprintf("utterlog-go/%s", v),
 	}

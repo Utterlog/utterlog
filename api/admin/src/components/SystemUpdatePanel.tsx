@@ -4,7 +4,7 @@ import api from '@/lib/api';
 import { Modal } from '@/components/ui/modal';
 
 interface VersionInfo {
-  current: { version: string; built_at: string };
+  current: { version: string; commit?: string; built_at: string };
   latest: {
     version: string;
     name: string;
@@ -155,15 +155,10 @@ export default function SystemUpdatePanel() {
     return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
-  // Shorten `sha-<40-char-hash>` to `sha-<7-char>` for readability.
-  // Tagged builds (v1.0.1) are left as-is.
-  function shortVersion(v: string): string {
-    if (!v) return '—';
-    if (v.startsWith('sha-') && v.length > 11) return v.slice(0, 11); // "sha-" + 7 hex
-    return v;
-  }
-  const cur = shortVersion(info?.current.version || '—');
-  const curFull = info?.current.version || '—';
+  // Main label = release version (v1.0.2). Commit SHA goes below as
+  // a small subtitle so the UI never fronts an ugly "sha-<40hex>".
+  const cur = info?.current.version || '—';
+  const curCommit = info?.current.commit || '';
   const lat = info?.latest?.version || '—';
   const updateAvailable = info?.update_available ?? false;
 
@@ -204,9 +199,14 @@ export default function SystemUpdatePanel() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div>
             <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 4 }}>当前版本</div>
-            <div title={curFull} style={{ fontSize: 18, fontWeight: 600, fontFamily: 'ui-monospace, monospace', color: updateAvailable ? 'var(--color-text)' : statusColor }}>{cur}</div>
+            <div style={{ fontSize: 18, fontWeight: 600, fontFamily: 'ui-monospace, monospace', color: updateAvailable ? 'var(--color-text)' : statusColor }}>{cur}</div>
+            {curCommit && (
+              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4, fontFamily: 'ui-monospace, monospace' }}>
+                提交 {curCommit.length > 7 ? curCommit.slice(0, 7) : curCommit}
+              </div>
+            )}
             {info?.current.built_at && (
-              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
                 构建于 {info.current.built_at}
               </div>
             )}

@@ -64,18 +64,22 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # Compute a human-readable VERSION: tag name (v1.0.1) for tagged
-      # builds, or sha-<7hex> for branch pushes. Full 40-char SHA goes
-      # to a separate BUILD_COMMIT build-arg so we can still trace
-      # exactly which commit the image was built from.
-      - name: Compute version label
+      # VERSION — always a human-readable release label (v1.0.2).
+      # On tag pushes: exactly the tag name.
+      # On main pushes: the latest reachable tag (via git describe).
+      # BUILD_COMMIT — 7-char short SHA, displayed as small subtitle
+      # in the admin UI so you can still trace the exact build.
+      - name: Compute version + commit
         id: verlabel
         run: |
+          COMMIT=$(echo "${{ github.sha }}" | cut -c1-7)
           if [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "label=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            VERSION="${{ github.ref_name }}"
           else
-            echo "label=sha-$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+            VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev")
           fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "commit=$COMMIT"  >> "$GITHUB_OUTPUT"
 
       - name: Build & push to both registries
         uses: docker/build-push-action@v6
@@ -87,7 +91,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VERSION=${{ steps.verlabel.outputs.label }}
+            VERSION=${{ steps.verlabel.outputs.version }}
+            BUILD_COMMIT=${{ steps.verlabel.outputs.commit }}
             BUILD_TIME=${{ github.event.head_commit.timestamp }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max

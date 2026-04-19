@@ -31,11 +31,13 @@ COPY --from=admin-builder /app/admin/dist ./admin/dist
 # (webp needs CGO so we keep it on but strip.) Inject version + build time
 # into the handler package so /api/v1/admin/system/version can surface them.
 ARG VERSION=dev
+ARG BUILD_COMMIT=unknown
 ARG BUILD_TIME=unknown
 RUN CGO_ENABLED=1 go build \
     -ldflags="-s -w \
       -X main.Version=${VERSION} \
       -X utterlog-go/internal/handler.BuildVersion=${VERSION} \
+      -X utterlog-go/internal/handler.BuildCommit=${BUILD_COMMIT} \
       -X utterlog-go/internal/handler.BuildTime=${BUILD_TIME}" \
     -trimpath \
     -o /out/utterlog-api .
