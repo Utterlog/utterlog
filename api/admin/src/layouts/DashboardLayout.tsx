@@ -144,7 +144,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Wide pages — no max-width cap but still scrollable (unlike fullWidth
   // which hides overflow). Useful for dense list tables whose rightmost
   // columns (操作 icons, RSS URL etc.) get clipped at 1280px.
-  const wide = pathname === '/links';
+  const wide =
+    pathname === '/links' ||
+    pathname === '/posts' ||
+    pathname === '/pages';
 
   return (
     <div className="dashboard-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
