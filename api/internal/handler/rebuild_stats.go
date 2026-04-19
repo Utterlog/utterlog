@@ -8,6 +8,51 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// SystemClearCache flushes ephemeral Redis entries that the app can
+// safely rebuild on next access. Intentionally DOES NOT touch
+// `webauthn:*` (in-flight passkey challenges — clearing would break a
+// user mid-login). Also skips JWT/session keys.
+func SystemClearCache(c *gin.Context) {
+	if config.RDB == nil {
+		util.Success(c, gin.H{"cleared": 0, "note": "redis 未配置，无缓存可清"})
+		return
+	}
+	cleared := 0
+	patterns := []string{
+		"captcha:*",   // PoW + image captchas (ephemeral, user refetches on demand)
+		"captcha:img:*",
+		"online:*",    // online visitor tracker — repopulates from heartbeats
+		"stats:*",     // any stats caches we might add later
+		"views:*",     // per-post view counter cache
+		"geo:*",       // ip→country cache, rebuilds on next comment
+	}
+	for _, pat := range patterns {
+		iter := config.RDB.Scan(config.Ctx, 0, pat, 500).Iterator()
+		for iter.Next(config.Ctx) {
+			config.RDB.Del(config.Ctx, iter.Val())
+			cleared++
+		}
+	}
+	util.Success(c, gin.H{"cleared": cleared})
+}
+
+// SystemClearRSSCache truncates the RSS aggregator tables so the next
+// cron / manual refresh pulls everything fresh. Sync subscriptions
+// themselves are preserved — only their cached items and
+// last_fetched_at marker are reset.
+func SystemClearRSSCache(c *gin.Context) {
+	t := config.T
+	cleared := 0
+
+	if r, err := config.DB.Exec(fmt.Sprintf("DELETE FROM %s", t("feed_items"))); err == nil && r != nil {
+		n, _ := r.RowsAffected()
+		cleared = int(n)
+	}
+	config.DB.Exec(fmt.Sprintf("UPDATE %s SET last_fetched_at = 0", t("rss_subscriptions")))
+
+	util.Success(c, gin.H{"cleared_items": cleared, "note": "下次 cron 或手动刷新订阅时会重新拉取"})
+}
+
 // SystemRebuildStats recomputes every denormalized counter Utterlog
 // caches on content rows — useful after a WordPress sync, a manual
 // DB restore, or any time the admin suspects the cached numbers

@@ -19,6 +19,10 @@ export default function LinksPage() {
   const [editingGroup, setEditingGroup] = useState<{ old: string; new: string } | null>(null);
   const [customGroups, setCustomGroups] = useState<string[]>([]);
   const [refreshingFeeds, setRefreshingFeeds] = useState(false);
+  const [busy, setBusy] = useState<'icon' | 'cache' | 'rss' | null>(null);
+  // Incremented by 一键刷新 ico — appended to favicon URLs to bust
+  // the browser's image cache without touching any DB state.
+  const [iconBust, setIconBust] = useState(0);
 
   const refreshFeeds = async () => {
     setRefreshingFeeds(true);
@@ -33,6 +37,37 @@ export default function LinksPage() {
     } finally {
       setRefreshingFeeds(false);
     }
+  };
+
+  const refreshIcons = () => {
+    setBusy('icon');
+    setIconBust(Date.now());
+    setTimeout(() => setBusy(null), 400);
+    toast.success('已刷新所有友链图标缓存');
+  };
+
+  const clearCache = async () => {
+    if (!confirm('确定清空服务端缓存？验证码、在线数等临时缓存会重建。')) return;
+    setBusy('cache');
+    try {
+      const r: any = await api.post('/admin/system/clear-cache');
+      const d = r?.data || r;
+      toast.success(`已清空 ${d?.cleared ?? 0} 条缓存`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error?.message || '清空失败');
+    } finally { setBusy(null); }
+  };
+
+  const clearRSSCache = async () => {
+    if (!confirm('确定清空 RSS 订阅缓存？所有已抓取的文章会被删除，下次刷新重新拉取。')) return;
+    setBusy('rss');
+    try {
+      const r: any = await api.post('/admin/system/clear-rss-cache');
+      const d = r?.data || r;
+      toast.success(`已清空 ${d?.cleared_items ?? 0} 条订阅缓存`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error?.message || '清空失败');
+    } finally { setBusy(null); }
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,8 +191,20 @@ export default function LinksPage() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <span className="text-dim" style={{ fontSize: '13px' }}>共 {links.length} 条友链</span>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" onClick={refreshFeeds} loading={refreshingFeeds} disabled={refreshingFeeds}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <Button variant="secondary" onClick={refreshIcons} loading={busy === 'icon'} disabled={busy !== null}>
+            <i className="fa-regular fa-image" style={{ marginRight: 6 }} />
+            一键刷新 ico
+          </Button>
+          <Button variant="secondary" onClick={clearCache} loading={busy === 'cache'} disabled={busy !== null}>
+            <i className="fa-regular fa-broom-wide" style={{ marginRight: 6 }} />
+            一键清空缓存
+          </Button>
+          <Button variant="secondary" onClick={clearRSSCache} loading={busy === 'rss'} disabled={busy !== null}>
+            <i className="fa-regular fa-trash-can" style={{ marginRight: 6 }} />
+            一键清空 RSS 缓存
+          </Button>
+          <Button variant="secondary" onClick={refreshFeeds} loading={refreshingFeeds} disabled={refreshingFeeds || busy !== null}>
             <i className="fa-regular fa-arrows-rotate" style={{ marginRight: 6 }} />
             手动刷新订阅
           </Button>
@@ -207,7 +254,8 @@ export default function LinksPage() {
             </thead>
             <tbody>
               {filteredLinks.map((link: any, i: number) => {
-                const favicon = link.logo || (() => { try { return `https://ico.bluecdn.com/${new URL(link.url).hostname}`; } catch { return ''; } })();
+                const baseFavicon = link.logo || (() => { try { return `https://ico.bluecdn.com/${new URL(link.url).hostname}`; } catch { return ''; } })();
+                const favicon = baseFavicon ? `${baseFavicon}${baseFavicon.includes('?') ? '&' : '?'}v=${iconBust}` : '';
                 return (
                   <tr key={link.id} className="hover:bg-soft" style={{ transition: 'background-color 0.1s' }}>
                     <td className="text-dim" style={{ fontSize: '12px' }}>{i + 1}</td>

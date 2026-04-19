@@ -395,6 +395,8 @@ func main() {
 		authed.POST("/admin/system/upgrade", handler.SystemUpgrade)
 		authed.GET("/admin/system/upgrade/status", handler.SystemUpgradeStatus)
 		authed.POST("/admin/system/rebuild-stats", handler.SystemRebuildStats)
+		authed.POST("/admin/system/clear-cache", handler.SystemClearCache)
+		authed.POST("/admin/system/clear-rss-cache", handler.SystemClearRSSCache)
 
 		// WordPress sync — admin management (create/list/delete sites,
 		// view job history, trigger rollback). The per-site token is
