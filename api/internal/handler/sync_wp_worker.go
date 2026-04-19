@@ -69,8 +69,12 @@ func RunPostFinishWorker(jobID, siteUUID string) {
 		return
 	}
 
-	updateJob(jobID, "stage", "geoip")
-	_ = fillCommentGeoIP(jobID, siteUUID)
+	// Count recalc runs BEFORE geoip so the homepage sidebar / dashboard
+	// don't stay stuck at 0 for the ~minutes that the rate-limited
+	// ip-api.com lookups take (0.17-3 req/s for 400+ comments). GeoIP
+	// is a cosmetic enrichment; sync progress should feel done when
+	// the user-visible counts are right.
+	updateJob(jobID, "stage", "counts")
 
 	// Recalculate term counts for this site.
 	config.DB.Exec(fmt.Sprintf(`
@@ -91,6 +95,9 @@ func RunPostFinishWorker(jobID, siteUUID string) {
 		) sub
 		WHERE p.id = sub.post_id AND p.source_site_uuid = $1
 	`, config.T("posts"), config.T("comments")), siteUUID)
+
+	updateJob(jobID, "stage", "geoip")
+	_ = fillCommentGeoIP(jobID, siteUUID)
 
 	config.DB.Exec(fmt.Sprintf(`
 		UPDATE %s SET status='finished', stage='done', finished_at=$1 WHERE job_id=$2
