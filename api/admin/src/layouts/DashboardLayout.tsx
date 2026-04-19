@@ -147,7 +147,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const wide =
     pathname === '/links' ||
     pathname === '/posts' ||
-    pathname === '/pages';
+    pathname === '/pages' ||
+    pathname === '/comments';
 
   return (
     <div className="dashboard-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
