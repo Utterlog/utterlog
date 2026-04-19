@@ -201,9 +201,9 @@ export default function CommentCaptcha({ onVerified, onReset }: CommentCaptchaPr
         maxLength={4}
         placeholder="输入验证码"
         style={{
-          width: '90px', height: '36px', padding: '0 10px', boxSizing: 'border-box',
+          width: '120px', height: '36px', padding: '0 10px', boxSizing: 'border-box',
           border: '1px solid var(--color-border, #e5e5e5)', background: 'var(--color-bg-card, #fff)',
-          fontSize: '14px', fontFamily: 'monospace', letterSpacing: '2px',
+          fontSize: '14px', fontFamily: 'monospace', letterSpacing: imgCode ? '2px' : 'normal',
           outline: 'none',
         }}
       />

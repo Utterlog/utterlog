@@ -25,8 +25,35 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/font/gofont/gobold"
+	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
+
+// captchaFace is a 26pt bold Go font face used for the image CAPTCHA.
+// basicfont.Face7x13 was the original — at 7x13 px it's barely legible
+// on a 120x40 noisy background, hence the user feedback that letters
+// looked too small. Built once at startup to avoid re-parsing per
+// request; no failure mode other than a broken embedded font binary.
+var captchaFace font.Face
+
+func init() {
+	parsed, err := opentype.Parse(gobold.TTF)
+	if err != nil {
+		captchaFace = basicfont.Face7x13
+		return
+	}
+	face, err := opentype.NewFace(parsed, &opentype.FaceOptions{
+		Size:    26,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	if err != nil {
+		captchaFace = basicfont.Face7x13
+		return
+	}
+	captchaFace = face
+}
 
 // Generic content CRUD for moments, music, movies, books, goods, links, playlists
 
@@ -1103,13 +1130,13 @@ func ImageCaptchaChallenge(c *gin.Context) {
 			if px >= 0 && px < 120 && py >= 0 && py < 40 { img.Set(px, py, lineColor) }
 		}
 	}
-	// Draw text
-	face := basicfont.Face7x13
-	d := &font.Drawer{Dst: img, Src: image.NewUniform(color.RGBA{50, 50, 120, 255}), Face: face}
+	// Draw text with the larger TTF face so letters fill more of the
+	// 120x40 image. Each char randomly offset for mild distortion.
+	d := &font.Drawer{Dst: img, Src: image.NewUniform(color.RGBA{50, 50, 120, 255}), Face: captchaFace}
 	for i, ch := range codeStr {
 		d.Dot = fixed.Point26_6{
-			X: fixed.I(15 + i*25 + rand.Intn(5)),
-			Y: fixed.I(22 + rand.Intn(8)),
+			X: fixed.I(8 + i*26 + rand.Intn(4)),
+			Y: fixed.I(30 + rand.Intn(4)),
 		}
 		d.DrawString(string(ch))
 	}
