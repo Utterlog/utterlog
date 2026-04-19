@@ -531,9 +531,13 @@ func randHex(bytes int) string {
 
 // mapStatusWP translates WordPress post_status into UL's enum.
 func mapStatusWP(s string) string {
+	// Utterlog's canonical status values are publish / private / draft.
+	// Previously this mapped to "published" which silently hid every
+	// imported post from dashboard stats / homepage / AI context — all
+	// of which filter WHERE status='publish'.
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "publish", "published":
-		return "published"
+		return "publish"
 	case "private":
 		return "private"
 	case "draft", "pending":
