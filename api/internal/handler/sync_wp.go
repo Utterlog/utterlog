@@ -241,8 +241,13 @@ func SyncWPBatch(c *gin.Context) {
 
 type finishReq struct {
 	syncAuthEnvelope
-	JobID   string                 `json:"job_id"`
-	Summary map[string]interface{} `json:"summary"`
+	JobID string `json:"job_id"`
+	// json.RawMessage so we tolerate whatever the client hands us —
+	// empty array [], object {}, or omitted. PHP's wp_json_encode
+	// renders an empty associative array as "[]" (JSON array), which
+	// fails to bind into map[string]interface{}. RawMessage lets us
+	// decode lazily and fall through gracefully.
+	Summary json.RawMessage `json:"summary"`
 }
 
 // SyncWPFinish closes the job and kicks off the async media + rewrite
@@ -250,7 +255,7 @@ type finishReq struct {
 func SyncWPFinish(c *gin.Context) {
 	var req finishReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "JSON 解析失败")
+		util.BadRequest(c, "JSON 解析失败: "+err.Error())
 		return
 	}
 	site, ok := authSyncRequest(c, req.syncAuthEnvelope)
@@ -262,8 +267,12 @@ func SyncWPFinish(c *gin.Context) {
 		return
 	}
 
-	// Transition to 'processing' — the async stages run next.
-	countsJSON, _ := json.Marshal(req.Summary)
+	// Store as-is; coerce empty/array to {} so downstream JSONB queries
+	// don't choke on arrays when a key is expected.
+	countsJSON := []byte(req.Summary)
+	if len(countsJSON) == 0 || string(countsJSON) == "[]" || string(countsJSON) == "null" {
+		countsJSON = []byte("{}")
+	}
 	_, err := config.DB.Exec(fmt.Sprintf(`
 		UPDATE %s SET status='processing', stage='media_scan', counts=$1 WHERE job_id=$2
 	`, config.T("sync_jobs")), countsJSON, req.JobID)
