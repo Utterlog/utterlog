@@ -376,6 +376,19 @@ func FetchFeeds(c *gin.Context) {
 // request returns in a reasonable time on large follow graphs.
 func runFeedFetch(limit int) (fetched, newItems int) {
 	t := config.T
+	// First, mirror every ul_links.rss_url into ul_rss_subscriptions so
+	// adding a link with an RSS address is all the admin needs to do —
+	// no separate /social/follow dance. user_id=1 is the default admin
+	// owner of these auto-imported subscriptions; site_url comes from
+	// the link's url and site_name from its display name.
+	config.DB.Exec(fmt.Sprintf(`
+		INSERT INTO %s (user_id, site_url, feed_url, site_name, site_avatar, last_fetched_at, created_at)
+		SELECT 1, l.url, l.rss_url, l.name, COALESCE(l.logo,''), 0, EXTRACT(EPOCH FROM NOW())::bigint
+		FROM %s l
+		WHERE l.rss_url IS NOT NULL AND l.rss_url <> ''
+		ON CONFLICT (user_id, feed_url) DO NOTHING
+	`, t("rss_subscriptions"), t("links")))
+
 	var subs []struct {
 		ID      int    `db:"id"`
 		FeedURL string `db:"feed_url"`
