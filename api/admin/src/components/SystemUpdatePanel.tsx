@@ -12,6 +12,7 @@ interface VersionInfo {
     url: string;
     published_at: string;
     prerelease: boolean;
+    commit?: string;
   } | null;
   update_available: boolean;
   checked_at: string;
@@ -216,8 +217,13 @@ export default function SystemUpdatePanel() {
             <div style={{ fontSize: 18, fontWeight: 600, fontFamily: 'ui-monospace, monospace', color: statusColor }}>
               {lat}
             </div>
+            {info?.latest?.commit && (
+              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4, fontFamily: 'ui-monospace, monospace' }}>
+                提交 {info.latest.commit}
+              </div>
+            )}
             {info?.latest?.published_at && (
-              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
                 发布于 {new Date(info.latest.published_at).toLocaleString()}
               </div>
             )}

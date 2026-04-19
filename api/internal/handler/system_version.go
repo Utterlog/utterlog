@@ -45,6 +45,10 @@ type githubRelease struct {
 	PublishedAt string `json:"published_at"`
 	Prerelease  bool   `json:"prerelease"`
 	Draft       bool   `json:"draft"`
+	// Commit is filled after the Releases API response by a second call
+	// to /commits/{tag}. 7-char short form so the UI can render it the
+	// same way as current build's commit.
+	Commit string `json:"commit,omitempty"`
 }
 
 type versionCache struct {
@@ -108,6 +112,7 @@ func SystemVersion(c *gin.Context) {
 			"url":          rel.HTMLURL,
 			"published_at": rel.PublishedAt,
 			"prerelease":   rel.Prerelease,
+			"commit":       rel.Commit,
 		}
 		payload["update_available"] = isNewer(current["version"].(string), rel.TagName)
 	} else {
@@ -204,11 +209,50 @@ func fetchLatestRelease() {
 		return
 	}
 
+	// Second call: resolve tag → commit SHA so the admin UI can show
+	// the "latest" commit hash alongside the version label, matching
+	// how the current build displays v1.0.2 · 3ac2f03. Silent on
+	// failure — commit is decorative, don't let it block the release.
+	rel.Commit = fetchTagCommit(rel.TagName)
+
 	verCache.mu.Lock()
 	verCache.fetched = time.Now()
 	verCache.release = &rel
 	verCache.errorMsg = ""
 	verCache.mu.Unlock()
+}
+
+// fetchTagCommit hits GitHub's commits-by-ref endpoint to turn a tag
+// name (e.g., "v1.0.2") into the 7-char short SHA of the commit it
+// points to. Returns "" on any failure.
+func fetchTagCommit(tag string) string {
+	if tag == "" {
+		return ""
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	url := "https://api.github.com/repos/utterlog/utterlog/commits/" + tag
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "utterlog-api")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp == nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return ""
+	}
+	var body struct {
+		SHA string `json:"sha"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return ""
+	}
+	if len(body.SHA) >= 7 {
+		return body.SHA[:7]
+	}
+	return body.SHA
 }
 
 // ============================================================
