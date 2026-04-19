@@ -155,13 +155,14 @@ func importPostsOrPages(jobID, siteUUID, postType string, items []map[string]int
 		}
 
 		excerpt := strings.TrimSpace(itemStr(item, "excerpt"))
-		// If WP didn't provide a manual excerpt, derive one from content so
-		// list views (homepage cards, search results) aren't blank. Strip
-		// markdown / HTML / shortcodes, collapse whitespace, cap at 500
-		// runes so the inner-page AI summary block has full text while
-		// homepage CSS line-clamp handles its own visual truncation.
+		// If WP didn't provide a manual excerpt, derive one from content.
+		// Target 100-200 runes: homepage CSS clamps to 3 lines anyway,
+		// and the inner-page AISummary block renders the stored excerpt
+		// in full, so 200 keeps both reads clean without a trailing
+		// ellipsis (no "…" — the CSS adds its own visual one only on
+		// overflow, and the inner page shouldn't have any ellipsis).
 		if excerpt == "" && content != "" {
-			excerpt = deriveExcerptFromContent(content, 500)
+			excerpt = deriveExcerptFromContent(content, 200)
 		}
 		password := itemStr(item, "password")
 		coverURL := itemStr(item, "featured_image_url") // will be rewritten post-finish
