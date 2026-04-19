@@ -17,17 +17,19 @@ var excerptStripRE = regexp.MustCompile("(?s)```.*?```|<[^>]+>|\\[/?[a-zA-Z][^\\
 
 // deriveExcerptFromContent returns up to `limit` runes of clean prose
 // from a post body. Used when WordPress's post_excerpt was empty — no
-// excerpt at all is worse than a content-derived one.
+// excerpt at all is worse than a content-derived one. No trailing
+// ellipsis: the frontend homepage CSS-truncates with its own "…" at
+// the three-line mark; the post inner page shows this excerpt in
+// full, so a hard appended "…" on the DB row would break that.
 func deriveExcerptFromContent(content string, limit int) string {
 	s := excerptStripRE.ReplaceAllString(content, " ")
 	s = strings.ReplaceAll(s, "\r", " ")
 	s = strings.ReplaceAll(s, "\n", " ")
-	// Collapse any run of whitespace to one space.
 	fields := strings.Fields(s)
 	s = strings.Join(fields, " ")
 	runes := []rune(strings.TrimSpace(s))
 	if len(runes) > limit {
-		return string(runes[:limit]) + "…"
+		return string(runes[:limit])
 	}
 	return string(runes)
 }
@@ -155,10 +157,11 @@ func importPostsOrPages(jobID, siteUUID, postType string, items []map[string]int
 		excerpt := strings.TrimSpace(itemStr(item, "excerpt"))
 		// If WP didn't provide a manual excerpt, derive one from content so
 		// list views (homepage cards, search results) aren't blank. Strip
-		// markdown / HTML / shortcodes, collapse whitespace, take the first
-		// ~200 runes — matching what users write as excerpts by hand.
+		// markdown / HTML / shortcodes, collapse whitespace, cap at 500
+		// runes so the inner-page AI summary block has full text while
+		// homepage CSS line-clamp handles its own visual truncation.
 		if excerpt == "" && content != "" {
-			excerpt = deriveExcerptFromContent(content, 200)
+			excerpt = deriveExcerptFromContent(content, 500)
 		}
 		password := itemStr(item, "password")
 		coverURL := itemStr(item, "featured_image_url") // will be rewritten post-finish
