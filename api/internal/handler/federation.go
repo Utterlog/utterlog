@@ -631,10 +631,14 @@ func fetchRSSFeed(feedURL string) ([]rssItem, error) {
 	var rss rssXML
 	if err := xml.NewDecoder(resp.Body).Decode(&rss); err != nil { return nil, err }
 
-	now := time.Now().Unix()
 	var items []rssItem
 	for _, item := range rss.Channel.Items {
-		pubDate := parseRSSDate(item.PubDate, now)
+		// Fallback = 0 (not now). When a feed entry lacks pubDate —
+		// some themes dump site navigation as <item>s without dates —
+		// we don't want to stamp it with the fetch time and trick the
+		// card into showing "1 分钟前". 0 sinks the item in DESC
+		// ordering and the UI's !val check renders no timestamp.
+		pubDate := parseRSSDate(item.PubDate, 0)
 		guid := item.GUID
 		if guid == "" {
 			guid = item.Link
