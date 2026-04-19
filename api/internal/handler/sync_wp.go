@@ -398,14 +398,30 @@ type createSiteReq struct {
 	SourceURL string `json:"source_url"`
 }
 
-// AdminSyncSiteCreate generates a new site_uuid + plaintext token,
-// stores the bcrypt hash, and returns the plaintext ONCE. Admin must
-// copy it immediately — token is not retrievable later.
+// AdminSyncSiteCreate registers a sync source. By default the site_uuid
+// is reused from ul_options.utterlog_site_id — the installation's own
+// system UUID — so the WP plugin can use the single UUID the admin
+// already sees in their Utterlog settings, no separate "wp_xxx" id
+// ceremony. Only when an admin adds a SECOND WP source (rare) does a
+// fresh random UUID get generated to avoid the UNIQUE conflict.
 func AdminSyncSiteCreate(c *gin.Context) {
 	var req createSiteReq
 	c.ShouldBindJSON(&req)
 
-	uuid := "wp_" + randHex(16)
+	uuid := installationSiteUUID()
+	if uuid == "" {
+		uuid = "wp_" + randHex(16)
+	} else {
+		// If the installation UUID is already registered as a sync
+		// site, fall back to a fresh random one (second+ source).
+		var exists int
+		config.DB.Get(&exists, fmt.Sprintf(
+			"SELECT COUNT(*) FROM %s WHERE site_uuid=$1", config.T("sync_sites")), uuid)
+		if exists > 0 {
+			uuid = "wp_" + randHex(16)
+		}
+	}
+
 	token := randHex(24) // 48 hex chars
 	hash, _ := bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
 	now := time.Now().Unix()
@@ -426,6 +442,16 @@ func AdminSyncSiteCreate(c *gin.Context) {
 		"label":     req.Label,
 		"note":      "请立即保存 token — 之后无法再次查看",
 	})
+}
+
+// installationSiteUUID reads the Utterlog installation's own system UUID
+// from ul_options (set during install). Empty if the option row doesn't
+// exist yet.
+func installationSiteUUID() string {
+	var v string
+	config.DB.Get(&v, fmt.Sprintf(
+		"SELECT value FROM %s WHERE name='utterlog_site_id' LIMIT 1", config.T("options")))
+	return strings.TrimSpace(v)
 }
 
 // AdminSyncSiteList returns all registered sync sites (no token).
