@@ -34,6 +34,10 @@ type Comment struct {
 	VisitorID   string  `db:"visitor_id" json:"-"`
 	CreatedAt   int64   `db:"created_at" json:"created_at"`
 	UpdatedAt   int64   `db:"updated_at" json:"updated_at"`
+	// Sync provenance. SELECT * queries that feed this struct panic
+	// silently into []Comment{} if these columns aren't modeled.
+	SourceType     string `db:"source_type" json:"source_type,omitempty"`
+	SourceSiteUUID string `db:"source_site_uuid" json:"source_site_uuid,omitempty"`
 }
 
 type GeoInfo struct {

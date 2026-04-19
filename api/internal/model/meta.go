@@ -22,6 +22,11 @@ type Meta struct {
 	SeoKeywords    *string `db:"seo_keywords" json:"seo_keywords,omitempty"`
 	CreatedAt      int64   `db:"created_at" json:"created_at"`
 	UpdatedAt      int64   `db:"updated_at" json:"updated_at"`
+	// Sync provenance (populated only for WP-imported terms). Optional
+	// on JSON output so native terms don't carry empty strings.
+	SourceType     string  `db:"source_type" json:"source_type,omitempty"`
+	SourceID       int64   `db:"source_id" json:"source_id,omitempty"`
+	SourceSiteUUID string  `db:"source_site_uuid" json:"source_site_uuid,omitempty"`
 }
 
 func MetasByType(typ string) ([]Meta, error) {
