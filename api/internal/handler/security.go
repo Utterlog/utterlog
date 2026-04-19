@@ -52,6 +52,17 @@ func CCProtection() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !ccEnabled { c.Next(); return }
 
+		// Authenticated admin surface is gated by JWT + role already —
+		// CC protection here only creates false-positive lockouts when
+		// the dashboard polls (sync progress, analytics, etc). Skip it
+		// entirely for /admin/* paths so operators can't ban themselves
+		// by using the app normally.
+		if strings.HasPrefix(c.Request.URL.Path, "/api/v1/admin/") ||
+			strings.HasPrefix(c.Request.URL.Path, "/api/v1/sync/") {
+			c.Next()
+			return
+		}
+
 		ip := getRealIP(c)
 
 		// Check if banned
