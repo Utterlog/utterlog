@@ -170,7 +170,13 @@ func importPostsOrPages(jobID, siteUUID, postType string, items []map[string]int
 		syncMapSet(jobID, "post", srcID, id)
 
 		// Write term relationships from categories + tags slugs.
+		// WP stores non-ASCII slugs URL-encoded (域名 -> %e5%9f%9f...),
+		// and wp_get_object_terms returns them in that raw form. Decode
+		// here so the lookup key matches the decoded form we stored in
+		// importTerms — otherwise any term with a non-ASCII slug would
+		// never link, and the post↔tag graph would silently collapse.
 		for _, slug := range itemStrSlice(item, "categories") {
+			slug = decodeURLSlug(slug)
 			if termID, ok := syncMapGet(jobID, "term_slug_category:"+slug, 0); ok {
 				config.DB.Exec(fmt.Sprintf(`
 					INSERT INTO %s (post_id, meta_id, created_at) VALUES ($1, $2, $3)
@@ -179,6 +185,7 @@ func importPostsOrPages(jobID, siteUUID, postType string, items []map[string]int
 			}
 		}
 		for _, slug := range itemStrSlice(item, "tags") {
+			slug = decodeURLSlug(slug)
 			if termID, ok := syncMapGet(jobID, "term_slug_tag:"+slug, 0); ok {
 				config.DB.Exec(fmt.Sprintf(`
 					INSERT INTO %s (post_id, meta_id, created_at) VALUES ($1, $2, $3)
