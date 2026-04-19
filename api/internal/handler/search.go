@@ -202,7 +202,31 @@ func generateAISummary(postID int) {
 		return
 	}
 
-	prompt := fmt.Sprintf("用中文总结以下文章，100-200字之间，直接输出总结内容，不要任何前缀、Markdown 标记或emoji。内容需完整概括文章要点，不要只写一句话：\n\n标题：%s", p.Title)
+	// Read the two admin-configurable options (saved from AI 设置 → 摘要设置).
+	// ai_summary_max_length: target character count. Default 200, clamped
+	// to sensible bounds so a typo'd '10000' doesn't nuke the prompt.
+	// ai_summary_prompt: optional custom prompt override. Blank = use
+	// the built-in prompt.
+	maxLen := 200
+	if v := getOption("ai_summary_max_length"); v != "" {
+		if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && n >= 50 && n <= 1000 {
+			maxLen = n
+		}
+	}
+	minLen := maxLen / 2
+	if minLen < 50 {
+		minLen = 50
+	}
+	customPrompt := strings.TrimSpace(getOption("ai_summary_prompt"))
+
+	var prompt string
+	if customPrompt != "" {
+		prompt = fmt.Sprintf("%s\n字数控制在 %d-%d 字之间。不要任何前缀、Markdown 标记或emoji。\n\n标题：%s",
+			customPrompt, minLen, maxLen, p.Title)
+	} else {
+		prompt = fmt.Sprintf("用中文总结以下文章，%d-%d字之间，直接输出总结内容，不要任何前缀、Markdown 标记或emoji。内容需完整概括文章要点，不要只写一句话：\n\n标题：%s",
+			minLen, maxLen, p.Title)
+	}
 	if p.Excerpt != nil && *p.Excerpt != "" {
 		prompt += "\n摘要：" + *p.Excerpt
 	}
@@ -215,9 +239,13 @@ func generateAISummary(postID int) {
 		prompt += "\n内容：" + text
 	}
 
-	// 400 tokens ≈ 250-300 汉字 — leaves headroom over the 200-char
-	// target so the model doesn't truncate mid-sentence.
-	result := callAI(prompt, 400)
+	// ~2 tokens per Chinese char as a rough budget; double the target
+	// to leave the model room to write before hitting the cutoff.
+	maxTokens := maxLen * 2
+	if maxTokens < 200 {
+		maxTokens = 200
+	}
+	result := callAI(prompt, maxTokens)
 	if result == "" {
 		return
 	}
@@ -226,6 +254,13 @@ func generateAISummary(postID int) {
 	config.DB.Exec(
 		fmt.Sprintf("UPDATE %s SET ai_summary = $1 WHERE id = $2", config.T("posts")),
 		result, postID)
+}
+
+// getOption reads a single ul_options value. Empty string if missing.
+func getOption(name string) string {
+	var v string
+	_ = config.DB.Get(&v, "SELECT COALESCE(value,'') FROM "+config.T("options")+" WHERE name=$1", name)
+	return v
 }
 
 // SemanticSearch handles public search requests
