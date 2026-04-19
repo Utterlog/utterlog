@@ -79,6 +79,19 @@ func RunPostFinishWorker(jobID, siteUUID string) {
 		) WHERE m.source_site_uuid = $1
 	`, config.T("metas"), config.T("relationships")), siteUUID)
 
+	// Recalculate comment_count for imported posts. Utterlog native
+	// flow increments comment_count on each new comment; bulk sync
+	// inserts bypass that path so the cached count stays 0 without
+	// this pass — which breaks homepage cards and dashboard stats.
+	config.DB.Exec(fmt.Sprintf(`
+		UPDATE %s p SET comment_count = COALESCE(sub.c, 0)
+		FROM (
+		  SELECT post_id, COUNT(*) c FROM %s
+		  WHERE status='approved' GROUP BY post_id
+		) sub
+		WHERE p.id = sub.post_id AND p.source_site_uuid = $1
+	`, config.T("posts"), config.T("comments")), siteUUID)
+
 	config.DB.Exec(fmt.Sprintf(`
 		UPDATE %s SET status='finished', stage='done', finished_at=$1 WHERE job_id=$2
 	`, config.T("sync_jobs")), time.Now().Unix(), jobID)
