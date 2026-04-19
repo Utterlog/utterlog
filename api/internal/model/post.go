@@ -54,8 +54,11 @@ type MetaBrief struct {
 	Count int    `json:"count"`
 }
 
-const postListCols = "id, title, slug, excerpt, type, display_id, status, author_id, cover_url, view_count, comment_count, word_count, created_at, updated_at"
-const postDetailCols = "id, title, slug, content, excerpt, type, display_id, status, author_id, cover_url, password, allow_comment, pinned, view_count, comment_count, word_count, created_at, updated_at"
+// ai_summary included so list views (homepage cards, search results)
+// can prefer AI-generated summary over plain excerpt without a second
+// round-trip. ~80 runes per row is cheap.
+const postListCols = "id, title, slug, excerpt, ai_summary, type, display_id, status, author_id, cover_url, view_count, comment_count, word_count, created_at, updated_at"
+const postDetailCols = "id, title, slug, content, excerpt, ai_summary, ai_questions, type, display_id, status, author_id, cover_url, password, allow_comment, pinned, view_count, comment_count, word_count, created_at, updated_at"
 
 func PostsList(typ, status, search, orderBy, order string, page, perPage int, categorySlug string, tagSlug ...string) ([]Post, int, error) {
 	t := config.T("posts")

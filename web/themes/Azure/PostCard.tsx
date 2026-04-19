@@ -101,14 +101,16 @@ export default function PostCard({ post, isNewest }: { post: any; isNewest?: boo
         />
       </Link>
 
-      {/* Excerpt */}
-      {(post.excerpt || post.content) && (
+      {/* Excerpt — prefer AI summary when present, fall back to manual
+          excerpt or a derived slice of content. If the admin clears the
+          AI summary the card silently reverts to the excerpt. */}
+      {(post.ai_summary || post.excerpt || post.content) && (
         <div style={{ padding: '12px 20px' }}>
           <p style={{
             fontSize: '14px', lineHeight: 1.8, color: '#555', margin: 0,
             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
           }}>
-            {post.excerpt || post.content?.replace(/[#*`>\-\[\]()!~|]/g, '').replace(/\n+/g, ' ').trim().slice(0, 300)}
+            {post.ai_summary || post.excerpt || post.content?.replace(/[#*`>\-\[\]()!~|]/g, '').replace(/\n+/g, ' ').trim().slice(0, 300)}
           </p>
         </div>
       )}
