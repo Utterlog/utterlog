@@ -141,6 +141,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     pathname === '/ai' ||
     pathname.startsWith('/ai/');
 
+  // Wide pages — no max-width cap but still scrollable (unlike fullWidth
+  // which hides overflow). Useful for dense list tables whose rightmost
+  // columns (操作 icons, RSS URL etc.) get clipped at 1280px.
+  const wide = pathname === '/links';
+
   return (
     <div className="dashboard-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
@@ -280,6 +285,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {fullWidth ? (
             // Editor / chat / logs: fill the full viewport height, children handle internal scroll
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              {children}
+            </div>
+          ) : wide ? (
+            // Wide pages: full viewport width, normal scroll
+            <div style={{ padding: '24px 32px' }}>
               {children}
             </div>
           ) : (
