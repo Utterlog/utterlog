@@ -87,6 +87,34 @@ type syncSite struct {
 	UpdatedAt  int64  `db:"updated_at"`
 }
 
+// ---------------- /ping ----------------
+
+// SyncWPPing is a lightweight auth-only endpoint for the plugin's
+// "测试连接" button: verifies that the Utterlog URL is reachable AND
+// that the {site_uuid, token} pair matches a registered, non-disabled
+// site. Returns the site's label + last-seen time so the plugin can
+// show a friendly confirmation.
+func SyncWPPing(c *gin.Context) {
+	var req syncAuthEnvelope
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.BadRequest(c, "JSON 解析失败")
+		return
+	}
+	site, ok := authSyncRequest(c, req)
+	if !ok {
+		return
+	}
+	util.Success(c, gin.H{
+		"ok":            true,
+		"site_uuid":     site.SiteUUID,
+		"label":         site.Label,
+		"source_url":    site.SourceURL,
+		"last_seen_at":  site.LastSeenAt,
+		"server_time":   time.Now().Unix(),
+		"server_version": "1.0.0",
+	})
+}
+
 // ---------------- /start ----------------
 
 type startReq struct {

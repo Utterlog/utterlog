@@ -64,6 +64,19 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable={{is_default_branch}}
 
+      # Compute a human-readable VERSION: tag name (v1.0.1) for tagged
+      # builds, or sha-<7hex> for branch pushes. Full 40-char SHA goes
+      # to a separate BUILD_COMMIT build-arg so we can still trace
+      # exactly which commit the image was built from.
+      - name: Compute version label
+        id: verlabel
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "label=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "label=sha-$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build & push to both registries
         uses: docker/build-push-action@v6
         with:
@@ -74,7 +87,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VERSION=sha-${{ github.sha }}
+            VERSION=${{ steps.verlabel.outputs.label }}
             BUILD_TIME=${{ github.event.head_commit.timestamp }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max

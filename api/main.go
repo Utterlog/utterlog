@@ -243,6 +243,7 @@ func main() {
 	// Auth via {site_uuid, token} in each request body — site must be
 	// registered via admin POST /admin/sync/wordpress/sites first.
 	syncWP := api.Group("/sync/wordpress")
+	syncWP.POST("/ping", handler.SyncWPPing)
 	syncWP.POST("/start", handler.SyncWPStart)
 	syncWP.POST("/batch", handler.SyncWPBatch)
 	syncWP.POST("/finish", handler.SyncWPFinish)
