@@ -235,6 +235,7 @@ func InitDB() error {
 		DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS source_type VARCHAR(32) DEFAULT ''", T(table)))
 		DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS source_id BIGINT DEFAULT 0", T(table)))
 		DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS source_site_uuid VARCHAR(64) DEFAULT ''", T(table)))
+
 		// Partial UNIQUE so only synced rows participate; native UL
 		// content (source_site_uuid='') isn't constrained.
 		//
@@ -242,11 +243,23 @@ func InitDB() error {
 		// indexes on ul_comments / ul_media — CREATE UNIQUE INDEX IF
 		// NOT EXISTS is a no-op on a name match and will silently
 		// leave us without the constraint ON CONFLICT needs.
+		//
+		// Skip media: its INSERT hardcodes source_id=0 (WP attachment
+		// IDs aren't meaningful post-download; dedupe is by SHA-256
+		// in pullOneMedia). A UNIQUE on (site, 'wordpress', 0) would
+		// let only one media row through per site, and the rest
+		// would fail with UNIQUE violation and never land.
+		if table == "media" {
+			continue
+		}
 		DB.Exec(fmt.Sprintf(
 			"CREATE UNIQUE INDEX IF NOT EXISTS idx_%s_sync_provenance ON %s (source_site_uuid, source_type, source_id) WHERE source_site_uuid != ''",
 			table, T(table),
 		))
 	}
+	// Clean up any stale UNIQUE index on media left over from when the
+	// migration loop above included "media" — harmless on fresh installs.
+	DB.Exec("DROP INDEX IF EXISTS idx_media_sync_provenance")
 
 	return nil
 }
