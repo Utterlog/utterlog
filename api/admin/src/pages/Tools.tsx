@@ -4,9 +4,10 @@ import { importApi, optionsApi } from '@/lib/api';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui';
+import SyncSitesPanel from '@/components/SyncSitesPanel';
 
 export default function ToolsPage() {
-  const [activeTab, setActiveTab] = useState<'import' | 'backup'>('import');
+  const [activeTab, setActiveTab] = useState<'import' | 'backup' | 'wp-sync'>('import');
 
   // WordPress import state
   const [wpImporting, setWpImporting] = useState(false);
@@ -119,6 +120,7 @@ export default function ToolsPage() {
       <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--color-border)', marginBottom: '20px' }}>
         {[
           { key: 'import' as const, label: '导入工具' },
+          { key: 'wp-sync' as const, label: 'WordPress 同步' },
           { key: 'backup' as const, label: '备份恢复' },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
@@ -174,6 +176,11 @@ export default function ToolsPage() {
             <p className="text-dim" style={{ fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>即将推出</p>
           </div>
         </div>
+      )}
+
+      {/* ==================== WordPress 同步 ==================== */}
+      {activeTab === 'wp-sync' && (
+        <SyncSitesPanel />
       )}
 
       {/* ==================== 备份恢复 ==================== */}
