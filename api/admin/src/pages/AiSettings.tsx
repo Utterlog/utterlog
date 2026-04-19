@@ -597,15 +597,35 @@ export default function AiSettingsPage() {
                   任务后台异步运行，每项间隔 800ms 避免触发 AI 限流。
                 </p>
                 <BatchProgress job={batchJobs.all} />
-                <Button
-                  onClick={() => startBatch('all', '/ai/batch-all', '任务')}
-                  loading={batchLoading.all || batchJobs.all?.running}
-                  disabled={batchJobs.all?.running}
-                  style={{ padding: '0 20px' }}
-                >
-                  <i className="fa-solid fa-bolt" style={{ fontSize: '13px', marginRight: 8 }} />
-                  {batchJobs.all?.running ? '生成中…' : '一键生成全部'}
-                </Button>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <Button
+                    onClick={() => startBatch('all', '/ai/batch-all', '任务')}
+                    loading={batchLoading.all || batchJobs.all?.running}
+                    disabled={batchJobs.all?.running}
+                    style={{ padding: '0 20px' }}
+                  >
+                    <i className="fa-solid fa-bolt" style={{ fontSize: '13px', marginRight: 8 }} />
+                    {batchJobs.all?.running ? '生成中…' : '一键生成全部'}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    disabled={batchJobs.all?.running}
+                    style={{ padding: '0 20px' }}
+                    onClick={async () => {
+                      if (!confirm('确定清空所有文章的 AI 摘要 + 陪读问题？下次一键生成会重新从头跑。')) return;
+                      try {
+                        const r: any = await api.post('/ai/batch-delete');
+                        const d = r.data || r;
+                        toast.success(`已清空 ${d?.updated ?? 0} 篇文章的 AI 数据`);
+                      } catch (e: any) {
+                        toast.error(e?.response?.data?.error?.message || '清空失败');
+                      }
+                    }}
+                  >
+                    <i className="fa-regular fa-trash-can" style={{ fontSize: '13px', marginRight: 8 }} />
+                    批量清空 AI 数据
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

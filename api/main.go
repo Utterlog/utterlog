@@ -475,6 +475,7 @@ func main() {
 		authed.POST("/ai/batch-questions", handler.AIBatchQuestions)
 		authed.POST("/ai/batch-summary", handler.AIBatchSummary)
 		authed.POST("/ai/batch-all", handler.AIBatchAll)
+		authed.POST("/ai/batch-delete", handler.AIBatchDelete)
 		authed.GET("/ai/batch-status", handler.AIBatchStatus)
 		authed.POST("/media/parse", handler.ParseMediaURL)
 		authed.POST("/media/douban-import", handler.DoubanImport)

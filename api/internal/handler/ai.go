@@ -671,7 +671,11 @@ func AIBatchQuestions(c *gin.Context) {
 				job.Done++
 			} else {
 				job.Failed++
-				job.LastError = fmt.Sprintf("post #%d: AI returned empty", id)
+				errDetail := aiLastError
+				if errDetail == "" {
+					errDetail = "AI returned empty"
+				}
+				job.LastError = fmt.Sprintf("post #%d: %s", id, errDetail)
 			}
 			aiBatchState.Unlock()
 			// Rate-limit — don't hammer the AI provider
@@ -739,7 +743,11 @@ func AIBatchSummary(c *gin.Context) {
 				job.Done++
 			} else {
 				job.Failed++
-				job.LastError = fmt.Sprintf("post #%d: AI returned empty", id)
+				errDetail := aiLastError
+				if errDetail == "" {
+					errDetail = "AI returned empty"
+				}
+				job.LastError = fmt.Sprintf("post #%d: %s", id, errDetail)
 			}
 			aiBatchState.Unlock()
 			time.Sleep(800 * time.Millisecond)
@@ -809,7 +817,16 @@ func AIBatchAll(c *gin.Context) {
 				aiBatchState.Lock()
 				var q string
 				config.DB.Get(&q, fmt.Sprintf("SELECT COALESCE(ai_questions,'') FROM %s WHERE id=$1", config.T("posts")), cand.ID)
-				if q != "" { job.Done++ } else { job.Failed++; job.LastError = fmt.Sprintf("post #%d: questions failed", cand.ID) }
+				if q != "" {
+					job.Done++
+				} else {
+					job.Failed++
+					d := aiLastError
+					if d == "" {
+						d = "questions failed"
+					}
+					job.LastError = fmt.Sprintf("post #%d: %s", cand.ID, d)
+				}
 				aiBatchState.Unlock()
 				time.Sleep(800 * time.Millisecond)
 			}
@@ -818,7 +835,16 @@ func AIBatchAll(c *gin.Context) {
 				aiBatchState.Lock()
 				var s string
 				config.DB.Get(&s, fmt.Sprintf("SELECT COALESCE(ai_summary,'') FROM %s WHERE id=$1", config.T("posts")), cand.ID)
-				if s != "" { job.Done++ } else { job.Failed++; job.LastError = fmt.Sprintf("post #%d: summary failed", cand.ID) }
+				if s != "" {
+					job.Done++
+				} else {
+					job.Failed++
+					d := aiLastError
+					if d == "" {
+						d = "summary failed"
+					}
+					job.LastError = fmt.Sprintf("post #%d: %s", cand.ID, d)
+				}
 				aiBatchState.Unlock()
 				time.Sleep(800 * time.Millisecond)
 			}
@@ -832,10 +858,66 @@ func AIBatchAll(c *gin.Context) {
 	util.Success(c, job)
 }
 
+// AIBatchDelete — POST /api/v1/ai/batch-delete
+// Wipes ai_summary and ai_questions from every post so a subsequent
+// /ai/batch-all regenerates from scratch. Accepts JSON body:
+//   {"fields": ["summary","questions"]}  — what to wipe (defaults to both)
+func AIBatchDelete(c *gin.Context) {
+	var req struct {
+		Fields []string `json:"fields"`
+	}
+	c.ShouldBindJSON(&req)
+	wipeSummary, wipeQuestions := true, true
+	if len(req.Fields) > 0 {
+		wipeSummary, wipeQuestions = false, false
+		for _, f := range req.Fields {
+			switch strings.ToLower(strings.TrimSpace(f)) {
+			case "summary", "ai_summary":
+				wipeSummary = true
+			case "questions", "ai_questions":
+				wipeQuestions = true
+			}
+		}
+	}
+	setParts := []string{}
+	if wipeSummary {
+		setParts = append(setParts, "ai_summary = NULL")
+	}
+	if wipeQuestions {
+		setParts = append(setParts, "ai_questions = NULL")
+	}
+	if len(setParts) == 0 {
+		util.BadRequest(c, "fields 必须包含 summary 或 questions")
+		return
+	}
+	r, err := config.DB.Exec(fmt.Sprintf(
+		"UPDATE %s SET %s WHERE type='post' AND status='publish'",
+		config.T("posts"), strings.Join(setParts, ", ")))
+	if err != nil {
+		util.Error(c, 500, "DB_ERR", err.Error())
+		return
+	}
+	rows, _ := r.RowsAffected()
+	util.Success(c, gin.H{
+		"updated":         rows,
+		"wiped_summary":   wipeSummary,
+		"wiped_questions": wipeQuestions,
+	})
+}
+
+// aiLastError records the most recent callAI failure so batch jobs can
+// surface it in job.LastError — previous code returned "" on any error,
+// which collapsed "no provider" / "bad key" / "rate limited" / "empty
+// response" all into the same opaque "AI returned empty" message.
+var aiLastError string
+
 func callAI(prompt string, maxTokens int) string {
 	var provider model.AIProvider
 	err := config.DB.Get(&provider, "SELECT * FROM "+config.T("ai_providers")+" WHERE type='text' AND is_active=true ORDER BY is_default DESC LIMIT 1")
-	if err != nil { return "" }
+	if err != nil {
+		aiLastError = "no active provider: " + err.Error()
+		return ""
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"model": provider.Model, "messages": []map[string]string{{"role": "user", "content": prompt}},
@@ -845,15 +927,44 @@ func callAI(prompt string, maxTokens int) string {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+provider.APIKey)
 	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
-	if err != nil { return "" }
+	if err != nil {
+		aiLastError = "http: " + err.Error()
+		return ""
+	}
 	defer resp.Body.Close()
+
+	rawBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		preview := string(rawBody)
+		if len(preview) > 200 {
+			preview = preview[:200]
+		}
+		aiLastError = fmt.Sprintf("provider HTTP %d: %s", resp.StatusCode, preview)
+		return ""
+	}
+
 	var result map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.Unmarshal(rawBody, &result); err != nil {
+		aiLastError = "decode: " + err.Error()
+		return ""
+	}
 	if choices, ok := result["choices"].([]interface{}); ok && len(choices) > 0 {
 		if msg, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{}); ok {
-			return fmt.Sprintf("%v", msg["content"])
+			content := fmt.Sprintf("%v", msg["content"])
+			if strings.TrimSpace(content) == "" {
+				aiLastError = "empty content in choices[0].message"
+				return ""
+			}
+			aiLastError = ""
+			return content
 		}
 	}
+	// Fall-through: shape didn't match OpenAI-compatible schema
+	preview := string(rawBody)
+	if len(preview) > 200 {
+		preview = preview[:200]
+	}
+	aiLastError = "unexpected response shape: " + preview
 	return ""
 }
 
