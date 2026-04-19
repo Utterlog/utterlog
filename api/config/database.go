@@ -231,7 +231,7 @@ func InitDB() error {
 	// Provenance columns on content tables — lets us delete-by-site
 	// for rollback and dedupe on re-sync via the UNIQUE index below.
 	// ul_media already has source_type + source_id; we add site_uuid.
-	for _, table := range []string{"posts", "comments", "metas", "media"} {
+	for _, table := range []string{"posts", "comments", "metas", "media", "links"} {
 		DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS source_type VARCHAR(32) DEFAULT ''", T(table)))
 		DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS source_id BIGINT DEFAULT 0", T(table)))
 		DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS source_site_uuid VARCHAR(64) DEFAULT ''", T(table)))

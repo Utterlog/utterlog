@@ -2,10 +2,27 @@ package handler
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 	"utterlog-go/config"
 )
+
+// decodeURLSlug handles the case where the source (WordPress) sent a
+// percent-encoded slug — historically WP stored non-ASCII slugs that
+// way (域名 -> %e5%9f%9f%e5%90%8d). Plugins v0.5.4+ decode on the PHP
+// side, but older plugins / manual retrigger may still send encoded
+// strings. This is a belt-and-braces pass so the DB always has
+// readable slugs.
+func decodeURLSlug(s string) string {
+	if !strings.Contains(s, "%") {
+		return s
+	}
+	if decoded, err := url.QueryUnescape(s); err == nil && decoded != "" {
+		return decoded
+	}
+	return s
+}
 
 // ============================================================
 // Resource importers for WordPress sync.
@@ -31,7 +48,7 @@ func importTerms(jobID, siteUUID, termType string, items []map[string]interface{
 	for i, item := range items {
 		srcID := itemInt64(item, "source_id")
 		name := itemStr(item, "name")
-		slug := itemStr(item, "slug")
+		slug := decodeURLSlug(itemStr(item, "slug"))
 		if name == "" || slug == "" || srcID == 0 {
 			continue
 		}
@@ -254,6 +271,56 @@ func importComments(jobID, siteUUID string, items []map[string]interface{}) (int
 		}
 		syncMapSet(jobID, "comment", srcID, id)
 		imported++
+	}
+	return imported, nil
+}
+
+// importLinks maps WP's Links Manager (wp_links) entries into ul_links.
+// WP has no "group" concept so every imported link lands in the default
+// group; admins can reorganize after the fact. visibility=Y -> status=1.
+func importLinks(jobID, siteUUID string, items []map[string]interface{}) (int, error) {
+	t := config.T("links")
+	now := time.Now().Unix()
+	imported := 0
+
+	for i, item := range items {
+		srcID := itemInt64(item, "source_id")
+		name := itemStr(item, "name")
+		urlStr := itemStr(item, "url")
+		if name == "" || urlStr == "" || srcID == 0 {
+			continue
+		}
+		status := 1
+		if v, ok := item["visible"].(bool); ok && !v {
+			status = 0
+		}
+		desc := itemStr(item, "description")
+		logo := itemStr(item, "logo")
+		rel := itemStr(item, "rel")
+		rssURL := itemStr(item, "rss_url")
+
+		_, err := config.DB.Exec(fmt.Sprintf(`
+			INSERT INTO %s (name, url, description, logo, rel, rss_url,
+			                order_num, status, group_name,
+			                created_at, updated_at,
+			                source_type, source_id, source_site_uuid)
+			VALUES ($1, $2, $3, $4, $5, $6,
+			        $7, $8, 'default',
+			        $9, $9,
+			        'wordpress', $10, $11)
+			ON CONFLICT (source_site_uuid, source_type, source_id) WHERE source_site_uuid != ''
+			DO UPDATE SET name = EXCLUDED.name, url = EXCLUDED.url,
+			              description = EXCLUDED.description, logo = EXCLUDED.logo,
+			              rel = EXCLUDED.rel, rss_url = EXCLUDED.rss_url,
+			              status = EXCLUDED.status, updated_at = EXCLUDED.updated_at
+		`, t),
+			name, urlStr, desc, logo, rel, rssURL,
+			i+1, status,
+			now,
+			srcID, siteUUID)
+		if err == nil {
+			imported++
+		}
 	}
 	return imported, nil
 }

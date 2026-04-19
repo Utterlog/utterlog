@@ -214,6 +214,8 @@ func SyncWPBatch(c *gin.Context) {
 		imported, err = importPostsOrPages(req.JobID, site.SiteUUID, "page", req.Items)
 	case "comments":
 		imported, err = importComments(req.JobID, site.SiteUUID, req.Items)
+	case "links":
+		imported, err = importLinks(req.JobID, site.SiteUUID, req.Items)
 	default:
 		util.Error(c, 400, "BAD_RESOURCE", "未知 resource: "+req.Resource)
 		return
