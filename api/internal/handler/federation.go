@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -628,11 +630,44 @@ func fetchRSSFeed(feedURL string) ([]rssItem, error) {
 			guid = item.Link
 		}
 		items = append(items, rssItem{
-			Title: item.Title, Link: item.Link, Description: item.Description,
-			PubDate: pubDate, GUID: guid,
+			Title:       strings.TrimSpace(cleanHTMLToText(item.Title)),
+			Link:        strings.TrimSpace(item.Link),
+			Description: cleanHTMLToText(item.Description),
+			PubDate:     pubDate, GUID: guid,
 		})
 	}
 	return items, nil
+}
+
+// htmlTagRE strips any <tag>, including <br/>, <a ...>, <span ...>.
+var htmlTagRE = regexp.MustCompile(`<[^>]+>`)
+
+// multiSpaceRE collapses runs of whitespace (including newlines) into one.
+var multiSpaceRE = regexp.MustCompile(`\s+`)
+
+// cleanHTMLToText turns the CDATA-wrapped HTML commonly found in RSS
+// <description> / <title> blobs into plain text: drop all tags, decode
+// entities (&#187;, &nbsp;, etc.), collapse whitespace, and cap length
+// so one giant WordPress excerpt doesn't stuff a 50 KB card into the
+// subscription feed. Without this the feeds page rendered the raw
+// markup as text (see "<span class=read-more>...&#187;").
+func cleanHTMLToText(s string) string {
+	if s == "" {
+		return ""
+	}
+	// Strip tags before entity decode — otherwise a stray &lt;a&gt; in
+	// the source renders as visible <a> after decode.
+	s = htmlTagRE.ReplaceAllString(s, " ")
+	s = html.UnescapeString(s)
+	s = multiSpaceRE.ReplaceAllString(s, " ")
+	s = strings.TrimSpace(s)
+	// Cap at ~500 runes so the card stays readable; cards link out for
+	// the full article anyway.
+	runes := []rune(s)
+	if len(runes) > 500 {
+		return string(runes[:500]) + "…"
+	}
+	return s
 }
 
 // parseRSSDate tries the handful of formats real feeds use in the wild,
