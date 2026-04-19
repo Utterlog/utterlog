@@ -365,18 +365,32 @@ func FederatedComment(c *gin.Context) {
 
 // Fetch RSS feeds from all subscriptions (called by cron or manually)
 func FetchFeeds(c *gin.Context) {
+	fetched, newItems := runFeedFetch(0)
+	util.Success(c, gin.H{"fetched": fetched, "new_items": newItems})
+}
+
+// runFeedFetch does one pass over stale subscriptions and returns
+// counts. Called by both the manual HTTP endpoint and the 6-hour cron
+// started in main.go. Passing limit=0 means "every subscription"; a
+// positive limit caps per-call work for the manual HTTP path so the
+// request returns in a reasonable time on large follow graphs.
+func runFeedFetch(limit int) (fetched, newItems int) {
 	t := config.T
 	var subs []struct {
 		ID      int    `db:"id"`
 		FeedURL string `db:"feed_url"`
 	}
-	config.DB.Select(&subs, fmt.Sprintf("SELECT id, feed_url FROM %s ORDER BY last_fetched_at ASC LIMIT 20", t("rss_subscriptions")))
+	q := fmt.Sprintf("SELECT id, feed_url FROM %s ORDER BY last_fetched_at ASC", t("rss_subscriptions"))
+	if limit > 0 {
+		q += fmt.Sprintf(" LIMIT %d", limit)
+	}
+	config.DB.Select(&subs, q)
 
-	fetched := 0
-	newItems := 0
 	for _, sub := range subs {
 		items, err := fetchRSSFeed(sub.FeedURL)
-		if err != nil { continue }
+		if err != nil {
+			continue
+		}
 		fetched++
 
 		now := time.Now().Unix()
@@ -391,14 +405,31 @@ func FetchFeeds(c *gin.Context) {
 		config.DB.Exec(fmt.Sprintf("UPDATE %s SET last_fetched_at = $1 WHERE id = $2", t("rss_subscriptions")), now, sub.ID)
 	}
 
-	// Generate notifications for new items
 	if newItems > 0 {
 		config.DB.Exec(fmt.Sprintf(
 			"INSERT INTO %s (user_id, type, title, content, created_at) VALUES (1,'feed','关注动态更新',$1,$2)",
 			t("notifications")), fmt.Sprintf("发现 %d 条新内容", newItems), time.Now().Unix())
 	}
+	return
+}
 
-	util.Success(c, gin.H{"fetched": fetched, "new_items": newItems})
+// StartFeedFetchCron runs runFeedFetch every 6 hours for the lifetime
+// of the process. Called once from main after DB init. The first tick
+// fires after an initial 2-minute warmup so the main listener is
+// healthy before we start outbound HTTP. Errors are swallowed inside
+// runFeedFetch (continue on fail) so a single bad feed never stops
+// the whole pass.
+func StartFeedFetchCron() {
+	go func() {
+		time.Sleep(2 * time.Minute)
+		runFeedFetch(0)
+		ticker := time.NewTicker(6 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			f, n := runFeedFetch(0)
+			fmt.Printf("[rss-cron] fetched=%d new_items=%d\n", f, n)
+		}
+	}()
 }
 
 // Get aggregated feed timeline

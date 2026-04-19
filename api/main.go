@@ -20,6 +20,7 @@ func main() {
 		config.InitRedis()
 		storage.Init()
 		handler.InitStatsSync()
+		handler.StartFeedFetchCron()
 	}
 
 	gin.SetMode(gin.ReleaseMode)
