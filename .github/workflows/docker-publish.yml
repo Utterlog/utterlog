@@ -30,7 +30,12 @@ jobs:
     name: API image
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 is required so `git describe --tags` below can find
+      # the nearest tag. Default shallow clone omits tags and every build
+      # on main ends up labeled "dev".
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
@@ -102,6 +107,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
