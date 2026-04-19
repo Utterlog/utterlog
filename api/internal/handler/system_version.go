@@ -383,29 +383,28 @@ func runUpgrade() {
 		return
 	}
 
-	appendLog("Pulling latest images (this may take 1-3 minutes)...")
+	appendLog("Launching upgrade sidecar (survives api recreation)...")
 
-	// Run the sequence in a detached shell so it survives when this api
-	// container is recreated. The shell uses `docker compose` via the
-	// mounted socket — it talks to the HOST's docker daemon, not the
-	// api container's internals.
+	// CRITICAL: we cannot run `docker compose up -d` from within the
+	// api container's own process tree. The moment compose recreates
+	// the api service it SIGKILLs everything inside — and our shell
+	// hasn't finished yet. The old api is gone, the new api container
+	// sits in `Created` state without the rest of the `up -d` run to
+	// start it. Result: total outage.
 	//
-	// One-click upgrade is a real operation on real deployments:
-	// always docker compose pull + up -d. No dev/noop shortcuts. If the
-	// user's compose file isn't pullable (e.g. it points at build:
-	// directives or unreachable images) the pull fails naturally and
-	// the error surfaces to the UI.
-	//
-	// Two compose layouts supported:
-	//   overlay  docker-compose.prod.yml + docker-compose.pull.yml
-	//            (the advanced / multi-file prod pattern)
-	//   slim     docker-compose.yml         (single-file slim install,
-	//            how curl install.sh | bash sets things up — the 90%
-	//            case)
-	// Set UTTERLOG_COMPOSE_MODE=overlay|slim to override auto-detection.
-	script := `
+	// Fix: spawn an independent sidecar container on the host docker
+	// daemon. The sidecar has its own process space, runs `docker
+	// compose pull + up -d` to completion, and doesn't care that
+	// api-1 gets recreated. Its log tail is written to
+	// ./public/uploads/upgrade.log which is bind-mounted so the UI
+	// can still read it.
+	installDir := os.Getenv("UTTERLOG_INSTALL_DIR")
+	if installDir == "" {
+		installDir = "/opt/utterlog"
+	}
+	sidecarScript := `
 set -e
-cd "${UTTERLOG_INSTALL_DIR:-/opt/utterlog}"
+cd "$INSTALL_DIR"
 
 MODE="${UTTERLOG_COMPOSE_MODE:-}"
 if [ -z "$MODE" ]; then
@@ -414,20 +413,21 @@ if [ -z "$MODE" ]; then
   elif [ -f docker-compose.yml ]; then
     MODE=slim
   else
-    echo "[upgrade] ERROR: no docker-compose files found under $(pwd)"
+    echo "[upgrade] ERROR: no docker-compose files under $(pwd)"
     exit 1
   fi
 fi
 
+echo "[upgrade] mode=$MODE — pulling ..."
 case "$MODE" in
   overlay)
-    echo "[upgrade] overlay mode — docker-compose.prod.yml + docker-compose.pull.yml"
     docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
+    echo "[upgrade] recreating containers ..."
     docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans
     ;;
   slim)
-    echo "[upgrade] slim install mode — single file"
     docker compose pull
+    echo "[upgrade] recreating containers ..."
     docker compose up -d --remove-orphans
     ;;
   *)
@@ -435,13 +435,37 @@ case "$MODE" in
     exit 1
     ;;
 esac
+
+echo "[upgrade] waiting for api health..."
+for i in $(seq 1 60); do
+  code=$(docker inspect --format='{{.State.Health.Status}}' utterlog-api-1 2>/dev/null || echo unknown)
+  [ "$code" = "healthy" ] && { echo "[upgrade] api healthy"; break; }
+  sleep 2
+done
+echo "[upgrade] done"
 `
-	cmd := exec.Command("nohup", "bash", "-c", script)
+
+	// Name the sidecar so we can find/cleanup stale runs.
+	sidecarName := "utterlog-upgrade-" + fmt.Sprintf("%d", time.Now().Unix())
+	// Remove any previous sidecar first (ignore error).
+	exec.Command("docker", "rm", "-f", "utterlog-upgrade-worker").Run()
+
+	cmd := exec.Command("docker", "run", "--rm", "-d",
+		"--name", sidecarName,
+		"-v", "/var/run/docker.sock:/var/run/docker.sock",
+		"-v", installDir+":"+installDir,
+		"-e", "INSTALL_DIR="+installDir,
+		"-e", "UTTERLOG_COMPOSE_MODE="+os.Getenv("UTTERLOG_COMPOSE_MODE"),
+		"-w", installDir,
+		// Official Docker CLI image — includes compose v2 plugin.
+		"docker:27-cli",
+		"sh", "-c", sidecarScript,
+	)
 	cmd.Stdout, _ = os.OpenFile(upgrade.logPath, os.O_APPEND|os.O_WRONLY, 0o644)
 	cmd.Stderr = cmd.Stdout
 
-	if err := cmd.Start(); err != nil {
-		appendLog("failed to start upgrade: " + err.Error())
+	if err := cmd.Run(); err != nil {
+		appendLog("failed to launch sidecar: " + err.Error())
 		upgrade.mu.Lock()
 		upgrade.running = false
 		upgrade.finished = true
@@ -451,25 +475,17 @@ esac
 		return
 	}
 
-	appendLog(fmt.Sprintf("upgrade shell detached (pid %d). API will restart momentarily.", cmd.Process.Pid))
+	appendLog(fmt.Sprintf("sidecar %s launched (docker logs %s -f)", sidecarName, sidecarName))
+	appendLog("API will restart shortly; sidecar continues independently.")
 
-	// Wait for the shell to finish so the UI can poll /upgrade/status
-	// and see success=true. For real upgrades the api container gets
-	// recreated by `compose up -d` and this goroutine dies with it —
-	// that's fine, the new container boots with a clean upgrade state
-	// and the admin page reads the fresh version. For dev/noop paths
-	// the shell exits quickly and we mark finished here.
-	waitErr := cmd.Wait()
-
+	// Can't wait for the sidecar — our api will be recreated mid-run,
+	// killing this goroutine. Optimistic success: the sidecar owns the
+	// real outcome. On restart, upgrade state resets to zero and the
+	// UI's version poll will show the new image's VERSION label.
 	upgrade.mu.Lock()
 	upgrade.running = false
 	upgrade.finished = true
-	upgrade.success = waitErr == nil
-	if waitErr != nil {
-		upgrade.message = waitErr.Error()
-		appendLog("upgrade shell exited with error: " + waitErr.Error())
-	} else {
-		appendLog("upgrade shell completed successfully")
-	}
+	upgrade.success = true
+	upgrade.message = "升级 worker 已启动，API 即将自动重启。如果前端一直 502，可以刷新页面看版本号是否已更新。"
 	upgrade.mu.Unlock()
 }
