@@ -239,6 +239,16 @@ func main() {
 	// RSS parse
 	api.GET("/rss/parse", handler.ParseRSS)
 
+	// ===================== WordPress sync (public, body-token auth) =====================
+	// Auth via {site_uuid, token} in each request body — site must be
+	// registered via admin POST /admin/sync/wordpress/sites first.
+	syncWP := api.Group("/sync/wordpress")
+	syncWP.POST("/start", handler.SyncWPStart)
+	syncWP.POST("/batch", handler.SyncWPBatch)
+	syncWP.POST("/finish", handler.SyncWPFinish)
+	syncWP.POST("/rollback", handler.SyncWPRollback)
+	syncWP.GET("/job/:id/status", handler.SyncWPJobStatus)
+
 	// ===================== Authenticated Routes =====================
 	authed := api.Group("", middleware.Auth())
 	{
@@ -382,6 +392,14 @@ func main() {
 		authed.GET("/admin/system/releases", handler.SystemReleases)
 		authed.POST("/admin/system/upgrade", handler.SystemUpgrade)
 		authed.GET("/admin/system/upgrade/status", handler.SystemUpgradeStatus)
+
+		// WordPress sync — admin management (create/list/delete sites,
+		// view job history, trigger rollback). The per-site token is
+		// shown once at creation and never again.
+		authed.POST("/admin/sync/wordpress/sites", handler.AdminSyncSiteCreate)
+		authed.GET("/admin/sync/wordpress/sites", handler.AdminSyncSiteList)
+		authed.DELETE("/admin/sync/wordpress/sites/:uuid", handler.AdminSyncSiteDelete)
+		authed.GET("/admin/sync/wordpress/jobs", handler.AdminSyncJobList)
 
 		// Security
 		authed.GET("/security/overview", handler.SecurityOverview)

@@ -150,6 +150,99 @@ func InitDB() error {
 	// Media: EXIF data storage
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS exif_data TEXT DEFAULT ''", T("media")))
 
+	// ================================================================
+	// WordPress sync — tables + provenance columns
+	// ================================================================
+
+	// Sync sites: one row per registered WordPress site that can push
+	// data. token_hash is bcrypt; lookups compare against the hash.
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id SERIAL PRIMARY KEY,
+		site_uuid VARCHAR(64) NOT NULL UNIQUE,
+		label VARCHAR(200) NOT NULL DEFAULT '',
+		source_url VARCHAR(500) NOT NULL DEFAULT '',
+		token_hash VARCHAR(100) NOT NULL,
+		disabled BOOLEAN NOT NULL DEFAULT false,
+		last_seen_at BIGINT NOT NULL DEFAULT 0,
+		created_at BIGINT NOT NULL,
+		updated_at BIGINT NOT NULL
+	)`, T("sync_sites")))
+
+	// Sync jobs: one row per /start. Status flows running → processing
+	// (media/rewrite) → finished | failed.
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id SERIAL PRIMARY KEY,
+		job_id VARCHAR(64) NOT NULL UNIQUE,
+		site_uuid VARCHAR(64) NOT NULL,
+		status VARCHAR(20) NOT NULL DEFAULT 'running',
+		stage VARCHAR(40) NOT NULL DEFAULT 'import',
+		manifest JSONB,
+		counts JSONB,
+		media_total INTEGER NOT NULL DEFAULT 0,
+		media_done INTEGER NOT NULL DEFAULT 0,
+		posts_rewritten INTEGER NOT NULL DEFAULT 0,
+		error_message TEXT,
+		started_at BIGINT NOT NULL,
+		finished_at BIGINT
+	)`, T("sync_jobs")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_sync_jobs_site ON %s (site_uuid, started_at DESC)", T("sync_jobs")))
+
+	// Idempotent batch receipts — server returns early if (job_id,
+	// resource, batch_no) was already processed (plugin retries are
+	// safe).
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		job_id VARCHAR(64) NOT NULL,
+		resource VARCHAR(32) NOT NULL,
+		batch_no INTEGER NOT NULL,
+		received_at BIGINT NOT NULL,
+		item_count INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (job_id, resource, batch_no)
+	)`, T("sync_batches")))
+
+	// ID map — resolves WP-origin IDs to UL IDs during a single job.
+	// Posts' categories/tags references + comments' parent references
+	// use this to translate source_ids into target_ids without race.
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		job_id VARCHAR(64) NOT NULL,
+		resource VARCHAR(32) NOT NULL,
+		source_id BIGINT NOT NULL,
+		target_id INTEGER NOT NULL,
+		PRIMARY KEY (job_id, resource, source_id)
+	)`, T("sync_id_map")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_sync_id_map_target ON %s (resource, target_id)", T("sync_id_map")))
+
+	// Media download queue — server pulls WP URLs after posts are in.
+	// Populated by /finish; drained by background worker.
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id SERIAL PRIMARY KEY,
+		job_id VARCHAR(64) NOT NULL,
+		original_url TEXT NOT NULL,
+		new_url TEXT,
+		new_media_id INTEGER,
+		status VARCHAR(20) NOT NULL DEFAULT 'pending',
+		attempts INTEGER NOT NULL DEFAULT 0,
+		error_message TEXT,
+		created_at BIGINT NOT NULL,
+		completed_at BIGINT,
+		UNIQUE (job_id, original_url)
+	)`, T("sync_media_queue")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_sync_media_job ON %s (job_id, status)", T("sync_media_queue")))
+
+	// Provenance columns on content tables — lets us delete-by-site
+	// for rollback and dedupe on re-sync via the UNIQUE index below.
+	// ul_media already has source_type + source_id; we add site_uuid.
+	for _, table := range []string{"posts", "comments", "metas", "media"} {
+		DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS source_type VARCHAR(32) DEFAULT ''", T(table)))
+		DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS source_id BIGINT DEFAULT 0", T(table)))
+		DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS source_site_uuid VARCHAR(64) DEFAULT ''", T(table)))
+		// Partial UNIQUE so only synced rows participate; native UL
+		// content (source_site_uuid='') isn't constrained.
+		DB.Exec(fmt.Sprintf(
+			"CREATE UNIQUE INDEX IF NOT EXISTS idx_%s_source ON %s (source_site_uuid, source_type, source_id) WHERE source_site_uuid != ''",
+			table, T(table),
+		))
+	}
+
 	return nil
 }
 
