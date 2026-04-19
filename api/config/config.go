@@ -74,6 +74,25 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
+// PublicBaseURL returns the origin Utterlog is publicly reachable at:
+// prefers ul_options.site_url (what admins configured at install) and
+// only falls back to config.C.AppURL when the DB/option isn't set.
+// In Docker, AppURL is typically `http://localhost:9260` (the internal
+// loopback to the api container), which is wrong for user-facing links
+// — OAuth redirects, upload URLs, email links, Telegram webhooks all
+// need the real https://your-domain. Use this helper for anything a
+// browser or upstream service will ever see.
+func PublicBaseURL() string {
+	if DB != nil {
+		var v string
+		_ = DB.Get(&v, "SELECT COALESCE(value,'') FROM "+T("options")+" WHERE name = $1", "site_url")
+		if v = strings.TrimRight(strings.TrimSpace(v), "/"); v != "" {
+			return v
+		}
+	}
+	return C.AppURL
+}
+
 // loadEnvFile parses a KEY=VALUE file and exports non-empty values into
 // os env, leaving already-set env vars alone when the file's value is
 // empty. This is the critical difference vs godotenv.Overload — it lets

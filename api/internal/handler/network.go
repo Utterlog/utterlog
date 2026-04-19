@@ -581,7 +581,10 @@ func OAuthAuthorize(c *gin.Context) {
 		util.Error(c, 502, "NOT_CONNECTED", "无法连接 Utterlog 网络")
 		return
 	}
-	redirectURI := config.C.AppURL + "/api/v1/network/oauth/callback"
+	// Must be the public origin (https://yourdomain), not AppURL which
+	// in Docker resolves to the container loopback and makes the OAuth
+	// provider redirect the browser back to http://localhost:9260/…
+	redirectURI := config.PublicBaseURL() + "/api/v1/network/oauth/callback"
 	state := fmt.Sprintf("%d-%d", time.Now().UnixNano(), middleware.GetUserID(c))
 
 	authURL := fmt.Sprintf("%s/oauth/authorize?client_id=%s&redirect_uri=%s&state=%s&response_type=code&scope=profile",
@@ -610,7 +613,8 @@ func OAuthCallback(c *gin.Context) {
 		"code":          code,
 		"client_id":     siteID,
 		"fingerprint":   siteFingerprint(),
-		"redirect_uri":  config.C.AppURL + "/api/v1/network/oauth/callback",
+		// Same as OAuthAuthorize — must match the URI sent at authorize time.
+		"redirect_uri":  config.PublicBaseURL() + "/api/v1/network/oauth/callback",
 	}
 	resp, err := hubRequest("POST", "/oauth/token", payload)
 	if err != nil {

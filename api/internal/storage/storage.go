@@ -53,25 +53,8 @@ func Init() {
 	}
 	Default = &LocalStorage{
 		baseDir: "public/uploads",
-		baseURL: localPublicBase() + "/uploads",
+		baseURL: config.PublicBaseURL() + "/uploads",
 	}
-}
-
-// localPublicBase returns the public origin to use when building local
-// storage URLs. Prefers ul_options.site_url (what the user visits) over
-// config.C.AppURL (which in Docker is the internal loopback
-// `http://localhost:9260` and produces Mixed-Content failures when the
-// public site is served over HTTPS). Falls back to AppURL if the
-// option is missing or DB isn't initialized yet.
-func localPublicBase() string {
-	if config.DB != nil {
-		var v string
-		_ = config.DB.Get(&v, fmt.Sprintf("SELECT COALESCE(value,'') FROM %s WHERE name = $1", config.C.DBPrefix+"options"), "site_url")
-		if v = strings.TrimRight(strings.TrimSpace(v), "/"); v != "" {
-			return v
-		}
-	}
-	return config.C.AppURL
 }
 
 func applyOptionsOverride() {
