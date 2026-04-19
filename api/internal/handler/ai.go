@@ -975,6 +975,10 @@ func callAI(prompt string, maxTokens int) string {
 			return content
 		}
 		attemptErrs = append(attemptErrs, fmt.Sprintf("[%s] %s", p.Name, errStr))
+		// stdout log — so the operator can `docker logs` and see exactly
+		// which provider failed with what reason, without having to poll
+		// the batch-status endpoint at just the right millisecond.
+		fmt.Printf("[ai] provider=%q model=%q failed: %s\n", p.Name, p.Model, errStr)
 	}
 	aiLastError = strings.Join(attemptErrs, " · ")
 	return ""
