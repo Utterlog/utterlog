@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { Modal } from '@/components/ui/modal';
@@ -57,6 +57,8 @@ export default function SyncSitesPanel() {
   const [createForm, setCreateForm] = useState({ label: '', source_url: '' });
   const [created, setCreated] = useState<CreatedToken | null>(null);
   const [copiedField, setCopiedField] = useState('');
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function loadSites() {
     try {
@@ -85,6 +87,50 @@ export default function SyncSitesPanel() {
   useEffect(() => {
     refreshAll();
   }, []);
+
+  // Auto-poll while any job is running/processing. Also tick a local
+  // clock so "elapsed time" displays update every second without
+  // hitting the backend.
+  useEffect(() => {
+    const hasActiveJob = jobs.some((j) => j.status === 'running' || j.status === 'processing');
+    if (hasActiveJob && !pollRef.current) {
+      pollRef.current = setInterval(() => {
+        loadJobs();
+        setNow(Math.floor(Date.now() / 1000));
+      }, 3000);
+    } else if (!hasActiveJob && pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    return () => {
+      if (pollRef.current && !hasActiveJob) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [jobs]);
+
+  // Local "elapsed time" ticker — updates every second while there's
+  // an active job so the UI feels alive even between polls.
+  useEffect(() => {
+    const hasActiveJob = jobs.some((j) => j.status === 'running' || j.status === 'processing');
+    if (!hasActiveJob) return;
+    const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [jobs]);
+
+  function fmtElapsed(startedAt: number) {
+    if (!startedAt) return '';
+    const s = Math.max(0, now - startedAt);
+    const mm = Math.floor(s / 60);
+    const ss = s % 60;
+    return `${mm}:${ss.toString().padStart(2, '0')}`;
+  }
+
+  function mediaPercent(j: SyncJob) {
+    if (!j.media_total) return 0;
+    return Math.round((j.media_done / j.media_total) * 100);
+  }
 
   async function submitCreate() {
     if (!createForm.label.trim()) {
@@ -226,6 +272,61 @@ export default function SyncSitesPanel() {
           </table>
         )}
       </div>
+
+      {/* Active jobs — big progress cards for running/processing jobs */}
+      {jobs.filter((j) => j.status === 'running' || j.status === 'processing').map((j) => (
+        <div key={'active-' + j.job_id} style={{
+          border: '2px solid var(--color-primary)', background: 'var(--color-primary-soft, #E6EEFB)',
+          padding: '16px 20px', marginBottom: 16,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600, color: 'var(--color-primary)' }}>
+              <i className="fa-solid fa-circle-notch fa-spin" />
+              任务进行中
+              <span style={{ fontSize: 11, color: 'var(--color-text-dim)', fontFamily: 'ui-monospace,monospace', fontWeight: 400 }}>
+                {(j.job_id || '').slice(0, 16)}…
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>
+              已运行 <b style={{ fontFamily: 'ui-monospace,monospace' }}>{fmtElapsed(j.started_at)}</b>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 12, color: 'var(--color-text)', marginBottom: 10 }}>
+            <b>当前阶段：</b> {stageLabel(j.stage)}
+          </div>
+
+          {/* Media progress bar */}
+          {j.media_total > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>
+                <span>媒体文件下载</span>
+                <span style={{ fontFamily: 'ui-monospace,monospace' }}>{j.media_done} / {j.media_total} ({mediaPercent(j)}%)</span>
+              </div>
+              <div style={{ height: 6, background: 'var(--color-surface,#fff)', border: '1px solid var(--color-border)' }}>
+                <div style={{
+                  width: mediaPercent(j) + '%',
+                  height: '100%',
+                  background: 'var(--color-primary)',
+                  transition: 'width 0.4s ease',
+                }} />
+              </div>
+            </div>
+          )}
+
+          {/* Posts rewritten */}
+          {j.posts_rewritten > 0 && (
+            <div style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>
+              <i className="fa-solid fa-pen-to-square" style={{ marginRight: 4 }} />
+              已改写 <b style={{ fontFamily: 'ui-monospace,monospace', color: 'var(--color-text)' }}>{j.posts_rewritten}</b> 篇文章的链接
+            </div>
+          )}
+
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 8 }}>
+            自动刷新中 · 每 3 秒 · 完成后会自动停止
+          </div>
+        </div>
+      ))}
 
       {/* Job history */}
       {jobs.length > 0 && (
