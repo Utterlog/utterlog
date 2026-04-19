@@ -185,19 +185,23 @@ export default function SyncSitesPanel() {
               </tr>
             </thead>
             <tbody>
-              {sites.map((s) => (
-                <tr key={s.site_uuid} style={{ borderTop: '1px solid var(--color-border)' }}>
+              {sites.map((s, idx) => {
+                const uuid = s.site_uuid || '';
+                return (
+                <tr key={uuid || 'row-' + idx} style={{ borderTop: '1px solid var(--color-border)' }}>
                   <td style={{ padding: '10px 14px', fontWeight: 500 }}>{s.label || '(未命名)'}</td>
                   <td style={{ padding: '10px 14px', fontFamily: 'ui-monospace,monospace', fontSize: 11 }}>
-                    {s.site_uuid.slice(0, 16)}…
-                    <button
-                      type="button"
-                      onClick={() => copy(s.site_uuid, 's-' + s.site_uuid)}
-                      title="复制完整 UUID"
-                      style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}
-                    >
-                      <i className={`fa-solid ${copiedField === 's-' + s.site_uuid ? 'fa-check' : 'fa-copy'}`} style={{ fontSize: 11 }} />
-                    </button>
+                    {uuid ? uuid.slice(0, 16) + '…' : <span style={{ color: 'var(--color-text-muted)' }}>(无 UUID)</span>}
+                    {uuid && (
+                      <button
+                        type="button"
+                        onClick={() => copy(uuid, 's-' + uuid)}
+                        title="复制完整 UUID"
+                        style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}
+                      >
+                        <i className={`fa-solid ${copiedField === 's-' + uuid ? 'fa-check' : 'fa-copy'}`} style={{ fontSize: 11 }} />
+                      </button>
+                    )}
                   </td>
                   <td style={{ padding: '10px 14px', color: 'var(--color-text-dim)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.source_url || '—'}
@@ -216,7 +220,8 @@ export default function SyncSitesPanel() {
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -241,10 +246,12 @@ export default function SyncSitesPanel() {
               </tr>
             </thead>
             <tbody>
-              {jobs.map((j) => (
-                <tr key={j.job_id} style={{ borderTop: '1px solid var(--color-border)' }}>
+              {jobs.map((j, idx) => {
+                const jid = j.job_id || '';
+                return (
+                <tr key={jid || 'job-' + idx} style={{ borderTop: '1px solid var(--color-border)' }}>
                   <td style={{ padding: '8px 14px', fontFamily: 'ui-monospace,monospace', fontSize: 10 }}>
-                    {j.job_id.slice(0, 16)}…
+                    {jid ? jid.slice(0, 16) + '…' : '—'}
                   </td>
                   <td style={{ padding: '8px 14px' }}>
                     <span style={{
@@ -262,7 +269,8 @@ export default function SyncSitesPanel() {
                   <td style={{ padding: '8px 14px', textAlign: 'right', fontFamily: 'ui-monospace,monospace' }}>{j.posts_rewritten}</td>
                   <td style={{ padding: '8px 14px', color: 'var(--color-text-dim)', fontSize: 11 }}>{fmtTime(j.started_at)}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
           <div style={{ padding: '8px 14px', textAlign: 'right', background: 'var(--color-bg-soft, #fafafa)' }}>

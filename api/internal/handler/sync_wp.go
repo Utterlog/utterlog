@@ -76,15 +76,15 @@ func authSyncRequest(c *gin.Context, env syncAuthEnvelope) (*syncSite, bool) {
 }
 
 type syncSite struct {
-	ID         int    `db:"id"`
-	SiteUUID   string `db:"site_uuid"`
-	Label      string `db:"label"`
-	SourceURL  string `db:"source_url"`
-	TokenHash  string `db:"token_hash"`
-	Disabled   bool   `db:"disabled"`
-	LastSeenAt int64  `db:"last_seen_at"`
-	CreatedAt  int64  `db:"created_at"`
-	UpdatedAt  int64  `db:"updated_at"`
+	ID         int    `db:"id" json:"id"`
+	SiteUUID   string `db:"site_uuid" json:"site_uuid"`
+	Label      string `db:"label" json:"label"`
+	SourceURL  string `db:"source_url" json:"source_url"`
+	TokenHash  string `db:"token_hash" json:"-"` // never expose to client
+	Disabled   bool   `db:"disabled" json:"disabled"`
+	LastSeenAt int64  `db:"last_seen_at" json:"last_seen_at"`
+	CreatedAt  int64  `db:"created_at" json:"created_at"`
+	UpdatedAt  int64  `db:"updated_at" json:"updated_at"`
 }
 
 // ---------------- /ping ----------------
@@ -432,7 +432,7 @@ func AdminSyncSiteCreate(c *gin.Context) {
 func AdminSyncSiteList(c *gin.Context) {
 	rows := []struct {
 		syncSite
-		RecentJobs int `db:"recent_jobs"`
+		RecentJobs int `db:"recent_jobs" json:"recent_jobs"`
 	}{}
 	config.DB.Select(&rows, fmt.Sprintf(`
 		SELECT s.*, COALESCE((SELECT COUNT(*) FROM %s j WHERE j.site_uuid = s.site_uuid), 0) AS recent_jobs
