@@ -119,9 +119,11 @@ export const commentsApi = {
   reply: (id: number, content: string) => api.post(`/comments/${id}/reply`, { content }),
 };
 
-// Links API
+// Links API — raise per_page so the admin list shows the full set, not
+// just the generic 20-row page. Friendship-link counts in the hundreds
+// are common post-migration.
 export const linksApi = {
-  list: () => api.get('/links'),
+  list: () => api.get('/links?per_page=500'),
   create: (data: any) => api.post('/links', data),
   update: (id: number, data: any) => api.put(`/links/${id}`, data),
   delete: (id: number) => api.delete(`/links/${id}`),
