@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui';
 
 interface SyncSite {
   site_uuid: string;
@@ -191,18 +192,9 @@ export default function SyncSitesPanel() {
           <div style={{ fontSize: 13, fontWeight: 600 }}>
             已授权站点 <span style={{ color: 'var(--color-text-muted)', fontWeight: 400, marginLeft: 6 }}>({sites.length})</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            style={{
-              height: 32, padding: '0 14px', fontSize: 13, fontWeight: 500,
-              background: 'var(--color-primary)', color: '#fff', border: 'none',
-              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
-              fontFamily: 'inherit',
-            }}
-          >
-            <i className="fa-solid fa-plus" /> 新建授权
-          </button>
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <i className="fa-solid fa-plus" style={{ marginRight: 6 }} /> 新建授权
+          </Button>
         </div>
 
         {loading ? (
@@ -409,12 +401,10 @@ export default function SyncSitesPanel() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <button type="button" onClick={() => setCreateOpen(false)} style={{ height: 38, padding: '0 18px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
-              取消
-            </button>
-            <button type="button" onClick={submitCreate} style={{ height: 38, padding: '0 18px', background: 'var(--color-primary)', color: '#fff', border: '1px solid var(--color-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <Button variant="secondary" onClick={() => setCreateOpen(false)}>取消</Button>
+            <Button onClick={submitCreate}>
               <i className="fa-solid fa-key" style={{ marginRight: 6 }} /> 生成 UUID + Token
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -472,22 +462,19 @@ export default function SyncSitesPanel() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => {
                   copy(
                     `Utterlog URL: ${window.location.origin}\nSite UUID: ${created.site_uuid}\nSync Token: ${created.token}`,
                     'all'
                   );
                 }}
-                style={{ height: 38, padding: '0 18px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 <i className={`fa-solid ${copiedField === 'all' ? 'fa-check' : 'fa-copy'}`} style={{ marginRight: 6 }} />
                 {copiedField === 'all' ? '已复制全部' : '复制三行配置'}
-              </button>
-              <button type="button" onClick={() => setCreated(null)} style={{ height: 38, padding: '0 18px', background: 'var(--color-primary)', color: '#fff', border: '1px solid var(--color-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                我已保存，关闭
-              </button>
+              </Button>
+              <Button onClick={() => setCreated(null)}>我已保存，关闭</Button>
             </div>
           </div>
         </Modal>

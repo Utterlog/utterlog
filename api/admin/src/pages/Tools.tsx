@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui';
 import SyncSitesPanel from '@/components/SyncSitesPanel';
+import RebuildStatsPanel from '@/components/RebuildStatsPanel';
 
 export default function ToolsPage() {
   const [activeTab, setActiveTab] = useState<'import' | 'backup' | 'wp-sync'>('import');
@@ -180,7 +181,10 @@ export default function ToolsPage() {
 
       {/* ==================== WordPress 同步 ==================== */}
       {activeTab === 'wp-sync' && (
-        <SyncSitesPanel />
+        <>
+          <SyncSitesPanel />
+          <RebuildStatsPanel />
+        </>
       )}
 
       {/* ==================== 备份恢复 ==================== */}

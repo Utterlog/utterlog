@@ -7,7 +7,6 @@ import api from '@/lib/api';
 import { useForm } from 'react-hook-form';
 import { FormSectionC, FormRowInputC, FormRowTextareaC } from '@/components/form/FormC';
 import SystemUpdatePanel from '@/components/SystemUpdatePanel';
-import RebuildStatsPanel from '@/components/RebuildStatsPanel';
 
 // Shared style constants
 const cardStyle = { padding: '28px', marginBottom: '20px' } as const;
@@ -1112,7 +1111,6 @@ export default function SettingsPage() {
                 有新版本时点「一键升级」即可。升级过程保留所有数据、配置和用户上传。
               </p>
               <SystemUpdatePanel />
-              <RebuildStatsPanel />
               <div style={{ marginTop: 24, padding: '14px 18px', background: 'var(--color-bg-soft, #fafafa)', border: '1px solid var(--color-border)', fontSize: 12, color: 'var(--color-text-dim)', lineHeight: 1.8 }}>
                 <div style={{ fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>
                   <i className="fa-regular fa-circle-info" style={{ marginRight: 6 }} />

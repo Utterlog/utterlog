@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api from '@/lib/api';
+import { Button } from '@/components/ui';
 
 // Post-sync / post-restore utility. Recomputes denormalized counters
 // Utterlog caches on content rows: ul_metas.count, ul_posts.comment_count,
@@ -38,15 +39,10 @@ export default function RebuildStatsPanel() {
         从评论、关系表实时重算每篇文章的评论数、每个分类/标签的引用数、每篇文章的字数。
         WordPress 导入后、手动导入、或发现数字与实际对不上时，点一下。
       </p>
-      <button
-        type="button"
-        className="btn"
-        onClick={run}
-        disabled={busy}
-        style={{ padding: '8px 14px', fontSize: 13 }}
-      >
+      <Button size="sm" onClick={run} loading={busy} disabled={busy}>
+        <i className="fa-solid fa-arrows-rotate" style={{ marginRight: 6 }} />
         {busy ? '重建中…' : '立即重建'}
-      </button>
+      </Button>
       {result && (
         <div style={{ marginTop: 12, fontSize: 12, color: 'var(--color-text-dim)', lineHeight: 1.7 }}>
           <div>分类/标签数量: 更新 {result.meta_count_updated ?? 0} 行</div>
