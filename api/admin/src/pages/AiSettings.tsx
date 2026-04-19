@@ -185,6 +185,15 @@ export default function AiSettingsPage() {
     }
   };
 
+  const stopBatch = async (type: 'questions' | 'summary' | 'all') => {
+    try {
+      await api.post(`/ai/batch-stop?type=${type}`);
+      toast.success('已请求停止，等当前请求完成后退出');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error?.message || '停止失败');
+    }
+  };
+
   // Save all AI config options
   const saveConfig = async () => {
     setSavingConfig(true);
@@ -607,6 +616,11 @@ export default function AiSettingsPage() {
                     <i className="fa-solid fa-bolt" style={{ fontSize: '13px', marginRight: 8 }} />
                     {batchJobs.all?.running ? '生成中…' : '一键生成全部'}
                   </Button>
+                  {batchJobs.all?.running && (
+                    <Button variant="secondary" onClick={() => stopBatch('all')} style={{ padding: '0 18px' }}>
+                      <i className="fa-solid fa-stop" style={{ fontSize: '12px', marginRight: 6 }} /> 停止
+                    </Button>
+                  )}
                   <Button
                     variant="danger"
                     disabled={batchJobs.all?.running}
@@ -646,14 +660,21 @@ export default function AiSettingsPage() {
                   为没有 AI 摘要的已发布文章生成摘要，用于文章预览、SEO description。
                 </p>
                 <BatchProgress job={batchJobs.summary} />
-                <Button
-                  onClick={() => startBatch('summary', '/ai/batch-summary', 'AI 摘要')}
-                  loading={batchLoading.summary || batchJobs.summary?.running}
-                  disabled={batchJobs.summary?.running}
-                  variant="secondary"
-                >
-                  {batchJobs.summary?.running ? '生成中…' : '生成摘要'}
-                </Button>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <Button
+                    onClick={() => startBatch('summary', '/ai/batch-summary', 'AI 摘要')}
+                    loading={batchLoading.summary || batchJobs.summary?.running}
+                    disabled={batchJobs.summary?.running}
+                    variant="secondary"
+                  >
+                    {batchJobs.summary?.running ? '生成中…' : '生成摘要'}
+                  </Button>
+                  {batchJobs.summary?.running && (
+                    <Button variant="danger" onClick={() => stopBatch('summary')}>
+                      <i className="fa-solid fa-stop" style={{ fontSize: '12px', marginRight: 6 }} /> 停止
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -674,14 +695,21 @@ export default function AiSettingsPage() {
                   为没有陪读问题的文章生成 3 个读者可能问的问题（用于 AI 陪读面板）。
                 </p>
                 <BatchProgress job={batchJobs.questions} />
-                <Button
-                  onClick={() => startBatch('questions', '/ai/batch-questions', '陪读问题')}
-                  loading={batchLoading.questions || batchJobs.questions?.running}
-                  disabled={batchJobs.questions?.running}
-                  variant="secondary"
-                >
-                  {batchJobs.questions?.running ? '生成中…' : '生成问题'}
-                </Button>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <Button
+                    onClick={() => startBatch('questions', '/ai/batch-questions', '陪读问题')}
+                    loading={batchLoading.questions || batchJobs.questions?.running}
+                    disabled={batchJobs.questions?.running}
+                    variant="secondary"
+                  >
+                    {batchJobs.questions?.running ? '生成中…' : '生成问题'}
+                  </Button>
+                  {batchJobs.questions?.running && (
+                    <Button variant="danger" onClick={() => stopBatch('questions')}>
+                      <i className="fa-solid fa-stop" style={{ fontSize: '12px', marginRight: 6 }} /> 停止
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

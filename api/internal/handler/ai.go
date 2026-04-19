@@ -608,6 +608,27 @@ type AIBatchJob struct {
 	StartedAt int64  `json:"started_at"`
 	FinishAt  int64  `json:"finished_at"`
 	LastError string `json:"last_error,omitempty"`
+	// Cancel is set by AIBatchStop. The batch goroutine checks this
+	// at every iteration and exits cleanly — no racing/leaking.
+	Cancel bool `json:"-"`
+}
+
+// AIBatchStop — POST /api/v1/ai/batch-stop?type=questions|summary|all
+// Flips the cancel flag on a running job so its goroutine bails out at
+// the next iteration. Does not kill in-flight HTTP requests; worst case
+// we wait up to one (provider timeout + 800ms) before exit.
+func AIBatchStop(c *gin.Context) {
+	t := c.DefaultQuery("type", "all")
+	aiBatchState.Lock()
+	j := aiBatchState.jobs[t]
+	if j == nil || !j.Running {
+		aiBatchState.Unlock()
+		util.Success(c, gin.H{"stopped": false, "note": "无正在运行的任务"})
+		return
+	}
+	j.Cancel = true
+	aiBatchState.Unlock()
+	util.Success(c, gin.H{"stopped": true, "type": t})
 }
 
 // hasActiveAITextProvider returns true if there's at least one active
@@ -662,6 +683,12 @@ func AIBatchQuestions(c *gin.Context) {
 	// Async: run in background so the API returns immediately
 	go func() {
 		for _, id := range ids {
+			aiBatchState.Lock()
+			cancel := job.Cancel
+			aiBatchState.Unlock()
+			if cancel {
+				break
+			}
 			generateAIQuestions(id)
 			aiBatchState.Lock()
 			// Verify if it actually got written
@@ -735,6 +762,12 @@ func AIBatchSummary(c *gin.Context) {
 
 	go func() {
 		for _, id := range ids {
+			aiBatchState.Lock()
+			cancel := job.Cancel
+			aiBatchState.Unlock()
+			if cancel {
+				break
+			}
 			generateAISummary(id)
 			aiBatchState.Lock()
 			var s string
@@ -812,6 +845,12 @@ func AIBatchAll(c *gin.Context) {
 
 	go func() {
 		for _, cand := range cands {
+			aiBatchState.Lock()
+			cancel := job.Cancel
+			aiBatchState.Unlock()
+			if cancel {
+				break
+			}
 			if cand.NeedQ {
 				generateAIQuestions(cand.ID)
 				aiBatchState.Lock()
