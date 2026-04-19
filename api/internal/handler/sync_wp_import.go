@@ -199,21 +199,58 @@ func importComments(jobID, siteUUID string, items []map[string]interface{}) (int
 	t := config.T("comments")
 	now := time.Now().Unix()
 	imported := 0
+	skipNoID, skipNoPostSrc, skipEmpty, skipNoPostMap := 0, 0, 0, 0
+	var firstOrphanSrc int64
+	var sampleMissingPostIDs []int64
+
+	defer func() {
+		if len(items) > 0 {
+			fmt.Printf("[sync/comments job=%s] received=%d imported=%d skip(no_id=%d no_post_src=%d empty=%d no_post_map=%d) first_orphan_src=%d sample_missing_post_ids=%v\n",
+				jobID, len(items), imported, skipNoID, skipNoPostSrc, skipEmpty, skipNoPostMap, firstOrphanSrc, sampleMissingPostIDs)
+		}
+	}()
 
 	for _, item := range items {
 		srcID := itemInt64(item, "source_id")
 		srcPostID := itemInt64(item, "source_post_id")
 		authorName := itemStr(item, "author_name")
 		content := itemStr(item, "content")
-		if srcID == 0 || srcPostID == 0 || content == "" {
+		if srcID == 0 {
+			skipNoID++
+			continue
+		}
+		if srcPostID == 0 {
+			skipNoPostSrc++
+			continue
+		}
+		if content == "" {
+			skipEmpty++
 			continue
 		}
 
 		postID, ok := syncMapGet(jobID, "post", srcPostID)
 		if !ok {
-			// Parent post wasn't imported (maybe filtered or failed) —
-			// skip the comment.
-			continue
+			// Fallback: look up in ul_posts by source provenance — the
+			// parent post may have been imported in a previous job.
+			var existingID int
+			_ = config.DB.Get(&existingID, fmt.Sprintf(`
+				SELECT id FROM %s
+				WHERE source_site_uuid=$1 AND source_type='wordpress' AND source_id=$2
+				LIMIT 1
+			`, config.T("posts")), siteUUID, srcPostID)
+			if existingID > 0 {
+				postID = existingID
+				syncMapSet(jobID, "post", srcPostID, existingID)
+			} else {
+				skipNoPostMap++
+				if firstOrphanSrc == 0 {
+					firstOrphanSrc = srcID
+				}
+				if len(sampleMissingPostIDs) < 10 {
+					sampleMissingPostIDs = append(sampleMissingPostIDs, srcPostID)
+				}
+				continue
+			}
 		}
 
 		var parentID int
