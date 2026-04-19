@@ -153,6 +153,32 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
+// Cross-tab sync: web/ and admin/ are served from the same origin and
+// share this localStorage key. Without this listener, logging out on
+// one tab leaves the other tab's in-memory Zustand state logged in
+// until the user manually refreshes. `storage` only fires on OTHER
+// tabs when the current tab writes localStorage, so there's no loop.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'auth-storage') return;
+    try {
+      const parsed = e.newValue ? JSON.parse(e.newValue)?.state : null;
+      if (!parsed || !parsed.accessToken) {
+        useAuthStore.setState({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+      } else {
+        useAuthStore.setState({
+          user: parsed.user ?? null,
+          accessToken: parsed.accessToken ?? null,
+          refreshToken: parsed.refreshToken ?? null,
+          isAuthenticated: !!parsed.isAuthenticated,
+        });
+      }
+    } catch {
+      useAuthStore.setState({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+    }
+  });
+}
+
 // Theme state
 export type Theme = 'steel' | 'blue' | 'green' | 'mint' | 'claude' | 'ocean' | 'dark';
 

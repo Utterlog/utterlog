@@ -153,6 +153,30 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
+// Cross-tab sync with the admin SPA (same origin, same localStorage key).
+// Without this, logging out here leaves other tabs' in-memory state
+// logged in until manual refresh. `storage` fires only on OTHER tabs.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'auth-storage') return;
+    try {
+      const parsed = e.newValue ? JSON.parse(e.newValue)?.state : null;
+      if (!parsed || !parsed.accessToken) {
+        useAuthStore.setState({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+      } else {
+        useAuthStore.setState({
+          user: parsed.user ?? null,
+          accessToken: parsed.accessToken ?? null,
+          refreshToken: parsed.refreshToken ?? null,
+          isAuthenticated: !!parsed.isAuthenticated,
+        });
+      }
+    } catch {
+      useAuthStore.setState({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+    }
+  });
+}
+
 // Theme state
 export type Theme = 'steel' | 'blue' | 'green' | 'mint' | 'claude' | 'ocean' | 'dark';
 
