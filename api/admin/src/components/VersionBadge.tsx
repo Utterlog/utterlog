@@ -38,12 +38,14 @@ export default function VersionBadge({ variant = 'compact' }: Props) {
   }, []);
 
   const current = info?.current.version || 'v1.0';
-  // Prefer the real release label (v1.0.2). Only fall back to commit
-  // SHA if the build was truly untagged (VERSION="dev"). The compact
-  // pill is narrow so version names over 10 chars get truncated.
-  const shortVer = current === 'dev' && info?.current.commit
-    ? info.current.commit.slice(0, 7)
-    : current.length > 10 ? current.slice(0, 10) : current;
+  // Always show the release label — never the raw commit SHA. If the
+  // build slipped out untagged (VERSION="dev"), prefer the latest known
+  // release from GitHub so the pill still looks like a version, not a
+  // hash. The compact pill is narrow, so long names get truncated.
+  const label = current === 'dev'
+    ? (info?.latest?.version || 'dev')
+    : current;
+  const shortVer = label.length > 10 ? label.slice(0, 10) : label;
   const hasUpdate = !!info?.update_available;
 
   if (variant === 'compact') {
