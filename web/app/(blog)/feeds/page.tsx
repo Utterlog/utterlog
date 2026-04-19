@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import api from '@/lib/api';
 
 interface FeedItem {
@@ -71,10 +71,18 @@ function getCardPositions(count: number) {
 export default function FeedsPage() {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  // After the first auto-load past page 1, subsequent page increments
+  // require an explicit button click so users who were on page 3 don't
+  // keep triggering fetches by scroll noise alone.
+  const [autoLoadExhausted, setAutoLoadExhausted] = useState(false);
   const [activeCard, setActiveCard] = useState<number | null>(null);
   const [topZ, setTopZ] = useState(100);
   const [cardZs, setCardZs] = useState<Record<number, number>>({});
   const [isMobile, setIsMobile] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -84,59 +92,79 @@ export default function FeedsPage() {
   }, []);
 
   useEffect(() => {
-    loadFeeds();
+    loadFeeds(1, true);
   }, []);
 
-  const loadFeeds = async () => {
-    setLoading(true);
+  // One-shot auto-load when the sentinel scrolls into view. After it
+  // fires, `autoLoadExhausted=true` and further loads need the button.
+  useEffect(() => {
+    if (autoLoadExhausted || !hasMore || loading || loadingMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setAutoLoadExhausted(true);
+          loadFeeds(page + 1, false);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [autoLoadExhausted, hasMore, loading, loadingMore, page]);
+
+  const loadFeeds = async (targetPage: number, reset: boolean) => {
+    if (reset) setLoading(true);
+    else setLoadingMore(true);
     try {
-      // Try Go backend feed-timeline first
-      const r: any = await api.get('/social/feed-timeline');
+      const r: any = await api.get(`/social/feed-timeline?page=${targetPage}`);
       const data = r.data || [];
-      if (data.length > 0) {
-        setItems(data.map((item: any) => ({
-          title: item.title,
-          link: item.link,
-          description: item.description,
-          pubDate: item.pub_date,
-          sourceName: item.site_name,
-          sourceUrl: item.site_url,
-        })));
-        setLoading(false);
-        return;
-      }
-    } catch {}
-
-    // Fallback: fetch from links RSS
-    try {
-      const linksRes: any = await api.get('/links');
-      const links = (linksRes.data || []).filter((l: any) => l.rss_url);
-
-      const allItems: FeedItem[] = [];
-      for (const link of links) {
+      const meta = r.meta || {};
+      const mapped: FeedItem[] = data.map((item: any) => ({
+        title: item.title,
+        link: item.link,
+        description: item.description,
+        pubDate: item.pub_date,
+        sourceName: item.site_name,
+        sourceUrl: item.site_url,
+      }));
+      setItems((prev) => (reset ? mapped : [...prev, ...mapped]));
+      setPage(targetPage);
+      setHasMore(!!meta.has_more);
+    } catch {
+      // Fallback — only on very first load, not on page-2+ errors.
+      if (reset) {
         try {
-          const proxyUrl = `/api/v1/rss/parse?url=${encodeURIComponent(link.rss_url)}`;
-          const resp: any = await api.get(proxyUrl);
-          if (resp.items) {
-            resp.items.forEach((item: any) => {
-              allItems.push({
-                title: item.title,
-                link: item.link,
-                description: item.description,
-                pubDate: item.pubDate || item.pub_date,
-                sourceName: link.name,
-                sourceUrl: link.url,
-              });
-            });
+          const linksRes: any = await api.get('/links');
+          const links = (linksRes.data || []).filter((l: any) => l.rss_url);
+          const allItems: FeedItem[] = [];
+          for (const link of links) {
+            try {
+              const proxyUrl = `/api/v1/rss/parse?url=${encodeURIComponent(link.rss_url)}`;
+              const resp: any = await api.get(proxyUrl);
+              if (resp.items) {
+                resp.items.forEach((item: any) => {
+                  allItems.push({
+                    title: item.title,
+                    link: item.link,
+                    description: item.description,
+                    pubDate: item.pubDate || item.pub_date,
+                    sourceName: link.name,
+                    sourceUrl: link.url,
+                  });
+                });
+              }
+            } catch {}
           }
+          allItems.sort((a, b) => new Date(b.pubDate || '').getTime() - new Date(a.pubDate || '').getTime());
+          setItems(allItems);
+          setHasMore(false);
         } catch {}
       }
-
-      allItems.sort((a, b) => new Date(b.pubDate || '').getTime() - new Date(a.pubDate || '').getTime());
-      setItems(allItems);
-    } catch {}
-
+    }
     setLoading(false);
+    setLoadingMore(false);
   };
 
   return (
@@ -316,6 +344,28 @@ export default function FeedsPage() {
           </div>
         );
       })()}
+
+      {/* Infinite-scroll sentinel (triggers one auto-load) + manual button */}
+      {items.length > 0 && hasMore && (
+        <div ref={sentinelRef} style={{ padding: '32px 0', textAlign: 'center' }}>
+          {loadingMore ? (
+            <span style={{ fontSize: '13px', color: '#888' }}>
+              <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 6 }} /> 加载中…
+            </span>
+          ) : autoLoadExhausted ? (
+            <button
+              onClick={() => loadFeeds(page + 1, false)}
+              style={{
+                padding: '10px 28px', fontSize: '13px', fontWeight: 500,
+                background: '#fff', color: '#0052D9', border: '1px solid #0052D9',
+                cursor: 'pointer',
+              }}
+            >
+              加载更多
+            </button>
+          ) : null}
+        </div>
+      )}
 
       </div>
     </div>

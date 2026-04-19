@@ -645,12 +645,17 @@ func parseRSSDate(s string, fallback int64) int64 {
 		return fallback
 	}
 	formats := []string{
-		time.RFC1123Z,                     // RFC 822 with numeric TZ
-		time.RFC1123,                      // RFC 822 with named TZ
+		time.RFC1123Z,                     // Mon, 02 Jan 2006 15:04:05 -0700
+		time.RFC1123,                      //  ...with named TZ (GMT/UTC)
+		time.RFC822Z,                      // Mon, 02 Jan 06 15:04 -0700  (2-digit year!)
+		time.RFC822,                       //  ...with named TZ
 		time.RFC3339,                      // Atom / modern
 		"2006-01-02T15:04:05Z07:00",       // Atom shorthand
 		"Mon, 2 Jan 2006 15:04:05 MST",    // lax RFC1123
 		"Mon, 2 Jan 2006 15:04:05 -0700",  // lax RFC1123Z
+		"Mon, _2 Jan 2006 15:04:05 -0700", // single-digit day variant
+		"Mon, 02 Jan 06 15:04:05 -0700",   // RFC822Z w/ seconds (seen in wpjam / 2-digit-year WP feeds)
+		"Mon, 02 Jan 06 15:04:05 MST",     //  ...named TZ
 		"2006-01-02 15:04:05",             // bare
 	}
 	for _, f := range formats {
