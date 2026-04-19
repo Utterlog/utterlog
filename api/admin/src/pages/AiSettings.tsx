@@ -601,8 +601,9 @@ export default function AiSettingsPage() {
                   onClick={() => startBatch('all', '/ai/batch-all', '任务')}
                   loading={batchLoading.all || batchJobs.all?.running}
                   disabled={batchJobs.all?.running}
+                  style={{ padding: '0 20px' }}
                 >
-                  <i className="fa-solid fa-bolt" style={{ fontSize: '13px' }} />
+                  <i className="fa-solid fa-bolt" style={{ fontSize: '13px', marginRight: 8 }} />
                   {batchJobs.all?.running ? '生成中…' : '一键生成全部'}
                 </Button>
               </div>

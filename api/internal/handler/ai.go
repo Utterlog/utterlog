@@ -610,10 +610,26 @@ type AIBatchJob struct {
 	LastError string `json:"last_error,omitempty"`
 }
 
+// hasActiveAITextProvider returns true if there's at least one active
+// provider with type='text' configured. Used to fail fast on batch
+// jobs — without this, users kick off a 28-post run that chugs through
+// every row writing "AI returned empty" as each request 404s at the
+// provider layer. One upfront check saves several minutes of pointless
+// rate-limited looping.
+func hasActiveAITextProvider() bool {
+	var count int
+	_ = config.DB.Get(&count, "SELECT COUNT(*) FROM "+config.T("ai_providers")+" WHERE type='text' AND is_active=true")
+	return count > 0
+}
+
 // AIBatchQuestions — POST /api/v1/ai/batch-questions
 // Starts an async background job that generates ai_questions for every
 // published post that doesn't have one cached yet. Rate-limited to ~1/sec.
 func AIBatchQuestions(c *gin.Context) {
+	if !hasActiveAITextProvider() {
+		util.Error(c, 400, "NO_AI_PROVIDER", "尚未配置 AI 服务商，请先在 AI 设置里添加并启用一个文本模型")
+		return
+	}
 	aiBatchState.Lock()
 	if j := aiBatchState.jobs["questions"]; j != nil && j.Running {
 		aiBatchState.Unlock()
@@ -686,6 +702,10 @@ func AIBatchStatus(c *gin.Context) {
 // AIBatchSummary — POST /api/v1/ai/batch-summary
 // Generate ai_summary for every published post that doesn't have one.
 func AIBatchSummary(c *gin.Context) {
+	if !hasActiveAITextProvider() {
+		util.Error(c, 400, "NO_AI_PROVIDER", "尚未配置 AI 服务商，请先在 AI 设置里添加并启用一个文本模型")
+		return
+	}
 	aiBatchState.Lock()
 	if j := aiBatchState.jobs["summary"]; j != nil && j.Running {
 		aiBatchState.Unlock()
@@ -737,6 +757,10 @@ func AIBatchSummary(c *gin.Context) {
 // One-click: generate both ai_questions AND ai_summary for posts missing them.
 // Runs two chained background jobs, tracked under key "all".
 func AIBatchAll(c *gin.Context) {
+	if !hasActiveAITextProvider() {
+		util.Error(c, 400, "NO_AI_PROVIDER", "尚未配置 AI 服务商，请先在 AI 设置里添加并启用一个文本模型")
+		return
+	}
 	aiBatchState.Lock()
 	if j := aiBatchState.jobs["all"]; j != nil && j.Running {
 		aiBatchState.Unlock()
