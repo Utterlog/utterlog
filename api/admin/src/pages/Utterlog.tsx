@@ -211,10 +211,21 @@ export default function UtterlogCenterPage() {
                 <a href="https://id.utterlog.com/profile" target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ fontSize: '12px', padding: '6px 14px', height: '32px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <i className="fa-regular fa-arrow-up-right-from-square" style={{ fontSize: '12px' }} /> ID 中心管理
                 </a>
-                <button type="button" className="btn btn-ghost text-dim" style={{ fontSize: '12px', padding: '6px 14px', height: '32px' }} onClick={async () => {
-                  if (!confirm('确定要解绑 Utterlog ID？解绑后头像、昵称将不再跨站同步。')) return;
-                  try { await networkApi.unbindUtterlogID(); setUtterlogBound(false); setUtterlogId(''); setUtterlogAvatar(''); toast.success('已解绑'); } catch { toast.error('解绑失败'); }
-                }}>解绑</button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  style={{ fontSize: '12px', padding: '6px 14px', height: '32px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  onClick={async () => {
+                    if (!confirm('确定要解绑 Utterlog ID？解绑后头像、昵称将不再跨站同步。')) return;
+                    try {
+                      await networkApi.unbindUtterlogID();
+                      setUtterlogBound(false); setUtterlogId(''); setUtterlogAvatar('');
+                      toast.success('已解绑');
+                    } catch { toast.error('解绑失败'); }
+                  }}
+                >
+                  <i className="fa-regular fa-link-slash" style={{ fontSize: '12px' }} /> 解绑
+                </button>
               </div>
             </div>
           ) : (
