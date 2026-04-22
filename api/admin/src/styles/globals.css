@@ -984,3 +984,76 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   from { opacity: 0; transform: translateX(20px); }
   to { opacity: 1; transform: translateX(0); }
 }
+
+/* ============================================================
+ * Changelog / release-notes rendering
+ * Shared by SystemUpdatePanel (System → 系统更新 tab) for both the
+ * latest-version body and each expanded release in 更新历史.
+ * Rendered HTML comes from renderChangelog() which handles **bold**,
+ * `code`, ```fences```, lists, headings, links.
+ * ============================================================ */
+.changelog-body h3,
+.changelog-body h4,
+.changelog-body h5,
+.changelog-body h6 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 16px 0 6px;
+}
+.changelog-body h3:first-child,
+.changelog-body h4:first-child,
+.changelog-body h5:first-child,
+.changelog-body h6:first-child {
+  margin-top: 0;
+}
+.changelog-body p {
+  margin: 6px 0;
+}
+.changelog-body ul {
+  margin: 8px 0 12px;
+  padding-left: 22px;
+  list-style: disc;
+}
+.changelog-body li {
+  margin: 3px 0;
+}
+.changelog-body strong {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.changelog-body em {
+  font-style: italic;
+}
+.changelog-body code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  background: var(--color-bg-soft, #f1f5f9);
+  padding: 1px 5px;
+  border: 1px solid var(--color-border);
+}
+.changelog-body pre {
+  margin: 10px 0 14px;
+  padding: 12px 14px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #0f172a;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.changelog-body pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  white-space: pre;
+}
+.changelog-body a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.changelog-body a:hover {
+  opacity: 0.8;
+}

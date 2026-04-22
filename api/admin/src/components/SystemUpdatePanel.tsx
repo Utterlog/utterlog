@@ -28,21 +28,79 @@ interface UpgradeStatus {
   log_tail: string;
 }
 
-// Simple markdown-lite renderer for GitHub release body: linebreaks +
-// bullets. Good enough for our changelog lines. HTML entities escaped
-// before mapping so there's no XSS risk from the release-notes body.
+// Markdown renderer for GitHub release bodies. Handles headings,
+// lists, paragraphs, inline code, fenced code blocks, bold/italic,
+// and [text](url) links. Mirrors the landing site's changelog
+// renderer so admin UI and utterlog.io/changelog show release notes
+// identically. XSS-safe: all user content flows through escapeHtml
+// before being re-decorated with inline/block markup.
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function renderChangelog(md: string): string {
   if (!md) return '';
-  const escaped = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return escaped
-    .split(/\n/)
-    .map((line) => {
-      if (/^\s*[-*]\s+/.test(line)) return `<li>${line.replace(/^\s*[-*]\s+/, '')}</li>`;
-      if (/^#+\s+/.test(line)) return `<h4>${line.replace(/^#+\s+/, '')}</h4>`;
-      if (!line.trim()) return '<br/>';
-      return `<p>${line}</p>`;
-    })
-    .join('');
+  const rawLines = md.split('\n');
+  const out: string[] = [];
+  let inList = false;
+  let inCode = false;
+  let codeLang = '';
+  const codeBuf: string[] = [];
+
+  const flushList = () => {
+    if (inList) { out.push('</ul>'); inList = false; }
+  };
+  const flushCode = () => {
+    const langClass = codeLang ? ` class="language-${escapeHtml(codeLang)}"` : '';
+    out.push(`<pre><code${langClass}>${escapeHtml(codeBuf.join('\n'))}</code></pre>`);
+    codeBuf.length = 0;
+    codeLang = '';
+    inCode = false;
+  };
+
+  // Stash inline code into placeholders so ** inside `code` isn't
+  // mistaken for bold; restore at the end.
+  const inlineFmt = (s: string) => {
+    const codeStash: string[] = [];
+    let t = escapeHtml(s).replace(/`([^`]+)`/g, (_, c) => {
+      codeStash.push(`<code>${c}</code>`);
+      return `\u0000${codeStash.length - 1}\u0000`;
+    });
+    t = t
+      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;!?]|$)/g, '$1<em>$2</em>')
+      .replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,;!?]|$)/g, '$1<em>$2</em>')
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/\u0000(\d+)\u0000/g, (_, n) => codeStash[Number(n)]);
+    return t;
+  };
+
+  for (const rawLine of rawLines) {
+    const fence = rawLine.match(/^```\s*([\w-]*)\s*$/);
+    if (fence) {
+      if (inCode) { flushCode(); }
+      else { flushList(); inCode = true; codeLang = fence[1] || ''; }
+      continue;
+    }
+    if (inCode) { codeBuf.push(rawLine); continue; }
+
+    if (/^\s*[-*]\s+/.test(rawLine)) {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push(`<li>${inlineFmt(rawLine.replace(/^\s*[-*]\s+/, ''))}</li>`);
+      continue;
+    }
+
+    flushList();
+    if (/^#+\s+/.test(rawLine)) {
+      const level = Math.min(rawLine.match(/^#+/)![0].length + 2, 6);
+      out.push(`<h${level}>${inlineFmt(rawLine.replace(/^#+\s+/, ''))}</h${level}>`);
+    } else if (rawLine.trim()) {
+      out.push(`<p>${inlineFmt(rawLine)}</p>`);
+    }
+  }
+  if (inCode) flushCode();
+  flushList();
+  return out.join('\n');
 }
 
 // The full version + upgrade UI. Renders inline — meant to be dropped
@@ -284,6 +342,7 @@ export default function SystemUpdatePanel() {
             更新内容 — {info.latest.name || info.latest.version}
           </h3>
           <div
+            className="changelog-body"
             style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--color-text)' }}
             dangerouslySetInnerHTML={{ __html: renderChangelog(info.latest.body) }}
           />
@@ -408,6 +467,7 @@ export default function SystemUpdatePanel() {
                   {isOpen && (
                     <div style={{ padding: '2px 20px 18px 42px', borderTop: '1px dashed var(--color-border)' }}>
                       <div
+                        className="changelog-body"
                         style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--color-text)' }}
                         dangerouslySetInnerHTML={{ __html: renderChangelog(rel.body) || '<p style="color:var(--color-text-muted);font-size:12px">（无更新说明）</p>' }}
                       />
