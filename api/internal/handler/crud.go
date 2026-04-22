@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"os"
 	"os/exec"
@@ -22,11 +23,45 @@ import (
 
 // Generic CRUD handlers for simple tables
 
+// Tables whose string columns should be HTML-unescaped on read.
+// Typecho / WordPress exports store user-entered titles/names with
+// their own entity encoding (Kevin&#039;s instead of Kevin's), which
+// reads fine in those platforms because their themes decode before
+// render but renders as literal garbage text in a React JSX {value}.
+// Rather than push the fix to every theme + the admin SPA, clean on
+// the API boundary so everyone downstream sees real Unicode.
+var htmlUnescapeTables = map[string][]string{
+	"links": {"name", "description", "group_name"},
+}
+
+// unescapeRow mutates string fields in-place for the given table's
+// whitelist. A no-op when the table isn't listed or fields are already
+// clean (html.UnescapeString returns the input unchanged for text
+// without entities).
+func unescapeRow(table string, row map[string]interface{}) {
+	fields, ok := htmlUnescapeTables[table]
+	if !ok {
+		return
+	}
+	for _, f := range fields {
+		if v, has := row[f]; has {
+			if s, isStr := v.(string); isStr {
+				row[f] = html.UnescapeString(s)
+			}
+		}
+	}
+}
+
 func GenericList(table string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 		perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "20"))
 		items, total, _ := model.GenericList(table, page, perPage, "")
+		if _, ok := htmlUnescapeTables[table]; ok {
+			for _, row := range items {
+				unescapeRow(table, row)
+			}
+		}
 		util.Paginate(c, items, total, page, perPage)
 	}
 }
