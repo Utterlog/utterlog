@@ -174,8 +174,20 @@ func PostAuthor(authorID int) *UserBrief {
 func FormatPost(p *Post, detail bool) PostWithRelations {
 	pr := PostWithRelations{Post: *p}
 	if !detail {
+		// Consolidate to a single display excerpt for list views
+		// (homepage cards, archive, category/tag listings). Priority:
+		//   ai_summary → hand-written excerpt → derived from content.
+		// Themes can now read `excerpt` as the single source of truth
+		// without having to branch on ai_summary themselves. Detail
+		// view (!detail=false) keeps the raw excerpt so the admin edit
+		// form shows what the author actually typed, separate from the
+		// AI-generated summary.
+		if p.AISummary != nil && strings.TrimSpace(*p.AISummary) != "" {
+			s := strings.TrimSpace(*p.AISummary)
+			pr.Excerpt = &s
+		}
 		// Auto-generate excerpt from content if not set
-		if (p.Excerpt == nil || *p.Excerpt == "") && p.Content != nil && *p.Content != "" {
+		if (pr.Excerpt == nil || *pr.Excerpt == "") && p.Content != nil && *p.Content != "" {
 			text := *p.Content
 			// Strip markdown: code blocks, images, links, headers, bold, etc.
 			for {

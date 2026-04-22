@@ -144,9 +144,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Wide pages — no max-width cap but still scrollable (unlike fullWidth
   // which hides overflow). Useful for dense list tables whose rightmost
   // columns (操作 icons, RSS URL etc.) get clipped at 1280px.
+  //
+  // /posts has nested tab routes (分类 / 标签) that share the Posts
+  // toolbar — include them so the table width doesn't jump between
+  // tabs. Same story for any future /posts/* tabs.
   const wide =
     pathname === '/links' ||
     pathname === '/posts' ||
+    pathname.startsWith('/posts/categories') ||
+    pathname.startsWith('/posts/tags') ||
     pathname === '/pages' ||
     pathname === '/comments';
 

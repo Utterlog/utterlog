@@ -30,7 +30,7 @@ COPY --from=admin-builder /app/admin/dist ./admin/dist
 # Build: stripped (-s -w), no symbols, static CGO disabled where possible.
 # (webp needs CGO so we keep it on but strip.) Inject version + build time
 # into the handler package so /api/v1/admin/system/version can surface them.
-ARG VERSION=v1.0.10
+ARG VERSION=v1.0.11
 ARG BUILD_COMMIT=unknown
 ARG BUILD_TIME=unknown
 RUN CGO_ENABLED=1 go build \

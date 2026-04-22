@@ -288,13 +288,18 @@ func ImportWordPressHandler(c *gin.Context) {
 		// Allow comments
 		allowComment := p.CommentStatus == "open"
 
-		// Insert post
+		// Insert post — fill published_at too, not just created_at. The
+		// admin post-edit page surfaces published_at as the "发布时间"
+		// field and some themes display it on the inner page; leaving
+		// it NULL produced jarring gaps in the UI for every WP-XML
+		// imported post.
+		publishedAtTS := time.Unix(createdAt, 0).UTC()
 		var newID int
 		err := config.DB.QueryRow(fmt.Sprintf(
-			"INSERT INTO %s (title, slug, content, excerpt, type, status, author_id, allow_comment, pinned, view_count, comment_count, created_at, updated_at) VALUES ($1,$2,$3,$4,'post',$5,1,$6,false,$7,0,$8,$9) RETURNING id",
+			"INSERT INTO %s (title, slug, content, excerpt, type, status, author_id, allow_comment, pinned, view_count, comment_count, created_at, updated_at, published_at) VALUES ($1,$2,$3,$4,'post',$5,1,$6,false,$7,0,$8,$9,$10) RETURNING id",
 			config.T("posts")),
 			p.Title, slug, nilIfEmpty(contentMD), nilIfEmpty(excerpt),
-			status, allowComment, viewCount, createdAt, updatedAt,
+			status, allowComment, viewCount, createdAt, updatedAt, publishedAtTS,
 		).Scan(&newID)
 		if err != nil {
 			continue

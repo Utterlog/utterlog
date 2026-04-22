@@ -261,6 +261,17 @@ func InitDB() error {
 	// migration loop above included "media" — harmless on fresh installs.
 	DB.Exec("DROP INDEX IF EXISTS idx_media_sync_provenance")
 
+	// Backfill published_at for legacy imports. Old WP-XML import
+	// (handler/import.go) and early Typecho paths only set created_at
+	// and left published_at NULL, which broke the "发布时间" column in
+	// admin + any theme that surfaces it. Idempotent: only touches
+	// rows where published_at is still NULL, so repeating the
+	// migration on every boot costs nothing.
+	DB.Exec(fmt.Sprintf(
+		"UPDATE %s SET published_at = TO_TIMESTAMP(created_at) WHERE published_at IS NULL AND created_at > 0",
+		T("posts"),
+	))
+
 	return nil
 }
 
