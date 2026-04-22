@@ -44,9 +44,10 @@ export async function getPosts(params?: {
   return fetchAPI<any>(`/posts${query ? `?${query}` : ''}`);
 }
 
-// 按 slug 获取文章
+// 按 slug 获取文章 — Chinese slugs must be percent-encoded here, otherwise
+// Node's fetch refuses the URL and the caller thinks the post doesn't exist.
 export async function getPostBySlug(slug: string) {
-  return fetchAPI<any>(`/posts/slug/${slug}`);
+  return fetchAPI<any>(`/posts/slug/${encodeURIComponent(slug)}`);
 }
 
 // 文章详情

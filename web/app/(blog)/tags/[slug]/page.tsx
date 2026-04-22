@@ -9,12 +9,27 @@ interface TagPageProps {
   params: Promise<{ slug: string }>;
 }
 
+// Chinese tags often arrive as percent-encoded (browsers encode the path
+// on navigation; copy-pasting from an external link keeps the %XX form).
+// Next.js decodes dynamic segments for us, but we still normalize +
+// match by both slug and name so a raw Chinese name with no custom slug
+// like /tags/编程 works whether it was clicked from within the site or
+// pasted in from an external referrer.
+function normalize(s: string): string {
+  let t = s;
+  try { t = decodeURIComponent(t); } catch {}
+  return t.normalize('NFC').trim();
+}
+function matchTag(tags: any[], slug: string) {
+  const needle = normalize(slug);
+  return tags.find((t: any) => normalize(t.slug || '') === needle || normalize(t.name || '') === needle);
+}
+
 export async function generateMetadata({ params }: TagPageProps): Promise<Metadata> {
   const { slug } = await params;
   try {
     const response = await getTags();
-    const tags = response.data || [];
-    const tag = tags.find((t: any) => t.slug === slug);
+    const tag = matchTag(response.data || [], slug);
     if (tag) return { title: `${tag.name} — 标签` };
   } catch {}
   return { title: '标签' };
@@ -24,7 +39,7 @@ export default async function TagPostsPage({ params }: TagPageProps) {
   const { slug } = await params;
 
   const ctx = await getThemeContextData();
-  const tag = ctx.tags.find((t: any) => t.slug === slug);
+  const tag = matchTag(ctx.tags, slug);
   if (!tag) notFound();
 
   let posts: any[] = [];

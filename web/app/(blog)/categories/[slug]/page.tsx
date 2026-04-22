@@ -9,12 +9,24 @@ interface CategoryPageProps {
   params: Promise<{ slug: string }>;
 }
 
+// Same story as /tags/[slug]: Chinese categories with no custom
+// slug are stored as raw names; accept percent-encoded paths and
+// match by either slug or name after NFC-normalizing both sides.
+function normalize(s: string): string {
+  let t = s;
+  try { t = decodeURIComponent(t); } catch {}
+  return t.normalize('NFC').trim();
+}
+function matchCategory(cats: any[], slug: string) {
+  const needle = normalize(slug);
+  return cats.find((c: any) => normalize(c.slug || '') === needle || normalize(c.name || '') === needle);
+}
+
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { slug } = await params;
   try {
     const response = await getCategories();
-    const categories = response.data || [];
-    const cat = categories.find((c: any) => c.slug === slug);
+    const cat = matchCategory(response.data || [], slug);
     if (cat) return { title: `${cat.name} — 分类` };
   } catch {}
   return { title: '分类' };
@@ -24,7 +36,7 @@ export default async function CategoryPostsPage({ params }: CategoryPageProps) {
   const { slug } = await params;
 
   const ctx = await getThemeContextData();
-  const category = ctx.categories.find((c: any) => c.slug === slug);
+  const category = matchCategory(ctx.categories, slug);
   if (!category) notFound();
 
   let posts: any[] = [];
