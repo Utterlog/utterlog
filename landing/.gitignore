@@ -1,8 +1,0 @@
-node_modules/
-.next/
-out/
-*.log
-.DS_Store
-.env*.local
-next-env.d.ts
-.turbo

@@ -96,6 +96,14 @@ pnpm-lock.yaml
 # WordPress sync plugin — tracked in a separate repo, not part of main source
 /wordpress-plugin/
 
+# Landing + docs sites moved to private sibling repos:
+#   github.com/utterlog/utterlog-landing → utterlog.io
+#   github.com/utterlog/utterlog-docs    → docs.utterlog.io
+# Local checkouts live at ../utterlog-landing and ../utterlog-docs; these
+# ignore rules stop accidental re-adds if the dirs get recreated here.
+/landing/
+/docs/
+
 # Misc
 PaperMono-Regular.woff2
 backup/
