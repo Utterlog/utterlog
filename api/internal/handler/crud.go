@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -344,7 +346,49 @@ func getHostname() string {
 	return strings.TrimSpace(string(out))
 }
 
+// getLocalIP returns the public IP of the host the api is running on.
+// Inside a Docker container, `hostname -I` / `ifconfig` report the
+// container's internal bridge IP (172.x.x.x), which is useless to show
+// as "主机 IP" in the admin sidebar — visitors never hit that address.
+// Probe api.ipx.ee which returns whatever outbound IP the egress gets,
+// cached for the process lifetime. Fall back to local interface IP when
+// the probe fails (offline dev).
+var cachedPublicIP string
+var publicIPOnce sync.Once
+
 func getLocalIP() string {
+	publicIPOnce.Do(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+		defer cancel()
+		req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.ipx.ee/ip", nil)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil || resp == nil {
+			cachedPublicIP = localInterfaceIP()
+			return
+		}
+		defer resp.Body.Close()
+		var d struct {
+			IP          string `json:"ip"`
+			CountryCode string `json:"country_code"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&d); err != nil || d.IP == "" {
+			cachedPublicIP = localInterfaceIP()
+			return
+		}
+		cachedPublicIP = d.IP
+		// Warm the country cache from the same response so we don't
+		// need a second HTTP round-trip.
+		if d.CountryCode != "" && cachedCountry == "" {
+			cachedCountry = strings.ToLower(d.CountryCode)
+		}
+	})
+	return cachedPublicIP
+}
+
+// localInterfaceIP is the old "hostname -I" style fallback, kept for
+// local dev where there's no internet. Returns the first non-loopback
+// IPv4.
+func localInterfaceIP() string {
 	out, err := exec.Command("sh", "-c", "hostname -i 2>/dev/null | awk '{print $1}' || hostname -I 2>/dev/null | awk '{print $1}' || ipconfig getifaddr en0 2>/dev/null").Output()
 	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
 		out, _ = exec.Command("sh", "-c", "ifconfig | grep 'inet ' | grep -v 127.0.0.1 | head -1 | awk '{print $2}'").Output()
@@ -358,8 +402,17 @@ var cachedCountry string
 var countryOnce sync.Once
 
 func getServerCountry() string {
+	// Prefer whatever getLocalIP already cached (same probe). Only
+	// fall back to a dedicated call if the IP probe hasn't run yet.
+	if cachedCountry != "" {
+		return cachedCountry
+	}
 	countryOnce.Do(func() {
-		resp, err := http.Get("https://api.ipx.ee/ip")
+		if cachedCountry != "" { return }
+		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+		defer cancel()
+		req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.ipx.ee/ip", nil)
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil { cachedCountry = ""; return }
 		defer resp.Body.Close()
 		var geo struct { CountryCode string `json:"country_code"` }
@@ -369,21 +422,60 @@ func getServerCountry() string {
 	return cachedCountry
 }
 
+// getOSInfo returns the HOST OS description. Go runs inside an Alpine
+// container, so reading the container's own /etc/os-release always
+// says "Alpine Linux v3.20" no matter what the user's actual server is.
+// Look for a bind-mounted /host/etc/os-release first (added to
+// docker-compose.yml so future installs expose it); fall back to the
+// container's own file with a "(container)" suffix so the UI is
+// honest about what we can see.
 func getOSInfo() string {
-	// Try to read /etc/os-release for Linux
-	out, err := exec.Command("sh", "-c", "cat /etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d'\"' -f2").Output()
-	if err == nil && len(strings.TrimSpace(string(out))) > 0 {
-		return strings.TrimSpace(string(out))
+	// Preferred: host OS via bind mount
+	if b, err := os.ReadFile("/host/etc/os-release"); err == nil {
+		if name := parseOsReleasePretty(string(b)); name != "" {
+			return name
+		}
 	}
-	// macOS
-	out, err = exec.Command("sw_vers", "-productName").Output()
-	if err == nil {
+	// macOS host with Go binary running natively (dev)
+	if out, err := exec.Command("sw_vers", "-productName").Output(); err == nil {
 		name := strings.TrimSpace(string(out))
 		ver, _ := exec.Command("sw_vers", "-productVersion").Output()
-		return name + " " + strings.TrimSpace(string(ver))
+		if name != "" {
+			return name + " " + strings.TrimSpace(string(ver))
+		}
+	}
+	// Fallback: container's own OS (accurate for local-run, labeled
+	// in-container for dockerized deploys so the admin knows we're
+	// not reading the actual host).
+	if b, err := os.ReadFile("/etc/os-release"); err == nil {
+		if name := parseOsReleasePretty(string(b)); name != "" {
+			if inDocker() {
+				return name + " (容器)"
+			}
+			return name
+		}
 	}
 	return runtime.GOOS + "/" + runtime.GOARCH
 }
+
+func parseOsReleasePretty(s string) string {
+	for _, line := range strings.Split(s, "\n") {
+		if strings.HasPrefix(line, "PRETTY_NAME=") {
+			v := strings.TrimPrefix(line, "PRETTY_NAME=")
+			v = strings.Trim(v, "\"'")
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
+func inDocker() bool {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+	return false
+}
+
 
 func getDiskUsage() (string, string, string) {
 	out, err := exec.Command("df", "-h", "/").Output()
