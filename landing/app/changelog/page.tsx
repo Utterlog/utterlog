@@ -47,29 +47,68 @@ function escapeHtml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Simple markdown-ish renderer: headings, lists, paragraphs, inline code.
+// Simple markdown-ish renderer.
+// Handles: fenced code blocks (```lang ... ```), headings, lists,
+// paragraphs, inline code, and autolinks. Good enough for GitHub
+// release bodies without pulling a full markdown dependency.
 function renderMd(md: string): string {
   if (!md) return '';
-  const escaped = escapeHtml(md)
-    .replace(/`([^`]+)`/g, '<code>$1</code>');
-  const lines = escaped.split('\n');
+  const rawLines = md.split('\n');
   const out: string[] = [];
   let inList = false;
-  for (const line of lines) {
-    if (/^\s*[-*]\s+/.test(line)) {
-      if (!inList) { out.push('<ul>'); inList = true; }
-      out.push(`<li>${line.replace(/^\s*[-*]\s+/, '')}</li>`);
-    } else {
-      if (inList) { out.push('</ul>'); inList = false; }
-      if (/^#+\s+/.test(line)) {
-        const level = Math.min(line.match(/^#+/)![0].length + 1, 5);
-        out.push(`<h${level}>${line.replace(/^#+\s+/, '')}</h${level}>`);
-      } else if (line.trim()) {
-        out.push(`<p>${line}</p>`);
+  let inCode = false;
+  let codeLang = '';
+  const codeBuf: string[] = [];
+
+  const flushList = () => {
+    if (inList) { out.push('</ul>'); inList = false; }
+  };
+  const flushCode = () => {
+    const langClass = codeLang ? ` class="language-${escapeHtml(codeLang)}"` : '';
+    out.push(`<pre><code${langClass}>${escapeHtml(codeBuf.join('\n'))}</code></pre>`);
+    codeBuf.length = 0;
+    codeLang = '';
+    inCode = false;
+  };
+
+  const inlineFmt = (s: string) =>
+    escapeHtml(s)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" rel="noopener">$1</a>');
+
+  for (const rawLine of rawLines) {
+    const fence = rawLine.match(/^```\s*([\w-]*)\s*$/);
+    if (fence) {
+      if (inCode) {
+        flushCode();
+      } else {
+        flushList();
+        inCode = true;
+        codeLang = fence[1] || '';
       }
+      continue;
+    }
+    if (inCode) {
+      codeBuf.push(rawLine);
+      continue;
+    }
+
+    if (/^\s*[-*]\s+/.test(rawLine)) {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push(`<li>${inlineFmt(rawLine.replace(/^\s*[-*]\s+/, ''))}</li>`);
+      continue;
+    }
+
+    flushList();
+    if (/^#+\s+/.test(rawLine)) {
+      const level = Math.min(rawLine.match(/^#+/)![0].length + 1, 5);
+      out.push(`<h${level}>${inlineFmt(rawLine.replace(/^#+\s+/, ''))}</h${level}>`);
+    } else if (rawLine.trim()) {
+      out.push(`<p>${inlineFmt(rawLine)}</p>`);
     }
   }
-  if (inList) out.push('</ul>');
+  if (inCode) flushCode();
+  flushList();
   return out.join('\n');
 }
 

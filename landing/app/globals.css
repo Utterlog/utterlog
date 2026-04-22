@@ -44,6 +44,25 @@ html, body {
   padding: 1px 5px;
   border: 1px solid #e2e8f0;
 }
+.changelog-body pre {
+  margin: 10px 0 14px;
+  padding: 12px 14px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #0f172a;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.changelog-body pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  white-space: pre;
+}
 .changelog-body a { color: var(--color-primary); text-decoration: underline; }
 
 *, *::before, *::after { box-sizing: border-box; }
