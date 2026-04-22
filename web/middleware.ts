@@ -12,13 +12,18 @@ import type { NextRequest } from 'next/server';
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip static assets, API proxies, /admin (served by Go), Next internals
+  // Skip static assets, API proxies, /admin (served by Go), Next internals.
+  // Also skip the proxy-only URLs (/feed, /uploads/*) so the install-gate
+  // fetch doesn't run on them — those routes exit via next.config.js
+  // rewrites to the Go API, where adding middleware overhead + a
+  // potential fetch failure path just creates mysterious 500s.
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/uploads/') ||
-    pathname.match(/\.(?:ico|png|jpg|jpeg|svg|webp|avif|gif|css|js|woff2?|ttf|map)$/)
+    pathname === '/feed' ||
+    pathname.match(/\.(?:ico|png|jpg|jpeg|svg|webp|avif|gif|css|js|woff2?|ttf|map|xml)$/)
   ) {
     return NextResponse.next();
   }
@@ -65,7 +70,10 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Run on every page except static/next internals (they're also filtered above)
-    '/((?!_next|api/|uploads/|.*\\.(?:ico|png|jpg|jpeg|svg|webp|avif|gif|css|js|woff2?|ttf|map)$).*)',
+    // Run on every page except static/next internals (also filtered in
+    // the function body above). /feed is listed explicitly so middleware
+    // doesn't wrap the external-rewrite proxy and inject a failure
+    // path — keeps the Go RSS XML response unhindered.
+    '/((?!_next|api/|uploads/|feed$|.*\\.(?:ico|png|jpg|jpeg|svg|webp|avif|gif|css|js|woff2?|ttf|map|xml)$).*)',
   ],
 };
