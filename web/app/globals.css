@@ -840,3 +840,113 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   from { opacity: 0; transform: translateX(20px); }
   to { opacity: 1; transform: translateX(0); }
 }
+
+/* ============================================================
+ * Blog image display effects — 8 variants driven by the admin
+ * Settings → 图片处理 → 图片显示效果 option. ImageEffects.tsx
+ * sets html[data-img-effect] + --img-effect-duration so pure
+ * CSS can switch the animation.
+ *
+ * Scope: everything inside .blog-prose (rendered article body)
+ * plus any element opted in with data-blog-image (cover images,
+ * gallery tiles, moment photos). Keeps the effect off of chrome
+ * (logos, avatars, nav icons).
+ * ============================================================ */
+:root { --img-effect-duration: 400ms; }
+
+/* Base targeting — all effects use the same selector set */
+:where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
+  will-change: opacity, transform, filter, clip-path;
+}
+
+/* 1. fade — opacity 0 → 1 */
+html[data-img-effect="fade"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
+  animation: img-fade var(--img-effect-duration) ease both;
+}
+@keyframes img-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* 2. blur — heavy blur → sharp */
+html[data-img-effect="blur"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
+  animation: img-blur var(--img-effect-duration) ease both;
+}
+@keyframes img-blur {
+  from { opacity: 0; filter: blur(18px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+
+/* 3. blinds — horizontal strips reveal from left */
+html[data-img-effect="blinds"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image])[data-img-effect-visible="1"] {
+  animation: img-blinds var(--img-effect-duration) ease-out both;
+}
+html[data-img-effect="blinds"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]):not([data-img-effect-visible]) {
+  opacity: 0;
+}
+@keyframes img-blinds {
+  from { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); opacity: 0; }
+  to   { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }
+}
+
+/* 4. pixel — chunky mosaic via aggressive blur + contrast */
+html[data-img-effect="pixel"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
+  animation: img-pixel var(--img-effect-duration) steps(8) both;
+}
+@keyframes img-pixel {
+  from { opacity: 0; filter: blur(12px) contrast(2); transform: scale(1.04); }
+  to   { opacity: 1; filter: blur(0) contrast(1); transform: scale(1); }
+}
+
+/* 5. slide-up — scroll-triggered slide from below */
+html[data-img-effect="slide-up"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image])[data-img-effect-visible="1"] {
+  animation: img-slide-up var(--img-effect-duration) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+html[data-img-effect="slide-up"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]):not([data-img-effect-visible]) {
+  opacity: 0;
+}
+@keyframes img-slide-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 6. scale — zoom in from 0.94 */
+html[data-img-effect="scale"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image])[data-img-effect-visible="1"] {
+  animation: img-scale var(--img-effect-duration) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+html[data-img-effect="scale"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]):not([data-img-effect-visible]) {
+  opacity: 0;
+}
+@keyframes img-scale {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* 7. curtain — reveal from center out */
+html[data-img-effect="curtain"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image])[data-img-effect-visible="1"] {
+  animation: img-curtain var(--img-effect-duration) ease-out both;
+}
+html[data-img-effect="curtain"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]):not([data-img-effect-visible]) {
+  opacity: 0;
+}
+@keyframes img-curtain {
+  from { clip-path: inset(0 50% 0 50%); opacity: 0; }
+  to   { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+
+/* 8. none — no-op; opacity transition just to avoid a jarring swap */
+html[data-img-effect="none"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
+  animation: none;
+}
+
+/* Respect user's reduced-motion preference for every option except
+ * the pure "none" no-op. Skips the animation entirely. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-img-effect] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    clip-path: none !important;
+  }
+}

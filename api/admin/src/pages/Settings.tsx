@@ -192,7 +192,17 @@ export default function SettingsPage() {
     telegram: ['telegram_bot_token', 'telegram_chat_id', 'telegram_webhook_secret', 'tg_notify_comment', 'tg_notify_follow', 'tg_notify_publish', 'tg_daily_report', 'tg_comment_approve', 'tg_comment_reply', 'tg_publish_moment', 'tg_upload_media'],
     comment: ['allow_comments', 'comment_moderation', 'comment_trust_returning', 'comment_require_email', 'comment_notify_admin', 'comment_pagination', 'comment_per_page', 'comment_order', 'comment_captcha_mode', 'comment_captcha_difficulty'],
     media: ['media_driver', 's3_endpoint', 's3_region', 's3_bucket', 's3_access_key', 's3_secret_key', 's3_custom_domain', 'storage_limit_gb', 'max_upload_size', 'allowed_extensions', 'folder_driver_covers', 'folder_driver_books', 'folder_driver_movies', 'folder_driver_music', 'folder_driver_links', 'folder_driver_moments', 'folder_driver_albums', 'folder_driver_avatars'],
-    image: ['image_convert_format', 'image_quality', 'image_max_width', 'image_strip_exif', 'tinypng_enabled', 'tinypng_api_key', 'random_image_enabled', 'random_image_api', 'image_animation', 'image_lazy_load', 'image_lightbox'],
+    image: [
+      'image_convert_format', 'image_quality', 'image_max_width', 'image_strip_exif',
+      'tinypng_enabled', 'tinypng_api_key',
+      'random_image_enabled', 'random_image_api',
+      // Display effect + lightbox fields were rendered but missing
+      // from the whitelist — saves silently dropped them, so the
+      // front-end always saw the default 'fade' regardless of choice.
+      'image_display_effect', 'image_display_duration',
+      'image_lazy_load', 'image_lazy_load_placeholder',
+      'image_lightbox', 'image_lightbox_style',
+    ],
   };
 
   const onSubmit = async (data: any) => {

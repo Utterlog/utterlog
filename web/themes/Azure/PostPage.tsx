@@ -21,7 +21,7 @@ export default function PostPage({ post }: { post: any }) {
     <div style={{ padding: '0' }}>
       {/* Featured image */}
       <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
-        <img src={coverUrl} alt={post.title}
+        <img src={coverUrl} alt={post.title} data-blog-image
           style={{ width: '100%', height: '400px', objectFit: 'cover', display: 'block' }} />
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,

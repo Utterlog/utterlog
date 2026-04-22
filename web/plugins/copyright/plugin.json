@@ -2,7 +2,7 @@
   "name": "copyright",
   "displayName": "版权声明",
   "description": "在文章底部自动添加版权声明和原文链接",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "author": "Utterlog",
   "hooks": {
     "after_content": "<div style=\"margin-top:24px;padding:16px;border:1px dashed #ddd;font-size:13px;color:#888\"><strong>版权声明</strong>：本文为原创内容，转载请注明出处。</div>"

@@ -5,6 +5,7 @@ import { getThemeContextData } from '@/lib/theme-data';
 import { ThemeProvider } from '@/lib/theme-context';
 import { SlotHead, SlotFooter } from '@/lib/slots';
 import PageViewTracker from '@/components/blog/PageViewTracker';
+import ImageEffects from '@/components/blog/ImageEffects';
 
 // Force runtime rendering for all blog routes. Utterlog is a CMS — content is
 // created in the admin AFTER deploy, so there's nothing to pre-render at build
@@ -53,6 +54,10 @@ export default async function BlogLayout({
       <ThemeProvider value={ctx}>
         <ThemeLayout>
           <PageViewTracker />
+          <ImageEffects
+            effect={ctx.options.image_display_effect}
+            durationMs={ctx.options.image_display_duration}
+          />
           {children}
         </ThemeLayout>
         <SlotFooter options={ctx.options} />
