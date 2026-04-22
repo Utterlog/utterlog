@@ -19,7 +19,15 @@ const browserMap: Record<string, string> = {
 const osMap: Record<string, string> = {
   macos: '/icons/os/macos.svg',
   ios: '/icons/os/ios.svg',
+  // parseUA in CommentList.tsx produces "Windows 10", "Windows 11",
+  // "Windows 8.1", etc.; include the versioned keys so the correct
+  // SVG shows up, and keep plain "windows" as a fallback.
   windows: '/icons/os/windows11.svg',
+  'windows 10': '/icons/os/windows10.svg',
+  'windows 11': '/icons/os/windows11.svg',
+  'windows 8': '/icons/os/windows10.svg',
+  'windows 8.1': '/icons/os/windows10.svg',
+  'windows 7': '/icons/os/windows10.svg',
   linux: '/icons/os/linux.svg',
   ubuntu: '/icons/os/ubuntu.svg',
   debian: '/icons/os/debian.svg',

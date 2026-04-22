@@ -1,11 +1,24 @@
-import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from './providers';
+import { getOptions } from '@/lib/blog-api';
 
-export const metadata: Metadata = {
-  title: 'Utterlog!',
-  description: '一个简洁优雅的博客',
-};
+export async function generateMetadata() {
+  let favicon = '/favicon.ico';
+  let title = 'Utterlog!';
+  let description = '一个简洁优雅的博客';
+  try {
+    const optRes: any = await getOptions();
+    const opts = optRes.data || optRes || {};
+    if (opts.site_favicon) favicon = opts.site_favicon;
+    if (opts.site_title) title = opts.site_title;
+    if (opts.site_description) description = opts.site_description;
+  } catch {}
+  return {
+    title,
+    description,
+    icons: { icon: favicon, shortcut: favicon, apple: favicon },
+  };
+}
 
 export default function RootLayout({
   children,

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useThemeContext } from '@/lib/theme-context';
+import { useAuthStore } from '@/lib/store';
 
 const defaultNavItems = [
   { href: '/', label: '首页' },
@@ -25,9 +26,20 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [navigating, setNavigating] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { menus, site } = useThemeContext();
+  // Subscribe to the shared auth store — admin + frontend share the
+  // same localStorage key ("auth-storage"), so signing in via /admin
+  // lights up this header without any extra round-trip.
+  const user = useAuthStore((s) => s.user);
+  const isAuthed = useAuthStore((s) => s.isAuthenticated);
+  const logout = useAuthStore((s) => s.logout);
+  // Avoid hydration mismatch: render signed-out on the server, upgrade
+  // once the zustand persist middleware has hydrated from localStorage.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => { setNavigating(false); }, [pathname]);
+  useEffect(() => { setNavigating(false); setUserMenuOpen(false); }, [pathname]);
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const a = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement;
@@ -125,7 +137,7 @@ export default function Header() {
           ))}
         </nav>
 
-        {/* Search + Loading */}
+        {/* Search + Auth */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }} className="hidden md:flex">
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" style={{ position: 'absolute', left: '10px' }}>
@@ -152,6 +164,65 @@ export default function Header() {
               lineHeight: '16px',
             }}>⌘K</kbd>
           </div>
+
+          {/* Auth indicator */}
+          {mounted && isAuthed && user ? (
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setUserMenuOpen(o => !o); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '4px 8px 4px 4px', background: 'transparent',
+                  border: '1px solid #e0e0e0', cursor: 'pointer',
+                }}
+              >
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.nickname || user.username} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{
+                    width: '24px', height: '24px', borderRadius: '50%',
+                    background: '#0052D9', color: '#fff',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '11px', fontWeight: 600,
+                  }}>{(user.nickname || user.username || '?')[0]}</span>
+                )}
+                <span style={{ fontSize: '12px', color: '#333', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.nickname || user.username}
+                </span>
+                <i className="fa-solid fa-chevron-down" style={{ fontSize: '9px', opacity: 0.5 }} />
+              </button>
+              {userMenuOpen && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    position: 'absolute', right: 0, top: '100%', marginTop: '4px',
+                    background: '#fff', border: '1px solid #e5e5e5', boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                    minWidth: '140px', zIndex: 100,
+                  }}
+                >
+                  <a href="/admin" style={{ display: 'block', padding: '8px 14px', fontSize: '13px', color: '#333', textDecoration: 'none' }}>
+                    <i className="fa-regular fa-gauge" style={{ fontSize: '12px', marginRight: '6px' }} /> 管理后台
+                  </a>
+                  <button
+                    onClick={() => { logout(); setUserMenuOpen(false); }}
+                    style={{ display: 'block', width: '100%', padding: '8px 14px', fontSize: '13px', color: '#dc2626', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    <i className="fa-regular fa-right-from-bracket" style={{ fontSize: '12px', marginRight: '6px' }} /> 退出登录
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : mounted ? (
+            <a
+              href="/admin/login"
+              style={{
+                padding: '6px 12px', fontSize: '12px', color: '#555',
+                border: '1px solid #e0e0e0', textDecoration: 'none',
+              }}
+            >
+              登录
+            </a>
+          ) : null}
         </div>
 
         {/* Loading — header 最右侧固定占位 */}

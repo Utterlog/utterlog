@@ -7,8 +7,11 @@ import toast from 'react-hot-toast';
 import { Button, ConfirmDialog } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
 
+// A built-in page with `contentKey` gets an inline HTML/markdown editor
+// stored in that option. Pages without contentKey are pure list views
+// and only expose the enable/disable toggle.
 const builtinPages = [
-  { key: 'page_about', label: '关于', slug: '/about', icon: 'fa-regular fa-user' },
+  { key: 'page_about', label: '关于', slug: '/about', icon: 'fa-regular fa-user', contentKey: 'page_about_content' as const },
   { key: 'page_moments', label: '说说', slug: '/moments', icon: 'fa-regular fa-comment-dots' },
   { key: 'page_archives', label: '归档', slug: '/archives', icon: 'fa-regular fa-box-archive' },
   { key: 'page_music', label: '音乐', slug: '/music', icon: 'fa-regular fa-music' },
@@ -18,7 +21,7 @@ const builtinPages = [
   { key: 'page_feeds', label: '订阅', slug: '/feeds', icon: 'fa-regular fa-rss' },
   { key: 'page_links', label: '友链', slug: '/links', icon: 'fa-regular fa-link' },
   { key: 'page_albums', label: '相册', slug: '/albums', icon: 'fa-regular fa-images' },
-];
+] satisfies { key: string; label: string; slug: string; icon: string; contentKey?: string }[];
 
 export default function PagesPage() {
   const navigate = useNavigate();
@@ -26,8 +29,36 @@ export default function PagesPage() {
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [builtinStatus, setBuiltinStatus] = useState<Record<string, boolean>>({});
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [savingContent, setSavingContent] = useState(false);
 
   useEffect(() => { fetchPages(); fetchBuiltinStatus(); }, []);
+
+  const openContentEditor = async (contentKey: string) => {
+    try {
+      const r: any = await api.get('/options');
+      const opts = r.data || r || {};
+      setEditingContent(opts[contentKey] || '');
+      setEditingKey(contentKey);
+    } catch {
+      toast.error('读取内容失败');
+    }
+  };
+
+  const saveBuiltinContent = async () => {
+    if (!editingKey) return;
+    setSavingContent(true);
+    try {
+      await optionsApi.updateMany({ [editingKey]: editingContent });
+      toast.success('已保存');
+      setEditingKey(null);
+    } catch {
+      toast.error('保存失败');
+    } finally {
+      setSavingContent(false);
+    }
+  };
 
   const fetchBuiltinStatus = async () => {
     try {
@@ -132,7 +163,17 @@ export default function PagesPage() {
                       }} />
                     </button>
                   </td>
-                  <td />
+                  <td>
+                    {p.contentKey ? (
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                        <button onClick={() => openContentEditor(p.contentKey!)} className="text-primary-themed"
+                          title="编辑内容"
+                          style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                          <i className="fa-regular fa-pen" style={{ fontSize: '14px' }} />
+                        </button>
+                      </div>
+                    ) : null}
+                  </td>
                 </tr>
               );
             })}
@@ -184,6 +225,48 @@ export default function PagesPage() {
       </div>
 
       <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="确认删除" message="删除后无法恢复" />
+
+      {editingKey && (
+        <div
+          onClick={() => setEditingKey(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--color-bg-card)', width: '720px', maxWidth: '90vw',
+              maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+              border: '1px solid var(--color-border)',
+            }}
+          >
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 className="text-main" style={{ fontSize: '15px', fontWeight: 600 }}>编辑内容 — {editingKey}</h3>
+              <button onClick={() => setEditingKey(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>
+                <i className="fa-regular fa-xmark" />
+              </button>
+            </div>
+            <div style={{ padding: '20px', flex: 1, overflow: 'auto' }}>
+              <p className="text-dim" style={{ fontSize: '12px', marginBottom: '8px' }}>
+                支持 HTML 片段。留空则恢复默认示例内容。
+              </p>
+              <textarea
+                className="input"
+                style={{ width: '100%', minHeight: '360px', fontFamily: 'monospace', fontSize: '13px' }}
+                value={editingContent}
+                onChange={e => setEditingContent(e.target.value)}
+                placeholder="<p>欢迎来到我的博客...</p>"
+              />
+            </div>
+            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <Button variant="secondary" onClick={() => setEditingKey(null)} disabled={savingContent}>取消</Button>
+              <Button onClick={saveBuiltinContent} loading={savingContent}>保存</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

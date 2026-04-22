@@ -461,8 +461,12 @@ func ArchiveStats(c *gin.Context) {
 		heatmap = []dayCount{}
 	}
 
-	// Total page views — fast path via Redis, fallback to DB
-	totalViews := GetTotalViews()
+	// Total page views — read fresh from DB (SELECT COUNT is cheap on the
+	// access_logs indexed PK). Redis was a stale source of truth: if the
+	// IncrTotalViews side of the write path ever got skipped the Redis
+	// counter drifted and stats looked permanently out of date.
+	var totalViews int
+	config.DB.Get(&totalViews, "SELECT COUNT(*) FROM "+t("access_logs"))
 
 	util.Success(c, gin.H{
 		"post_count":    postCount,

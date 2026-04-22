@@ -240,6 +240,11 @@ func main() {
 	// RSS parse
 	api.GET("/rss/parse", handler.ParseRSS)
 
+	// Feed timeline — public read: visitor /feeds page needs to show
+	// the owner's aggregated friend-feed items without a login wall.
+	// Falls back to user_id=1 when the caller isn't signed in.
+	api.GET("/social/feed-timeline", handler.FeedTimeline)
+
 	// ===================== WordPress sync (public, body-token auth) =====================
 	// Auth via {site_uuid, token} in each request body — site must be
 	// registered via admin POST /admin/sync/wordpress/sites first.
@@ -383,7 +388,6 @@ func main() {
 		authed.GET("/social/follow-status", handler.FollowStatus)
 		authed.GET("/social/following", handler.ListFollowing)
 		authed.GET("/social/management", handler.FollowManagement)
-		authed.GET("/social/feed-timeline", handler.FeedTimeline)
 		authed.POST("/social/fetch-feeds", handler.FetchFeeds)
 		authed.GET("/system/update-check", handler.CheckSystemUpdate)
 

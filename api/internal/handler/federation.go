@@ -465,9 +465,17 @@ func StartFeedFetchCron() {
 	}()
 }
 
-// Get aggregated feed timeline
+// Get aggregated feed timeline.
+// Public-friendly: /feeds page on the frontend is a visitor-facing
+// wall of friend-feed items pulled from the blog owner's links + RSS
+// subscriptions. When no one is signed in, fall back to the owner
+// (user_id=1, which runFeedFetch auto-populates) so visitors still
+// see the same aggregated stream instead of an empty list / 401.
 func FeedTimeline(c *gin.Context) {
 	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		userID = 1
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage := 20
 	offset := (page - 1) * perPage
@@ -475,7 +483,7 @@ func FeedTimeline(c *gin.Context) {
 	t := config.T
 	var items []map[string]interface{}
 	rows, _ := config.DB.Queryx(fmt.Sprintf(
-		"SELECT fi.*, rs.site_name, rs.site_url FROM %s fi JOIN %s rs ON fi.subscription_id = rs.id WHERE rs.user_id = $1 ORDER BY fi.pub_date DESC LIMIT $2 OFFSET $3",
+		"SELECT fi.*, rs.site_name, rs.site_url FROM %s fi JOIN %s rs ON fi.subscription_id = rs.id WHERE rs.user_id = $1 ORDER BY fi.pub_date DESC NULLS LAST, fi.id DESC LIMIT $2 OFFSET $3",
 		t("feed_items"), t("rss_subscriptions")), userID, perPage, offset)
 	if rows != nil {
 		defer rows.Close()

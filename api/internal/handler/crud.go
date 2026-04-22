@@ -437,8 +437,8 @@ func PostsFeed(c *gin.Context) {
 	t := config.T("posts")
 	siteTitle := model.GetOption("site_title")
 	if siteTitle == "" { siteTitle = "Utterlog" }
-	siteURL := model.GetOption("site_url")
-	if siteURL == "" { siteURL = config.C.AppURL }
+	siteDesc := model.GetOption("site_description")
+	siteURL := strings.TrimRight(config.PublicBaseURL(), "/")
 
 	var posts []model.Post
 	config.DB.Select(&posts, fmt.Sprintf("SELECT id, title, slug, excerpt, content, created_at, updated_at FROM %s WHERE status='publish' AND type='post' ORDER BY created_at DESC LIMIT 20", t))
@@ -447,13 +447,17 @@ func PostsFeed(c *gin.Context) {
 	c.Header("Cache-Control", "public, max-age=3600")
 	xml := `<?xml version="1.0" encoding="UTF-8"?>` + "\n"
 	xml += `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>` + "\n"
-	xml += fmt.Sprintf("<title>%s</title><link>%s</link><language>zh-CN</language>\n", siteTitle, siteURL)
+	xml += fmt.Sprintf("<title>%s</title><link>%s</link><description>%s</description><language>zh-CN</language>\n",
+		xmlEscape(siteTitle), xmlEscape(siteURL), xmlEscape(siteDesc))
+	xml += fmt.Sprintf(`<atom:link href="%s/api/v1/feed" rel="self" type="application/rss+xml"/>`+"\n", xmlEscape(siteURL))
 	for _, p := range posts {
 		content := ""; if p.Content != nil { content = *p.Content }
 		excerpt := ""; if p.Excerpt != nil { excerpt = *p.Excerpt }
 		if excerpt == "" && len(content) > 300 { excerpt = content[:300] }
-		xml += fmt.Sprintf("<item><title>%s</title><link>%s/posts/%s</link><description><![CDATA[%s]]></description></item>\n",
-			p.Title, siteURL, p.Slug, excerpt)
+		link := fmt.Sprintf("%s/posts/%s", siteURL, p.Slug)
+		pubDate := time.Unix(p.CreatedAt, 0).UTC().Format(time.RFC1123Z)
+		xml += fmt.Sprintf("<item><title>%s</title><link>%s</link><guid isPermaLink=\"true\">%s</guid><pubDate>%s</pubDate><description><![CDATA[%s]]></description></item>\n",
+			xmlEscape(p.Title), xmlEscape(link), xmlEscape(link), pubDate, cdataSafe(excerpt))
 	}
 	xml += "</channel></rss>"
 	c.String(200, xml)
@@ -462,8 +466,7 @@ func PostsFeed(c *gin.Context) {
 func MemosFeed(c *gin.Context) {
 	siteTitle := model.GetOption("site_title")
 	if siteTitle == "" { siteTitle = "Utterlog" }
-	siteURL := model.GetOption("site_url")
-	if siteURL == "" { siteURL = config.C.AppURL }
+	siteURL := strings.TrimRight(config.PublicBaseURL(), "/")
 
 	var moments []model.Moment
 	config.DB.Select(&moments, fmt.Sprintf("SELECT id, content, created_at FROM %s WHERE visibility='public' ORDER BY created_at DESC LIMIT 30", config.T("moments")))
@@ -471,11 +474,29 @@ func MemosFeed(c *gin.Context) {
 	c.Header("Content-Type", "application/xml; charset=utf-8")
 	xml := `<?xml version="1.0" encoding="UTF-8"?>` + "\n"
 	xml += `<rss version="2.0"><channel>` + "\n"
-	xml += fmt.Sprintf("<title>%s - 说说</title><link>%s/moments</link><language>zh-CN</language>\n", siteTitle, siteURL)
+	xml += fmt.Sprintf("<title>%s - 说说</title><link>%s/moments</link><language>zh-CN</language>\n",
+		xmlEscape(siteTitle), xmlEscape(siteURL))
 	for _, m := range moments {
 		title := m.Content; if len(title) > 80 { title = title[:80] + "..." }
-		xml += fmt.Sprintf("<item><title>%s</title><description><![CDATA[%s]]></description></item>\n", title, m.Content)
+		pubDate := time.Unix(m.CreatedAt, 0).UTC().Format(time.RFC1123Z)
+		guid := fmt.Sprintf("%s/moments#%d", siteURL, m.ID)
+		xml += fmt.Sprintf("<item><title>%s</title><link>%s/moments</link><guid isPermaLink=\"false\">%s</guid><pubDate>%s</pubDate><description><![CDATA[%s]]></description></item>\n",
+			xmlEscape(title), xmlEscape(siteURL), xmlEscape(guid), pubDate, cdataSafe(m.Content))
 	}
 	xml += "</channel></rss>"
 	c.String(200, xml)
+}
+
+// xmlEscape escapes the 5 predefined XML entities for safe use inside
+// element text or attribute values. Apostrophe is escaped too because
+// some feed readers choke on raw ' inside attributes.
+func xmlEscape(s string) string {
+	r := strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", "\"", "&quot;", "'", "&apos;")
+	return r.Replace(s)
+}
+
+// cdataSafe breaks any "]]>" sequences inside content so a raw CDATA
+// block stays well-formed.
+func cdataSafe(s string) string {
+	return strings.ReplaceAll(s, "]]>", "]]]]><![CDATA[>")
 }

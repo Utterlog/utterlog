@@ -1,6 +1,6 @@
 {
   "name": "utterlog-landing",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "private": true,
   "description": "Marketing landing page for utterlog.io — static Next.js export",
   "scripts": {

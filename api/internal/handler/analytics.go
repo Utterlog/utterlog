@@ -614,7 +614,9 @@ func DashboardStats(c *gin.Context) {
 	config.DB.Get(&categoryCount, "SELECT COUNT(*) FROM "+t("metas")+" WHERE type='category'")
 	config.DB.Get(&tagCount, "SELECT COUNT(*) FROM "+t("metas")+" WHERE type='tag'")
 
-	totalViews := GetTotalViews()
+	// DB-sourced count so admin dashboard never shows a stale Redis value
+	var totalViews int
+	config.DB.Get(&totalViews, "SELECT COUNT(*) FROM "+t("access_logs"))
 
 	var totalWords int
 	config.DB.Get(&totalWords, "SELECT COALESCE(SUM(word_count),0) FROM "+t("posts")+" WHERE status='publish' AND type='post'")

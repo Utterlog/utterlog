@@ -1,6 +1,6 @@
 {
   "name": "utterlog-docs",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "private": true,
   "description": "Documentation site for docs.utterlog.io — static Next.js export",
   "scripts": {

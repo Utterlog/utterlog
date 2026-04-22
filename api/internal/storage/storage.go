@@ -27,9 +27,12 @@ type Storage interface {
 
 var Default Storage
 
-// NewLocalStorage returns a LocalStorage instance for the default public/uploads path
+// NewLocalStorage returns a LocalStorage instance for the default public/uploads path.
+// baseURL is left empty so URL() reads PublicBaseURL() dynamically — that way
+// admins changing the site_url option in settings see existing upload URLs
+// reflect the new origin immediately, without needing an API restart.
 func NewLocalStorage() *LocalStorage {
-	return &LocalStorage{baseDir: "public/uploads", baseURL: config.C.AppURL + "/uploads"}
+	return &LocalStorage{baseDir: "public/uploads"}
 }
 
 // NewS3IfConfigured returns a new S3Storage if credentials are configured, else nil
@@ -53,7 +56,6 @@ func Init() {
 	}
 	Default = &LocalStorage{
 		baseDir: "public/uploads",
-		baseURL: config.PublicBaseURL() + "/uploads",
 	}
 }
 
@@ -143,7 +145,11 @@ func (l *LocalStorage) Delete(path string) error {
 }
 
 func (l *LocalStorage) URL(path string) string {
-	return l.baseURL + "/" + path
+	base := l.baseURL
+	if base == "" {
+		base = strings.TrimRight(config.PublicBaseURL(), "/") + "/uploads"
+	}
+	return base + "/" + path
 }
 
 // --- S3/R2 Storage ---

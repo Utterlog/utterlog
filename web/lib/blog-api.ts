@@ -126,8 +126,11 @@ export async function getBooks(params?: { page?: number; per_page?: number }) {
 }
 
 // 归档统计
+// Fresh every 30s — 2-min stale numbers looked broken ("stats are old")
+// next to admin's live counts. 30s keeps ISR benefits but matches human
+// expectations after publishing a post.
 export async function getArchiveStats() {
-  return fetchAPI<any>('/archive/stats', { next: { revalidate: 120 } });
+  return fetchAPI<any>('/archive/stats', { next: { revalidate: 30 } });
 }
 
 // 搜索

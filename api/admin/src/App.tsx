@@ -63,6 +63,7 @@ const PostEdit = lazy(() => import('@/pages/PostEdit'));
 const PostCategories = lazy(() => import('@/pages/PostCategories'));
 const PostTags = lazy(() => import('@/pages/PostTags'));
 const Pages = lazy(() => import('@/pages/Pages'));
+const Menus = lazy(() => import('@/pages/Menus'));
 const PageCreate = lazy(() => import('@/pages/PageCreate'));
 const PageEdit = lazy(() => import('@/pages/PageEdit'));
 const Moments = lazy(() => import('@/pages/Moments'));
@@ -166,6 +167,7 @@ export default function App() {
         <Route path="/posts/edit/:id" element={<PostEdit />} />
 
         <Route path="/pages" element={<Pages />} />
+        <Route path="/menus" element={<Menus />} />
         <Route path="/pages/create" element={<PageCreate />} />
         <Route path="/pages/edit/:id" element={<PageEdit />} />
 
