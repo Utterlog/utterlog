@@ -176,7 +176,18 @@ export default function SettingsPage() {
   };
 
   const tabFields: Record<string, string[]> = {
-    general: ['site_title', 'site_subtitle', 'site_url', 'site_description', 'site_keywords', 'site_logo', 'site_logo_dark', 'site_favicon', 'site_since', 'site_icp', 'site_footer_code', 'analytics_code', 'posts_per_page', 'admin_email'],
+    // Must include every field the General tab actually renders via
+    // register(...). onSubmit filters the form payload through this
+    // whitelist — if a field is missing here, the user's edit silently
+    // vanishes (the save POST just doesn't include that key, so the DB
+    // row stays unchanged and on reload the field reverts).
+    general: [
+      'site_title', 'site_subtitle', 'site_url', 'site_description', 'site_keywords',
+      'admin_email', 'site_since', 'posts_per_page',
+      'site_logo', 'site_logo_dark', 'site_favicon',
+      'beian_gongan', 'beian_icp',
+      'custom_head_code',
+    ],
     email: ['email_provider', 'email_from', 'email_from_name', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_encryption', 'resend_api_key', 'sendflare_api_key'],
     telegram: ['telegram_bot_token', 'telegram_chat_id', 'telegram_webhook_secret', 'tg_notify_comment', 'tg_notify_follow', 'tg_notify_publish', 'tg_daily_report', 'tg_comment_approve', 'tg_comment_reply', 'tg_publish_moment', 'tg_upload_media'],
     comment: ['allow_comments', 'comment_moderation', 'comment_trust_returning', 'comment_require_email', 'comment_notify_admin', 'comment_pagination', 'comment_per_page', 'comment_order', 'comment_captcha_mode', 'comment_captcha_difficulty'],
