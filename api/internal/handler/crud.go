@@ -180,8 +180,13 @@ func SystemStatus(c *gin.Context) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	// Uptime
-	uptime := time.Since(startTime).String()
+	// Uptime — host system uptime, not the api process. The old
+	// time.Since(startTime) reported ~1 minute after every docker
+	// compose up -d recreate, which is useless for the admin.
+	// /proc/uptime inside a Linux container isn't namespaced, so
+	// reading it returns the real host uptime (verified: container
+	// + host values match exactly).
+	uptime := getHostUptime()
 
 	// DB ping
 	dbOK := config.DB.Ping() == nil
@@ -238,6 +243,45 @@ func SystemStatus(c *gin.Context) {
 }
 
 var startTime = time.Now()
+
+// getHostUptime reads /proc/uptime and formats as "X天 Y小时 Z分钟".
+// Falls back to the container process uptime on non-Linux dev setups
+// where /proc/uptime doesn't exist.
+func getHostUptime() string {
+	var secs float64
+	if b, err := os.ReadFile("/proc/uptime"); err == nil {
+		// "860230.80 13747132.14\n" — first field is seconds since boot
+		parts := strings.Fields(string(b))
+		if len(parts) > 0 {
+			if v, err := strconv.ParseFloat(parts[0], 64); err == nil {
+				secs = v
+			}
+		}
+	}
+	if secs <= 0 {
+		secs = time.Since(startTime).Seconds()
+	}
+	return formatUptime(int64(secs))
+}
+
+func formatUptime(secs int64) string {
+	if secs <= 0 {
+		return "—"
+	}
+	days := secs / 86400
+	hours := (secs % 86400) / 3600
+	mins := (secs % 3600) / 60
+	if days > 0 {
+		return fmt.Sprintf("%d天 %d小时 %d分钟", days, hours, mins)
+	}
+	if hours > 0 {
+		return fmt.Sprintf("%d小时 %d分钟", hours, mins)
+	}
+	if mins > 0 {
+		return fmt.Sprintf("%d分钟", mins)
+	}
+	return fmt.Sprintf("%d秒", secs)
+}
 
 var cachedCPU int
 var cpuMu sync.Mutex
