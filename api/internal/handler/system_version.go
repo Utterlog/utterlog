@@ -18,7 +18,7 @@ import (
 )
 
 // BuildVersion is populated at link time via -ldflags "-X ...BuildVersion=".
-// Expected to be a release tag like "v1.0.14" (or "dev" for local runs).
+// Expected to be a release tag like "v1.0.15" (or "dev" for local runs).
 var BuildVersion = ""
 
 // BuildCommit is the 7-char git SHA of the build, injected via -ldflags.
@@ -252,7 +252,7 @@ func fetchLatestRelease() {
 
 	// Second call: resolve tag → commit SHA so the admin UI can show
 	// the "latest" commit hash alongside the version label, matching
-	// how the current build displays v1.0.14 · 3ac2f03. Silent on
+	// how the current build displays v1.0.15 · 3ac2f03. Silent on
 	// failure — commit is decorative, don't let it block the release.
 	rel.Commit = fetchTagCommit(rel.TagName)
 
@@ -264,7 +264,7 @@ func fetchLatestRelease() {
 }
 
 // fetchTagCommit hits GitHub's commits-by-ref endpoint to turn a tag
-// name (e.g., "v1.0.14") into the 7-char short SHA of the commit it
+// name (e.g., "v1.0.15") into the 7-char short SHA of the commit it
 // points to. Returns "" on any failure.
 func fetchTagCommit(tag string) string {
 	if tag == "" {
@@ -527,6 +527,34 @@ if [ -z "$MODE" ]; then
   else
     echo "[$(ts)] ERROR: no docker-compose files under $(pwd)"
     exit 1
+  fi
+fi
+
+# Refresh docker-compose.yml from utterlog.io BEFORE the pull so new
+# bind mounts / env vars added in recent releases actually apply on
+# recreate. Previously the admin's 一键升级 only pulled images; if a
+# release introduced a new volume (e.g. /etc/os-release for the host
+# OS reporting), users stayed on the old compose spec and wondered
+# why the feature didn't work after upgrading. Only refresh in slim
+# mode (one file, matches what utterlog.io serves); overlay mode
+# assumes the user maintains docker-compose.prod.yml themselves.
+if [ "$MODE" = "slim" ]; then
+  BASE_URL="${UTTERLOG_BASE_URL:-https://utterlog.io}"
+  if command -v curl >/dev/null 2>&1; then
+    if curl -fsSL --max-time 10 "$BASE_URL/docker-compose.yml" -o docker-compose.yml.new 2>>"$LOG"; then
+      # Only replace if the download is non-empty and parses as YAML
+      # (crude check — first non-blank line starts with a valid key).
+      if [ -s docker-compose.yml.new ] && head -n1 docker-compose.yml.new | grep -qE '^[a-zA-Z_]+:'; then
+        cp docker-compose.yml docker-compose.yml.bak 2>/dev/null || true
+        mv docker-compose.yml.new docker-compose.yml
+        echo "[$(ts)] docker-compose.yml refreshed from $BASE_URL"
+      else
+        rm -f docker-compose.yml.new
+        echo "[$(ts)] skipped compose refresh — downloaded file looks invalid"
+      fi
+    else
+      echo "[$(ts)] skipped compose refresh — download failed (keeping local file)"
+    fi
   fi
 fi
 
