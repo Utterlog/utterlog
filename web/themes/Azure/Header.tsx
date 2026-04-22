@@ -5,21 +5,6 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useThemeContext } from '@/lib/theme-context';
 
-const defaultNavItems = [
-  { href: '/', label: '首页' },
-  { href: '/about', label: '关于' },
-  { href: '/archives', label: '归档' },
-  { href: '/moments', label: '说说' },
-  { href: '/links', label: '友链' },
-  { href: '/feeds', label: '订阅' },
-  { href: '#entertainment', label: '娱乐', children: [
-    { href: '/music', label: '音乐' },
-    { href: '/books', label: '图书' },
-    { href: '/movies', label: '电影' },
-    { href: '/games', label: '游戏' },
-  ]},
-];
-
 export default function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -39,7 +24,11 @@ export default function Header() {
     return () => document.removeEventListener('click', handleClick);
   }, [pathname]);
 
-  const navItems = menus.header?.length ? menus.header : defaultNavItems;
+  // Header nav is admin-driven only — no hardcoded fallback. Users
+  // who haven't configured 主题 → 菜单 → 顶部导航 see a bare header
+  // (logo + search), and the '重置默认' button in the Menus admin
+  // tab seeds the standard items (首页/关于/归档/说说/友链/订阅).
+  const navItems = menus.header ?? [];
   const siteName = site.title || '西风';
 
   const isActive = (href: string) => {
