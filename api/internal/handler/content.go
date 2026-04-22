@@ -10,6 +10,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -359,19 +360,50 @@ func PendingCommentCount(c *gin.Context) {
 }
 
 // sendCommentNotifications sends email to site admin for new comments,
-// and to the parent comment author for replies
+// and to the parent comment author for replies. Honors
+// `comment_notify_admin` (default on) for the admin path. The reply
+// path is user-to-user and fires regardless of that toggle.
+//
+// Supports all three providers (smtp / resend / sendflare) — earlier
+// this function only populated SMTP fields, so sites configured with
+// Resend or Sendflare saw no admin emails at all. The short-circuit
+// also hinged on smtp_host being non-empty, which made the whole
+// notification path dead weight in those deployments.
 func sendCommentNotifications(postID int, parentID *int, commenterName, content string, commentID int) {
-	smtpHost := model.GetOption("smtp_host")
-	if smtpHost == "" { return }
+	provider := model.GetOption("email_provider")
+	if provider == "" { provider = "smtp" }
 
 	cfg := util.EmailConfig{
-		Host:       smtpHost,
-		Port:       model.GetOption("smtp_port"),
-		User:       model.GetOption("smtp_user"),
-		Pass:       model.GetOption("smtp_pass"),
-		Encryption: model.GetOption("smtp_encryption"),
-		From:       model.GetOption("email_from"),
-		FromName:   model.GetOption("email_from_name"),
+		Provider:        provider,
+		Host:            model.GetOption("smtp_host"),
+		Port:            model.GetOption("smtp_port"),
+		User:            model.GetOption("smtp_user"),
+		Pass:            model.GetOption("smtp_pass"),
+		Encryption:      model.GetOption("smtp_encryption"),
+		From:            model.GetOption("email_from"),
+		FromName:        model.GetOption("email_from_name"),
+		ResendAPIKey:    model.GetOption("resend_api_key"),
+		SendflareAPIKey: model.GetOption("sendflare_api_key"),
+	}
+
+	// Gate early only when the active provider is unconfigured — e.g.
+	// provider=smtp with no smtp_host. Otherwise keep going.
+	switch provider {
+	case "smtp":
+		if cfg.Host == "" {
+			log.Printf("[comment-notify] skipped — provider=smtp but smtp_host is empty")
+			return
+		}
+	case "resend":
+		if cfg.ResendAPIKey == "" {
+			log.Printf("[comment-notify] skipped — provider=resend but resend_api_key is empty")
+			return
+		}
+	case "sendflare":
+		if cfg.SendflareAPIKey == "" {
+			log.Printf("[comment-notify] skipped — provider=sendflare but sendflare_api_key is empty")
+			return
+		}
 	}
 
 	siteName := model.GetOption("site_title")
@@ -388,10 +420,12 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 	preview := content
 	if len([]rune(preview)) > 200 { preview = string([]rune(preview)[:200]) + "..." }
 
-	// 1. Notify site admin — site-branded template
+	// 1. Notify site admin — gated by comment_notify_admin (default on;
+	// option absent means the user hasn't touched it → we assume yes).
 	admin, _ := model.UserByID(1)
 	site := email.LoadSiteData()
-	if admin != nil && admin.Email != "" {
+	notifyAdmin := model.GetOption("comment_notify_admin") != "false"
+	if notifyAdmin && admin != nil && admin.Email != "" {
 		body, err := email.Render("new_comment", email.NewCommentData{
 			Site:             site,
 			Author:           commenterName,
@@ -404,7 +438,11 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 		})
 		if err == nil {
 			subject := fmt.Sprintf("💬 新评论 — 《%s》", post.Title)
-			util.SendEmail(cfg, admin.Email, subject, body)
+			if err := util.SendEmail(cfg, admin.Email, subject, body); err != nil {
+				log.Printf("[comment-notify] admin email failed (provider=%s to=%s): %v", provider, admin.Email, err)
+			}
+		} else {
+			log.Printf("[comment-notify] render new_comment template failed: %v", err)
 		}
 	}
 
@@ -441,7 +479,11 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 		})
 		if err == nil {
 			subject := fmt.Sprintf("💬 你的评论收到了回复 — %s", siteName)
-			util.SendEmail(cfg, *parent.AuthorEmail, subject, body)
+			if err := util.SendEmail(cfg, *parent.AuthorEmail, subject, body); err != nil {
+				log.Printf("[comment-notify] reply email failed (provider=%s to=%s): %v", provider, *parent.AuthorEmail, err)
+			}
+		} else {
+			log.Printf("[comment-notify] render comment_reply template failed: %v", err)
 		}
 	}
 }

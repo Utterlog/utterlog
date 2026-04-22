@@ -105,5 +105,8 @@ pnpm-lock.yaml
 /docs/
 
 # Misc
-PaperMono-Regular.woff2
+# Root-anchor this so we only drop the stray copy at project root —
+# the "real" fonts at web/public/static/fonts/ and api/admin/public/fonts/
+# must be committed, otherwise CI Docker builds 404 on the font URL.
+/PaperMono-Regular.woff2
 backup/
