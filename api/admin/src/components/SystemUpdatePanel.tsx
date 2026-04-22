@@ -351,9 +351,22 @@ export default function SystemUpdatePanel() {
               版本检查失败
             </button>
           ) : (
-            <button type="button" disabled style={primaryBtnStyle}>
-              <i className="fa-solid fa-circle-check" />
-              当前已是最新版本
+            // Up-to-date — still let the admin force a re-pull. Useful
+            // when latest == current but the user suspects a botched
+            // previous upgrade (network blip during compose pull, image
+            // layers half-cached, etc.), or when they just want to
+            // redeploy the same tag.
+            <button
+              type="button"
+              onClick={doUpgrade}
+              disabled={upgrading || loading}
+              style={{ ...primaryBtnStyle, cursor: upgrading || loading ? 'not-allowed' : 'pointer' }}
+              title="重新拉取当前版本并重启容器"
+              onMouseEnter={(e) => { if (!upgrading && !loading) e.currentTarget.style.background = statusColorDark; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = statusColor; }}
+            >
+              <i className={`fa-solid ${upgrading ? 'fa-spinner fa-spin' : 'fa-arrows-rotate'}`} />
+              {upgrading ? '重新部署中…' : '重新部署 ' + cur}
             </button>
           )}
           <button
@@ -537,7 +550,7 @@ export default function SystemUpdatePanel() {
       </div>
 
       {/* Upgrade confirm dialog — styled modal, replaces native confirm() */}
-      <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} title="确认一键升级" size="sm">
+      <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} title={checkState === 'update' ? '确认一键升级' : '确认重新部署'} size="sm">
         <div>
           <div style={{
             width: 44, height: 44, margin: '0 auto 14px',
@@ -546,13 +559,19 @@ export default function SystemUpdatePanel() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 20,
           }}>
-            <i className="fa-solid fa-cloud-arrow-down" />
+            <i className={`fa-solid ${checkState === 'update' ? 'fa-cloud-arrow-down' : 'fa-arrows-rotate'}`} />
           </div>
           <div style={{ fontSize: 14, color: 'var(--color-text)', lineHeight: 1.7, textAlign: 'center', marginBottom: 6 }}>
-            即将升级到 <b style={{ color: 'var(--color-primary)', fontFamily: 'ui-monospace,monospace' }}>{lat}</b>
+            {checkState === 'update' ? (
+              <>即将升级到 <b style={{ color: 'var(--color-primary)', fontFamily: 'ui-monospace,monospace' }}>{lat}</b></>
+            ) : (
+              <>即将重新部署 <b style={{ color: 'var(--color-primary)', fontFamily: 'ui-monospace,monospace' }}>{cur}</b></>
+            )}
           </div>
           <div style={{ fontSize: 13, color: 'var(--color-text-dim)', lineHeight: 1.7, textAlign: 'center', marginBottom: 16 }}>
-            拉取最新镜像并重建容器，约需 30-60 秒。
+            {checkState === 'update'
+              ? '拉取最新镜像并重建容器，约需 30-60 秒。'
+              : '重新拉取当前版本镜像并重建容器，约需 30-60 秒。'}
             <br />
             期间后台短暂不可访问，数据、配置、上传文件全部保留。
           </div>
@@ -590,8 +609,8 @@ export default function SystemUpdatePanel() {
                 display: 'inline-flex', alignItems: 'center', gap: 6,
               }}
             >
-              <i className="fa-solid fa-cloud-arrow-down" />
-              确认升级
+              <i className={`fa-solid ${checkState === 'update' ? 'fa-cloud-arrow-down' : 'fa-arrows-rotate'}`} />
+              {checkState === 'update' ? '确认升级' : '确认重新部署'}
             </button>
           </div>
         </div>
