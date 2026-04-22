@@ -403,6 +403,12 @@ func main() {
 		authed.POST("/admin/system/clear-cache", handler.SystemClearCache)
 		authed.POST("/admin/system/clear-rss-cache", handler.SystemClearRSSCache)
 
+		// Analytics maintenance — purge bots / dedup rows / drop aged
+		// data; stats preview so the dialog can show what will be
+		// affected before the admin confirms.
+		authed.GET("/admin/analytics/stats", handler.AnalyticsStats)
+		authed.POST("/admin/analytics/purge", handler.PurgeAnalytics)
+
 		// WordPress sync — admin management (create/list/delete sites,
 		// view job history, trigger rollback). The per-site token is
 		// shown once at creation and never again.

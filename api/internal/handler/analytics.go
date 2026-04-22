@@ -84,8 +84,35 @@ func AccessLogger() gin.HandlerFunc {
 }
 
 func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string) {
+	// Bot early-out — never write bot traffic to access_logs. This is
+	// the single chokepoint for both the AccessLogger middleware and
+	// the explicit /track POST, so one check here keeps crawlers,
+	// monitoring probes, and scripting libraries entirely out of the
+	// dataset (no row to purge, no GeoIP fetch, no Redis mark-online).
+	if IsBot(ua) {
+		return
+	}
+
 	// Priority: CF-Connecting-IP > X-Real-IP > X-Forwarded-For > RemoteAddr
 	if xff != "" { ip = strings.TrimSpace(strings.Split(xff, ",")[0]) }
+
+	// Session dedup: if this visitor_id (or IP when vid is empty) has
+	// already been recorded on this exact path in the last 30 seconds,
+	// drop the new row. Protects against React StrictMode double-effect,
+	// navigation jitter, and legitimate refreshes that would otherwise
+	// inflate "最近访客" with identical rows on every F5.
+	now := time.Now().Unix()
+	dedupKey := visitorID
+	if dedupKey == "" { dedupKey = ip }
+	if dedupKey != "" {
+		var existing int
+		config.DB.Get(&existing, fmt.Sprintf(
+			"SELECT COUNT(*) FROM %s WHERE path = $1 AND COALESCE(NULLIF(visitor_id,''), ip) = $2 AND created_at >= $3",
+			config.T("access_logs")), path, dedupKey, now-30)
+		if existing > 0 {
+			return
+		}
+	}
 
 	device, browser, browserVer, os, osVer := parseUserAgent(ua)
 	refHost := ""
@@ -100,7 +127,6 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 	if len(ipParts) == 4 { ipMasked = ipParts[0] + "." + ipParts[1] + ".*.*" }
 
 	t := config.T("access_logs")
-	now := time.Now().Unix()
 	var logID int
 	config.DB.QueryRow(fmt.Sprintf(
 		"INSERT INTO %s (ip, ip_masked, path, method, referer, referer_host, user_agent, device_type, browser, browser_version, os, os_version, visitor_id, fingerprint, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id",
@@ -180,10 +206,13 @@ func AnalyticsOverview(c *gin.Context) {
 	where := ""
 	if since > 0 { where = fmt.Sprintf("WHERE created_at >= %d", since) }
 
-	// Summary stats
+	// Summary stats — "unique visitors" prefers the browser-issued
+	// visitor_id over IP so multiple users behind the same NAT don't
+	// collapse into one visitor, and a single user clearing cookies
+	// doesn't count as a distinct visitor until their IP changes too.
 	var totalVisits, uniqueIPs int
 	config.DB.Get(&totalVisits, fmt.Sprintf("SELECT COUNT(*) FROM %s %s", t, where))
-	config.DB.Get(&uniqueIPs, fmt.Sprintf("SELECT COUNT(DISTINCT ip) FROM %s %s", t, where))
+	config.DB.Get(&uniqueIPs, fmt.Sprintf("SELECT COUNT(DISTINCT COALESCE(NULLIF(visitor_id,''), ip)) FROM %s %s", t, where))
 
 	var uniquePaths int
 	config.DB.Get(&uniquePaths, fmt.Sprintf("SELECT COUNT(DISTINCT path) FROM %s %s", t, where))
@@ -340,6 +369,15 @@ func TrackPageView(c *gin.Context) {
 		util.BadRequest(c, "path is required"); return
 	}
 
+	ua := c.Request.UserAgent()
+	// Bot early-out — respond 200 with {ok:true} so bots don't retry,
+	// but skip every downstream side-effect (DB insert, post view++,
+	// Redis counters, mark-online).
+	if IsBot(ua) {
+		util.Success(c, gin.H{"ok": true})
+		return
+	}
+
 	// Get real IP
 	realIP := c.Request.Header.Get("CF-Connecting-IP")
 	if realIP == "" { realIP = c.Request.Header.Get("X-Real-IP") }
@@ -347,13 +385,15 @@ func TrackPageView(c *gin.Context) {
 
 	// Async: log access + increment counters via Redis
 	go func() {
-		logAccess(realIP, req.Path, "GET", req.Referer, c.Request.UserAgent(), c.Request.Header.Get("X-Forwarded-For"), req.VisitorID, req.Fingerprint)
+		logAccess(realIP, req.Path, "GET", req.Referer, ua, c.Request.Header.Get("X-Forwarded-For"), req.VisitorID, req.Fingerprint)
 
 		// Global PV counter + mark online
 		IncrTotalViews()
 		MarkOnline(req.VisitorID, realIP, req.Path)
 
-		// Per-post view counter
+		// Per-post view counter — only bump on the first view per
+		// visitor per post. Keeps refreshes / tab-refocus from inflating
+		// per-post numbers beyond what the aggregate dashboard shows.
 		if strings.HasPrefix(req.Path, "/posts/") {
 			slug := strings.TrimPrefix(req.Path, "/posts/")
 			slug = strings.Split(slug, "?")[0]
@@ -363,7 +403,7 @@ func TrackPageView(c *gin.Context) {
 				config.DB.Get(&postID, fmt.Sprintf(
 					"SELECT id FROM %s WHERE slug = $1 AND status = 'publish'",
 					config.T("posts")), slug)
-				if postID > 0 {
+				if postID > 0 && isFirstPostViewToday(req.Path, req.VisitorID, realIP) {
 					IncrPostViews(postID)
 				}
 			}
@@ -371,6 +411,24 @@ func TrackPageView(c *gin.Context) {
 	}()
 
 	util.Success(c, gin.H{"ok": true})
+}
+
+// isFirstPostViewToday returns true when neither this visitor_id nor IP
+// has viewed the given path since midnight. Daily dedup keeps the
+// per-post counter close to unique-reader intent without needing a
+// separate seen-set table. The 30s dedup in logAccess already stopped
+// the just-inserted row from double-counting, so n > 1 means a real
+// earlier view today.
+func isFirstPostViewToday(path, visitorID, ip string) bool {
+	key := visitorID
+	if key == "" { key = ip }
+	if key == "" { return false }
+	todayStart := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Now().Location()).Unix()
+	var n int
+	config.DB.Get(&n, fmt.Sprintf(
+		"SELECT COUNT(*) FROM %s WHERE path = $1 AND COALESCE(NULLIF(visitor_id,''), ip) = $2 AND created_at >= $3",
+		config.T("access_logs")), path, key, todayStart)
+	return n <= 1
 }
 
 // Recent access logs
@@ -695,7 +753,7 @@ func DashboardStats(c *gin.Context) {
 	var trend []dayCount
 	d30ago := time.Now().Add(-30 * 24 * time.Hour).Unix()
 	config.DB.Select(&trend, fmt.Sprintf(
-		"SELECT TO_CHAR(TO_TIMESTAMP(created_at), 'MM-DD') as date, COUNT(*) as count, COUNT(*) as visits, COUNT(DISTINCT ip) as visitors FROM %s WHERE created_at >= $1 GROUP BY date ORDER BY date",
+		"SELECT TO_CHAR(TO_TIMESTAMP(created_at), 'MM-DD') as date, COUNT(*) as count, COUNT(*) as visits, COUNT(DISTINCT COALESCE(NULLIF(visitor_id,''), ip)) as visitors FROM %s WHERE created_at >= $1 GROUP BY date ORDER BY date",
 		t("access_logs")), d30ago)
 
 	// Today visits

@@ -1,8 +1,10 @@
 
 import { useEffect, useState, useRef } from 'react';
+import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { BrowserIcon, OSIcon, DeviceIcon } from '@/lib/tech-icons';
 import VisitorMap from '@/components/dashboard/VisitorMap';
+import { Button } from '@/components/ui';
 
 
 const periods = [
@@ -70,6 +72,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
   const [onlineOpen, setOnlineOpen] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -105,6 +108,22 @@ export default function AnalyticsPage() {
               </button>
             ))}
           </div>
+
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          {/* Data cleanup — purge bots / duplicates / aged rows */}
+          <button
+            onClick={() => setPurgeOpen(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '4px 12px', fontSize: '12px', fontWeight: 500,
+              background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
+              cursor: 'pointer', color: 'var(--color-text-sub)',
+            }}
+            title="清理爬虫 / 重复 / 过期访问记录"
+          >
+            <i className="fa-regular fa-broom" style={{ fontSize: '11px' }} />
+            <span>数据清理</span>
+          </button>
 
           {/* Online users indicator */}
           <div style={{ position: 'relative' }}>
@@ -159,6 +178,7 @@ export default function AnalyticsPage() {
                 </div>
               </>
             )}
+          </div>
           </div>
         </div>
 
@@ -216,6 +236,167 @@ export default function AnalyticsPage() {
       <div>
         <RecentVisitorsPanel />
       </div>
+
+      {/* Data cleanup dialog */}
+      {purgeOpen && <PurgeDialog onClose={() => setPurgeOpen(false)} />}
+    </div>
+  );
+}
+
+function PurgeDialog({ onClose }: { onClose: () => void }) {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [purgeBots, setPurgeBots] = useState(true);
+  const [purgeDupes, setPurgeDupes] = useState(true);
+  const [olderDays, setOlderDays] = useState('');
+  const [result, setResult] = useState<any>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get('/admin/analytics/stats')
+      .then((r: any) => setStats(r.data || r))
+      .catch(() => toast.error('获取统计失败'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const run = async () => {
+    if (!purgeBots && !purgeDupes && !olderDays) {
+      toast.error('请至少勾选一项');
+      return;
+    }
+    setRunning(true);
+    setResult(null);
+    try {
+      const qs = new URLSearchParams({
+        bots: purgeBots ? '1' : '0',
+        duplicates: purgeDupes ? '1' : '0',
+        ...(olderDays ? { older_than_days: olderDays } : {}),
+      });
+      const r: any = await api.post('/admin/analytics/purge?' + qs.toString());
+      const d = r.data || r;
+      setResult(d);
+      const total = Number(d.bots_deleted || 0) + Number(d.duplicates_deleted || 0) + Number(d.aged_deleted || 0);
+      toast.success(`已清理 ${total.toLocaleString()} 条记录`);
+      // Reload stats so the UI reflects the new totals
+      const s: any = await api.get('/admin/analytics/stats');
+      setStats(s.data || s);
+    } catch {
+      toast.error('清理失败');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const fmt = (n: any) => (typeof n === 'number' || typeof n === 'string') ? Number(n).toLocaleString() : '—';
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        background: 'var(--color-bg-card)', width: '540px', maxWidth: '92vw',
+        border: '1px solid var(--color-border)',
+      }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 className="text-main" style={{ fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <i className="fa-regular fa-broom" style={{ color: 'var(--color-primary)' }} /> 数据清理
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'var(--color-text-dim)' }}>
+            <i className="fa-regular fa-xmark" />
+          </button>
+        </div>
+
+        <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {loading ? (
+            <div className="text-dim" style={{ textAlign: 'center', padding: '20px', fontSize: '13px' }}>加载中...</div>
+          ) : (
+            <>
+              {/* Current stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                <StatBox label="总记录" value={fmt(stats?.total_rows)} />
+                <StatBox label="疑似爬虫" value={fmt(stats?.bot_rows)} color="#dc2626" />
+                <StatBox label="独立访客" value={fmt(stats?.unique_visitors)} color="#16a34a" />
+              </div>
+
+              {/* Options */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px', border: '1px solid var(--color-border)' }}>
+                <label style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={purgeBots} onChange={(e) => setPurgeBots(e.target.checked)} style={{ marginTop: '2px' }} />
+                  <div>
+                    <div className="text-main" style={{ fontSize: '13px', fontWeight: 500 }}>清除爬虫记录</div>
+                    <div className="text-dim" style={{ fontSize: '11px', marginTop: '2px' }}>
+                      User-Agent 匹配 Googlebot / Ahrefs / curl / headless 等 70+ 种模式
+                    </div>
+                  </div>
+                </label>
+
+                <label style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={purgeDupes} onChange={(e) => setPurgeDupes(e.target.checked)} style={{ marginTop: '2px' }} />
+                  <div>
+                    <div className="text-main" style={{ fontSize: '13px', fontWeight: 500 }}>合并 30 秒内重复访问</div>
+                    <div className="text-dim" style={{ fontSize: '11px', marginTop: '2px' }}>
+                      同一访客刷新同一页面算一次；保留最早的一条
+                    </div>
+                  </div>
+                </label>
+
+                <label style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <input type="checkbox" checked={!!olderDays} onChange={(e) => setOlderDays(e.target.checked ? '90' : '')} style={{ marginTop: '2px' }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="text-main" style={{ fontSize: '13px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      清除
+                      <input
+                        type="number"
+                        min={1}
+                        value={olderDays}
+                        onChange={(e) => setOlderDays(e.target.value)}
+                        disabled={!olderDays}
+                        className="input"
+                        style={{ width: '64px', padding: '2px 8px', fontSize: '12px', textAlign: 'center' }}
+                      />
+                      天前的历史记录
+                    </div>
+                    <div className="text-dim" style={{ fontSize: '11px', marginTop: '2px' }}>
+                      按建站时长保留近期数据，历史归档或直接丢弃
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Result */}
+              {result && (
+                <div style={{ padding: '10px 12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', fontSize: '12px' }}>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>本次清理</div>
+                  <div className="text-sub" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
+                    <span>爬虫：{fmt(result.bots_deleted)} 条</span>
+                    <span>重复：{fmt(result.duplicates_deleted)} 条</span>
+                    <span>过期：{fmt(result.aged_deleted)} 条</span>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <Button variant="secondary" onClick={onClose} disabled={running}>关闭</Button>
+          <Button onClick={run} loading={running} disabled={loading}>
+            <i className="fa-regular fa-broom" style={{ fontSize: '12px' }} />
+            执行清理
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatBox({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div style={{ padding: '10px', border: '1px solid var(--color-border)', textAlign: 'center' }}>
+      <div style={{ fontSize: '18px', fontWeight: 700, color: color || 'var(--color-text)' }}>{value}</div>
+      <div className="text-dim" style={{ fontSize: '11px', marginTop: '2px' }}>{label}</div>
     </div>
   );
 }
