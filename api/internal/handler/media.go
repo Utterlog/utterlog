@@ -603,8 +603,12 @@ func UploadBranding(c *gin.Context) {
 		return
 	}
 
-	// Build URL — root path, e.g. domain.com/logo.png
-	url := config.C.AppURL + "/" + filename
+	// Build URL — root path, e.g. domain.com/logo.png. PublicBaseURL()
+	// reads the admin-configured site_url option first and only falls
+	// back to APP_URL env var if unset, so uploaded branding URLs
+	// reflect the real public origin instead of the install-time
+	// http://localhost:9260 placeholder.
+	url := strings.TrimRight(config.PublicBaseURL(), "/") + "/" + filename
 
 	util.Success(c, gin.H{
 		"url":      url,

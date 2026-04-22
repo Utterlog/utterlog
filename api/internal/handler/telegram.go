@@ -174,7 +174,7 @@ func TelegramWebhook(c *gin.Context) {
 		io.Copy(dst, resp.Body)
 		dst.Close()
 
-		imgURL := config.C.AppURL + "/uploads/" + filename
+		imgURL := strings.TrimRight(config.PublicBaseURL(), "/") + "/uploads/" + filename
 
 		config.DB.Exec(fmt.Sprintf(
 			"INSERT INTO %s (name, filename, url, mime_type, size, driver, category, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
@@ -356,7 +356,7 @@ func TelegramGetChatID(c *gin.Context) {
 	}
 
 	// 2. Try getUpdates (may fail if webhook is active — we temporarily delete it)
-	webhookURL := config.C.AppURL + "/api/v1/telegram/webhook"
+	webhookURL := strings.TrimRight(config.PublicBaseURL(), "/") + "/api/v1/telegram/webhook"
 
 	// Delete webhook
 	delResp, err := http.Get(fmt.Sprintf("https://api.telegram.org/bot%s/deleteWebhook", botToken))
@@ -440,7 +440,7 @@ func TelegramSetupWebhook(c *gin.Context) {
 	botToken := model.GetOption("telegram_bot_token")
 	if botToken == "" { util.BadRequest(c, "Bot Token 未配置"); return }
 
-	webhookURL := config.C.AppURL + "/api/v1/telegram/webhook"
+	webhookURL := strings.TrimRight(config.PublicBaseURL(), "/") + "/api/v1/telegram/webhook"
 	resp, err := http.Get(fmt.Sprintf("https://api.telegram.org/bot%s/setWebhook?url=%s", botToken, webhookURL))
 	if err != nil { util.Error(c, 500, "WEBHOOK_ERROR", err.Error()); return }
 	defer resp.Body.Close()

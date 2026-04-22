@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 	"utterlog-go/config"
 	"utterlog-go/internal/util"
@@ -72,7 +73,7 @@ func CreateBackup(c *gin.Context) {
 		"filename": filename,
 		"path":     zipPath,
 		"size":     size,
-		"url":      config.C.AppURL + "/" + zipPath,
+		"url":      strings.TrimRight(config.PublicBaseURL(), "/") + "/" + zipPath,
 		"created":  ts,
 	})
 }
@@ -89,7 +90,7 @@ func ListBackups(c *gin.Context) {
 			"filename": info.Name(),
 			"size":     info.Size(),
 			"created":  info.ModTime().Format("2006-01-02 15:04:05"),
-			"url":      config.C.AppURL + "/" + path,
+			"url":      strings.TrimRight(config.PublicBaseURL(), "/") + "/" + path,
 		})
 		return nil
 	})
