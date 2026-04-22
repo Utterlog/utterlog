@@ -18,7 +18,7 @@ import (
 )
 
 // BuildVersion is populated at link time via -ldflags "-X ...BuildVersion=".
-// Expected to be a release tag like "v1.0.6" (or "dev" for local runs).
+// Expected to be a release tag like "v1.0.7" (or "dev" for local runs).
 var BuildVersion = ""
 
 // BuildCommit is the 7-char git SHA of the build, injected via -ldflags.
@@ -252,7 +252,7 @@ func fetchLatestRelease() {
 
 	// Second call: resolve tag → commit SHA so the admin UI can show
 	// the "latest" commit hash alongside the version label, matching
-	// how the current build displays v1.0.6 · 3ac2f03. Silent on
+	// how the current build displays v1.0.7 · 3ac2f03. Silent on
 	// failure — commit is decorative, don't let it block the release.
 	rel.Commit = fetchTagCommit(rel.TagName)
 
@@ -264,7 +264,7 @@ func fetchLatestRelease() {
 }
 
 // fetchTagCommit hits GitHub's commits-by-ref endpoint to turn a tag
-// name (e.g., "v1.0.6") into the 7-char short SHA of the commit it
+// name (e.g., "v1.0.7") into the 7-char short SHA of the commit it
 // points to. Returns "" on any failure.
 func fetchTagCommit(tag string) string {
 	if tag == "" {
@@ -501,8 +501,21 @@ func runUpgrade() {
 	if installDir == "" {
 		installDir = "/opt/utterlog"
 	}
+	// Everything the sidecar prints goes to the shared upgrade.log that
+	// the API's SystemUpgradeStatus endpoint reads — so the admin UI
+	// sees the real pull / recreate / health-check progress instead of
+	// a silent "sidecar launched" line followed by nothing (which is
+	// what it looked like before when sidecar stdout went to its own
+	// ephemeral docker log).
 	sidecarScript := `
 set -e
+# Write everything to the host-mounted upgrade.log so the api can tail it.
+mkdir -p "$INSTALL_DIR/uploads"
+LOG="$INSTALL_DIR/uploads/upgrade.log"
+exec >>"$LOG" 2>&1
+
+ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+echo "[$(ts)] sidecar starting in $INSTALL_DIR"
 cd "$INSTALL_DIR"
 
 MODE="${UTTERLOG_COMPOSE_MODE:-}"
@@ -512,36 +525,47 @@ if [ -z "$MODE" ]; then
   elif [ -f docker-compose.yml ]; then
     MODE=slim
   else
-    echo "[upgrade] ERROR: no docker-compose files under $(pwd)"
+    echo "[$(ts)] ERROR: no docker-compose files under $(pwd)"
     exit 1
   fi
 fi
 
-echo "[upgrade] mode=$MODE — pulling ..."
+echo "[$(ts)] mode=$MODE — pulling images ..."
 case "$MODE" in
   overlay)
     docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
-    echo "[upgrade] recreating containers ..."
+    echo "[$(ts)] recreating containers ..."
     docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans
     ;;
   slim)
     docker compose pull
-    echo "[upgrade] recreating containers ..."
+    echo "[$(ts)] recreating containers ..."
     docker compose up -d --remove-orphans
     ;;
   *)
-    echo "[upgrade] ERROR: unknown UTTERLOG_COMPOSE_MODE=$MODE"
+    echo "[$(ts)] ERROR: unknown UTTERLOG_COMPOSE_MODE=$MODE"
     exit 1
     ;;
 esac
 
-echo "[upgrade] waiting for api health..."
+echo "[$(ts)] waiting for api health ..."
 for i in $(seq 1 60); do
   code=$(docker inspect --format='{{.State.Health.Status}}' utterlog-api-1 2>/dev/null || echo unknown)
-  [ "$code" = "healthy" ] && { echo "[upgrade] api healthy"; break; }
+  if [ "$code" = "healthy" ]; then
+    echo "[$(ts)] api healthy after ${i}s"
+    break
+  fi
+  if [ "$i" = "60" ]; then
+    echo "[$(ts)] WARN: api not healthy after 120s (state=$code); check docker logs utterlog-api-1"
+  fi
   sleep 2
 done
-echo "[upgrade] done"
+
+# Print the running binary's version tag so the admin UI can confirm
+# the upgrade actually flipped. Relies on the image label set by GHA.
+IMG=$(docker inspect utterlog-api-1 --format='{{.Config.Image}}' 2>/dev/null || echo '?')
+DIGEST=$(docker inspect utterlog-api-1 --format='{{.Image}}' 2>/dev/null | cut -c1-19)
+echo "[$(ts)] done — image=$IMG digest=$DIGEST"
 `
 
 	// Name the sidecar so we can find/cleanup stale runs.
