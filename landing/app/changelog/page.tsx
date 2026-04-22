@@ -71,10 +71,26 @@ function renderMd(md: string): string {
     inCode = false;
   };
 
-  const inlineFmt = (s: string) =>
-    escapeHtml(s)
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" rel="noopener">$1</a>');
+  // Inline markdown: escape first, then transform. Order matters —
+  //   1. extract inline code into placeholders so ** inside `code`
+  //      doesn't get mis-parsed as bold
+  //   2. bold **x** then italic *x* / _x_
+  //   3. links [text](url)
+  //   4. restore code
+  const inlineFmt = (s: string) => {
+    const codeStash: string[] = [];
+    let t = escapeHtml(s).replace(/`([^`]+)`/g, (_, c) => {
+      codeStash.push(`<code>${c}</code>`);
+      return `\u0000${codeStash.length - 1}\u0000`;
+    });
+    t = t
+      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;!?]|$)/g, '$1<em>$2</em>')
+      .replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,;!?]|$)/g, '$1<em>$2</em>')
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" rel="noopener">$1</a>')
+      .replace(/\u0000(\d+)\u0000/g, (_, n) => codeStash[Number(n)]);
+    return t;
+  };
 
   for (const rawLine of rawLines) {
     const fence = rawLine.match(/^```\s*([\w-]*)\s*$/);
