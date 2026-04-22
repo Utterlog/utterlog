@@ -18,7 +18,7 @@ import (
 )
 
 // BuildVersion is populated at link time via -ldflags "-X ...BuildVersion=".
-// Expected to be a release tag like "v1.0.7" (or "dev" for local runs).
+// Expected to be a release tag like "v1.0.8" (or "dev" for local runs).
 var BuildVersion = ""
 
 // BuildCommit is the 7-char git SHA of the build, injected via -ldflags.
@@ -252,7 +252,7 @@ func fetchLatestRelease() {
 
 	// Second call: resolve tag → commit SHA so the admin UI can show
 	// the "latest" commit hash alongside the version label, matching
-	// how the current build displays v1.0.7 · 3ac2f03. Silent on
+	// how the current build displays v1.0.8 · 3ac2f03. Silent on
 	// failure — commit is decorative, don't let it block the release.
 	rel.Commit = fetchTagCommit(rel.TagName)
 
@@ -264,7 +264,7 @@ func fetchLatestRelease() {
 }
 
 // fetchTagCommit hits GitHub's commits-by-ref endpoint to turn a tag
-// name (e.g., "v1.0.7") into the 7-char short SHA of the commit it
+// name (e.g., "v1.0.8") into the 7-char short SHA of the commit it
 // points to. Returns "" on any failure.
 func fetchTagCommit(tag string) string {
 	if tag == "" {
