@@ -377,6 +377,15 @@ func getRedisInfo() gin.H {
 }
 
 func getHostname() string {
+	// Inside a container, `hostname` returns the container ID (e.g.
+	// "566ddbfe4c8a") which is meaningless to the admin. Prefer the
+	// host's /etc/hostname bind-mounted to /host/etc/hostname — added
+	// to docker-compose.yml alongside /etc/os-release.
+	if b, err := os.ReadFile("/host/etc/hostname"); err == nil {
+		if name := strings.TrimSpace(string(b)); name != "" {
+			return name
+		}
+	}
 	out, _ := exec.Command("hostname").Output()
 	return strings.TrimSpace(string(out))
 }
@@ -460,14 +469,32 @@ func getServerCountry() string {
 // getOSInfo returns the HOST OS description. Go runs inside an Alpine
 // container, so reading the container's own /etc/os-release always
 // says "Alpine Linux v3.20" no matter what the user's actual server is.
-// Look for a bind-mounted /host/etc/os-release first (added to
-// docker-compose.yml so future installs expose it); fall back to the
-// container's own file with a "(container)" suffix so the UI is
-// honest about what we can see.
+// Look for a bind-mounted /host/... release file across the common
+// locations (distros put it in one of these three); fall back to the
+// container's own file with a "(容器)" suffix so the UI is honest
+// about what we can see.
 func getOSInfo() string {
-	// Preferred: host OS via bind mount
-	if b, err := os.ReadFile("/host/etc/os-release"); err == nil {
-		if name := parseOsReleasePretty(string(b)); name != "" {
+	// Preferred: host OS via bind mount. Try multiple standard paths
+	// since some distros only populate one.
+	for _, p := range []string{
+		"/host/etc/os-release",
+		"/host/usr/lib/os-release",
+	} {
+		if b, err := os.ReadFile(p); err == nil {
+			if name := parseOsReleasePretty(string(b)); name != "" {
+				return name
+			}
+		}
+	}
+	// Older RHEL / CentOS < 7 — only /etc/redhat-release
+	if b, err := os.ReadFile("/host/etc/redhat-release"); err == nil {
+		if s := strings.TrimSpace(string(b)); s != "" {
+			return s
+		}
+	}
+	// Debian / Ubuntu LSB fallback
+	if b, err := os.ReadFile("/host/etc/lsb-release"); err == nil {
+		if name := parseLSBDescription(string(b)); name != "" {
 			return name
 		}
 	}
@@ -481,7 +508,16 @@ func getOSInfo() string {
 	}
 	// Fallback: container's own OS (accurate for local-run, labeled
 	// in-container for dockerized deploys so the admin knows we're
-	// not reading the actual host).
+	// not reading the actual host). If /host/etc/os-release *should*
+	// be mounted but isn't, log it once so the admin can spot a
+	// compose misconfiguration in `docker logs utterlog-api-1`.
+	if inDocker() {
+		osReleaseMountWarnOnce.Do(func() {
+			if _, err := os.Stat("/host/etc"); err != nil {
+				fmt.Printf("[system-status] /host/etc not mounted — host OS will show as the container base image. Update docker-compose.yml via `bash update.sh` to pick up the new bind mounts.\n")
+			}
+		})
+	}
 	if b, err := os.ReadFile("/etc/os-release"); err == nil {
 		if name := parseOsReleasePretty(string(b)); name != "" {
 			if inDocker() {
@@ -491,6 +527,21 @@ func getOSInfo() string {
 		}
 	}
 	return runtime.GOOS + "/" + runtime.GOARCH
+}
+
+var osReleaseMountWarnOnce sync.Once
+
+// parseLSBDescription reads /etc/lsb-release style files. Key is
+// DISTRIB_DESCRIPTION, which is quoted just like PRETTY_NAME in
+// os-release.
+func parseLSBDescription(s string) string {
+	for _, line := range strings.Split(s, "\n") {
+		if strings.HasPrefix(line, "DISTRIB_DESCRIPTION=") {
+			v := strings.TrimPrefix(line, "DISTRIB_DESCRIPTION=")
+			return strings.TrimSpace(strings.Trim(v, "\"'"))
+		}
+	}
+	return ""
 }
 
 func parseOsReleasePretty(s string) string {

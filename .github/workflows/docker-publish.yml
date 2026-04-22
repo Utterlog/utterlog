@@ -69,7 +69,7 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # VERSION — always a human-readable release label (v1.0.9).
+      # VERSION — always a human-readable release label (v1.0.10).
       # On tag pushes: exactly the tag name.
       # On main pushes: the latest reachable tag (via git describe).
       # BUILD_COMMIT — 7-char short SHA, displayed as small subtitle
