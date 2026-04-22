@@ -16,11 +16,18 @@ async function getReleases() {
           'Accept': 'application/vnd.github+json',
           'User-Agent': 'utterlog-landing',
         },
-        // For Next.js static export, this is fetched once at build time.
-        cache: 'no-store',
+        // `output: 'export'` forbids `cache: 'no-store'` (that flips the
+        // page into dynamic rendering, which static export rejects).
+        // `force-cache` bakes the fetched data into the static HTML at
+        // build time — exactly what we want since the landing is
+        // rebuilt+redeployed on every release anyway.
+        cache: 'force-cache',
       }
     );
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.warn(`[changelog] GitHub releases API returned ${res.status}`);
+      return [];
+    }
     return (await res.json()) as Array<{
       id: number;
       tag_name: string;
@@ -30,7 +37,8 @@ async function getReleases() {
       published_at: string;
       prerelease: boolean;
     }>;
-  } catch {
+  } catch (e) {
+    console.warn(`[changelog] GitHub releases fetch failed:`, e);
     return [];
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { HERO_BADGE } from '@/lib/version';
 
 const INSTALL_CMD = 'curl -fsSL https://utterlog.io/install.sh | bash';
 const UPDATE_CMD  = 'curl -fsSL https://utterlog.io/update.sh | bash';
@@ -98,7 +99,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 text-xs font-mono bg-brand-soft text-brand px-3 py-1.5 mb-8 border border-brand/20">
             <span className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
-            BETA · v1.0
+            {HERO_BADGE}
           </div>
 
           <h1 className="text-[40px] sm:text-[56px] font-bold tracking-tight text-slate-900 leading-[1.1] mb-6">
