@@ -3,8 +3,10 @@ import toast from 'react-hot-toast';
 import { themesApi, type ExtensionManifest } from '@/lib/api';
 import { siteUrlOf } from '@/lib/site';
 import FooterIconsEditor from '@/components/FooterIconsEditor';
+import MenusPage from './Menus';
 
 export default function Themes() {
+  const [tab, setTab] = useState<'themes' | 'menus' | 'footer'>('themes');
   const [themes, setThemes] = useState<ExtensionManifest[]>([]);
   const [active, setActive] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -87,8 +89,37 @@ export default function Themes() {
     }
   };
 
+  // Tab bar — themes / menus / footer icons — so menu management
+  // lives inside the same 主题 surface instead of a top-level sidebar
+  // entry. Keeps related theme-customization controls together.
+  const tabs: { key: typeof tab; label: string; icon: string }[] = [
+    { key: 'themes', label: '主题', icon: 'fa-regular fa-palette' },
+    { key: 'menus', label: '菜单', icon: 'fa-regular fa-list' },
+    { key: 'footer', label: '页脚图标', icon: 'fa-regular fa-share-nodes' },
+  ];
+
   return (
     <div>
+      <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--color-border)', marginBottom: 20 }}>
+        {tabs.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            padding: '10px 18px', fontSize: 13,
+            fontWeight: tab === t.key ? 600 : 400,
+            color: tab === t.key ? 'var(--color-primary)' : 'var(--color-text-sub)',
+            border: 'none',
+            borderBottom: tab === t.key ? '2px solid var(--color-primary)' : '2px solid transparent',
+            background: 'none', cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+          }}>
+            <i className={t.icon} style={{ fontSize: 13 }} />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'menus' && <MenusPage />}
+      {tab === 'footer' && <FooterIconsEditor />}
+      {tab === 'themes' && <>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div className="text-sub" style={{ fontSize: 13 }}>
@@ -304,8 +335,7 @@ export default function Themes() {
         </div>
       )}
 
-      {/* Theme settings: footer icon buttons (applies to all themes that read theme_footer_icons option) */}
-      <FooterIconsEditor />
+      </>}
     </div>
   );
 }

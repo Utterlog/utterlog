@@ -22,7 +22,6 @@ const menuItems: MenuItem[] = [
     ],
   },
   { to: '/pages', icon: 'fa-regular fa-file-lines', label: '页面', sub: 'Pages' },
-  { to: '/menus', icon: 'fa-solid fa-list', label: '菜单', sub: 'Menus' },
   { to: '/moments', icon: 'fa-solid fa-comment-dots', label: '说说', sub: 'Moments' },
   {
     to: '/music', icon: 'fa-solid fa-clapperboard', label: '娱乐', sub: 'Entertainment',
