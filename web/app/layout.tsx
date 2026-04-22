@@ -1,18 +1,31 @@
 import './globals.css';
 import { Providers } from './providers';
-import { getOptions } from '@/lib/blog-api';
 
+const API_BASE = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || '';
+
+// Resolves <title>, description, and favicon from site options at runtime.
+// During `next build` (docker image build) there's no API running and
+// INTERNAL_API_URL is blank — we skip the fetch entirely so prerender
+// doesn't hang. At runtime ISR takes over and refreshes these every 60s.
 export async function generateMetadata() {
   let favicon = '/favicon.ico';
   let title = 'Utterlog!';
   let description = '一个简洁优雅的博客';
-  try {
-    const optRes: any = await getOptions();
-    const opts = optRes.data || optRes || {};
-    if (opts.site_favicon) favicon = opts.site_favicon;
-    if (opts.site_title) title = opts.site_title;
-    if (opts.site_description) description = opts.site_description;
-  } catch {}
+  if (API_BASE) {
+    try {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 2000);
+      const res = await fetch(`${API_BASE}/options`, { next: { revalidate: 60 }, signal: ac.signal });
+      clearTimeout(timer);
+      if (res.ok) {
+        const json = await res.json();
+        const opts = json.data || json || {};
+        if (opts.site_favicon) favicon = opts.site_favicon;
+        if (opts.site_title) title = opts.site_title;
+        if (opts.site_description) description = opts.site_description;
+      }
+    } catch {}
+  }
   return {
     title,
     description,
