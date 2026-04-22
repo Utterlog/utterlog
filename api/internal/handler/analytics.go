@@ -15,16 +15,65 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Middleware to log access
+// Middleware to log access.
+//
+// Heavily scoped to avoid blowing up access_logs with asset / scanner
+// noise — earlier this middleware only skipped /api/, /uploads/, and
+// /_next/, which left /themes/*.css, /admin/assets/*, /favicon.*, and
+// every bot-scanned WordPress path (.env, wp-login.php, xmlrpc.php,
+// /robots.txt, etc.) landing in the table. One blog page load could
+// easily write a dozen rows on top of the single explicit /track POST
+// from the frontend, and CC scanners pushed counts into the tens of
+// thousands per minute.
+//
+// Current policy: only log text/html navigations that Go is actually
+// meant to serve as pages — today that's effectively nothing (the
+// blog frontend is Next.js, the admin is an SPA), so the middleware
+// is a thin safety net. All analytics now flow through explicit
+// POST /api/v1/track from PageViewTracker.
+var skipLogPrefix = []string{
+	"/api/", "/uploads/", "/_next/", "/themes/", "/admin", "/static/",
+	"/favicon", "/robots.txt", "/sitemap", "/manifest.json", "/ads.txt",
+	"/apple-touch-icon", "/browserconfig.xml", "/.well-known/",
+}
+
+var assetExt = map[string]bool{
+	".js": true, ".css": true, ".map": true,
+	".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".webp": true,
+	".avif": true, ".svg": true, ".ico": true,
+	".woff": true, ".woff2": true, ".ttf": true, ".otf": true, ".eot": true,
+	".json": true, ".xml": true, ".txt": true,
+	".mp4": true, ".webm": true, ".ogg": true, ".mp3": true, ".wav": true,
+}
+
 func AccessLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Skip API and static paths
 		path := c.Request.URL.Path
-		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/uploads/") || strings.HasPrefix(path, "/_next/") {
+		for _, p := range skipLogPrefix {
+			if strings.HasPrefix(path, p) {
+				c.Next(); return
+			}
+		}
+		// Skip anything with a file extension — all real pages are
+		// extensionless, all assets have one. Keeps bot-scanned junk
+		// like /wp-login.php, /.env.bak, /config.json out.
+		if i := strings.LastIndex(path, "."); i > 0 {
+			if ext := strings.ToLower(path[i:]); assetExt[ext] {
+				c.Next(); return
+			}
+			// Unknown extension (.php, .asp, .env, etc.) — treat as
+			// scanner noise, skip.
 			c.Next(); return
 		}
 
 		c.Next()
+
+		// Only log when the response was a real page (2xx/3xx). 404
+		// sweeps from scanners hit here by the thousand; no point
+		// recording them as "visitors".
+		if c.Writer.Status() >= 400 {
+			return
+		}
 
 		// Get real IP: CF-Connecting-IP > X-Real-IP > X-Forwarded-For > ClientIP
 		realIP := c.Request.Header.Get("CF-Connecting-IP")
