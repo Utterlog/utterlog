@@ -9,10 +9,38 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
-const POSITIONS: { key: string; label: string; hint: string }[] = [
-  { key: 'header', label: '顶部导航 (menu_header)', hint: '主题 Header 使用，留空则用主题默认菜单' },
-  { key: 'sidebar', label: '侧栏导航 (menu_sidebar)', hint: '首页左侧分类标签栏' },
-  { key: 'footer', label: '页脚导航 (menu_footer)', hint: '页脚链接' },
+type Position = { key: string; label: string; hint: string };
+
+// Per-theme menu position map. Mirrors each theme.json's menuPositions
+// array so the admin shows ONLY the positions the active theme actually
+// renders — users don't get a 'sidebar' tab for a theme that has no
+// sidebar, etc. Falls back to FALLBACK_POSITIONS for themes that aren't
+// in this map (custom / uploaded themes).
+const THEME_POSITIONS: Record<string, Position[]> = {
+  Azure: [
+    { key: 'header', label: '顶部导航', hint: 'Header 主菜单；留空则用主题默认菜单（首页/关于/归档/说说/友链/订阅）' },
+    { key: 'sidebar', label: '首页 Hero 侧边栏', hint: '首页左侧大图旁的导航 tab；留空则自动列出全部分类' },
+  ],
+  Flux: [
+    { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
+    { key: 'footer', label: '页脚导航', hint: 'Footer 辅助链接' },
+  ],
+  Chred: [
+    { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
+    { key: 'sidebar', label: '侧栏导航', hint: '首页左侧分类' },
+  ],
+  Westlife: [
+    { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
+  ],
+  '2026': [
+    { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
+  ],
+};
+
+const FALLBACK_POSITIONS: Position[] = [
+  { key: 'header', label: '顶部导航', hint: '主题 Header 主菜单' },
+  { key: 'sidebar', label: '侧栏导航', hint: '主题侧栏（如适用）' },
+  { key: 'footer', label: '页脚导航', hint: '主题页脚（如适用）' },
 ];
 
 const defaultHeaderMenu: MenuItem[] = [
@@ -38,6 +66,8 @@ export default function MenusPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [menus, setMenus] = useState<Record<string, MenuItem[]>>({});
+  const [positions, setPositions] = useState<Position[]>(FALLBACK_POSITIONS);
+  const [activeTheme, setActiveTheme] = useState('');
   const [activePos, setActivePos] = useState('header');
 
   useEffect(() => { fetchMenus(); }, []);
@@ -47,8 +77,15 @@ export default function MenusPage() {
     try {
       const r: any = await optionsApi.list();
       const opts = r.data || r || {};
+      const theme = (opts.active_theme || 'Azure').toString();
+      const pos = THEME_POSITIONS[theme] || FALLBACK_POSITIONS;
+      setActiveTheme(theme);
+      setPositions(pos);
+      // Keep the active tab pointing at something valid for this theme
+      if (!pos.find(p => p.key === activePos)) setActivePos(pos[0]?.key || 'header');
+
       const next: Record<string, MenuItem[]> = {};
-      POSITIONS.forEach(p => {
+      pos.forEach(p => {
         next[p.key] = parseMenu(opts[`menu_${p.key}`]);
       });
       setMenus(next);
@@ -127,7 +164,7 @@ export default function MenusPage() {
     setSaving(true);
     try {
       const payload: Record<string, string> = {};
-      POSITIONS.forEach(p => {
+      positions.forEach(p => {
         payload[`menu_${p.key}`] = JSON.stringify(menus[p.key] || []);
       });
       await optionsApi.updateMany(payload);
@@ -144,12 +181,14 @@ export default function MenusPage() {
   }
 
   const items = menus[activePos] || [];
-  const posDef = POSITIONS.find(p => p.key === activePos);
+  const posDef = positions.find(p => p.key === activePos);
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-        <span className="text-dim" style={{ fontSize: '13px' }}>管理前端导航菜单 — 各位置以 JSON 数组保存到 options 表</span>
+        <span className="text-dim" style={{ fontSize: '13px' }}>
+          当前主题 <code style={{ color: 'var(--color-primary)' }}>{activeTheme || '—'}</code> 声明了 {positions.length} 个菜单位置
+        </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
           <Button variant="secondary" onClick={resetToDefault}>
             <i className="fa-regular fa-rotate-left" style={{ fontSize: '13px' }} /> 重置默认
@@ -161,7 +200,7 @@ export default function MenusPage() {
       </div>
 
       <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--color-border)', marginBottom: '20px' }}>
-        {POSITIONS.map(p => (
+        {positions.map(p => (
           <button
             key={p.key}
             onClick={() => setActivePos(p.key)}

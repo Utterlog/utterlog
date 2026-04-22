@@ -7,6 +7,7 @@ import LazyImage from '@/components/ui/LazyImage';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { getCategoryIcon } from './constants';
+import { useThemeContext } from '@/lib/theme-context';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 const ACCENT = '#0052D9';
@@ -21,6 +22,13 @@ const MODES = [
 export default function HomePage({ posts, page, totalPages, categories: serverCategories = [], archiveStats: serverStats = {}, perPage = 8 }: { posts: any[]; page: number; totalPages: number; categories?: any[]; archiveStats?: any; perPage?: number }) {
   const [categories, setCategories] = useState<any[]>(serverCategories);
   const [activeCatIdx, setActiveCatIdx] = useState(0);
+  // Admin-configured sidebar menu items. When non-empty, each row
+  // becomes a static navigation link in the hero sidebar instead of
+  // the auto-generated category filter tabs. Empty ⇒ fall back to
+  // the category auto-list behavior.
+  const { menus: ctxMenus } = useThemeContext();
+  const sidebarMenu = Array.isArray(ctxMenus?.sidebar) ? ctxMenus.sidebar : [];
+  const useCustomSidebar = sidebarMenu.length > 0;
   const [modeIdx, setModeIdx] = useState(0);
   const [heroPost, setHeroPost] = useState<any>(posts[0] || null);
   const [paused, setPaused] = useState(false);
@@ -155,8 +163,9 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
 
   const heroSrc = heroPost?.cover_url || (heroPost ? `https://img.et/1920/1080?type=landscape&r=${heroPost.id}` : '');
 
-  // Hero height = tabs count * tab height (tabs: 1 全部 + categories + 1 playback row)
-  const tabCount = 1 + categories.length; // 全部 + categories
+  // Hero height — tab row count depends on which sidebar mode we're in.
+  // Custom menu uses its own length; default uses 1 全部 + N categories.
+  const tabCount = useCustomSidebar ? sidebarMenu.length : 1 + categories.length;
   const heroHeight = Math.max(280, tabCount * 56); // min 280px
 
   return (
@@ -164,33 +173,54 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
       {/* ===== Hero area: tabs + image — single unit, scrolls together ===== */}
       {(
         <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)' }} className="lg:grid">
-          {/* Left: Category tabs */}
+          {/* Left: sidebar — admin-configured menu if set, otherwise
+              auto-generated category filter tabs. */}
           <div style={{ borderRight: '1px solid #e5e5e5' }} className="hidden lg:block">
             <div style={{ height: heroHeight, display: 'flex', flexDirection: 'column' }}>
-              <button onClick={() => handleTabClick(0)} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                width: '100%', flex: 1, padding: '0 16px', fontSize: '14px',
-                color: activeCatIdx === 0 ? '#fff' : '#555',
-                background: activeCatIdx === 0 ? ACCENT : 'transparent',
-                border: 'none', borderBottom: '1px solid #e5e5e5', cursor: 'pointer',
-                textAlign: 'left', transition: 'all 0.15s',
-              }}>
-                <span>全部 ({totalPostCount})</span>
-                <i className="fa-sharp fa-light fa-grid-2" style={{ fontSize: activeCatIdx === 0 ? '26px' : '22px', opacity: activeCatIdx === 0 ? 1 : 0.6, color: activeCatIdx === 0 ? '#fff' : undefined, transition: 'all 0.15s' }} />
-              </button>
-              {categories.map((cat, i) => (
-                <button key={cat.id} onClick={() => handleTabClick(i + 1)} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  width: '100%', flex: 1, padding: '0 16px', fontSize: '14px',
-                  color: activeCatIdx === i + 1 ? '#fff' : '#555',
-                  background: activeCatIdx === i + 1 ? ACCENT : 'transparent',
-                  border: 'none', borderBottom: i < categories.length - 1 ? '1px solid #e5e5e5' : 'none', cursor: 'pointer',
-                  textAlign: 'left', transition: 'all 0.15s',
-                }}>
-                  <span>{cat.name} ({cat.count || 0})</span>
-                  <i className={getCategoryIcon(cat)} style={{ fontSize: activeCatIdx === i + 1 ? '26px' : '22px', opacity: activeCatIdx === i + 1 ? 1 : 0.6, color: activeCatIdx === i + 1 ? '#fff' : undefined, transition: 'all 0.15s' }} />
-                </button>
-              ))}
+              {useCustomSidebar ? (
+                sidebarMenu.map((item: any, i: number) => (
+                  <Link key={i} href={item.href || '#'} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    width: '100%', flex: 1, padding: '0 16px', fontSize: '14px',
+                    color: '#555', textDecoration: 'none',
+                    borderBottom: i < sidebarMenu.length - 1 ? '1px solid #e5e5e5' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#555'; }}
+                  >
+                    <span>{item.label}</span>
+                    <i className={item.icon || 'fa-sharp fa-light fa-circle-arrow-right'} style={{ fontSize: '22px', opacity: 0.6, transition: 'all 0.15s' }} />
+                  </Link>
+                ))
+              ) : (
+                <>
+                  <button onClick={() => handleTabClick(0)} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    width: '100%', flex: 1, padding: '0 16px', fontSize: '14px',
+                    color: activeCatIdx === 0 ? '#fff' : '#555',
+                    background: activeCatIdx === 0 ? ACCENT : 'transparent',
+                    border: 'none', borderBottom: '1px solid #e5e5e5', cursor: 'pointer',
+                    textAlign: 'left', transition: 'all 0.15s',
+                  }}>
+                    <span>全部 ({totalPostCount})</span>
+                    <i className="fa-sharp fa-light fa-grid-2" style={{ fontSize: activeCatIdx === 0 ? '26px' : '22px', opacity: activeCatIdx === 0 ? 1 : 0.6, color: activeCatIdx === 0 ? '#fff' : undefined, transition: 'all 0.15s' }} />
+                  </button>
+                  {categories.map((cat, i) => (
+                    <button key={cat.id} onClick={() => handleTabClick(i + 1)} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      width: '100%', flex: 1, padding: '0 16px', fontSize: '14px',
+                      color: activeCatIdx === i + 1 ? '#fff' : '#555',
+                      background: activeCatIdx === i + 1 ? ACCENT : 'transparent',
+                      border: 'none', borderBottom: i < categories.length - 1 ? '1px solid #e5e5e5' : 'none', cursor: 'pointer',
+                      textAlign: 'left', transition: 'all 0.15s',
+                    }}>
+                      <span>{cat.name} ({cat.count || 0})</span>
+                      <i className={getCategoryIcon(cat)} style={{ fontSize: activeCatIdx === i + 1 ? '26px' : '22px', opacity: activeCatIdx === i + 1 ? 1 : 0.6, color: activeCatIdx === i + 1 ? '#fff' : undefined, transition: 'all 0.15s' }} />
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           </div>
           {/* Right: Hero image — overlaps border line */}
