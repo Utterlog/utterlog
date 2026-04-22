@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -118,9 +119,12 @@ func SystemVersion(c *gin.Context) {
 	} else {
 		payload["latest"] = nil
 		payload["update_available"] = false
-		if errMsg != "" {
-			payload["error"] = errMsg
-		}
+	}
+	// Surface errMsg on every response (even when a stale `rel` is
+	// still cached) so the admin SPA can warn "上次检查失败" instead
+	// of silently trusting stale data.
+	if errMsg != "" {
+		payload["error"] = errMsg
 	}
 	util.Success(c, payload)
 }
@@ -150,8 +154,9 @@ func currentVersion() gin.H {
 // - Current == "dev" or starts with "sha-" (untagged build): any tagged
 //   semver release counts as newer. This lets dev/local installs see
 //   the update badge so the feature is visible while testing.
-// - Both semver: lexicographic compare works for monotonic 1.x tags;
-//   pre-release gating is surfaced via the prerelease flag separately.
+// - Both semver: numeric-per-component compare so 1.0.10 > 1.0.9 (the
+//   old lexicographic compare flipped those). Pre-release gating is
+//   surfaced via the prerelease flag separately.
 func isNewer(current, latest string) bool {
 	c := strings.TrimPrefix(current, "v")
 	l := strings.TrimPrefix(latest, "v")
@@ -159,10 +164,46 @@ func isNewer(current, latest string) bool {
 		return false
 	}
 	if c == "dev" || strings.HasPrefix(c, "sha-") {
-		// Any tagged semver release is "newer" than a dev/sha build.
 		return !strings.HasPrefix(l, "sha-")
 	}
-	return l > c
+	return compareSemver(l, c) > 0
+}
+
+// compareSemver returns >0 if a > b, <0 if a < b, 0 if equal. Splits
+// on "." then parses each segment as int; non-numeric tail (e.g.
+// "1.0.0-rc1") is treated as older than a pure numeric version.
+func compareSemver(a, b string) int {
+	// Strip a pre-release suffix (anything after "-") for the main
+	// comparison — "1.0.0-rc1" < "1.0.0" < "1.0.1".
+	aMain, aPre := splitPre(a)
+	bMain, bPre := splitPre(b)
+	ap := strings.Split(aMain, ".")
+	bp := strings.Split(bMain, ".")
+	n := len(ap); if len(bp) > n { n = len(bp) }
+	for i := 0; i < n; i++ {
+		var av, bv int
+		if i < len(ap) { av, _ = strconv.Atoi(ap[i]) }
+		if i < len(bp) { bv, _ = strconv.Atoi(bp[i]) }
+		if av != bv {
+			if av > bv { return 1 }
+			return -1
+		}
+	}
+	// Equal main → a release is newer than a pre-release of the same
+	// main ("1.0.0" > "1.0.0-rc1"); two pre-releases fall back to
+	// lexicographic.
+	if aPre == "" && bPre != "" { return 1 }
+	if aPre != "" && bPre == "" { return -1 }
+	if aPre > bPre { return 1 }
+	if aPre < bPre { return -1 }
+	return 0
+}
+
+func splitPre(v string) (main, pre string) {
+	if i := strings.Index(v, "-"); i >= 0 {
+		return v[:i], v[i+1:]
+	}
+	return v, ""
 }
 
 func fetchLatestRelease() {

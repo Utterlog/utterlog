@@ -157,6 +157,40 @@ export default function SystemUpdatePanel() {
     });
   }
 
+  // Verifies whether the upgrade actually took effect. The backend
+  // marks `success=true` optimistically the moment it hands the pull
+  // off to the sidecar container, so the old "升级完成" toast was
+  // firing even when the pull later failed or the api was recreated
+  // into the same image. This re-polls /version, waits for the
+  // BuildVersion string to match the latest release, and only then
+  // declares success. If after `maxWaitSec` the running version is
+  // still the old one, we surface a "升级未生效" error so the user
+  // knows to investigate the docker logs.
+  async function verifyUpgradeApplied(expected: string, maxWaitSec = 60) {
+    const started = Date.now();
+    let lastErr = '';
+    while (Date.now() - started < maxWaitSec * 1000) {
+      try {
+        const r = await api.get<any>('/admin/system/version?refresh=1');
+        setInfo(r.data);
+        const got = r.data?.current?.version || '';
+        if (expected && got === expected) {
+          toast.success('升级完成 — 已运行 ' + got);
+          return true;
+        }
+      } catch (e: any) {
+        lastErr = e?.message || '';
+      }
+      await new Promise((res) => setTimeout(res, 2000));
+    }
+    toast.error(
+      lastErr
+        ? `无法确认升级结果（${lastErr}）—— 请手动刷新页面核对版本`
+        : `升级未生效 — 容器仍在旧版本，请检查 docker logs utterlog-api-1`
+    );
+    return false;
+  }
+
   async function pollStatus() {
     try {
       const r = await api.get<any>('/admin/system/upgrade/status');
@@ -165,11 +199,12 @@ export default function SystemUpdatePanel() {
         clearInterval(pollRef.current!);
         pollRef.current = null;
         if (r.data.success) {
-          toast.success('升级完成，正在刷新版本信息...');
-          setTimeout(() => {
-            load(true);
-            setUpgrading(false);
-          }, 2000);
+          // Backend's "success" is optimistic — verify the running
+          // version actually flipped before declaring victory.
+          const expected = info?.latest?.version || '';
+          toast('升级脚本已执行，正在确认容器版本...');
+          await verifyUpgradeApplied(expected, 60);
+          setUpgrading(false);
         } else {
           toast.error('升级失败: ' + r.data.message);
           setUpgrading(false);
@@ -214,17 +249,26 @@ export default function SystemUpdatePanel() {
     return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
-  // Main label = release version (v1.0.2). Commit SHA goes below as
+  // Main label = release version (v1.0.5). Commit SHA goes below as
   // a small subtitle so the UI never fronts an ugly "sha-<40hex>".
   const cur = info?.current.version || '—';
   const curCommit = info?.current.commit || '';
   const lat = info?.latest?.version || '—';
   const updateAvailable = info?.update_available ?? false;
+  // Tri-state: update-available | up-to-date | check-failed. The old
+  // 2-state logic (just updateAvailable) collapsed check-failed into
+  // up-to-date, so GitHub rate-limits / network blips silently claimed
+  // the user was current even when they weren't.
+  const checkFailed = !!info && info.latest == null && !!info.error;
+  const checkState: 'update' | 'ok' | 'unknown' =
+    checkFailed ? 'unknown' : updateAvailable ? 'update' : 'ok';
 
-  // Status color: blue when an update is available, green when up-to-date.
-  const statusColor = updateAvailable ? '#0052D9' : '#16a34a';
-  const statusColorDark = updateAvailable ? '#003DA6' : '#15803d';
-  const statusColorSoft = updateAvailable ? 'rgba(0,82,217,0.08)' : 'rgba(22,163,74,0.08)';
+  // Status color: blue when an update is available, green when up-to-date,
+  // amber when we couldn't actually check (GitHub rate-limit / network /
+  // missing-release) so the UI doesn't look like a false positive.
+  const statusColor = checkState === 'update' ? '#0052D9' : checkState === 'unknown' ? '#d97706' : '#16a34a';
+  const statusColorDark = checkState === 'update' ? '#003DA6' : checkState === 'unknown' ? '#b45309' : '#15803d';
+  const statusColorSoft = checkState === 'update' ? 'rgba(0,82,217,0.08)' : checkState === 'unknown' ? 'rgba(217,119,6,0.10)' : 'rgba(22,163,74,0.08)';
 
   // Primary button = main action (upgrade / "up-to-date"). Blue or green.
   const primaryBtnStyle: React.CSSProperties = {
@@ -289,7 +333,7 @@ export default function SystemUpdatePanel() {
         </div>
 
         <div style={{ marginTop: 18, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          {updateAvailable ? (
+          {checkState === 'update' ? (
             <button
               type="button"
               onClick={doUpgrade}
@@ -300,6 +344,11 @@ export default function SystemUpdatePanel() {
             >
               <i className={`fa-solid ${upgrading ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-down'}`} />
               {upgrading ? '升级中…' : '一键升级到 ' + lat}
+            </button>
+          ) : checkState === 'unknown' ? (
+            <button type="button" disabled style={primaryBtnStyle}>
+              <i className="fa-solid fa-triangle-exclamation" />
+              版本检查失败
             </button>
           ) : (
             <button type="button" disabled style={primaryBtnStyle}>
