@@ -199,9 +199,10 @@ func main() {
 	// Online count (public, no user details)
 	api.GET("/online", handler.OnlineCount)
 
-	// RSS Feeds
+	// RSS Feed — posts only. Moments feed was removed (no subscribers,
+	// one more URL to maintain, and moments are mostly short-form not
+	// typical RSS fare).
 	api.GET("/feed", handler.PostsFeed)
-	api.GET("/memos/feed", handler.MemosFeed)
 
 	// System
 	api.GET("/system/status", handler.SystemStatus)

@@ -15,6 +15,15 @@ const nextConfig = {
         source: '/uploads/:path*',
         destination: `${apiHost}/uploads/:path*`,
       },
+      // Feed goes straight to Go — no Next.js route handler wrapper.
+      // Keeps the public URL /feed stable, avoids the server-side fetch
+      // dance that turned transient upstream hiccups into "Feed Error"
+      // placeholder XML. Cache-Control set by the Go handler passes
+      // through unchanged.
+      {
+        source: '/feed',
+        destination: `${apiHost}/api/v1/feed`,
+      },
     ];
   },
   images: {

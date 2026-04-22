@@ -463,30 +463,6 @@ func PostsFeed(c *gin.Context) {
 	c.String(200, xml)
 }
 
-func MemosFeed(c *gin.Context) {
-	siteTitle := model.GetOption("site_title")
-	if siteTitle == "" { siteTitle = "Utterlog" }
-	siteURL := strings.TrimRight(config.PublicBaseURL(), "/")
-
-	var moments []model.Moment
-	config.DB.Select(&moments, fmt.Sprintf("SELECT id, content, created_at FROM %s WHERE visibility='public' ORDER BY created_at DESC LIMIT 30", config.T("moments")))
-
-	c.Header("Content-Type", "application/xml; charset=utf-8")
-	xml := `<?xml version="1.0" encoding="UTF-8"?>` + "\n"
-	xml += `<rss version="2.0"><channel>` + "\n"
-	xml += fmt.Sprintf("<title>%s - 说说</title><link>%s/moments</link><language>zh-CN</language>\n",
-		xmlEscape(siteTitle), xmlEscape(siteURL))
-	for _, m := range moments {
-		title := m.Content; if len(title) > 80 { title = title[:80] + "..." }
-		pubDate := time.Unix(m.CreatedAt, 0).UTC().Format(time.RFC1123Z)
-		guid := fmt.Sprintf("%s/moments#%d", siteURL, m.ID)
-		xml += fmt.Sprintf("<item><title>%s</title><link>%s/moments</link><guid isPermaLink=\"false\">%s</guid><pubDate>%s</pubDate><description><![CDATA[%s]]></description></item>\n",
-			xmlEscape(title), xmlEscape(siteURL), xmlEscape(guid), pubDate, cdataSafe(m.Content))
-	}
-	xml += "</channel></rss>"
-	c.String(200, xml)
-}
-
 // xmlEscape escapes the 5 predefined XML entities for safe use inside
 // element text or attribute values. Apostrophe is escaped too because
 // some feed readers choke on raw ' inside attributes.
