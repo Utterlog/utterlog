@@ -29,7 +29,7 @@ export default function PostPage({ post }: { post: any }) {
         </h1>
 
         {/* AI Summary */}
-        <AISummary postId={post.id} excerpt={post.excerpt} />
+        <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
 
         {/* Content + TOC (outside) */}
         <div style={{ position: 'relative' }}>

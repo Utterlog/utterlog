@@ -95,7 +95,7 @@ export default function Sidebar() {
       {/* Author profile card */}
       <div style={{ borderBottom: '1px solid #e5e5e5', padding: '20px 16px', textAlign: 'center' }}>
         <img
-          src={siteOptions.site_avatar || author?.avatar || `https://gravatar.bluecdn.com/avatar/${author?.email ? md5(author.email.trim().toLowerCase()) : '0'}?s=2048&d=mp`}
+          src={author?.avatar || siteOptions.owner_avatar || siteOptions.site_logo || ''}
           alt=""
           style={{ width: 64, height: 64, objectFit: 'cover', margin: '0 auto 8px', display: 'block', background: '#f0f0f0', clipPath: 'url(#squircle)' }}
         />

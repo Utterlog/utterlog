@@ -420,17 +420,26 @@ export default function PostContent({ content, postId }: PostContentProps) {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    // Capture-phase listener + preventDefault kills the browser's
+    // default anchor-navigation when a markdown image is wrapped in
+    // a link (`[![alt](src)](href)`) — otherwise clicking an image
+    // inside an <a> would follow the href and skip the lightbox, which
+    // users were (rightly) describing as "the default behaviour
+    // coming back". The ExternalLink wrapper also calls window.open
+    // on mousedown via target=_blank, so we stop propagation too.
     const handleClick = (e: MouseEvent) => {
       const img = (e.target as HTMLElement).closest('.blog-image img') as HTMLImageElement;
       if (!img) return;
+      e.preventDefault();
+      e.stopPropagation();
       const nodeList = el.querySelectorAll<HTMLImageElement>('.blog-image img');
       const all = Array.from(nodeList);
       const list = all.map(el => ({ src: el.currentSrc || el.src, alt: el.alt || '' }));
       const idx = all.indexOf(img);
       setLightbox({ list, index: idx >= 0 ? idx : 0 });
     };
-    el.addEventListener('click', handleClick);
-    return () => el.removeEventListener('click', handleClick);
+    el.addEventListener('click', handleClick, true);
+    return () => el.removeEventListener('click', handleClick, true);
   }, []);
 
   // Fetch EXIF data for all images in the post

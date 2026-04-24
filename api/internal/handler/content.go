@@ -687,6 +687,16 @@ func resolveDisplayAvatar(email string) string {
 }
 
 // GetSiteOwner returns the site owner's public profile (no auth required).
+//
+// `avatar` is the admin-uploaded file from users.avatar (empty if never
+// uploaded). The web tier's theme-data.ts is responsible for choosing
+// which of {avatar, utterlog_avatar, gravatar_url} to actually display
+// based on the site-wide `avatar_source` option — so we return all three
+// and let it decide. Previously this field was the output of
+// resolveDisplayAvatar(email), which IGNORES u.Avatar entirely and
+// always returns a gravatar/utterlog URL, so an admin who had uploaded
+// their avatar still saw the gray gravatar mystery-person fallback on
+// the sidebar — because the uploaded file never left the server.
 func GetSiteOwner(c *gin.Context) {
 	u, err := model.SiteOwner()
 	if err != nil {
@@ -701,13 +711,17 @@ func GetSiteOwner(c *gin.Context) {
 	if u.Bio != nil {
 		bio = *u.Bio
 	}
+	avatar := ""
+	if u.Avatar != nil {
+		avatar = *u.Avatar
+	}
 	emailHash := fmt.Sprintf("%x", md5.Sum([]byte(strings.TrimSpace(strings.ToLower(u.Email)))))
 	gravatarURL := fmt.Sprintf("https://gravatar.bluecdn.com/avatar/%s?s=128&d=mp", emailHash)
 	utterlogAvatarURL := fmt.Sprintf("https://id.utterlog.com/avatar/%s", emailHash)
 
 	util.Success(c, gin.H{
 		"nickname":        u.NicknameStr(),
-		"avatar":          resolveDisplayAvatar(u.Email),
+		"avatar":          avatar,
 		"gravatar_url":    gravatarURL,
 		"utterlog_avatar": utterlogAvatarURL,
 		"url":             url,

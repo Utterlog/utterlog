@@ -359,12 +359,29 @@ export default function MarkdownEditor({
   );
 
   return (
-    <div className={`flex flex-col border border-line rounded-[4px] overflow-hidden bg-card ${className}`}>
-      {/* toolbar */}
+    // Root is the flex column host. `minHeight` lives ONLY here — passing
+    // it further down (onto the body or textarea) forced both to be at
+    // least as tall as the parent, which on top of the ~40px toolbar
+    // overflowed the container by that amount. With `overflow: hidden`
+    // up the chain that overflow was clipped at the bottom, swallowing
+    // the textarea's last rows and its scrollbar → users reported
+    // "can't scroll down" and "left content incomplete".
+    <div
+      className={`flex flex-col border border-line rounded-[4px] overflow-hidden bg-card ${className}`}
+      style={{ minHeight }}
+    >
+      {/* Toolbar — flex-shrink: 0 keeps it from being squeezed when
+          the body is tall; nowrap + overflow-x: auto means it always
+          occupies exactly one row (predictable height, body calculations
+          stay correct) and scrolls sideways on narrow viewports instead
+          of wrapping into 2–3 rows that used to push the body down. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '2px',
         padding: '6px 16px', borderBottom: '1px solid var(--color-border)',
-        background: 'var(--color-bg-soft)', flexWrap: 'wrap',
+        background: 'var(--color-bg-soft)',
+        flexShrink: 0, flexWrap: 'nowrap',
+        overflowX: 'auto', overflowY: 'visible',
+        whiteSpace: 'nowrap',
       }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--color-text-dim)', marginRight: '6px' }}>
           <i className="fa-regular fa-eye" style={{ fontSize: '14px' }} /> Markdown
@@ -608,10 +625,17 @@ export default function MarkdownEditor({
         </span>
       </div>
 
-      {/* editor body: left input + right preview */}
-      <div className="flex flex-1" style={{ minHeight }}>
+      {/* Editor body: left input + right preview.
+          `min-height: 0` on every flex child is the modern incantation
+          that lets a flex item shrink below its content's intrinsic
+          size (flex's default min-size is `auto`, which refuses to
+          shrink and causes exactly the "can't reach the bottom"
+          behaviour we had). The textarea gets its own native scrollbar
+          once content exceeds the column, and the preview pane's
+          inner `overflowY: auto` handles its own scroll. */}
+      <div className="flex flex-1" style={{ minHeight: 0 }}>
         {/* left: raw markdown */}
-        <div className="flex-1 flex flex-col border-r border-line">
+        <div className="flex-1 flex flex-col border-r border-line" style={{ minWidth: 0, minHeight: 0 }}>
           <textarea
             ref={taRef}
             value={value}
@@ -619,14 +643,17 @@ export default function MarkdownEditor({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className="flex-1 w-full resize-none bg-transparent text-sm text-main font-mono leading-relaxed focus:outline-none placeholder:text-dim"
-            style={{ minHeight, padding: '16px 20px' }}
+            style={{ padding: '16px 20px', minHeight: 0, overflowY: 'auto' }}
             spellCheck={false}
           />
         </div>
 
         {/* right: preview */}
-        <div className="flex-1 flex flex-col" style={{ background: 'var(--color-bg-soft)' }}>
-          <div style={{ flex: 1, padding: '20px 24px', overflowY: 'auto' }} className="blog-prose text-sm">
+        <div className="flex-1 flex flex-col" style={{ background: 'var(--color-bg-soft)', minWidth: 0, minHeight: 0 }}>
+          <div
+            style={{ flex: 1, padding: '20px 24px', overflowY: 'auto', minHeight: 0 }}
+            className="blog-prose text-sm"
+          >
             {value ? (
               <SafePreview value={value} />
             ) : (

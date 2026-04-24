@@ -58,7 +58,7 @@ export default function PostPage({ post }: { post: any }) {
       <hr className="border-line mb-10" />
 
       <article>
-        <AISummary postId={post.id} excerpt={post.excerpt} />
+        <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
         <PostContent content={post.content || ''} postId={post.id} />
       </article>
 

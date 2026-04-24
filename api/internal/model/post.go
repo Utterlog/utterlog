@@ -239,9 +239,9 @@ func FormatPost(p *Post, detail bool) PostWithRelations {
 func CreatePost(p *Post) (int, error) {
 	var id int
 	err := config.DB.QueryRow(fmt.Sprintf(
-		"INSERT INTO %s (title, slug, content, excerpt, type, status, author_id, cover_url, password, allow_comment, pinned, word_count, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id",
+		"INSERT INTO %s (title, slug, content, excerpt, ai_summary, type, status, author_id, cover_url, password, allow_comment, pinned, word_count, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id",
 		config.T("posts")),
-		p.Title, p.Slug, p.Content, p.Excerpt, p.Type, p.Status, p.AuthorID,
+		p.Title, p.Slug, p.Content, p.Excerpt, p.AISummary, p.Type, p.Status, p.AuthorID,
 		p.CoverURL, p.Password, p.AllowComment, p.Pinned, p.WordCount, p.CreatedAt, p.UpdatedAt,
 	).Scan(&id)
 	return id, err
@@ -249,9 +249,9 @@ func CreatePost(p *Post) (int, error) {
 
 func UpdatePost(id int, p *Post) error {
 	_, err := config.DB.Exec(fmt.Sprintf(
-		"UPDATE %s SET title=$1, slug=$2, content=$3, excerpt=$4, status=$5, cover_url=$6, password=$7, allow_comment=$8, pinned=$9, word_count=$10, updated_at=$11, published_at=$12 WHERE id=$13",
+		"UPDATE %s SET title=$1, slug=$2, content=$3, excerpt=$4, ai_summary=$5, status=$6, cover_url=$7, password=$8, allow_comment=$9, pinned=$10, word_count=$11, updated_at=$12, published_at=$13 WHERE id=$14",
 		config.T("posts")),
-		p.Title, p.Slug, p.Content, p.Excerpt, p.Status, p.CoverURL, p.Password, p.AllowComment, p.Pinned, p.WordCount, p.UpdatedAt, p.PublishedAt, id,
+		p.Title, p.Slug, p.Content, p.Excerpt, p.AISummary, p.Status, p.CoverURL, p.Password, p.AllowComment, p.Pinned, p.WordCount, p.UpdatedAt, p.PublishedAt, id,
 	)
 	return err
 }

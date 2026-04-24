@@ -111,6 +111,10 @@ func CreatePost(c *gin.Context) {
 		p.WordCount = countWords(req.Content)
 	}
 	if excerpt != "" { p.Excerpt = &excerpt }
+	// Admin-provided summary is authoritative — mirror it into
+	// ai_summary so the post page renders it instead of waiting for
+	// the BG auto-generator (which only fills ai_summary when empty).
+	if req.Excerpt != "" { p.AISummary = &req.Excerpt }
 	if req.CoverURL != "" { p.CoverURL = &req.CoverURL }
 	if req.Password != "" { p.Password = &req.Password }
 	p.AllowComment = req.AllowComment
@@ -197,6 +201,15 @@ func UpdatePost(c *gin.Context) {
 	// Handle excerpt: use provided, or auto-extract if content changed and no excerpt
 	if req.Excerpt != "" {
 		existing.Excerpt = &req.Excerpt
+		// Mirror the manually-edited excerpt into ai_summary so the
+		// public post page (which renders ai_summary, not excerpt)
+		// reflects the admin's edit on the very next request. Without
+		// this, the BG generateAISummary job below would skip because
+		// ai_summary is already non-empty (the one-line guard at
+		// search.go:201), and the page would keep showing the
+		// previously-generated text — exactly the "saved but not
+		// synced" symptom.
+		existing.AISummary = &req.Excerpt
 	} else if req.Content != "" && (existing.Excerpt == nil || *existing.Excerpt == "") {
 		exc := extractExcerpt(req.Content, 200)
 		if exc != "" { existing.Excerpt = &exc }

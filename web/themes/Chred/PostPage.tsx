@@ -69,7 +69,7 @@ export default function PostPage({ post }: { post: any }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ padding: '32px' }}>
             {/* AI Summary */}
-            <AISummary postId={post.id} excerpt={post.excerpt} />
+            <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
 
             {/* Content + TOC */}
             <div style={{ position: 'relative' }}>
