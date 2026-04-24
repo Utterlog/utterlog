@@ -92,21 +92,17 @@ export default function Sidebar() {
   return (
     <aside style={{ width: '100%' }}>
 
-      {/* Author profile card */}
+      {/* Author profile card — `author.avatar` is resolved by
+          theme-data.ts from /owner's `avatar` field (always a URL via
+          resolveDisplayAvatar). Same source Footer uses. */}
       <div style={{ borderBottom: '1px solid #e5e5e5', padding: '20px 16px', textAlign: 'center' }}>
-        {(() => {
-          const avatarSrc = author?.avatar || siteOptions.owner_avatar || siteOptions.site_logo || '';
-          const baseStyle: React.CSSProperties = { width: 64, height: 64, margin: '0 auto 8px', display: 'block', background: '#f0f0f0', clipPath: 'url(#squircle)' };
-          if (avatarSrc) {
-            return <img src={avatarSrc} alt="" style={{ ...baseStyle, objectFit: 'cover' }} />;
-          }
-          const initial = (author?.nickname || siteOptions.site_title || 'U').trim().charAt(0).toUpperCase();
-          return (
-            <div style={{ ...baseStyle, color: '#0052D9', fontSize: '28px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {initial}
-            </div>
-          );
-        })()}
+        {author?.avatar && (
+          <img
+            src={author.avatar}
+            alt=""
+            style={{ width: 64, height: 64, objectFit: 'cover', margin: '0 auto 8px', display: 'block', background: '#f0f0f0', clipPath: 'url(#squircle)' }}
+          />
+        )}
         <div style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a1a' }}>
           {author?.nickname || siteOptions.site_title || '博主'}
         </div>

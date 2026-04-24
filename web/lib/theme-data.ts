@@ -2,7 +2,13 @@ import { getOptions, getCategories, getTags, getArchiveStats } from './blog-api'
 import type { ThemeContextData, MenuItem } from './theme-context';
 import { getThemeManifest } from './theme';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.INTERNAL_API_URL || '/api/v1';
+// Server-side first: INTERNAL_API_URL points at the api container
+// (http://api:8080/api/v1) so SSR fetches actually reach the backend.
+// NEXT_PUBLIC_API_URL is relative ('/api/v1') — fine for the browser,
+// but a relative URL passed to Node fetch during SSR fails silently,
+// which was leaving ownerRes.data empty and the sidebar avatar blank
+// even though /owner was returning a correct URL.
+const API_BASE = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 function parseMenu(raw: unknown): MenuItem[] {
   if (!raw) return [];
