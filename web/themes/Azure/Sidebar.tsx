@@ -107,11 +107,24 @@ export default function Sidebar() {
 
       {/* Author profile card */}
       <div style={{ borderBottom: '1px solid #e5e5e5', padding: '20px 16px', textAlign: 'center' }}>
-        <img
-          src={author?.avatar || siteOptions.owner_avatar || siteOptions.site_logo || ''}
-          alt=""
-          style={{ width: 64, height: 64, objectFit: 'cover', margin: '0 auto 8px', display: 'block', background: '#f0f0f0', clipPath: 'url(#squircle)' }}
-        />
+        {(() => {
+          // Pick first non-empty source; render <img> only when we have
+          // a real URL. Passing src="" to <img> makes the browser refetch
+          // the current page (Next.js logs a console error), which is
+          // what was happening when the admin had no avatar / owner_avatar
+          // / site_logo set.
+          const avatarSrc = author?.avatar || siteOptions.owner_avatar || siteOptions.site_logo || '';
+          const baseStyle: React.CSSProperties = { width: 64, height: 64, margin: '0 auto 8px', display: 'block', background: '#f0f0f0', clipPath: 'url(#squircle)' };
+          if (avatarSrc) {
+            return <img src={avatarSrc} alt="" style={{ ...baseStyle, objectFit: 'cover' }} />;
+          }
+          const initial = (author?.nickname || siteOptions.site_title || 'U').trim().charAt(0).toUpperCase();
+          return (
+            <div style={{ ...baseStyle, color: '#0052D9', fontSize: '28px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {initial}
+            </div>
+          );
+        })()}
         <div style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a1a' }}>
           {author?.nickname || siteOptions.site_title || '博主'}
         </div>
