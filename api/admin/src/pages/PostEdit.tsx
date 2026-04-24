@@ -9,6 +9,21 @@ import { ImportUrlModal } from '@/components/ui/import-url-modal';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
 
+// Convert a backend date (RFC3339 string, unix int seconds, or ISO-ish)
+// into the "YYYY-MM-DDTHH:mm" shape that <input type="datetime-local">
+// expects in local time. Returns empty string for null/undefined/invalid
+// input so the input sits in its placeholder state.
+function toLocalDatetime(val: string | number | null | undefined): string {
+  if (val === null || val === undefined || val === '') return '';
+  const n = Number(val);
+  const d = !isNaN(n) && n > 1e9 && n < 1e10
+    ? new Date(n * 1000)
+    : new Date(val as any);
+  if (isNaN(d.getTime())) return '';
+  const pad = (v: number) => String(v).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function EditPostPage() {
   const navigate = useNavigate();
   const params = useParams();
@@ -70,6 +85,10 @@ export default function EditPostPage() {
       setPassword(post.password || '');
       setAllowComment(post.allow_comment !== false);
       setPinned(post.pinned === true);
+      // Prefer published_at; drafts fall back to created_at so the
+      // sidebar isn't blank. Convert to datetime-local format (no TZ,
+      // no seconds) — the backend sends RFC3339 strings or unix ints.
+      setPublishAt(toLocalDatetime(post.published_at) || toLocalDatetime(post.created_at));
       if (post.categories?.length) setCategoryId(post.categories[0].id);
       if (post.tags?.length) setTagInput(post.tags.map((t: any) => t.name).join(', '));
     } catch {
@@ -95,6 +114,9 @@ export default function EditPostPage() {
         password: password || undefined,
         allow_comment: allowComment,
         pinned,
+        // Pass empty string to clear, omit to leave untouched — backend
+        // only looks at this when the key is present.
+        published_at: publishAt,
       });
       toast.success('文章更新成功');
     } catch {

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Post } from '@/types';
+import PostLink from './PostLink';
 
 function formatDate(dateInput: string | number): string {
   const ts = typeof dateInput === 'number' ? dateInput : Number(dateInput);
@@ -31,13 +32,13 @@ export default function PostCard({ post }: PostCardProps) {
     <article style={{ padding: '24px 0' }}>
       {/* Title */}
       <h2 style={{ fontSize: '20px', fontWeight: 700, lineHeight: 1.4, margin: '0 0 8px 0' }}>
-        <Link
-          href={`/posts/${post.slug}`}
+        <PostLink
+          post={post}
           className="text-main hover:text-primary-themed"
           style={{ textDecoration: 'none', transition: 'color 0.15s', fontFamily: 'var(--font-serif)' }}
         >
           {post.title}
-        </Link>
+        </PostLink>
       </h2>
 
       {/* Excerpt */}

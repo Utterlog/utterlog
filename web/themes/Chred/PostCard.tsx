@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import LazyImage from '@/components/ui/LazyImage';
+import PostLink from '@/components/blog/PostLink';
 
 function formatDate(ts: string | number) {
   const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
@@ -14,7 +15,6 @@ function formatDate(ts: string | number) {
 import { getCategoryIcon } from './constants';
 
 export default function PostCard({ post }: { post: any }) {
-  const slug = post.slug || post.id;
   const { mon, day } = formatDate(post.created_at);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
@@ -41,7 +41,7 @@ export default function PostCard({ post }: { post: any }) {
         </div>
 
         {/* Title */}
-        <Link href={`/posts/${slug}`} style={{ textDecoration: 'none', flex: 1, minWidth: 0 }}>
+        <PostLink post={post} style={{ textDecoration: 'none', flex: 1, minWidth: 0 }}>
           <h2 style={{
             fontSize: '18px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.4,
             transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -51,7 +51,7 @@ export default function PostCard({ post }: { post: any }) {
           >
             {post.title}
           </h2>
-        </Link>
+        </PostLink>
 
         {isNew && <span style={{ padding: '1px 6px', fontSize: '10px', fontWeight: 600, background: '#fff3e0', color: '#f57c00', border: '1px solid #ffe0b2', flexShrink: 0 }}>NEW</span>}
 
@@ -77,7 +77,7 @@ export default function PostCard({ post }: { post: any }) {
       </div>
 
       {/* Cover image */}
-      <Link href={`/posts/${slug}`} style={{ display: 'block', position: 'relative' }}>
+      <PostLink post={post} style={{ display: 'block', position: 'relative' }}>
         <LazyImage
           src={coverUrl}
           alt={post.title}
@@ -88,7 +88,7 @@ export default function PostCard({ post }: { post: any }) {
           position: 'absolute', top: 0, right: 0, bottom: 0, width: '4px',
           background: '#f53004', opacity: hovered ? 1 : 0, transition: 'opacity 0.2s',
         }} />
-      </Link>
+      </PostLink>
 
       {/* Excerpt */}
       {post.excerpt && (

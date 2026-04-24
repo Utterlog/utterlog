@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { getCategoryIcon } from './constants';
 import LazyImage from '@/components/ui/LazyImage';
+import PostLink from '@/components/blog/PostLink';
 
 const ACCENT = '#0052D9';
 
@@ -15,7 +16,6 @@ function formatDate(ts: string | number) {
 }
 
 export default function PostCard({ post, isNewest }: { post: any; isNewest?: boolean }) {
-  const slug = post.slug || post.id;
   const { mon, day } = formatDate(post.created_at);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
@@ -56,7 +56,7 @@ export default function PostCard({ post, isNewest }: { post: any; isNewest?: boo
 
         {/* Title + meta */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '0 20px' }}>
-        <Link href={`/posts/${slug}`} style={{ textDecoration: 'none', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <PostLink post={post} style={{ textDecoration: 'none', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
           <h2 style={{
             fontSize: '28px', fontWeight: 400, color: hovered ? ACCENT : '#1a1a1a', lineHeight: 1.22, letterSpacing: '-0.01em',
             transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -64,7 +64,7 @@ export default function PostCard({ post, isNewest }: { post: any; isNewest?: boo
             {post.title}
           </h2>
           {isNew && <span className="new-badge-pulse" style={{ padding: '1px 6px', fontSize: '10px', fontWeight: 600, background: '#fff3e0', color: '#f57c00', border: '1px solid #ffe0b2', flexShrink: 0 }}>NEW</span>}
-        </Link>
+        </PostLink>
 
         {/* Stats — only on hover */}
         <div style={{
@@ -92,14 +92,14 @@ export default function PostCard({ post, isNewest }: { post: any; isNewest?: boo
       </div>
 
       {/* Cover image */}
-      <Link href={`/posts/${slug}`} className="azure-img-hover-wrap" style={{ display: 'block', position: 'relative', overflow: 'hidden' }}>
+      <PostLink post={post} className="azure-img-hover-wrap" style={{ display: 'block', position: 'relative', overflow: 'hidden' }}>
         <LazyImage
           src={coverUrl}
           alt={post.title}
           className="azure-img-hover"
           style={{ width: '100%', height: '320px' }}
         />
-      </Link>
+      </PostLink>
 
       {/* Excerpt — prefer AI summary when present, fall back to manual
           excerpt or a derived slice of content. If the admin clears the

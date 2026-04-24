@@ -85,9 +85,12 @@ export async function getLinks() {
   return fetchAPI<any>('/links', { next: { revalidate: 300 } });
 }
 
-// 站点配置
+// 站点配置 — tagged so the admin SPA can bust this cache instantly
+// via POST /api/revalidate with { tags: ['options'] }. Time-based
+// revalidate is a backstop only (10min ceiling for rare browsers that
+// bypass the tag flush).
 export async function getOptions() {
-  return fetchAPI<any>('/options', { next: { revalidate: 10 } });
+  return fetchAPI<any>('/options', { next: { tags: ['options'], revalidate: 600 } });
 }
 
 // 说说

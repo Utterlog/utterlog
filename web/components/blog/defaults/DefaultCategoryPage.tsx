@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import PostLink from '../PostLink';
 
 function getCatIcon(name: string, icon?: string) {
   if (icon && icon.startsWith('fa')) return icon;
@@ -58,7 +59,7 @@ export default function DefaultCategoryPage({ category, posts }: DefaultCategory
                 <span style={{ fontSize: '13px', color: 'var(--color-text-dim)' }}>{yearPosts.length} 篇</span>
               </div>
               {yearPosts.map((post: any, idx: number) => (
-                <Link key={post.id} href={`/posts/${post.slug}`}
+                <PostLink key={post.id} post={post}
                   style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', borderBottom: idx < yearPosts.length - 1 ? '1px solid var(--color-divider)' : 'none', textDecoration: 'none', transition: 'background 0.1s' }}
                   className="hover:bg-soft post-list-link">
                   <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '50px', flexShrink: 0 }}>{formatMMDD(post.created_at)}</span>
@@ -68,7 +69,7 @@ export default function DefaultCategoryPage({ category, posts }: DefaultCategory
                     <span><i className="fa-regular fa-comment" style={{ fontSize: '11px' }} /> {post.comment_count || 0}</span>
                     <span><i className="fa-regular fa-eye" style={{ fontSize: '11px' }} /> {post.view_count || 0}</span>
                   </span>
-                </Link>
+                </PostLink>
               ))}
             </div>
           ))}

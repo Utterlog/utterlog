@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import PostLink from '@/components/blog/PostLink';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
@@ -108,7 +109,7 @@ export default function Sidebar() {
           {tabPosts.map((post: any, idx: number) => {
             const numIcons = ['fa-solid fa-1', 'fa-solid fa-2', 'fa-solid fa-3', 'fa-solid fa-4', 'fa-solid fa-5'];
             return (
-            <Link key={post.id} href={`/posts/${post.slug}`} style={{
+            <PostLink key={post.id} post={post} style={{
               display: 'flex', alignItems: 'center', gap: '8px',
               padding: '8px 16px', fontSize: '13px', color: '#333',
               textDecoration: 'none', borderBottom: '1px solid #f0f0f0',
@@ -119,7 +120,7 @@ export default function Sidebar() {
             >
               <i className={`${numIcons[idx] || 'fa-solid fa-5'} fa-fw`} style={{ color: idx < 3 ? '#f53004' : '#bbb', fontSize: '12px' }} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.title}</span>
-            </Link>
+            </PostLink>
             );
           })}
         </div>

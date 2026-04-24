@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"strings"
+	"time"
 	"utterlog-go/config"
 )
 
@@ -25,8 +26,12 @@ type Post struct {
 	WordCount    int     `db:"word_count" json:"word_count"`
 	AISummary    *string `db:"ai_summary" json:"ai_summary,omitempty"`
 	AIQuestions  *string `db:"ai_questions" json:"ai_questions,omitempty"`
-	CreatedAt    int64   `db:"created_at" json:"created_at"`
-	UpdatedAt    int64   `db:"updated_at" json:"updated_at"`
+	CreatedAt    int64      `db:"created_at" json:"created_at"`
+	UpdatedAt    int64      `db:"updated_at" json:"updated_at"`
+	// Null when the post has never been published (draft never promoted).
+	// Stored as a proper timestamp column so WP-style backdated imports
+	// keep real publish dates, independent of created_at.
+	PublishedAt  *time.Time `db:"published_at" json:"published_at,omitempty"`
 }
 
 type PostWithRelations struct {
@@ -57,8 +62,8 @@ type MetaBrief struct {
 // ai_summary included so list views (homepage cards, search results)
 // can prefer AI-generated summary over plain excerpt without a second
 // round-trip. ~80 runes per row is cheap.
-const postListCols = "id, title, slug, excerpt, ai_summary, type, display_id, status, author_id, cover_url, view_count, comment_count, word_count, created_at, updated_at"
-const postDetailCols = "id, title, slug, content, excerpt, ai_summary, ai_questions, type, display_id, status, author_id, cover_url, password, allow_comment, pinned, view_count, comment_count, word_count, created_at, updated_at"
+const postListCols = "id, title, slug, excerpt, ai_summary, type, display_id, status, author_id, cover_url, view_count, comment_count, word_count, created_at, updated_at, published_at"
+const postDetailCols = "id, title, slug, content, excerpt, ai_summary, ai_questions, type, display_id, status, author_id, cover_url, password, allow_comment, pinned, view_count, comment_count, word_count, created_at, updated_at, published_at"
 
 func PostsList(typ, status, search, orderBy, order string, page, perPage int, categorySlug string, tagSlug ...string) ([]Post, int, error) {
 	t := config.T("posts")
@@ -244,9 +249,9 @@ func CreatePost(p *Post) (int, error) {
 
 func UpdatePost(id int, p *Post) error {
 	_, err := config.DB.Exec(fmt.Sprintf(
-		"UPDATE %s SET title=$1, slug=$2, content=$3, excerpt=$4, status=$5, cover_url=$6, password=$7, allow_comment=$8, pinned=$9, word_count=$10, updated_at=$11 WHERE id=$12",
+		"UPDATE %s SET title=$1, slug=$2, content=$3, excerpt=$4, status=$5, cover_url=$6, password=$7, allow_comment=$8, pinned=$9, word_count=$10, updated_at=$11, published_at=$12 WHERE id=$13",
 		config.T("posts")),
-		p.Title, p.Slug, p.Content, p.Excerpt, p.Status, p.CoverURL, p.Password, p.AllowComment, p.Pinned, p.WordCount, p.UpdatedAt, id,
+		p.Title, p.Slug, p.Content, p.Excerpt, p.Status, p.CoverURL, p.Password, p.AllowComment, p.Pinned, p.WordCount, p.UpdatedAt, p.PublishedAt, id,
 	)
 	return err
 }

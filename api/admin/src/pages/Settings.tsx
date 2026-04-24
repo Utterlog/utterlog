@@ -78,7 +78,6 @@ export default function SettingsPage() {
         slot_after_content: s.slot_after_content || '',
         slot_sidebar_top: s.slot_sidebar_top || '',
         slot_sidebar_bottom: s.slot_sidebar_bottom || '',
-        posts_per_page: s.posts_per_page || 10,
         site_since: s.site_since || '',
         // 邮件
         email_provider: s.email_provider || 'smtp',
@@ -183,7 +182,7 @@ export default function SettingsPage() {
     // row stays unchanged and on reload the field reverts).
     general: [
       'site_title', 'site_subtitle', 'site_url', 'site_description', 'site_keywords',
-      'admin_email', 'site_since', 'posts_per_page',
+      'admin_email', 'site_since',
       'site_logo', 'site_logo_dark', 'site_favicon',
       'beian_gongan', 'beian_icp',
       'custom_head_code',
@@ -365,7 +364,6 @@ export default function SettingsPage() {
                 <FormRowInputC label="管理员邮箱" type="email" register={register('admin_email')} placeholder="admin@yourdomain.com" hint="接收系统升级、安全通知等消息" />
                 <FormRowTextareaC label="站点描述" rows={2} register={register('site_description')} placeholder="一句话描述你的站点" />
                 <FormRowInputC label="站点关键词" register={register('site_keywords')} placeholder="博客,技术,生活" />
-                <FormRowInputC label="每页文章数" type="number" register={register('posts_per_page')} />
                 <FormRowInputC label="建站时间" type="date" register={register('site_since')} hint="留空则从第一篇文章算起" last />
               </FormSectionC>
 

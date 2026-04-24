@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import PostLink from '../PostLink';
 import Heatmap from '@/app/(blog)/archives/Heatmap';
 
 function timeAgo(ts: number | string): string {
@@ -181,14 +182,14 @@ export default function DefaultArchivePage({ posts, categories, tags, stats }: D
                 {latest && (
                   <div style={{ padding: '0 20px 14px', position: 'relative', zIndex: 1 }}>
                     <div style={{ paddingTop: '10px', borderTop: '1px solid var(--color-divider)' }}>
-                      <Link href={`/posts/${latest.slug}`} style={{
+                      <PostLink post={latest} style={{
                         fontSize: '12px', color: 'var(--color-text-sub)', textDecoration: 'none',
                         display: 'flex', alignItems: 'center', gap: '5px',
                       }}>
                         <i className="fa-sharp fa-light fa-pen-line" style={{ fontSize: '10px', color: 'var(--color-text-dim)', flexShrink: 0 }} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{latest.title}</span>
                         <span style={{ fontSize: '11px', color: 'var(--color-text-dim)', flexShrink: 0, marginLeft: '8px' }}>{timeAgo(latest.created_at)}</span>
-                      </Link>
+                      </PostLink>
                     </div>
                   </div>
                 )}
@@ -240,7 +241,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats }: D
               </Link>
 
               {monthGroup.posts.map((post: any, idx: number) => (
-                <Link key={post.id} href={`/posts/${post.slug}`} style={{
+                <PostLink key={post.id} post={post} style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
                   padding: '10px 24px',
                   borderBottom: idx < monthGroup.posts.length - 1 ? '1px solid var(--color-divider)' : 'none',
@@ -253,7 +254,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats }: D
                     <span><i className="fa-regular fa-comment fa-fw" style={{ fontSize: '11px' }} /> {post.comment_count || 0}</span>
                     <span><i className="fa-regular fa-eye fa-fw" style={{ fontSize: '11px' }} /> {post.view_count || 0}</span>
                   </span>
-                </Link>
+                </PostLink>
               ))}
             </div>
           ))}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import PostLink from './PostLink';
 
 function LazyCardImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -132,7 +133,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
       {(data.prev || data.next) && (
         <div className="post-prev-next">
           {data.prev ? (
-            <Link href={`/posts/${data.prev.slug}`} className="post-prev-next-link prev">
+            <PostLink post={data.prev} className="post-prev-next-link prev">
               <div className="post-prev-next-text">
                 <span className="post-prev-next-label"><i className="fa-regular fa-arrow-left" style={{ fontSize: '12px' }} /> 上一篇</span>
                 <span className="post-prev-next-title">{data.prev.title}</span>
@@ -140,7 +141,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
               <div className="post-prev-next-cover">
                 <img src={data.prev.cover_url || `https://img.et/1920/1080?type=landscape&r=${data.prev.id}`} alt="" />
               </div>
-            </Link>
+            </PostLink>
           ) : (
             <div className="post-prev-next-link prev" style={{ cursor: 'default' }}>
               <div className="post-prev-next-cover">
@@ -152,7 +153,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
             </div>
           )}
           {data.next ? (
-            <Link href={`/posts/${data.next.slug}`} className="post-prev-next-link next">
+            <PostLink post={data.next} className="post-prev-next-link next">
               <div className="post-prev-next-cover">
                 <img src={data.next.cover_url || `https://img.et/1920/1080?type=landscape&r=${data.next.id}`} alt="" />
               </div>
@@ -160,7 +161,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
                 <span className="post-prev-next-label">下一篇 <i className="fa-regular fa-arrow-right" style={{ fontSize: '12px' }} /></span>
                 <span className="post-prev-next-title">{data.next.title}</span>
               </div>
-            </Link>
+            </PostLink>
           ) : (
             <div className="post-prev-next-link next" style={{ cursor: 'default' }}>
               <div className="post-prev-next-cover">
@@ -231,7 +232,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
               const date = new Date((post.created_at || 0) * 1000);
               const mon = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
               return (
-                <Link key={post.id} href={`/posts/${post.slug}`} className="post-related-card azure-img-hover-wrap">
+                <PostLink key={post.id} post={post} className="post-related-card azure-img-hover-wrap">
                   <div className="post-related-card-cover">
                     <LazyCardImage src={coverSrc} alt={post.title} />
                     <span className="post-related-card-date">{mon}</span>
@@ -250,7 +251,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
                       </div>
                     </div>
                   </div>
-                </Link>
+                </PostLink>
               );
             })}
             {activeTab !== 'feeds' && activeItems.length === 0 && (

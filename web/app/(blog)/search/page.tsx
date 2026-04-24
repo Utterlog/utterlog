@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { searchPosts } from '@/lib/blog-api';
+import PostLink from '@/components/blog/PostLink';
 
 export const metadata: Metadata = { title: '搜索' };
 
@@ -85,7 +86,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           {results.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {results.map((post: any) => (
-                <Link key={post.id} href={`/posts/${post.slug}`} style={{
+                <PostLink key={post.id} post={post} style={{
                   display: 'flex', alignItems: 'center', gap: '16px',
                   padding: '16px 20px', border: '1px solid var(--color-border)',
                   textDecoration: 'none', transition: 'background 0.1s',
@@ -124,7 +125,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                       <i className="fa-regular fa-eye" style={{ marginRight: '4px' }} />{post.view_count || 0}
                     </span>
                   </div>
-                </Link>
+                </PostLink>
               ))}
             </div>
           ) : (

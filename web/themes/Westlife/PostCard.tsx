@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import LazyImage from '@/components/ui/LazyImage';
+import PostLink from '@/components/blog/PostLink';
 
 function formatDate(ts: string | number) {
   const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
@@ -9,11 +9,10 @@ function formatDate(ts: string | number) {
 }
 
 export default function PostCard({ post }: { post: any }) {
-  const slug = post.slug || post.id;
   const coverUrl = post.cover_url || `https://img.et/1920/1080?type=landscape&r=${post.id}`;
 
   return (
-    <Link href={`/posts/${slug}`} style={{ textDecoration: 'none', display: 'block' }}>
+    <PostLink post={post} style={{ textDecoration: 'none', display: 'block' }}>
       <article style={{
         background: '#fff', borderRadius: '12px',
         marginBottom: '12px', border: '1px solid #e9e9e9',
@@ -47,6 +46,6 @@ export default function PostCard({ post }: { post: any }) {
           </div>
         </div>
       </article>
-    </Link>
+    </PostLink>
   );
 }

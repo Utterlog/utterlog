@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getPosts } from '@/lib/blog-api';
+import PostLink from '@/components/blog/PostLink';
 
 interface Props { params: Promise<{ year: string }> }
 
@@ -63,7 +64,7 @@ export default async function YearArchive({ params }: Props) {
             <span style={{ fontSize: '12px', color: 'var(--color-text-dim)', fontWeight: 400 }}>{posts.length} 篇</span>
           </Link>
           {posts.map((post: any, idx: number) => (
-            <Link key={post.id} href={`/posts/${post.slug}`} style={{
+            <PostLink key={post.id} post={post} style={{
               display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px',
               borderBottom: idx < posts.length - 1 ? '1px solid var(--color-divider)' : 'none',
               textDecoration: 'none', transition: 'background 0.1s',
@@ -71,7 +72,7 @@ export default async function YearArchive({ params }: Props) {
               <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '44px', flexShrink: 0 }}>{formatDate(post.created_at).full}</span>
               <i className={postCategoryIcon(post)} title={post.categories?.[0]?.name || ''} style={{ fontSize: '13px', color: 'var(--color-primary)', flexShrink: 0, width: '14px', textAlign: 'center' }} />
               <span style={{ flex: 1, fontSize: '14px', color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.title}</span>
-            </Link>
+            </PostLink>
           ))}
         </div>
       ))}

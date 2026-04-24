@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getPosts } from '@/lib/blog-api';
+import PostLink from '@/components/blog/PostLink';
 
 interface Props { params: Promise<{ year: string; month: string; day: string }> }
 
@@ -38,7 +39,7 @@ export default async function DayArchive({ params }: Props) {
 
       <div style={{ border: '1px solid var(--color-border)' }}>
         {posts.map((post: any, idx: number) => (
-          <Link key={post.id} href={`/posts/${post.slug}`} style={{
+          <PostLink key={post.id} post={post} style={{
             display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px',
             borderBottom: idx < posts.length - 1 ? '1px solid var(--color-divider)' : 'none',
             textDecoration: 'none', transition: 'background 0.1s',
@@ -49,7 +50,7 @@ export default async function DayArchive({ params }: Props) {
               <span><i className="fa-regular fa-comment fa-fw" /> {post.comment_count || 0}</span>
               <span><i className="fa-regular fa-eye fa-fw" /> {post.view_count || 0}</span>
             </span>
-          </Link>
+          </PostLink>
         ))}
         {posts.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-dim)' }}>当天暂无文章</div>

@@ -35,6 +35,12 @@ export default async function PostPage({ params }: PostPageProps) {
 
   if (!post) notFound();
 
+  // /posts/[slug] is kept as a stable fallback for old bookmarks and
+  // feed readers — it renders the post at this URL regardless of the
+  // admin's chosen permalink structure. Internal navigation uses the
+  // custom format directly via PostLink, so users only land here when
+  // something external (external link, stored bookmark) points here.
+
   let themeName = 'Azure';
   try { themeName = await getActiveTheme(); } catch {}
 

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getPosts } from '@/lib/blog-api';
+import PostLink from '@/components/blog/PostLink';
 
 interface Props { params: Promise<{ year: string; month: string }> }
 
@@ -41,7 +42,7 @@ export default async function MonthArchive({ params }: Props) {
           const d = typeof post.created_at === 'number' ? new Date(post.created_at * 1000) : new Date(post.created_at);
           const day = String(d.getDate()).padStart(2, '0');
           return (
-            <Link key={post.id} href={`/posts/${post.slug}`} style={{
+            <PostLink key={post.id} post={post} style={{
               display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px',
               borderBottom: idx < posts.length - 1 ? '1px solid var(--color-divider)' : 'none',
               textDecoration: 'none', transition: 'background 0.1s',
@@ -56,7 +57,7 @@ export default async function MonthArchive({ params }: Props) {
                 <span><i className="fa-regular fa-comment fa-fw" /> {post.comment_count || 0}</span>
                 <span><i className="fa-regular fa-eye fa-fw" /> {post.view_count || 0}</span>
               </span>
-            </Link>
+            </PostLink>
           );
         })}
         {posts.length === 0 && (

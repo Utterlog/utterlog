@@ -7,6 +7,7 @@ import LazyImage from '@/components/ui/LazyImage';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { getCategoryIcon } from './constants';
+import PostLink from '@/components/blog/PostLink';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 const ACCENT = '#f53004';
@@ -187,7 +188,7 @@ export default function HomePage({ posts, page, totalPages }: { posts: any[]; pa
               onMouseEnter={() => setPaused(true)}
               onMouseLeave={() => setPaused(false)}
             >
-              <Link href={`/posts/${heroPost.slug}`} style={{ display: 'block', textDecoration: 'none' }}>
+              <PostLink post={heroPost} style={{ display: 'block', textDecoration: 'none' }}>
                 <LazyImage src={heroSrc} alt={heroPost.title}
                   style={{ width: '100%', height: heroHeight }} />
                 <div style={{
@@ -199,7 +200,7 @@ export default function HomePage({ posts, page, totalPages }: { posts: any[]; pa
                     {heroPost.title}
                   </h2>
                 </div>
-              </Link>
+              </PostLink>
               <div style={{
                 position: 'absolute', top: 0, right: 0, zIndex: 2,
                 background: MODES[modeIdx].color, color: '#fff', fontSize: '12px', fontWeight: 600,

@@ -150,8 +150,14 @@ func UpdatePost(c *gin.Context) {
 		Pinned       *bool    `json:"pinned"`
 		CategoryIDs  []int    `json:"category_ids"`
 		TagNames     []string `json:"tag_names"`
+		// RFC3339 / ISO8601 string or empty. Admin edit page sends the
+		// datetime-local value here so authors can backdate or reschedule.
+		// Empty string clears it back to NULL.
+		PublishedAt  *string  `json:"published_at"`
 	}
 	c.ShouldBindJSON(&req)
+
+	wasDraft := existing.Status == "draft"
 
 	if req.Title != "" { existing.Title = req.Title }
 	if req.Slug != "" { existing.Slug = req.Slug }
@@ -164,6 +170,29 @@ func UpdatePost(c *gin.Context) {
 	if req.Password != "" { existing.Password = &req.Password }
 	if req.AllowComment != nil { existing.AllowComment = req.AllowComment }
 	if req.Pinned != nil { existing.Pinned = req.Pinned }
+
+	// Explicit published_at from the client wins. Empty string clears.
+	if req.PublishedAt != nil {
+		if *req.PublishedAt == "" {
+			existing.PublishedAt = nil
+		} else {
+			// Accept both "2026-04-24T15:30" (datetime-local) and full
+			// RFC3339. Treat naive strings as local time in the server's
+			// TZ — same way a bare datetime-local input renders.
+			layouts := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02T15:04"}
+			for _, l := range layouts {
+				if t, err := time.ParseInLocation(l, *req.PublishedAt, time.Local); err == nil {
+					existing.PublishedAt = &t
+					break
+				}
+			}
+		}
+	}
+	// Auto-backfill: draft → publish and no explicit date supplied.
+	if wasDraft && existing.Status == "publish" && existing.PublishedAt == nil {
+		now := time.Now()
+		existing.PublishedAt = &now
+	}
 
 	// Handle excerpt: use provided, or auto-extract if content changed and no excerpt
 	if req.Excerpt != "" {
