@@ -37,10 +37,53 @@ export async function getThemeContextData(): Promise<ThemeContextData> {
     }
   }
 
-  // Extract social links from options
+  // Social links — admin stores them as a single `social_links` JSON
+  // array of `{icon, name, url, qr?}`. Themes historically read from
+  // flat `social_github` / `social_twitter` / … keys. Expand the array
+  // into those flat keys (via a name-to-key map) AND populate
+  // `opts.social_*` so the flat lookups in Sidebar / About / etc.
+  // resolve without touching every theme.
+  const nameToKey: Record<string, string> = {
+    'github':    'social_github',
+    'x':         'social_twitter',
+    'twitter':   'social_twitter',
+    'weibo':     'social_weibo',
+    '微博':      'social_weibo',
+    'telegram':  'social_telegram',
+    'email':     'social_email',
+    '邮箱':      'social_email',
+    'youtube':   'social_youtube',
+    'instagram': 'social_instagram',
+    '微信':      'social_weixin',
+    'wechat':    'social_weixin',
+    'bilibili':  'social_bilibili',
+    'b 站':      'social_bilibili',
+    '抖音':      'social_douyin',
+    'tiktok':    'social_tiktok',
+    'douban':    'social_douban',
+    '豆瓣':      'social_douban',
+    'linkedin':  'social_linkedin',
+    'mastodon':  'social_mastodon',
+    'discord':   'social_discord',
+    'rss':       'social_rss',
+  };
+  if (opts.social_links) {
+    try {
+      const arr = JSON.parse(opts.social_links);
+      if (Array.isArray(arr)) {
+        for (const s of arr) {
+          if (!s?.url && !s?.qr) continue;
+          const nameKey = String(s.name || '').toLowerCase().trim();
+          const flatKey = nameToKey[nameKey] || `social_${nameKey.replace(/\s+/g, '_')}`;
+          if (s.url && !opts[flatKey]) opts[flatKey] = s.url;
+        }
+      }
+    } catch { /* malformed JSON — leave flat keys untouched */ }
+  }
+
   const socials: Record<string, string> = {};
   for (const key of Object.keys(opts)) {
-    if (key.startsWith('social_') && opts[key]) {
+    if (key.startsWith('social_') && key !== 'social_links' && opts[key]) {
       socials[key.replace('social_', '')] = opts[key];
     }
   }

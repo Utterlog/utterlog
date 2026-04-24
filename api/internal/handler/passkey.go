@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"utterlog-go/config"
@@ -19,18 +20,32 @@ import (
 	"github.com/google/uuid"
 )
 
-var webAuthnInstance *webauthn.WebAuthn
+// Cached per-origin instance. The library itself is thread-safe once
+// constructed, so re-using one instance while the site URL is stable is
+// fine — but if the admin switches site_url (e.g. attaching a new
+// domain in the install wizard) we need to rebuild, otherwise every
+// browser would keep getting "Error validating origin" because the
+// cached RPID / RPOrigin still point at the old URL.
+var (
+	webAuthnInstance *webauthn.WebAuthn
+	webAuthnOrigin   string
+)
 
 func getWebAuthn() (*webauthn.WebAuthn, error) {
-	if webAuthnInstance != nil {
-		return webAuthnInstance, nil
+	// Source of truth: the same helper every other handler uses to
+	// build user-facing URLs — ul_options.site_url first, then
+	// config.C.AppURL. Before this, we queried a non-existent
+	// `app_url` option and silently fell back to
+	// `http://localhost:3000`, which never matches the browser's
+	// real origin → "Error validating origin" on every passkey
+	// register / login attempt.
+	appURL := strings.TrimRight(strings.TrimSpace(config.PublicBaseURL()), "/")
+	if appURL == "" {
+		appURL = "http://localhost:8080"
 	}
 
-	// Read site URL from options
-	var appURL string
-	config.DB.Get(&appURL, fmt.Sprintf("SELECT COALESCE(value,'') FROM %s WHERE name='app_url'", config.T("options")))
-	if appURL == "" {
-		appURL = "http://localhost:3000"
+	if webAuthnInstance != nil && webAuthnOrigin == appURL {
+		return webAuthnInstance, nil
 	}
 
 	parsed, err := url.Parse(appURL)
@@ -40,13 +55,21 @@ func getWebAuthn() (*webauthn.WebAuthn, error) {
 
 	var siteName string
 	config.DB.Get(&siteName, fmt.Sprintf("SELECT COALESCE(value,'Utterlog') FROM %s WHERE name='site_title'", config.T("options")))
+	if siteName == "" {
+		siteName = "Utterlog"
+	}
 
-	webAuthnInstance, err = webauthn.New(&webauthn.Config{
+	inst, err := webauthn.New(&webauthn.Config{
 		RPID:          parsed.Hostname(),
 		RPDisplayName: siteName,
 		RPOrigins:     []string{appURL},
 	})
-	return webAuthnInstance, err
+	if err != nil {
+		return nil, err
+	}
+	webAuthnInstance = inst
+	webAuthnOrigin = appURL
+	return inst, nil
 }
 
 // webauthnUser wraps model.User to implement webauthn.User interface

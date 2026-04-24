@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button, Input, Textarea, Select, Modal, Toggle } from '@/components/ui';
+import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC, FormRowRangeC } from '@/components/form/FormC';
 import { useAuthStore } from '@/lib/store';
 
 interface Provider {
@@ -371,24 +372,35 @@ export default function AiSettingsPage() {
 
       {/* ── 聊天配置 ── */}
       {activeTab === '聊天配置' && (
-        <div className="card" style={cardStyle}>
-          <SectionTitle icon="fa-regular fa-comment-dots">前端聊天气泡</SectionTitle>
-          <div className="space-y-4">
-            <Toggle label="允许访客（未登录）使用 AI 聊天" checked={config.ai_chat_guest === 'true'} onChange={e => updateConfig('ai_chat_guest', String(e.target.checked))} />
-            <Select label="气泡位置" value={config.ai_chat_position} onChange={e => updateConfig('ai_chat_position', e.target.value)}>
-              <option value="right">右下角</option>
-              <option value="left">左下角</option>
-            </Select>
-            <div>
-              <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>对话温度 ({config.ai_chat_temp})</label>
-              <input type="range" min="0" max="2" step="0.1" value={config.ai_chat_temp} onChange={e => updateConfig('ai_chat_temp', e.target.value)} style={{ width: '100%' }} />
-              <p className="text-xs text-dim mt-1">越低越精确，越高越有创意</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '16px' }}>
+        <>
+          <FormSectionC title="前端聊天气泡" icon="fa-regular fa-comment-dots">
+            <FormRowToggleC
+              label="允许访客（未登录）使用 AI 聊天"
+              checked={config.ai_chat_guest === 'true'}
+              onChange={v => updateConfig('ai_chat_guest', String(v))}
+            />
+            <FormRowSelectC
+              label="气泡位置"
+              value={config.ai_chat_position}
+              onChange={v => updateConfig('ai_chat_position', v)}
+              options={[
+                { value: 'right', label: '右下角' },
+                { value: 'left', label: '左下角' },
+              ]}
+            />
+            <FormRowRangeC
+              label="对话温度"
+              hint="越低越精确，越高越有创意"
+              value={config.ai_chat_temp}
+              onChange={v => updateConfig('ai_chat_temp', v)}
+              min={0} max={2} step={0.1}
+              last
+            />
+          </FormSectionC>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
           </div>
-        </div>
+        </>
       )}
 
       {/* ── 文章设置 ── */}
@@ -424,92 +436,140 @@ export default function AiSettingsPage() {
 
           {/* 摘要设置 */}
           {config.ai_summary_auto === 'true' && (
-            <div className="card" style={cardStyle}>
-              <SectionTitle icon="fa-regular fa-align-left">摘要设置</SectionTitle>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <Input label="摘要最大长度" type="number" value={config.ai_summary_max_length} onChange={e => updateConfig('ai_summary_max_length', e.target.value)} style={{ maxWidth: '200px' }} />
-                <div>
-                  <Textarea label="自定义提示词（可选）" rows={3} value={config.ai_summary_prompt} onChange={e => updateConfig('ai_summary_prompt', e.target.value)} placeholder="留空使用默认提示词" />
-                  <p className="text-xs text-dim" style={{ marginTop: '4px' }}>例如：请用轻松幽默的语气总结</p>
-                </div>
-              </div>
-            </div>
+            <FormSectionC title="摘要设置" icon="fa-regular fa-align-left">
+              <FormRowInputC
+                label="摘要最大长度"
+                type="number"
+                value={config.ai_summary_max_length}
+                onChange={v => updateConfig('ai_summary_max_length', v)}
+              />
+              <FormRowTextareaC
+                label="自定义提示词（可选）"
+                hint="例如：请用轻松幽默的语气总结"
+                rows={3}
+                value={config.ai_summary_prompt}
+                onChange={v => updateConfig('ai_summary_prompt', v)}
+                placeholder="留空使用默认提示词"
+                last
+              />
+            </FormSectionC>
           )}
 
           {/* 特色图设置 */}
           {config.ai_image_auto === 'true' && (
-            <div className="card" style={cardStyle}>
-              <SectionTitle icon="fa-regular fa-image">特色图设置</SectionTitle>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <Select label="图片生成模型" value={config.ai_image_model} onChange={e => updateConfig('ai_image_model', e.target.value)}>
-                  <option value="">使用默认图片提供商</option>
-                  <option value="dall-e-3">OpenAI DALL·E 3</option>
-                  <option value="gpt-image-1">OpenAI GPT Image</option>
-                  <option value="gemini">Google Gemini Image</option>
-                  <option value="wanx">通义万相</option>
-                  <option value="cogview">智谱 CogView</option>
-                  <option value="doubao">豆包 SeedDream</option>
-                  <option value="minimax">MiniMax Image</option>
-                  <option value="flux">SiliconFlow FLUX</option>
-                </Select>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <Select label="图片比例" value={config.ai_image_ratio} onChange={e => updateConfig('ai_image_ratio', e.target.value)}>
-                    <option value="16:9">16:9（推荐）</option>
-                    <option value="1:1">1:1</option>
-                    <option value="4:3">4:3</option>
-                    <option value="3:2">3:2</option>
-                  </Select>
-                  <Select label="图片风格" value={config.ai_image_style} onChange={e => updateConfig('ai_image_style', e.target.value)}>
-                    <option value="editorial">编辑风格</option>
-                    <option value="realistic">写实风格</option>
-                    <option value="cinematic">电影风格</option>
-                    <option value="illustration">插画风格</option>
-                    <option value="minimal">极简风格</option>
-                    <option value="watercolor">水彩风格</option>
-                  </Select>
-                  <Select label="图片格式" value={config.ai_image_format} onChange={e => updateConfig('ai_image_format', e.target.value)}>
-                    <option value="webp">WebP（推荐）</option>
-                    <option value="png">PNG</option>
-                    <option value="jpg">JPEG</option>
-                  </Select>
-                  <Input label="压缩质量" type="number" value={config.ai_image_quality} onChange={e => updateConfig('ai_image_quality', e.target.value)} min={1} max={100} />
-                </div>
-                <Select label="文字策略" value={config.ai_image_text} onChange={e => updateConfig('ai_image_text', e.target.value)}>
-                  <option value="no_text">不包含文字</option>
-                  <option value="title_only">仅标题</option>
-                  <option value="subtle_caption">微妙文字</option>
-                </Select>
+            <FormSectionC title="特色图设置" icon="fa-regular fa-image">
+              <FormRowSelectC
+                label="图片生成模型"
+                value={config.ai_image_model}
+                onChange={v => updateConfig('ai_image_model', v)}
+                options={[
+                  { value: '',            label: '使用默认图片提供商' },
+                  { value: 'dall-e-3',    label: 'OpenAI DALL·E 3' },
+                  { value: 'gpt-image-1', label: 'OpenAI GPT Image' },
+                  { value: 'gemini',      label: 'Google Gemini Image' },
+                  { value: 'wanx',        label: '通义万相' },
+                  { value: 'cogview',     label: '智谱 CogView' },
+                  { value: 'doubao',      label: '豆包 SeedDream' },
+                  { value: 'minimax',     label: 'MiniMax Image' },
+                  { value: 'flux',        label: 'SiliconFlow FLUX' },
+                ]}
+              />
+              {/* 4 short fields paired into 2×2 — wrapping in a CSS grid
+                  side-by-steps two FormRow*C in the same section row
+                  while keeping the internal 32/68 label-value split. */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                <FormRowSelectC
+                  label="图片比例"
+                  value={config.ai_image_ratio}
+                  onChange={v => updateConfig('ai_image_ratio', v)}
+                  options={[
+                    { value: '16:9', label: '16:9（推荐）' },
+                    { value: '1:1',  label: '1:1' },
+                    { value: '4:3',  label: '4:3' },
+                    { value: '3:2',  label: '3:2' },
+                  ]}
+                />
+                <FormRowSelectC
+                  label="图片风格"
+                  value={config.ai_image_style}
+                  onChange={v => updateConfig('ai_image_style', v)}
+                  options={[
+                    { value: 'editorial',    label: '编辑风格' },
+                    { value: 'realistic',    label: '写实风格' },
+                    { value: 'cinematic',    label: '电影风格' },
+                    { value: 'illustration', label: '插画风格' },
+                    { value: 'minimal',      label: '极简风格' },
+                    { value: 'watercolor',   label: '水彩风格' },
+                  ]}
+                />
+                <FormRowSelectC
+                  label="图片格式"
+                  value={config.ai_image_format}
+                  onChange={v => updateConfig('ai_image_format', v)}
+                  options={[
+                    { value: 'webp', label: 'WebP（推荐）' },
+                    { value: 'png',  label: 'PNG' },
+                    { value: 'jpg',  label: 'JPEG' },
+                  ]}
+                />
+                <FormRowInputC
+                  label="压缩质量"
+                  type="number"
+                  value={config.ai_image_quality}
+                  onChange={v => updateConfig('ai_image_quality', v)}
+                  hint="1-100"
+                />
               </div>
-            </div>
+              <FormRowSelectC
+                label="文字策略"
+                value={config.ai_image_text}
+                onChange={v => updateConfig('ai_image_text', v)}
+                options={[
+                  { value: 'no_text',        label: '不包含文字' },
+                  { value: 'title_only',     label: '仅标题' },
+                  { value: 'subtle_caption', label: '微妙文字' },
+                ]}
+                last
+              />
+            </FormSectionC>
           )}
 
           {/* 提示词配置 */}
-          <div className="card" style={cardStyle}>
-            <SectionTitle icon="fa-regular fa-terminal">自定义提示词</SectionTitle>
-            <p className="text-xs text-dim" style={{ marginTop: '-12px', marginBottom: '20px' }}>自定义每个 AI 功能的指令，留空使用内置默认提示词</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              {[
-                { key: 'ai_summary_prompt', label: '摘要提示词', icon: 'fa-regular fa-align-left', placeholder: '留空使用默认：根据文章内容生成简洁摘要', rows: 3 },
-                { key: 'ai_slug_prompt', label: 'Slug 提示词', icon: 'fa-regular fa-link', placeholder: '留空使用默认：生成 SEO 友好的英文 URL 别名', rows: 3 },
-                { key: 'ai_keywords_prompt', label: '关键词提示词', icon: 'fa-regular fa-tags', placeholder: '留空使用默认：从文章中提取 3-5 个关键词', rows: 3 },
-                { key: 'ai_polish_prompt', label: '润色提示词', icon: 'fa-regular fa-wand-magic-sparkles', placeholder: '留空使用默认：润色优化文章质量', rows: 3 },
-              ].map(item => (
-                <div key={item.key} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label className="text-sub" style={{ fontSize: '13px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <i className={item.icon} style={{ fontSize: '12px', color: 'var(--color-primary)' }} /> {item.label}
-                  </label>
-                  <textarea
-                    className="input text-sm"
-                    rows={item.rows}
-                    value={config[item.key] || ''}
-                    onChange={e => updateConfig(item.key, e.target.value)}
-                    placeholder={item.placeholder}
-                    style={{ fontSize: '12px', fontFamily: 'monospace', resize: 'vertical' }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+          <FormSectionC
+            title="自定义提示词"
+            icon="fa-regular fa-terminal"
+            description="自定义每个 AI 功能的指令，留空使用内置默认提示词"
+          >
+            <FormRowTextareaC
+              label="摘要提示词"
+              rows={3}
+              value={config.ai_summary_prompt}
+              onChange={v => updateConfig('ai_summary_prompt', v)}
+              placeholder="留空使用默认：根据文章内容生成简洁摘要"
+            />
+            <FormRowTextareaC
+              label="Slug 提示词"
+              rows={3}
+              value={config.ai_slug_prompt}
+              onChange={v => updateConfig('ai_slug_prompt', v)}
+              placeholder="留空使用默认：生成 SEO 友好的英文 URL 别名"
+            />
+            <FormRowTextareaC
+              label="关键词提示词"
+              rows={3}
+              value={config.ai_keywords_prompt}
+              onChange={v => updateConfig('ai_keywords_prompt', v)}
+              placeholder="留空使用默认：从文章中提取 3-5 个关键词"
+            />
+            <FormRowTextareaC
+              label="润色提示词"
+              rows={3}
+              value={config.ai_polish_prompt}
+              onChange={v => updateConfig('ai_polish_prompt', v)}
+              placeholder="留空使用默认：润色优化文章质量"
+              last
+            />
+          </FormSectionC>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
@@ -519,71 +579,112 @@ export default function AiSettingsPage() {
 
       {/* ── 博主资料 ── */}
       {activeTab === '博主资料' && (
-        <div className="card" style={cardStyle}>
-          <SectionTitle icon="fa-regular fa-user-pen">博主资料 & AI 记忆</SectionTitle>
-          <p className="text-xs text-dim mb-5">AI 会根据这些信息了解你的写作风格和偏好，提供更个性化的回复</p>
-          <div className="space-y-4">
-            <Input label="博主昵称" value={config.ai_blogger_name} onChange={e => updateConfig('ai_blogger_name', e.target.value)} placeholder="你的名字或笔名" />
-            <Textarea label="博客简介" rows={3} value={config.ai_blogger_bio} onChange={e => updateConfig('ai_blogger_bio', e.target.value)} placeholder="简要描述你的博客主题和风格" />
-            <Textarea label="写作风格" rows={2} value={config.ai_blogger_style} onChange={e => updateConfig('ai_blogger_style', e.target.value)} placeholder="例如：轻松幽默、技术严谨、文艺清新..." />
-            <div>
-              <Textarea label="AI 记忆（MEMORY.md）" rows={8} value={config.ai_blogger_memory} onChange={e => updateConfig('ai_blogger_memory', e.target.value)} placeholder="AI 会自动在这里记录你的偏好和上下文..." style={{ fontFamily: 'monospace' }} />
-              <p className="text-xs text-dim mt-1">这些记忆会作为上下文发送给 AI，帮助它更好地理解你</p>
-            </div>
-            <Select label="记忆存储方式" value={config.ai_memory_storage} onChange={e => updateConfig('ai_memory_storage', e.target.value)}>
-              <option value="local">本地文件</option>
-              <option value="s3">S3/R2 云存储</option>
-            </Select>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '16px' }}>
+        <>
+          <FormSectionC
+            title="博主资料 & AI 记忆"
+            icon="fa-regular fa-user-pen"
+            description="AI 会根据这些信息了解你的写作风格和偏好，提供更个性化的回复"
+          >
+            <FormRowInputC
+              label="博主昵称"
+              value={config.ai_blogger_name}
+              onChange={v => updateConfig('ai_blogger_name', v)}
+              placeholder="你的名字或笔名"
+            />
+            <FormRowTextareaC
+              label="博客简介"
+              rows={3}
+              value={config.ai_blogger_bio}
+              onChange={v => updateConfig('ai_blogger_bio', v)}
+              placeholder="简要描述你的博客主题和风格"
+            />
+            <FormRowTextareaC
+              label="写作风格"
+              rows={2}
+              value={config.ai_blogger_style}
+              onChange={v => updateConfig('ai_blogger_style', v)}
+              placeholder="例如：轻松幽默、技术严谨、文艺清新..."
+            />
+            <FormRowTextareaC
+              label="AI 记忆（MEMORY.md）"
+              hint="这些记忆会作为上下文发送给 AI，帮助它更好地理解你"
+              rows={8}
+              value={config.ai_blogger_memory}
+              onChange={v => updateConfig('ai_blogger_memory', v)}
+              placeholder="AI 会自动在这里记录你的偏好和上下文..."
+            />
+            <FormRowSelectC
+              label="记忆存储方式"
+              value={config.ai_memory_storage}
+              onChange={v => updateConfig('ai_memory_storage', v)}
+              options={[
+                { value: 'local', label: '本地文件' },
+                { value: 's3', label: 'S3/R2 云存储' },
+              ]}
+              last
+            />
+          </FormSectionC>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
           </div>
-        </div>
+        </>
       )}
 
       {/* ── 系统提示词 ── */}
       {activeTab === '系统提示词' && (
-        <div className="card" style={cardStyle}>
-          <SectionTitle icon="fa-regular fa-scroll">AI 系统提示词</SectionTitle>
-          <div className="space-y-4">
-            <div>
-              <Textarea label="聊天系统提示词" rows={8} value={config.ai_system_prompt} onChange={e => updateConfig('ai_system_prompt', e.target.value)} style={{ fontFamily: 'monospace' }} />
-              <p className="text-xs text-dim mt-1">定义 AI 的角色和行为方式，会在每次对话开始时发送给 AI</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '16px' }}>
+        <>
+          <FormSectionC title="AI 系统提示词" icon="fa-regular fa-scroll">
+            <FormRowTextareaC
+              label="聊天系统提示词"
+              hint="定义 AI 的角色和行为方式，会在每次对话开始时发送给 AI"
+              rows={8}
+              value={config.ai_system_prompt}
+              onChange={v => updateConfig('ai_system_prompt', v)}
+              last
+            />
+          </FormSectionC>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
           </div>
-        </div>
+        </>
       )}
 
       {/* ── 数据权限 ── */}
       {activeTab === '数据权限' && (
-        <div className="card" style={cardStyle}>
-          <SectionTitle icon="fa-regular fa-shield-halved">AI 数据访问权限</SectionTitle>
-          <p className="text-xs text-dim mb-5">控制 AI 可以访问哪些站点数据作为上下文</p>
-          <div className="space-y-1">
-            {[
-              { key: 'site_basics', label: '站点基础信息', desc: '系统版本、服务器信息' },
-              { key: 'theme_info', label: '主题信息', desc: '当前主题和配色' },
-              { key: 'active_plugins', label: '启用的插件', desc: '插件列表' },
-              { key: 'posts', label: '文章内容', desc: '所有已发布文章的标题和内容' },
-              { key: 'pages_content', label: '页面内容', desc: '所有已发布页面' },
-              { key: 'taxonomies', label: '分类和标签', desc: '分类目录和标签列表' },
-              { key: 'comments', label: '评论内容', desc: '所有评论列表' },
-              { key: 'users_count', label: '用户统计', desc: '按角色统计用户数量' },
-              { key: 'database_query', label: '数据库查询', desc: '允许 AI 执行只读 SQL 查询获取更多数据' },
-            ].map(item => (
-              <Toggle key={item.key} label={item.label} description={item.desc}
-                checked={!!dataPerms[item.key]}
-                onChange={() => togglePerm(item.key)}
-                style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)' }} />
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: '8px', paddingTop: '16px', justifyContent: 'flex-end' }}>
+        <>
+          <FormSectionC
+            title="AI 数据访问权限"
+            icon="fa-regular fa-shield-halved"
+            description="控制 AI 可以访问哪些站点数据作为上下文"
+          >
+            {(() => {
+              const perms = [
+                { key: 'site_basics',    label: '站点基础信息', hint: '系统版本、服务器信息' },
+                { key: 'theme_info',     label: '主题信息',     hint: '当前主题和配色' },
+                { key: 'active_plugins', label: '启用的插件',   hint: '插件列表' },
+                { key: 'posts',          label: '文章内容',     hint: '所有已发布文章的标题和内容' },
+                { key: 'pages_content',  label: '页面内容',     hint: '所有已发布页面' },
+                { key: 'taxonomies',     label: '分类和标签',   hint: '分类目录和标签列表' },
+                { key: 'comments',       label: '评论内容',     hint: '所有评论列表' },
+                { key: 'users_count',    label: '用户统计',     hint: '按角色统计用户数量' },
+                { key: 'database_query', label: '数据库查询',   hint: '允许 AI 执行只读 SQL 查询获取更多数据' },
+              ];
+              return perms.map((item, idx) => (
+                <FormRowToggleC
+                  key={item.key}
+                  label={item.label}
+                  hint={item.hint}
+                  checked={!!dataPerms[item.key]}
+                  onChange={() => togglePerm(item.key)}
+                  last={idx === perms.length - 1}
+                />
+              ));
+            })()}
+          </FormSectionC>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
           </div>
-        </div>
+        </>
       )}
 
       {/* ── 批量任务 ── */}

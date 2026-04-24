@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import PostLink from '@/components/blog/PostLink';
+import { useThemeContext } from '@/lib/theme-context';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
@@ -48,26 +49,38 @@ export default function Sidebar() {
   const [categories, setCategories] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>({});
   const [activeTab, setActiveTab] = useState<'latest' | 'hot' | 'random'>('latest');
   const [tabPosts, setTabPosts] = useState<any[]>([]);
   const [archiveOpen, setArchiveOpen] = useState<string | null>(null);
-  const [author, setAuthor] = useState<any>(null);
-  const [siteOptions, setSiteOptions] = useState<any>({}); // year string or null
+
+  // Pull site options / owner / categories / tags / archive-stats from
+  // the shared ThemeContext. Hitting /options directly here used to
+  // skip the `social_links` JSON → flat-key expansion that theme-data
+  // does, so Sidebar's social icons silently didn't render.
+  const ctx = useThemeContext();
+  const siteOptions = ctx.options;
+  const author = {
+    nickname: ctx.owner.nickname,
+    bio: ctx.owner.bio,
+    avatar: ctx.owner.avatar,
+    email: ctx.owner.email,
+  };
+  const categoriesCtx = ctx.categories;
+  const tagsCtx = ctx.tags
+    .slice()
+    .sort((a: any, b: any) => (b.count || 0) - (a.count || 0))
+    .slice(0, 20);
+  const stats = ctx.archiveStats;
 
   useEffect(() => {
-    fetch(`${API}/categories`).then(r => r.json()).then(r => setCategories(r.data || [])).catch(() => {});
-    fetch(`${API}/tags`).then(r => r.json()).then(r => {
-      const t = (r.data || []).sort((a: any, b: any) => (b.count || 0) - (a.count || 0));
-      setTags(t.slice(0, 20));
-    }).catch(() => {});
+    // Only fetch dynamic slices that the context can't give us
+    // (latest/hot/random post lists + recent approved comments).
+    setCategories(categoriesCtx);
+    setTags(tagsCtx);
     fetch(`${API}/comments?per_page=5&status=approved&exclude_admin=1`).then(r => r.json()).then(r => {
       const all = r.data?.comments || r.data || [];
       setComments(all);
     }).catch(() => {});
-    fetch(`${API}/archive/stats`).then(r => r.json()).then(r => setStats(r.data || {})).catch(() => {});
-    fetch(`${API}/options`).then(r => r.json()).then(r => setSiteOptions(r.data || {})).catch(() => {});
-    fetch(`${API}/owner`).then(r => r.json()).then(r => { if (r.data) setAuthor(r.data); }).catch(() => {});
     fetchTabPosts('latest');
   }, []);
 

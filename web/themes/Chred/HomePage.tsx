@@ -4,6 +4,7 @@ import PostCard from './PostCard';
 import Sidebar from './Sidebar';
 import Pagination from '@/components/blog/Pagination';
 import LazyImage from '@/components/ui/LazyImage';
+import FadeCover from '@/components/blog/FadeCover';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { getCategoryIcon } from './constants';
@@ -189,7 +190,7 @@ export default function HomePage({ posts, page, totalPages }: { posts: any[]; pa
               onMouseLeave={() => setPaused(false)}
             >
               <PostLink post={heroPost} style={{ display: 'block', textDecoration: 'none' }}>
-                <LazyImage src={heroSrc} alt={heroPost.title}
+                <FadeCover src={heroSrc} alt={heroPost.title}
                   style={{ width: '100%', height: heroHeight }} />
                 <div style={{
                   position: 'absolute', bottom: 0, left: 0, right: 0,

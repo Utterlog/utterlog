@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import PostLink from './PostLink';
+import SharedFadeCover from './FadeCover';
 
 function LazyCardImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -22,12 +23,25 @@ function LazyCardImage({ src, alt }: { src: string; alt: string }) {
   return (
     <div ref={ref} style={{ position: 'absolute', inset: 0 }}>
       {inView && (
+        // Prev/next covers and related-card thumbnails deliberately
+        // hard-code the classic blur→sharp fade regardless of the
+        // admin's image_display_effect choice — a scattered pixel or
+        // blinds reveal here looked aggressive in the footer. No
+        // `data-blog-image` = escapes the global effect selector.
+        // `transform` is kept in the transition list so the
+        // `.azure-img-hover-wrap:hover` scale(1.04) zoom stays smooth
+        // instead of snapping instantly.
         <img
           src={src}
           alt={alt}
           onLoad={() => setLoaded(true)}
           className={`azure-img-hover ${loaded ? 'azure-img-lazy loaded' : 'azure-img-lazy'}`}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          style={{
+            width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+            opacity: loaded ? 1 : 0,
+            filter: loaded ? 'blur(0)' : 'blur(20px)',
+            transition: 'opacity 0.5s ease-in-out, filter 0.5s linear, transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
         />
       )}
       {(!inView || !loaded) && (
@@ -42,6 +56,14 @@ function LazyCardImage({ src, alt }: { src: string; alt: string }) {
       )}
     </div>
   );
+}
+
+// Alias to the shared FadeCover. Kept as a local name (`FadeCover`)
+// so the JSX call sites below don't have to change; the wrapper
+// supplies a `width/height: 100%` container that drops nicely into
+// the existing `.post-prev-next-cover` slot without extra styling.
+function FadeCover({ src }: { src: string }) {
+  return <SharedFadeCover src={src} style={{ width: '100%', height: '100%' }} />;
 }
 
 interface NavPost {
@@ -139,13 +161,13 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
                 <span className="post-prev-next-title">{data.prev.title}</span>
               </div>
               <div className="post-prev-next-cover">
-                <img src={data.prev.cover_url || `https://img.et/1920/1080?type=landscape&r=${data.prev.id}`} alt="" />
+                <FadeCover src={data.prev.cover_url || `https://img.et/1920/1080?type=landscape&r=${data.prev.id}`} />
               </div>
             </PostLink>
           ) : (
             <div className="post-prev-next-link prev" style={{ cursor: 'default' }}>
               <div className="post-prev-next-cover">
-                {coverUrl && <img src={coverUrl} alt="" />}
+                {coverUrl && <FadeCover src={coverUrl} />}
               </div>
               <div className="post-prev-next-text">
                 <span className="post-prev-next-label"><i className="fa-light fa-sparkles" style={{ fontSize: '12px' }} /> 已是最早一篇</span>
@@ -155,7 +177,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
           {data.next ? (
             <PostLink post={data.next} className="post-prev-next-link next">
               <div className="post-prev-next-cover">
-                <img src={data.next.cover_url || `https://img.et/1920/1080?type=landscape&r=${data.next.id}`} alt="" />
+                <FadeCover src={data.next.cover_url || `https://img.et/1920/1080?type=landscape&r=${data.next.id}`} />
               </div>
               <div className="post-prev-next-text">
                 <span className="post-prev-next-label">下一篇 <i className="fa-regular fa-arrow-right" style={{ fontSize: '12px' }} /></span>
@@ -165,7 +187,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
           ) : (
             <div className="post-prev-next-link next" style={{ cursor: 'default' }}>
               <div className="post-prev-next-cover">
-                {coverUrl && <img src={coverUrl} alt="" />}
+                {coverUrl && <FadeCover src={coverUrl} />}
               </div>
               <div className="post-prev-next-text">
                 <span className="post-prev-next-label">这是最新文章 <i className="fa-light fa-sparkles" style={{ fontSize: '12px' }} /></span>

@@ -452,16 +452,9 @@
 
 /* ====== Azure 主题图片基准样式 ====== */
 
-/* 图片 blur 淡入加载 */
-[data-theme="Azure"] .azure-img-lazy {
-  filter: blur(20px);
-  opacity: 0;
-  transition: opacity 0.5s ease-in-out, filter 0.5s linear;
-}
-[data-theme="Azure"] .azure-img-lazy.loaded {
-  filter: blur(0);
-  opacity: 1;
-}
+/* .azure-img-lazy 淡入规则已删除 —— PostNavigation 内的 LazyCardImage
+   用 inline style 管理 opacity/filter transition（见 FadeCover 实现），
+   原 class-based 规则只是残留遮蔽，没有任何真实作用。 */
 
 /* 图片悬浮缓慢放大 */
 [data-theme="Azure"] .azure-img-hover {

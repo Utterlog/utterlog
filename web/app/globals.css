@@ -13,10 +13,23 @@ body {
   margin: 0;
 }
 
-/* Blog main: scrollbar always visible, footer sticks to bottom */
+/* Blog main: scrollbar always visible, footer sticks to bottom.
+   `.lightbox-active` on <html> locks the scroll so opening / closing
+   an image lightbox can't shift the underlying article position —
+   the original !important on overflow-y above was swallowing any
+   inline style attempts to pause the scroller. */
 .blog-main {
   overflow-y: scroll !important;
   background: inherit;
+}
+html.lightbox-active .blog-main {
+  overflow-y: hidden !important;
+}
+html.lightbox-active {
+  overflow: hidden !important;
+}
+html.lightbox-active body {
+  overflow: hidden !important;
 }
 .blog-main::-webkit-scrollbar {
   width: 10px;
@@ -544,17 +557,6 @@ body {
 .comment-hint { transition: opacity 0.2s; }
 div:hover > .comment-hint { opacity: 0.75 !important; }
 
-/* 系统全局图片 blur 淡入（后台+前台通用） */
-.img-blur-in {
-  filter: blur(20px);
-  opacity: 0;
-  transition: opacity 0.5s ease-in-out, filter 0.5s linear;
-}
-.img-blur-in.loaded {
-  filter: blur(0);
-  opacity: 1;
-}
-
 /* Blog image: lazy load with blur-fade effect.
    Single image = 80% width centered + 16:9. Multi-image grid images
    get their own aspect-ratio overrides below. */
@@ -573,16 +575,22 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
+  background-color: var(--color-bg-soft);
   filter: blur(20px);
-  opacity: 0;
-  transition: opacity 0.5s ease-in-out, filter 0.5s linear;
+  -webkit-transition: .5s ease-in-out opacity;
+  transition: .5s ease-in-out opacity;
 }
 .blog-image.loaded img {
   filter: blur(0);
   opacity: 1;
+  -webkit-transition: .5s filter linear, .5s -webkit-filter linear;
+  transition: .5s filter linear, .5s -webkit-filter linear;
 }
 
-/* Loading spinner */
+/* Loading spinner — stays mounted; opacity fades in sync with the
+   image's `filter` transition so the two visual states cross-fade
+   instead of the spinner snapping out a frame before the image
+   starts to un-blur (that one-frame gap read as a "double load"). */
 .blog-image-loader {
   position: absolute;
   inset: 0;
@@ -591,8 +599,13 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   justify-content: center;
   z-index: 2;
   color: var(--color-text-dim);
+  opacity: 1;
+  transition: opacity 0.35s ease-out;
+  pointer-events: none;
 }
-.blog-image.loaded .blog-image-loader { display: none; }
+.blog-image.loaded .blog-image-loader {
+  opacity: 0;
+}
 
 /* Post list hover — title changes to primary color */
 
@@ -773,44 +786,145 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   font-size: 13px;
 }
 
-/* Lightbox */
-.lightbox-overlay {
+/* Lightbox — ViewImage-inspired layout: backdrop with soft frosted
+   blur, image zone that slides in from above on open / down on close,
+   a bottom toolbar with prev/next/close + image counter, and a thin
+   horizontal loading bar. All corners sharp (border-radius: 0) per
+   the site's overall square-edge aesthetic. */
+.vi-overlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
+  padding: 1rem;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: lightbox-in 200ms ease-out;
+  flex-direction: column;
+  /* Solid-ish dark backdrop instead of `backdrop-filter: blur()`.
+     The blur forced a new compositor layer that was re-rasterized
+     every frame of the opacity fade, producing a visible flicker on
+     Chrome + Safari. An almost-opaque color reads as "focused"
+     without any GPU cost. */
+  background: rgba(18, 20, 24, 0.96);
+  animation: vi-in 300ms both;
+  will-change: opacity;
 }
-@keyframes lightbox-in { from { opacity: 0; } to { opacity: 1; } }
-.lightbox-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 40px;
-  height: 40px;
+.vi-overlay.vi-closing {
+  animation: vi-out 300ms forwards;
+}
+@keyframes vi-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vi-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* Main stage — fills the whole overlay; tools bar is absolutely
+   positioned over the bottom so the stage never loses room to it
+   and the image can always reach the overlay's full inner width. */
+.vi-stage {
+  flex: 1;
+  height: 0;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 50%;
+  position: relative;
+}
+.vi-stage .vi-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  border-radius: 0;
+  position: relative;
+  z-index: 1;
+  animation: vi-img-in 300ms both;
+  will-change: transform, opacity;
+}
+.vi-stage.vi-img-out .vi-img {
+  animation: vi-img-out 300ms forwards;
+}
+@keyframes vi-img-in  { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes vi-img-out { from { opacity: 1; transform: translateY(0); }     to { opacity: 0; transform: translateY(20px); } }
+
+/* Click-outside catch layer — sits behind the image but above the
+   backdrop, so clicks miss the img and fire a close. */
+.vi-stage .vi-backstop {
+  position: absolute;
+  inset: 0;
+  cursor: zoom-out;
+  z-index: 0;
+}
+
+/* Thin sliding loading bar — shows while the next image is decoding
+   during prev/next navigation. 8rem wide strip that slides across. */
+.vi-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8rem;
+  height: 3px;
+  margin: -1.5px -4rem;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  z-index: 1;
+  pointer-events: none;
+}
+.vi-loading::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 40%;
+  background: rgba(255, 255, 255, 0.55);
+  animation: vi-loading 900ms infinite ease-in-out;
+}
+@keyframes vi-loading {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* Bottom toolbar — floats over the stage bottom so the image zone
+   keeps its full width. Capped at 600px and horizontally centered
+   within the viewport. */
+.vi-tools {
+  position: absolute;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  left: 1rem;
+  right: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.5);
   color: #fff;
+  border-radius: 0;
+  /* No backdrop-filter here either — matches .vi-overlay removal;
+     keeps a single cheap compositing layer for the whole overlay. */
+  z-index: 2;
+}
+.vi-count {
+  min-width: 60px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.vi-nav {
+  display: flex;
+  gap: 10px;
+}
+.vi-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  z-index: 10;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  color: #fff;
   transition: background 0.15s;
 }
-.lightbox-close:hover { background: rgba(255, 255, 255, 0.2); }
-.lightbox-image {
-  max-width: 90vw;
-  max-height: 90vh;
-  object-fit: contain;
-  transition: transform 0.15s ease-out;
-  user-select: none;
-}
+.vi-btn:hover { background: rgba(255, 255, 255, 0.4); }
+.vi-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ========================================
    Scrollbar
@@ -884,97 +998,127 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
  * gallery tiles, moment photos). Keeps the effect off of chrome
  * (logos, avatars, nav icons).
  * ============================================================ */
-:root { --img-effect-duration: 400ms; }
+/* Default duration mirrors the old hard-coded LazyImage behaviour
+   (500ms) so the admin "fade" option feels identical to what the blog
+   had before the effect system existed. Admin can still override
+   via Settings → 图片处理 → 动画时长. */
+:root { --img-effect-duration: 500ms; }
 
-/* Base targeting — all effects use the same selector set */
-:where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
+/* Base targeting. Article-body images (`.blog-image img`,
+   `.blog-prose img`) already have a fully self-contained blur→sharp
+   fade defined further up in the file — owned by <LazyImage> in
+   components/blog/. The effect system below only applies to opt-in
+   cover images marked with `data-blog-image` to avoid a
+   double-transition conflict (two `transition` declarations would
+   replace each other, flickering around the time ImageEffects
+   attaches `html[data-img-effect]`). */
+:where([data-blog-image] img, img[data-blog-image]) {
   will-change: opacity, transform, filter, clip-path;
+  backface-visibility: hidden;
 }
 
-/* 1. fade — opacity 0 → 1 */
-html[data-img-effect="fade"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
-  animation: img-fade var(--img-effect-duration) ease both;
+/* 1. fade — reverts to the original LazyImage behaviour: pre-load
+      we show a blurred, transparent placeholder; the real image fades
+      in only once the browser reports load. A keyframe animation
+      would start the instant the <img> hits the DOM, which is much
+      earlier than load — so the blur-out finishes while the pixels
+      are still downloading and the image "pops" in. A transition
+      tied to the loaded state moves only when the browser actually
+      has pixels to show, matching the old inline-styled fade users
+      were used to.
+
+      IMPORTANT: Only hide when the image is EXPLICITLY marked
+      not-loaded (`data-loaded="0"` set by LazyImage, or wrapper
+      `.blog-image` without `.loaded`). Raw <img data-blog-image>
+      tags with no load tracking — article cover / hero images
+      rendered by themes directly — render immediately. Otherwise we
+      hide them forever because they never fire the state change
+      that would set `data-loaded="1"`. */
+/* Pre-load state is ONLY applied to images that explicitly declare
+   `data-loaded="0"` — i.e., JS-managed LazyImage instances that
+   will flip to "1" in their onLoad handler. Raw <img data-blog-image>
+   tags (PostPage hero banners, etc.) render without the blur since
+   they have no mechanism to fire a "loaded" signal and would
+   otherwise get stuck blurred forever. */
+html[data-img-effect="fade"] :where(
+  img[data-blog-image][data-loaded="0"],
+  [data-blog-image] img[data-loaded="0"]
+) {
+  background-color: var(--color-bg-soft);
+  filter: blur(20px);
+  -webkit-transition: .5s ease-in-out opacity;
+  transition: .5s ease-in-out opacity;
 }
-@keyframes img-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+/* Post-load: blur releases linearly, opacity pinned to 1. */
+html[data-img-effect="fade"] :where(
+  img[data-blog-image][data-loaded="1"],
+  [data-blog-image] img[data-loaded="1"]
+) {
+  filter: blur(0);
+  opacity: 1;
+  -webkit-transition: .5s filter linear, .5s -webkit-filter linear;
+  transition: .5s filter linear, .5s -webkit-filter linear;
 }
 
-/* 2. blur — heavy blur → sharp */
-html[data-img-effect="blur"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
-  animation: img-blur var(--img-effect-duration) ease both;
+/* 2. pixel — 10×10 mosaic of dark tiles lifting off the image in a
+      randomised order. The img itself doesn't animate; instead its
+      LazyImage wrapper mounts a <div class="pixel-overlay"> with 100
+      `.pixel-tile` children. Each tile's `--delay` variable
+      (randomized in JS) staggers when it fades to transparent.
+      Pure-CSS fallback for non-LazyImage imgs: no overlay, image
+      shows with no animation. */
+.pixel-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+  pointer-events: none;
+  z-index: 2;
 }
-@keyframes img-blur {
-  from { opacity: 0; filter: blur(18px); }
-  to   { opacity: 1; filter: blur(0); }
+.pixel-tile {
+  background: rgba(0, 0, 0, 0.9);
+  animation: pixel-reveal 0.5s forwards;
+  animation-delay: calc(var(--delay, 0) * 0.05s);
 }
-
-/* 3. blinds — horizontal strips reveal from left */
-html[data-img-effect="blinds"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image])[data-img-effect-visible="1"] {
-  animation: img-blinds var(--img-effect-duration) ease-out both;
+@keyframes pixel-reveal {
+  to { background: transparent; }
 }
-html[data-img-effect="blinds"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]):not([data-img-effect-visible]) {
-  opacity: 0;
-}
-@keyframes img-blinds {
-  from { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); opacity: 0; }
-  to   { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }
-}
-
-/* 4. pixel — chunky mosaic via aggressive blur + contrast */
-html[data-img-effect="pixel"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
-  animation: img-pixel var(--img-effect-duration) steps(8) both;
-}
-@keyframes img-pixel {
-  from { opacity: 0; filter: blur(12px) contrast(2); transform: scale(1.04); }
-  to   { opacity: 1; filter: blur(0) contrast(1); transform: scale(1); }
-}
-
-/* 5. slide-up — scroll-triggered slide from below */
-html[data-img-effect="slide-up"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image])[data-img-effect-visible="1"] {
-  animation: img-slide-up var(--img-effect-duration) cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-html[data-img-effect="slide-up"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]):not([data-img-effect-visible]) {
-  opacity: 0;
-}
-@keyframes img-slide-up {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* Image itself just renders immediately when `pixel` is active —
+   the overlay handles the whole visual reveal. */
+html[data-img-effect="pixel"] :where([data-blog-image] img, img[data-blog-image]) {
+  animation: none;
 }
 
-/* 6. scale — zoom in from 0.94 */
-html[data-img-effect="scale"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image])[data-img-effect-visible="1"] {
-  animation: img-scale var(--img-effect-duration) cubic-bezier(0.16, 1, 0.3, 1) both;
+/* 3. scale — gentle zoom-in; starting closer to 0.9 than before so
+      the movement is actually noticeable, with a spring-y ease. */
+html[data-img-effect="scale"] :where([data-blog-image] img, img[data-blog-image])[data-img-effect-visible="1"] {
+  animation: img-scale calc(var(--img-effect-duration) * 1.3) cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-html[data-img-effect="scale"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]):not([data-img-effect-visible]) {
+html[data-img-effect="scale"] :where([data-blog-image] img, img[data-blog-image]):not([data-img-effect-visible]) {
   opacity: 0;
 }
 @keyframes img-scale {
-  from { opacity: 0; transform: scale(0.94); }
-  to   { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scale(0.9); filter: blur(4px); }
+  to   { opacity: 1; transform: scale(1);   filter: blur(0); }
 }
 
-/* 7. curtain — reveal from center out */
-html[data-img-effect="curtain"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image])[data-img-effect-visible="1"] {
-  animation: img-curtain var(--img-effect-duration) ease-out both;
-}
-html[data-img-effect="curtain"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]):not([data-img-effect-visible]) {
-  opacity: 0;
-}
-@keyframes img-curtain {
-  from { clip-path: inset(0 50% 0 50%); opacity: 0; }
-  to   { clip-path: inset(0 0 0 0); opacity: 1; }
-}
-
-/* 8. none — no-op; opacity transition just to avoid a jarring swap */
-html[data-img-effect="none"] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
+/* 4. none — no-op; img renders immediately with no animation */
+html[data-img-effect="none"] :where([data-blog-image] img, img[data-blog-image]) {
   animation: none;
+}
+
+/* LazyImage skeleton placeholder shimmer — used when
+   `image_lazy_load_placeholder` is set to "skeleton". */
+@keyframes lazy-skeleton-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
 /* Respect user's reduced-motion preference for every option except
  * the pure "none" no-op. Skips the animation entirely. */
 @media (prefers-reduced-motion: reduce) {
-  html[data-img-effect] :where(.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]) {
+  html[data-img-effect] :where([data-blog-image] img, img[data-blog-image]) {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

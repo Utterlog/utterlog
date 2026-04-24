@@ -12,7 +12,8 @@
  *   </FormSectionC>
  */
 
-import type { ReactNode } from 'react';
+import { type ReactNode } from 'react';
+import { Toggle } from '@/components/ui';
 
 export function FormSectionC({
   title, icon, description, children, footerHint,
@@ -131,8 +132,12 @@ export function FormRowC({
 
 const LABEL_WIDTH = '32%';
 const ROW_BORDER = '1px solid var(--color-divider)';
-const VERT_DIVIDER = '1px solid var(--color-border)';
-const RIGHT_BG = 'var(--color-bg-soft)';
+// Same surface left and right — the earlier grey right column + vertical
+// divider made every simple toggle / input look like a 2-column data
+// table. Keep horizontal row borders only, so sections read as a single
+// unified surface like iOS Settings.
+const VERT_DIVIDER = 'none';
+const RIGHT_BG = 'transparent';
 
 // Inline editable text row — table-style
 export function FormRowInputC({
@@ -274,6 +279,94 @@ export function FormRowSelectC({
         >
           {options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
         </select>
+      </div>
+    </div>
+  );
+}
+
+// Toggle variant — table-style, switch sits in right cell. Delegates
+// the actual input to the existing <Toggle> component so the RHF
+// register flow (ref + onChange) keeps working exactly the same as
+// when <Toggle {...register('foo')} /> is used standalone.
+export function FormRowToggleC({
+  label, hint, checked, onChange, register, last,
+}: {
+  label: string;
+  hint?: string;
+  checked?: boolean;
+  onChange?: (v: boolean) => void;
+  register?: any;
+  last?: boolean;
+}) {
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: `${LABEL_WIDTH} 1fr`,
+      borderBottom: last ? 'none' : ROW_BORDER,
+      minHeight: 56,
+    }}>
+      <div style={{
+        padding: '10px 14px',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        borderRight: VERT_DIVIDER,
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>{label}</div>
+        {hint && <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.6 }}>{hint}</div>}
+      </div>
+      {/* Right cell: just the switch, flush to the right edge — the
+          inner <Toggle>'s default `justify-between` plus width:100%
+          makes its empty flex-1 label div eat all the space on the
+          left, so the switch hugs the right like iOS-style settings. */}
+      <div style={{ padding: '6px 14px', background: RIGHT_BG, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <Toggle
+          {...(register || {})}
+          {...(register ? {} : {
+            checked: !!checked,
+            onChange: (e: any) => onChange?.(e.target.checked),
+          })}
+          style={{ padding: 0, width: 'auto', flex: 'none' }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Range slider variant — table-style, shows current value inline with label.
+export function FormRowRangeC({
+  label, hint, value, onChange, min = 0, max = 100, step = 1, last,
+}: {
+  label: string;
+  hint?: string;
+  value: string | number;
+  onChange: (v: string) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  last?: boolean;
+}) {
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: `${LABEL_WIDTH} 1fr`,
+      borderBottom: last ? 'none' : ROW_BORDER,
+      minHeight: 56,
+    }}>
+      <div style={{
+        padding: '10px 14px',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        borderRight: VERT_DIVIDER,
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>
+          {label} <span className="text-dim" style={{ fontSize: 12 }}>({value})</span>
+        </div>
+        {hint && <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.6 }}>{hint}</div>}
+      </div>
+      <div style={{ padding: '10px 14px', background: RIGHT_BG, display: 'flex', alignItems: 'center' }}>
+        <input
+          type="range"
+          min={min} max={max} step={step}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{ width: '100%' }}
+        />
       </div>
     </div>
   );

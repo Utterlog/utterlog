@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { Button, Input, Toggle } from '@/components/ui';
 import api from '@/lib/api';
 import { useForm } from 'react-hook-form';
-import { FormSectionC, FormRowInputC, FormRowTextareaC } from '@/components/form/FormC';
+import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC } from '@/components/form/FormC';
 import SystemUpdatePanel from '@/components/SystemUpdatePanel';
 
 // Shared style constants
@@ -688,113 +688,107 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>通知功能</h3>
-                <div className="space-y-5">
-                  <Toggle label="新评论通知" {...register('tg_notify_comment')} />
-                  <Toggle label="新关注通知" {...register('tg_notify_follow')} />
-                  <Toggle label="文章发布通知" {...register('tg_notify_publish')} />
-                  <Toggle label="每日数据报告" {...register('tg_daily_report')} />
-                </div>
-              </div>
+              <FormSectionC title="通知功能" icon="fa-regular fa-bell">
+                <FormRowToggleC label="新评论通知" register={register('tg_notify_comment')} />
+                <FormRowToggleC label="新关注通知" register={register('tg_notify_follow')} />
+                <FormRowToggleC label="文章发布通知" register={register('tg_notify_publish')} />
+                <FormRowToggleC label="每日数据报告" register={register('tg_daily_report')} last />
+              </FormSectionC>
 
-              <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>管理功能</h3>
-                <div className="space-y-5">
-                  <Toggle label="评论审批" description="回复 /approve 通过" {...register('tg_comment_approve')} />
-                  <Toggle label="回复评论" description="直接回复消息即可" {...register('tg_comment_reply')} />
-                  <Toggle label="发布说说" description="发送文字/图片自动发布" {...register('tg_publish_moment')} />
-                  <Toggle label="AI 聊天" description="/ai 开头消息对接 AI 助手" {...register('tg_ai_chat')} />
-                </div>
-              </div>
+              <FormSectionC title="管理功能" icon="fa-regular fa-user-shield">
+                <FormRowToggleC label="评论审批" hint="回复 /approve 通过" register={register('tg_comment_approve')} />
+                <FormRowToggleC label="回复评论" hint="直接回复消息即可" register={register('tg_comment_reply')} />
+                <FormRowToggleC label="发布说说" hint="发送文字/图片自动发布" register={register('tg_publish_moment')} />
+                <FormRowToggleC label="AI 聊天" hint="/ai 开头消息对接 AI 助手" register={register('tg_ai_chat')} last />
+              </FormSectionC>
 
-              <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>图片上传</h3>
-                <p className="text-xs text-dim" style={{ marginTop: '-16px', marginBottom: '16px' }}>通过 Telegram 发送图片时，自动上传到媒体库</p>
-                <Toggle label="自动上传图片到媒体库" {...register('tg_auto_upload_image')} />
-              </div>
+              <FormSectionC title="图片上传" icon="fa-regular fa-image">
+                <FormRowToggleC
+                  label="自动上传图片到媒体库"
+                  hint="通过 Telegram 发送图片时，自动上传到媒体库"
+                  register={register('tg_auto_upload_image')}
+                  last
+                />
+              </FormSectionC>
             </>
           )}
 
           {/* ==================== 评论设置 ==================== */}
           {activeTab === 'comment' && (
-            <div className="card" style={cardStyle}>
-              <h3 style={sectionTitleStyle}>评论设置</h3>
-              <div className="space-y-5">
-                <Toggle label="允许评论" {...register('allow_comments')} />
-                <Toggle label="评论需要审核" {...register('comment_moderation')} />
-                <Toggle
+            <>
+              <FormSectionC title="评论开关" icon="fa-regular fa-comments">
+                <FormRowToggleC label="允许评论" register={register('allow_comments')} />
+                <FormRowToggleC label="评论需要审核" register={register('comment_moderation')} />
+                <FormRowToggleC
                   label="信任历史访客"
-                  description="评论者邮箱或浏览器指纹之前有过通过的评论，自动通过审核"
-                  {...register('comment_trust_returning')}
+                  hint="评论者邮箱或浏览器指纹之前有过通过的评论，自动通过审核"
+                  register={register('comment_trust_returning')}
                 />
-                <Toggle label="评论需要填写邮箱" {...register('comment_require_email')} />
-                <Toggle label="新评论邮件通知管理员" {...register('comment_notify_admin')} />
+                <FormRowToggleC label="评论需要填写邮箱" register={register('comment_require_email')} />
+                <FormRowToggleC label="新评论邮件通知管理员" register={register('comment_notify_admin')} last />
+              </FormSectionC>
 
-                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '20px', marginTop: '20px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>分页与排序</h4>
+              <FormSectionC title="分页与排序" icon="fa-regular fa-list-ol">
+                <FormRowToggleC
+                  label="开启评论分页"
+                  hint="关闭后所有评论一次性展开（移动端友好，适合评论较少的博客）"
+                  register={register('comment_pagination')}
+                />
+                {watch('comment_pagination') && (
+                  <FormRowInputC
+                    label="每页评论数"
+                    hint="仅分页开启时生效"
+                    type="number"
+                    register={register('comment_per_page')}
+                  />
+                )}
+                <FormRowSelectC
+                  label="默认排序"
+                  register={register('comment_order')}
+                  options={[
+                    { value: 'newest', label: '最新评论在前' },
+                    { value: 'oldest', label: '最早评论在前' },
+                  ]}
+                  last
+                />
+              </FormSectionC>
 
-                  <div style={{ marginBottom: '16px' }}>
-                    <Toggle
-                      label="开启评论分页"
-                      description="关闭后所有评论一次性展开（移动端友好，适合评论较少的博客）"
-                      {...register('comment_pagination')}
-                    />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    {watch('comment_pagination') && (
-                      <div>
-                        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>
-                          每页评论数
-                          <span className="text-dim" style={{ fontWeight: 400, marginLeft: 6 }}>（仅分页开启时生效）</span>
-                        </label>
-                        <Input type="number" min={5} max={100} {...register('comment_per_page')} style={{ width: '100%' }} />
-                      </div>
-                    )}
-                    <div style={{ gridColumn: watch('comment_pagination') ? 'auto' : '1 / -1' }}>
-                      <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>默认排序</label>
-                      <select {...register('comment_order')} className="input text-sm">
-                        <option value="newest">最新评论在前</option>
-                        <option value="oldest">最早评论在前</option>
-                      </select>
-                    </div>
+              {/* 人机验证：保留自定义 3 列图标 radio 卡片（非表单式 UI），
+                  只把子输入转成 FormRowInputC 保持风格一致 */}
+              <FormSectionC title="人机验证" icon="fa-regular fa-shield-halved">
+                <div style={{ padding: '14px 14px 10px', borderBottom: watch('comment_captcha_mode') === 'pow' ? '1px solid var(--color-divider)' : undefined }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)', marginBottom: 10 }}>验证方式</div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {([
+                      { value: 'off', label: '关闭', desc: '不验证' },
+                      { value: 'pow', label: 'PoW 验证', desc: '点击计算' },
+                      { value: 'image', label: '图片验证码', desc: '输入字符' },
+                    ] as const).map(opt => (
+                      <label key={opt.value} style={{
+                        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                        padding: '12px 8px',
+                        border: `1px solid ${watch('comment_captcha_mode') === opt.value ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                        background: watch('comment_captcha_mode') === opt.value ? 'color-mix(in srgb, var(--color-primary) 5%, transparent)' : 'transparent',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}>
+                        <input type="radio" value={opt.value} {...register('comment_captcha_mode')} style={{ display: 'none' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: watch('comment_captcha_mode') === opt.value ? 'var(--color-primary)' : 'var(--color-text-main)' }}>{opt.label}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>{opt.desc}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
-
-                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '20px', marginTop: '20px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>人机验证</h4>
-                  <div>
-                    <label className="text-sm text-sub" style={{ display: 'block', marginBottom: '8px' }}>验证方式</label>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      {([
-                        { value: 'off', label: '关闭', desc: '不验证' },
-                        { value: 'pow', label: 'PoW 验证', desc: '点击计算' },
-                        { value: 'image', label: '图片验证码', desc: '输入字符' },
-                      ] as const).map(opt => (
-                        <label key={opt.value} style={{
-                          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                          padding: '12px 8px', borderRadius: 0,
-                          border: `1px solid ${watch('comment_captcha_mode') === opt.value ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                          background: watch('comment_captcha_mode') === opt.value ? 'color-mix(in srgb, var(--color-primary) 5%, transparent)' : 'transparent',
-                          cursor: 'pointer', transition: 'all 0.15s',
-                        }}>
-                          <input type="radio" value={opt.value} {...register('comment_captcha_mode')} style={{ display: 'none' }} />
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: watch('comment_captcha_mode') === opt.value ? 'var(--color-primary)' : 'var(--color-text-main)' }}>{opt.label}</span>
-                          <span style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>{opt.desc}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  {watch('comment_captcha_mode') === 'pow' && (
-                    <div style={{ marginTop: '12px' }}>
-                      <label className="text-sm text-sub" style={{ display: 'block', marginBottom: '6px' }}>验证难度 (1-6，越大越难)</label>
-                      <Input type="number" min={1} max={6} {...register('comment_captcha_difficulty')} style={{ width: '120px' }} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+                {watch('comment_captcha_mode') === 'pow' && (
+                  <FormRowInputC
+                    label="验证难度"
+                    hint="1-6，越大越难"
+                    type="number"
+                    register={register('comment_captcha_difficulty')}
+                    last
+                  />
+                )}
+              </FormSectionC>
+            </>
           )}
 
           {/* ==================== 存储设置 ==================== */}
@@ -985,48 +979,50 @@ export default function SettingsPage() {
           {/* ==================== 图片处理 ==================== */}
           {activeTab === 'image' && (
             <>
-              <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>压缩与转换</h3>
-                <div className="grid gap-y-6">
-                  <div>
-                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>上传后自动转换格式</label>
-                    <select className="input text-sm" {...register('image_convert_format')}>
-                      <option value="">不转换（保持原格式）</option>
-                      <option value="webp">WebP（推荐，体积小兼容好）</option>
-                      <option value="jpg">JPEG</option>
-                    </select>
-                  </div>
+              <FormSectionC title="压缩与转换" icon="fa-regular fa-file-image">
+                <FormRowSelectC
+                  label="上传后自动转换格式"
+                  register={register('image_convert_format')}
+                  options={[
+                    { value: '',     label: '不转换（保持原格式）' },
+                    { value: 'webp', label: 'WebP（推荐，体积小兼容好）' },
+                    { value: 'jpg',  label: 'JPEG' },
+                  ]}
+                />
+                <FormRowInputC
+                  label="压缩质量"
+                  hint={`当前 ${imageQuality}，推荐 75-85，越低体积越小但画质降低`}
+                  type="range"
+                  register={register('image_quality')}
+                />
+                <FormRowInputC
+                  label="最大宽度 (px)"
+                  hint="留空不限制，建议 1920 或 2560。超过此宽度的图片会自动等比缩小"
+                  type="number"
+                  register={register('image_max_width')}
+                  placeholder="1920"
+                />
+                <FormRowToggleC
+                  label="去除 EXIF 信息"
+                  hint="保护隐私，减小体积"
+                  register={register('image_strip_exif')}
+                  last
+                />
+              </FormSectionC>
 
-                  <div>
-                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>压缩质量 (1-100)</label>
-                    <div className="flex items-center gap-4">
-                      <input type="range" min="1" max="100" className="flex-1" {...register('image_quality')} />
-                      <span className="text-sm text-sub font-mono" style={{ width: '32px', textAlign: 'right' }}>{imageQuality}</span>
-                    </div>
-                    <p className="text-xs text-dim" style={{ marginTop: '6px' }}>推荐 75-85，越低体积越小但画质降低</p>
-                  </div>
-
-                  <div>
-                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>最大宽度 (px)</label>
-                    <input className="input text-sm" type="number" {...register('image_max_width')} placeholder="留空不限制，建议 1920 或 2560" />
-                    <p className="text-xs text-dim" style={{ marginTop: '6px' }}>超过此宽度的图片会自动等比缩小</p>
-                  </div>
-
-                  <Toggle label="去除 EXIF 信息" description="保护隐私，减小体积" {...register('image_strip_exif')} />
-                </div>
-              </div>
-
-              <div className="card" style={cardStyle}>
-                <div style={subTitleRow}>
-                  <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>TinyPNG 压缩</h3>
-                  <Toggle {...register('tinypng_enabled')} />
-                </div>
-                <p className="text-xs text-dim" style={{ marginTop: '8px', marginBottom: '20px' }}>使用 TinyPNG API 进行高质量无损压缩，每月免费 500 张</p>
-                <div>
-                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>API Key</label>
-                  <input className="input text-sm" type="password" {...register('tinypng_api_key')} placeholder="从 tinypng.com/developers 获取" />
-                </div>
-              </div>
+              <FormSectionC title="TinyPNG 压缩" icon="fa-regular fa-compress" description="使用 TinyPNG API 进行高质量无损压缩，每月免费 500 张">
+                <FormRowToggleC
+                  label="启用 TinyPNG"
+                  register={register('tinypng_enabled')}
+                />
+                <FormRowInputC
+                  label="API Key"
+                  type="password"
+                  register={register('tinypng_api_key')}
+                  placeholder="从 tinypng.com/developers 获取"
+                  last
+                />
+              </FormSectionC>
 
               <div className="card" style={cardStyle}>
                 <div style={subTitleRow}>
@@ -1045,14 +1041,10 @@ export default function SettingsPage() {
                     <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>显示效果</label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                       {[
-                        { value: 'fade', label: '淡入', desc: '渐变透明度' },
-                        { value: 'blur', label: '模糊', desc: '从模糊到清晰' },
-                        { value: 'blinds', label: '百叶窗', desc: '条纹滑入' },
-                        { value: 'pixel', label: '像素化', desc: '从像素到清晰' },
-                        { value: 'slide-up', label: '上滑', desc: '从下方滑入' },
-                        { value: 'scale', label: '缩放', desc: '从小到大' },
-                        { value: 'curtain', label: '幕帘', desc: '从中间展开' },
-                        { value: 'none', label: '无', desc: '直接显示' },
+                        { value: 'fade',  label: '淡入',    desc: '模糊渐变透明' },
+                        { value: 'pixel', label: '像素化',  desc: '马赛克块消散' },
+                        { value: 'scale', label: '缩放',    desc: '从小放到正常' },
+                        { value: 'none',  label: '无',      desc: '直接显示' },
                       ].map(effect => {
                         const val = watch('image_display_effect', 'fade');
                         return (
@@ -1078,41 +1070,37 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="card" style={cardStyle}>
-                <div style={subTitleRow}>
-                  <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>懒加载</h3>
-                  <Toggle {...register('image_lazy_load')} />
-                </div>
-                <p className="text-xs text-dim" style={{ marginTop: '8px', marginBottom: '20px' }}>图片进入可视区域时才加载，提升页面加载速度</p>
-                <div>
-                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>占位效果</label>
-                  <select className="input text-sm" {...register('image_lazy_load_placeholder')}>
-                    <option value="blur">模糊缩略图（推荐）</option>
-                    <option value="color">主色调占位</option>
-                    <option value="skeleton">骨架屏</option>
-                    <option value="spinner">加载动画</option>
-                    <option value="none">空白</option>
-                  </select>
-                </div>
-              </div>
+              <FormSectionC title="懒加载" icon="fa-regular fa-hourglass-half" description="图片进入可视区域时才加载，提升页面加载速度">
+                <FormRowToggleC label="启用懒加载" register={register('image_lazy_load')} />
+                <FormRowSelectC
+                  label="占位效果"
+                  register={register('image_lazy_load_placeholder')}
+                  options={[
+                    { value: 'blur',     label: '模糊缩略图（推荐）' },
+                    { value: 'color',    label: '主色调占位' },
+                    { value: 'skeleton', label: '骨架屏' },
+                    { value: 'spinner',  label: '加载动画' },
+                    { value: 'none',     label: '空白' },
+                  ]}
+                  last
+                />
+              </FormSectionC>
 
-              <div className="card" style={cardStyle}>
-                <div style={subTitleRow}>
-                  <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>图片灯箱</h3>
-                  <Toggle {...register('image_lightbox')} />
-                </div>
-                <p className="text-xs text-dim" style={{ marginTop: '8px', marginBottom: '20px' }}>点击文章图片时全屏预览，支持缩放、拖拽、键盘导航、图片组切换</p>
-                <div>
-                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>灯箱风格</label>
-                  <select className="input text-sm" {...register('image_lightbox_style')}>
-                    <option value="default">默认（深色遮罩 + 缩放）</option>
-                    <option value="minimal">极简（无边框，纯图片）</option>
-                    <option value="gallery">画廊（底部缩略图导航）</option>
-                    <option value="slide">滑动（左右滑动切换）</option>
-                  </select>
-                  <p className="text-xs text-dim" style={{ marginTop: '6px' }}>基于 ViewImage.js 实现，支持触屏手势和键盘操作</p>
-                </div>
-              </div>
+              <FormSectionC title="图片灯箱" icon="fa-regular fa-expand" description="点击文章图片时全屏预览，支持缩放、拖拽、键盘导航、图片组切换">
+                <FormRowToggleC label="启用灯箱" register={register('image_lightbox')} />
+                <FormRowSelectC
+                  label="灯箱风格"
+                  hint="基于 ViewImage.js 实现，支持触屏手势和键盘操作"
+                  register={register('image_lightbox_style')}
+                  options={[
+                    { value: 'default',  label: '默认（深色遮罩 + 缩放）' },
+                    { value: 'minimal',  label: '极简（无边框，纯图片）' },
+                    { value: 'gallery',  label: '画廊（底部缩略图导航）' },
+                    { value: 'slide',    label: '滑动（左右滑动切换）' },
+                  ]}
+                  last
+                />
+              </FormSectionC>
             </>
           )}
 

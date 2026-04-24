@@ -7,7 +7,7 @@
   padding: 1.25rem 1.5rem;
   background: color-mix(in srgb, var(--color-primary) 4%, var(--color-bg-card));
   border: 1px solid color-mix(in srgb, var(--color-primary) 15%, var(--color-border));
-  border-radius: 8px;
+  border-radius: 4px;
 }
 .blog-ai-summary-header {
   display: flex;

@@ -1,7 +1,7 @@
 'use client';
 
 import './code-highlight-styles.css';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypePrism from 'rehype-prism-plus';
@@ -88,98 +88,151 @@ function CodeBlock({ children, className, ...props }: React.HTMLAttributes<HTMLP
   );
 }
 
-// Lightbox
-function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const dragging = useRef(false);
-  const lastPos = useRef({ x: 0, y: 0 });
+// Lightbox — gallery-style overlay. The article collects every
+// `.blog-image img` src into a list; clicking one opens the overlay
+// at that index and the user can step through siblings with the
+// arrow keys or the on-screen prev/next buttons. Open / close play
+// a 300ms translate+fade so the transition feels smooth even on
+// large covers (the <img> gets `decoding="async"` for the same
+// reason). Scroll lock is handled by toggling `html.lightbox-active`
+// which maps to `!important` overflow rules in globals.css.
+interface LightboxProps {
+  list: { src: string; alt: string }[];
+  index: number;
+  onClose: () => void;
+}
 
+function Lightbox({ list, index: startIndex, onClose }: LightboxProps) {
+  const [index, setIndex] = useState(startIndex);
+  const [loading, setLoading] = useState(true);
+  const [imgOut, setImgOut] = useState(false);   // triggers translateY+fade on the img between prev/next swaps
+  const [closing, setClosing] = useState(false); // fades overlay out before unmount
+
+  const current = list[index];
+
+  const closeSoft = useCallback(() => {
+    if (closing) return;
+    setClosing(true);
+    // Match the overlay fade-out keyframe length (300ms) before
+    // unmounting so the animation actually plays instead of getting
+    // torn down with an abrupt opacity:1 → null.
+    window.setTimeout(onClose, 300);
+  }, [closing, onClose]);
+
+  const step = useCallback((dir: 1 | -1) => {
+    if (list.length < 2) return;
+    const next = (index + dir + list.length) % list.length;
+    setImgOut(true);
+    // Swap the src mid-way so the in-animation plays on the new image
+    // — mirrors the ViewImage behaviour where the previous frame
+    // slides down/fades out, a brief blank appears, then the next
+    // frame slides in from above.
+    window.setTimeout(() => {
+      setIndex(next);
+      setLoading(true);
+      setImgOut(false);
+    }, 300);
+  }, [index, list.length]);
+
+  // Keyboard: Esc closes, arrows navigate.
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeSoft();
+      else if (e.key === 'ArrowLeft')  step(-1);
+      else if (e.key === 'ArrowRight') step(1);
     };
-    document.addEventListener('keydown', handleKey);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [closeSoft, step]);
 
-    // Lock scroll on ALL possible scroll containers:
-    //   - document.body (plain pages, tag/category/archive)
-    //   - .blog-main    (Azure theme Layout.tsx uses this as the scroller)
-    // Without locking .blog-main, wheel events bubble up and scroll the article
-    // behind the lightbox; clicking to zoom causes visible layout shift.
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevBodyPadding = document.body.style.paddingRight;
-    document.body.style.overflow = 'hidden';
-    document.body.style.paddingRight = `${scrollbarWidth}px`;
-
+  // Scroll lock — runs via useLayoutEffect (not useEffect) so it
+  // lands synchronously before the browser's first paint of the
+  // lightbox. If we used useEffect, frame 1 would show the overlay
+  // with .blog-main still scrollable, frame 2 would apply the
+  // padding-right compensation → a visible horizontal shift on open
+  // and another one on close.
+  useLayoutEffect(() => {
     const blogMain = document.querySelector('.blog-main') as HTMLElement | null;
-    const prevMainOverflow = blogMain?.style.overflow || '';
-    if (blogMain) blogMain.style.overflow = 'hidden';
+    const sbWidth = blogMain ? blogMain.offsetWidth - blogMain.clientWidth : 0;
+    const prevPad = blogMain?.style.paddingRight || '';
+    if (blogMain && sbWidth > 0) blogMain.style.paddingRight = `${sbWidth}px`;
+    document.documentElement.classList.add('lightbox-active');
 
-    // Also block wheel/touchmove reaching ancestors (defense-in-depth when the
-    // overlay itself uses preventDefault in a passive listener context).
     const blockScroll = (e: Event) => { e.preventDefault(); };
-    document.addEventListener('wheel', blockScroll, { passive: false, capture: false });
-    document.addEventListener('touchmove', blockScroll, { passive: false, capture: false });
+    document.addEventListener('wheel', blockScroll, { passive: false });
+    document.addEventListener('touchmove', blockScroll, { passive: false });
 
     return () => {
-      document.removeEventListener('keydown', handleKey);
+      document.documentElement.classList.remove('lightbox-active');
       document.removeEventListener('wheel', blockScroll);
       document.removeEventListener('touchmove', blockScroll);
-      document.body.style.overflow = prevBodyOverflow;
-      document.body.style.paddingRight = prevBodyPadding;
-      if (blogMain) blogMain.style.overflow = prevMainOverflow;
+      if (blogMain) blogMain.style.paddingRight = prevPad;
     };
-  }, [onClose]);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    // Don't preventDefault here — the document-level non-passive listener in
-    // useEffect already cancels all wheel scrolling while the lightbox is open.
-    // React synthetic wheel is passive by default in React 17+, so calling
-    // preventDefault here produces a noisy console warning with no effect.
-    setScale(s => Math.min(5, Math.max(0.5, s - e.deltaY * 0.001)));
   }, []);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (scale <= 1) return;
-    dragging.current = true;
-    lastPos.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-  }, [scale, position]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!dragging.current) return;
-    setPosition({ x: e.clientX - lastPos.current.x, y: e.clientY - lastPos.current.y });
-  }, []);
-
-  const handleMouseUp = useCallback(() => { dragging.current = false; }, []);
 
   return (
     <div
-      className="lightbox-overlay"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      className={`vi-overlay${closing ? ' vi-closing' : ''}`}
+      onClick={(e) => {
+        // Click outside the image (on the backdrop layer or overlay
+        // background) closes the lightbox; don't close when clicking
+        // the image itself, buttons, or tools bar.
+        const target = e.target as HTMLElement;
+        if (target === e.currentTarget || target.classList.contains('vi-backstop')) {
+          closeSoft();
+        }
+      }}
     >
-      <button className="lightbox-close" onClick={onClose} title="关闭 (Esc)">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-      <img
-        src={src}
-        alt={alt}
-        className="lightbox-image"
-        style={{
-          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-          cursor: scale > 1 ? 'grab' : 'zoom-in',
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (scale <= 1) setScale(2);
-          else { setScale(1); setPosition({ x: 0, y: 0 }); }
-        }}
-        draggable={false}
-      />
+      <div className={`vi-stage${imgOut ? ' vi-img-out' : ''}`}>
+        <div className="vi-backstop" />
+        {loading && <div className="vi-loading" aria-hidden="true" />}
+        <img
+          key={current.src}
+          className="vi-img"
+          src={current.src}
+          alt={current.alt || ''}
+          decoding="async"
+          draggable={false}
+          onLoad={() => setLoading(false)}
+        />
+      </div>
+
+      <div className="vi-tools">
+        <div className="vi-count">
+          <b>{index + 1}</b>/{list.length}
+        </div>
+        <div className="vi-nav">
+          <button
+            type="button"
+            className="vi-btn"
+            onClick={() => step(-1)}
+            disabled={list.length < 2}
+            aria-label="上一张"
+            title="上一张 (←)"
+          >
+            <svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M31 36L19 24L31 12" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <button
+            type="button"
+            className="vi-btn"
+            onClick={() => step(1)}
+            disabled={list.length < 2}
+            aria-label="下一张"
+            title="下一张 (→)"
+          >
+            <svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M19 12L31 24L19 36" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+        </div>
+        <button
+          type="button"
+          className="vi-btn"
+          onClick={closeSoft}
+          aria-label="关闭"
+          title="关闭 (Esc)"
+        >
+          <svg width="14" height="14" viewBox="0 0 48 48" fill="none"><path d="M8 8L40 40" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 40L40 8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+      </div>
     </div>
   );
 }
@@ -342,14 +395,26 @@ function processShortcodes(text: string): string {
 }
 
 export default function PostContent({ content, postId }: PostContentProps) {
-  // Block counters for annotation block_ids
+  // Block counters for annotation block_ids. Reset inline at the
+  // top of every render (below) so IDs are deterministic regardless
+  // of how many times this component re-renders — otherwise opening
+  // the lightbox, receiving exif data, etc. would increment the
+  // counters further and every BlockAnnotation's blockId would drift,
+  // forcing a remount cascade.
   const blockCounters = useRef({ p: 0, pre: 0, img: 0 });
-  // Reset counters on content change
-  useEffect(() => { blockCounters.current = { p: 0, pre: 0, img: 0 }; }, [content]);
-  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ list: { src: string; alt: string }[]; index: number } | null>(null);
   const [exifMap, setExifMap] = useState<Record<string, Record<string, string>>>({});
+  // Mirror exifMap into a ref so the memoized components factory can
+  // read the latest value without taking exifMap as a dep (which
+  // would change the factory identity when the exif fetch resolves
+  // and force-remount every LazyImage — causing the initial fade-in
+  // to replay ~500ms after content load).
+  const exifMapRef = useRef(exifMap);
+  exifMapRef.current = exifMap;
 
-  // Attach click handler to all images inside blog-prose
+  // Attach click handler to all images inside blog-prose. Collect
+  // every `.blog-image img` into the gallery list on each click so
+  // the overlay can step through all the post's images in order.
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -357,9 +422,12 @@ export default function PostContent({ content, postId }: PostContentProps) {
     if (!el) return;
     const handleClick = (e: MouseEvent) => {
       const img = (e.target as HTMLElement).closest('.blog-image img') as HTMLImageElement;
-      if (img) {
-        setLightbox({ src: img.src, alt: img.alt || '' });
-      }
+      if (!img) return;
+      const nodeList = el.querySelectorAll<HTMLImageElement>('.blog-image img');
+      const all = Array.from(nodeList);
+      const list = all.map(el => ({ src: el.currentSrc || el.src, alt: el.alt || '' }));
+      const idx = all.indexOf(img);
+      setLightbox({ list, index: idx >= 0 ? idx : 0 });
     };
     el.addEventListener('click', handleClick);
     return () => el.removeEventListener('click', handleClick);
@@ -382,6 +450,71 @@ export default function PostContent({ content, postId }: PostContentProps) {
     return () => clearTimeout(timer);
   }, [content]);
 
+  // Stabilize the `components` map — react-markdown 10 uses each
+  // entry as a React component type, so a fresh inline arrow function
+  // on every render looks like a brand-new component to the reconciler
+  // and every <p>/<img>/<a>/<pre> gets torn down and recreated. That's
+  // what was making article images re-fade when the lightbox opened
+  // or closed: the LazyImage subtree remounted, `loaded` reset to
+  // false, and the blur-release animation replayed. The factory reads
+  // `exifMapRef.current` so fresh exif data still propagates without
+  // invalidating the factory identity.
+  const components = useMemo(() => ({
+    p: ({ node, children, ...props }: any) => {
+      const id = `p-${blockCounters.current.p++}`;
+      const el = <p {...props}>{children}</p>;
+      return postId ? <BlockAnnotation blockId={id}>{el}</BlockAnnotation> : el;
+    },
+    img: ({ node, ...props }: any) => (
+      <LazyImage {...props} exifData={typeof props.src === 'string' ? exifMapRef.current[props.src] : undefined} />
+    ),
+    pre: ({ node, ...props }: any) => {
+      const id = `code-${blockCounters.current.pre++}`;
+      const el = <CodeBlock {...props} />;
+      return postId ? <BlockAnnotation blockId={id}>{el}</BlockAnnotation> : el;
+    },
+    a: ({ node, ...props }: any) => <ExternalLink {...props} />,
+    div: ({ node, ...props }: any) => {
+      const el = props as any;
+      // Image grid
+      if (el['data-image-grid'] !== undefined) {
+        const images: { src: string; alt: string }[] = [];
+        if (node?.children) {
+          for (const child of node.children) {
+            if (child.type === 'element' && child.tagName === 'img') {
+              const p = child.properties as any;
+              if (p?.['dataGridSrc']) {
+                images.push({ src: String(p['dataGridSrc']), alt: String(p['dataGridAlt'] || '') });
+              }
+            }
+          }
+        }
+        if (images.length > 0) {
+          const cols = el['data-cols'] ? parseInt(el['data-cols']) : undefined;
+          return <ImageGrid images={images} cols={cols} exifMap={exifMapRef.current} />;
+        }
+      }
+      // Music player shortcode
+      if (el['data-music-player'] !== undefined) {
+        const MusicPlayer = require('@/components/blog/MusicPlayer').default;
+        return <MusicPlayer
+          title={el['data-title'] || ''}
+          artist={el['data-artist'] || ''}
+          cover={el['data-cover'] || ''}
+          url={el['data-url'] || ''}
+          platform={el['data-platform'] || 'netease'}
+          id={el['data-id'] || ''}
+        />;
+      }
+      return <div {...props} />;
+    },
+  }), [postId]);
+
+  // Reset block counters at the top of every render so the p/pre
+  // factories above produce the same IDs each pass regardless of
+  // how many times we re-render.
+  blockCounters.current = { p: 0, pre: 0, img: 0 };
+
   const inner = (
     <>
       <div className="blog-prose" ref={containerRef}>
@@ -392,61 +525,13 @@ export default function PostContent({ content, postId }: PostContentProps) {
             [rehypePrism, { showLineNumbers: true, ignoreMissing: true }] as any,
             rehypeSlug,
           ]}
-          components={{
-            p: ({ node, children, ...props }) => {
-              const id = `p-${blockCounters.current.p++}`;
-              const el = <p {...props}>{children}</p>;
-              return postId ? <BlockAnnotation blockId={id}>{el}</BlockAnnotation> : el;
-            },
-            img: ({ node, ...props }) => <LazyImage {...props} exifData={typeof props.src === 'string' ? exifMap[props.src] : undefined} />,
-            pre: ({ node, ...props }) => {
-              const id = `code-${blockCounters.current.pre++}`;
-              const el = <CodeBlock {...props} />;
-              return postId ? <BlockAnnotation blockId={id}>{el}</BlockAnnotation> : el;
-            },
-            a: ({ node, ...props }) => <ExternalLink {...props} />,
-            div: ({ node, ...props }) => {
-              const el = props as any;
-              // Image grid
-              if (el['data-image-grid'] !== undefined) {
-                const images: { src: string; alt: string }[] = [];
-                // Extract images from child <img> elements with data-grid-src
-                if (node?.children) {
-                  for (const child of node.children) {
-                    if (child.type === 'element' && child.tagName === 'img') {
-                      const p = child.properties as any;
-                      if (p?.['dataGridSrc']) {
-                        images.push({ src: String(p['dataGridSrc']), alt: String(p['dataGridAlt'] || '') });
-                      }
-                    }
-                  }
-                }
-                if (images.length > 0) {
-                  const cols = el['data-cols'] ? parseInt(el['data-cols']) : undefined;
-                  return <ImageGrid images={images} cols={cols} exifMap={exifMap} />;
-                }
-              }
-              // Music player shortcode
-              if (el['data-music-player'] !== undefined) {
-                const MusicPlayer = require('@/components/blog/MusicPlayer').default;
-                return <MusicPlayer
-                  title={el['data-title'] || ''}
-                  artist={el['data-artist'] || ''}
-                  cover={el['data-cover'] || ''}
-                  url={el['data-url'] || ''}
-                  platform={el['data-platform'] || 'netease'}
-                  id={el['data-id'] || ''}
-                />;
-              }
-              return <div {...props} />;
-            },
-          }}
+          components={components}
         >
           {processShortcodes(processImageGrids(content))}
         </ReactMarkdown>
       </div>
       {lightbox && (
-        <Lightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />
+        <Lightbox list={lightbox.list} index={lightbox.index} onClose={() => setLightbox(null)} />
       )}
     </>
   );

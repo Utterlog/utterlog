@@ -648,8 +648,8 @@ export default function ProfilePage() {
               <p className="text-dim" style={{ fontSize: '13px', lineHeight: 1.8, marginBottom: '16px' }}>
                 两步验证已启用，每次登录时需要输入验证器应用生成的验证码。
               </p>
-              <button onClick={() => setTotpDisableMode(true)} className="btn btn-secondary" style={{ color: '#ef4444' }}>
-                <i className="fa-light fa-shield-xmark" style={{ marginRight: '6px' }} />
+              <button onClick={() => setTotpDisableMode(true)} className="btn btn-secondary" style={{ color: '#ef4444', padding: '0 24px', gap: '10px' }}>
+                <i className="fa-light fa-shield-xmark" />
                 关闭两步验证
               </button>
             </div>
@@ -824,8 +824,9 @@ export default function ProfilePage() {
                 setPasskeyNaming(true);
               }}
               className="btn btn-primary"
+              style={{ padding: '0 24px', gap: '10px' }}
             >
-              <i className="fa-light fa-plus" style={{ marginRight: '6px' }} />
+              <i className="fa-light fa-plus" />
               添加通行密钥
             </button>
           )}

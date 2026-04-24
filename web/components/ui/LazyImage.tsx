@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useThemeContext } from '@/lib/theme-context';
 
 interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
@@ -8,18 +9,67 @@ interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   spinnerSize?: number;
 }
 
+// 10×10 mosaic overlay used by the "pixel" image-display effect.
+// Mounts once the underlying <img> reports onLoad, then unmounts
+// itself after a second so it isn't stuck blocking future hovers.
+// Each tile gets a random `--delay` integer 0-9 so the reveal order
+// looks scattered rather than left-to-right.
+function PixelOverlay() {
+  const [visible, setVisible] = useState(true);
+  const delays = useMemo(
+    () => Array.from({ length: 100 }, () => Math.floor(Math.random() * 10)),
+    [],
+  );
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(false), 1100);
+    return () => clearTimeout(t);
+  }, []);
+  if (!visible) return null;
+  return (
+    <div className="pixel-overlay">
+      {delays.map((d, i) => (
+        <div
+          key={i}
+          className="pixel-tile"
+          style={{ ['--delay' as any]: d }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /**
- * 通用懒加载图片组件
- * - IntersectionObserver 检测是否进入视口（提前 300px 预加载）
- * - 未加载时显示条形旋转 spinner（主题色）
- * - 加载完成后淡入显示
+ * Site-wide lazy image (theme PostCards, HomePage heroes, PostNavigation
+ * covers, etc.). Now driven entirely by admin options from
+ * ThemeContext so the 后台 Settings → 图片处理 controls really do cover
+ * every image:
+ *
+ *   image_lazy_load            — when 'false' we skip the IO entirely and
+ *                                load immediately (honour the admin's
+ *                                "off" toggle).
+ *   image_lazy_load_placeholder — blur / color / skeleton / spinner / none
+ *   image_display_effect       — fade / blur / blinds / pixel / slide-up /
+ *                                scale / curtain / none (applied via the
+ *                                global CSS keyframes in globals.css — we
+ *                                opt in by stamping `data-blog-image` on
+ *                                the rendered <img>).
+ *   image_display_duration     — ms; also read by <ImageEffects/> into
+ *                                --img-effect-duration.
  */
 export default function LazyImage({ src, alt, spinnerSize = 28, style, className, ...props }: LazyImageProps) {
+  const { options } = useThemeContext();
+  const lazyEnabled = options?.image_lazy_load !== 'false';
+  const placeholder = options?.image_lazy_load_placeholder || 'spinner';
+  const effect = options?.image_display_effect || 'fade';
+
+  // When lazy load is disabled in the admin, start already-visible so
+  // the <img> renders on the first paint without waiting on IO.
+  const [inView, setInView] = useState(!lazyEnabled);
   const [loaded, setLoaded] = useState(false);
-  const [inView, setInView] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!lazyEnabled) return;
     const el = ref.current;
     if (!el) return;
     const observer = new IntersectionObserver(
@@ -28,7 +78,7 @@ export default function LazyImage({ src, alt, spinnerSize = 28, style, className
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [lazyEnabled]);
 
   return (
     <div
@@ -37,12 +87,18 @@ export default function LazyImage({ src, alt, spinnerSize = 28, style, className
       style={{
         position: 'relative',
         overflow: 'hidden',
-        background: 'var(--color-bg-soft, #f0f0f0)',
+        background: placeholder === 'color' ? 'var(--color-bg-soft, #e5e5e5)' :
+                    placeholder === 'blur'  ? 'linear-gradient(135deg,#ddd,#f5f5f5)' :
+                    placeholder === 'skeleton' ? '#f0f0f0' :
+                    placeholder === 'none' ? 'transparent' :
+                    'var(--color-bg-soft, #f0f0f0)',
         ...style,
       }}
     >
-      {/* Bar spinner */}
-      {!loaded && (
+      {/* Placeholder — shown until the <img> fires onLoad. Five modes mirror
+          the admin option so switching in Settings → 图片处理 visibly
+          changes the behaviour on every cover, not just article images. */}
+      {!loaded && placeholder === 'spinner' && (
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -70,23 +126,39 @@ export default function LazyImage({ src, alt, spinnerSize = 28, style, className
           </svg>
         </div>
       )}
+      {!loaded && placeholder === 'skeleton' && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(90deg, #f0f0f0 0%, #f8f8f8 50%, #f0f0f0 100%)',
+          backgroundSize: '200% 100%',
+          animation: 'lazy-skeleton-shimmer 1.6s linear infinite',
+        }} />
+      )}
 
-      {/* Image */}
+      {/* Image — only mounted once inView. `data-blog-image` hooks it
+          into the global effect keyframes so `image_display_effect`
+          actually drives the animation. The onLoad handler fires to
+          swap out whatever placeholder we're showing. */}
       {inView && (
         <img
           src={src}
           alt={alt || ''}
-          loading="lazy"
+          loading={lazyEnabled ? 'lazy' : 'eager'}
+          data-blog-image=""
+          data-loaded={loaded ? '1' : '0'}
           onLoad={() => setLoaded(true)}
           {...props}
           style={{
             width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-            opacity: loaded ? 1 : 0,
-            filter: loaded ? 'blur(0)' : 'blur(20px)',
-            transition: 'opacity 0.5s ease-in-out, filter 0.5s linear',
+            // Fade effect hooks on `data-loaded` (see globals.css) so
+            // the transition fires when pixels actually arrive, not
+            // when the <img> element first mounts. Other admin effects
+            // (blur / blinds / pixel / …) run keyframe animations off
+            // the data-blog-image selector and are unaffected by this.
           }}
         />
       )}
+      {effect === 'pixel' && loaded && <PixelOverlay />}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import PostContent from '@/components/blog/PostContent';
 import TableOfContents from '@/components/blog/TableOfContents';
 import AISummary from '@/components/blog/AISummary';
 import PostNavigation from '@/components/blog/PostNavigation';
+import FadeCover from '@/components/blog/FadeCover';
 import { getCategoryIcon } from './constants';
 import { CommentCount, CommentSection } from './PostInteractive';
 
@@ -21,8 +22,8 @@ export default function PostPage({ post }: { post: any }) {
     <div style={{ padding: '0' }}>
       {/* Featured image */}
       <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
-        <img src={coverUrl} alt={post.title} data-blog-image
-          style={{ width: '100%', height: '400px', objectFit: 'cover', display: 'block' }} />
+        <FadeCover src={coverUrl} alt={post.title}
+          style={{ width: '100%', height: '400px' }} />
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',

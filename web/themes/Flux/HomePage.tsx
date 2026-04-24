@@ -4,6 +4,7 @@ import PostCard from './PostCard';
 import Sidebar from './Sidebar';
 import Pagination from '@/components/blog/Pagination';
 import LazyImage from '@/components/ui/LazyImage';
+import FadeCover from '@/components/blog/FadeCover';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { getCategoryIcon } from './constants';
@@ -200,7 +201,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
               <div style={{ position: 'relative', overflow: 'hidden' }}
                 onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
                 <PostLink post={heroPost} style={{ display: 'block', textDecoration: 'none' }}>
-                  <LazyImage src={heroSrc} alt={heroPost.title} style={{ width: '100%', height: heroHeight }} />
+                  <FadeCover src={heroSrc} alt={heroPost.title} style={{ width: '100%', height: heroHeight }} />
                   <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', padding: '60px 24px 20px' }}>
                     <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', lineHeight: 1.4 }}>{heroPost.title}</h2>
                   </div>

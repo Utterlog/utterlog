@@ -34,9 +34,11 @@ export default function ImageEffects({ effect, durationMs }: Props) {
 
     if (value === 'none') return;
 
-    // Scroll-triggered reveal — for effects where an on-load
-    // animation is meaningless once the user has scrolled past.
-    const scrollTriggered = new Set(['slide-up', 'scale', 'blinds', 'curtain']);
+    // Scroll-triggered reveal — after trimming the admin option list
+    // down to fade / pixel / scale / none, only `scale` still needs
+    // a scroll trigger (the others either run on DOM-mount via CSS
+    // or are handled by their own LazyImage overlay).
+    const scrollTriggered = new Set(['scale']);
     if (!scrollTriggered.has(value)) return;
 
     const io = new IntersectionObserver(
@@ -52,8 +54,12 @@ export default function ImageEffects({ effect, durationMs }: Props) {
     );
 
     const attach = () => {
+      // Match the same selector scope as the CSS effect rules in
+      // globals.css — article-body images (.blog-prose/.blog-image)
+      // have their own self-contained fade and don't participate in
+      // the effect system, so skip them to avoid double-triggering.
       document
-        .querySelectorAll<HTMLElement>('.blog-prose img, .blog-image img, [data-blog-image] img, img[data-blog-image]')
+        .querySelectorAll<HTMLElement>('[data-blog-image] img, img[data-blog-image]')
         .forEach((el) => {
           if (el.dataset.imgEffectWatched) return;
           el.dataset.imgEffectWatched = '1';
