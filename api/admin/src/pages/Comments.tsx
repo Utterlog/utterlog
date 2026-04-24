@@ -431,12 +431,12 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
           {/* Approved: featured + edit + reply + spam + delete */}
           {row.status === 'approved' && (
             <>
-              <button onClick={() => toggleFeatured(row.id, row.featured)} className="action-btn" title={row.featured ? '取消精选' : '设为精选'} style={{ color: row.featured ? '#f59e0b' : undefined }}>
+              <button onClick={() => toggleFeatured(row.id, row.featured)} className={`action-btn${row.featured ? ' warning' : ''}`} title={row.featured ? '取消精选' : '设为精选'}>
                 <i className={row.featured ? 'fa-solid fa-star' : 'fa-regular fa-star'} style={{ fontSize: '14px' }} />
               </button>
-              <button onClick={() => setEditComment({ ...row })} className="action-btn" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-              <button onClick={() => { setReplyId(row.id); setReplyContent(''); }} className="action-btn" title="回复"><i className="fa-regular fa-comments" style={{ fontSize: '14px' }} /></button>
-              <button onClick={() => handleStatusChange(row.id, 'spam')} className="action-btn" title="标记垃圾">
+              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => { setReplyId(row.id); setReplyContent(''); }} className="action-btn primary" title="回复"><i className="fa-regular fa-comments" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => handleStatusChange(row.id, 'spam')} className="action-btn warning" title="标记垃圾">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
               </button>
               <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
@@ -445,11 +445,11 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
           {/* Pending: approve + edit + spam + delete */}
           {row.status === 'pending' && (
             <>
-              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success('已通过'); } catch { toast.error('操作失败'); } }} className="action-btn" title="通过" style={{ color: '#16a34a' }}>
+              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success('已通过'); } catch { toast.error('操作失败'); } }} className="action-btn success" title="通过">
                 <i className="fa-solid fa-check" style={{ fontSize: '14px' }} />
               </button>
-              <button onClick={() => setEditComment({ ...row })} className="action-btn" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-              <button onClick={() => { handleStatusChange(row.id, 'spam'); fetchCounts(); }} className="action-btn" title="垃圾箱" style={{ color: '#f59e0b' }}>
+              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => { handleStatusChange(row.id, 'spam'); fetchCounts(); }} className="action-btn warning" title="垃圾箱">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
               </button>
               <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
@@ -458,20 +458,20 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
           {/* Spam: approve + edit + delete */}
           {row.status === 'spam' && (
             <>
-              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success('已恢复'); } catch { toast.error('操作失败'); } }} className="action-btn" title="恢复通过" style={{ color: '#16a34a' }}>
+              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success('已恢复'); } catch { toast.error('操作失败'); } }} className="action-btn success" title="恢复通过">
                 <i className="fa-solid fa-check" style={{ fontSize: '14px' }} />
               </button>
-              <button onClick={() => setEditComment({ ...row })} className="action-btn" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
               <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title="永久删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
             </>
           )}
           {/* Trash: restore + edit + delete */}
           {row.status === 'trash' && (
             <>
-              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success('已恢复'); } catch { toast.error('操作失败'); } }} className="action-btn" title="恢复" style={{ color: '#16a34a' }}>
+              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success('已恢复'); } catch { toast.error('操作失败'); } }} className="action-btn success" title="恢复">
                 <i className="fa-solid fa-check" style={{ fontSize: '14px' }} />
               </button>
-              <button onClick={() => setEditComment({ ...row })} className="action-btn" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
               <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title="永久删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
             </>
           )}
@@ -482,63 +482,63 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
 
   return (
     <div>
-      {/* Status tabs + search */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {statusTabs.map(s => (
-            <Button
-              key={s.key}
-              variant={status === s.key ? 'primary' : 'secondary'}
-              onClick={() => { setSearch(''); setSelectedIds(new Set()); setStatus(s.key); setPage(1); navigate(s.key ? `/comments/${s.key}` : '/comments'); }}
-              style={{ flexShrink: 0, position: 'relative' }}
-            >
-              {s.label}
-              {s.count > 0 && (
-                <span style={{
-                  position: 'absolute', top: '-6px', right: '-6px',
-                  background: s.key === 'spam' ? '#f59e0b' : '#ef4444',
-                  color: '#fff', fontSize: '10px', fontWeight: 700,
-                  minWidth: '18px', height: '18px', borderRadius: '9px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: '0 5px',
-                }}>
-                  {s.count > 99 ? '99+' : s.count}
-                </span>
-              )}
-            </Button>
-          ))}
-          {status === 'trash' && comments.length > 0 && (
-            <Button variant="danger" onClick={() => setEmptyTrash(true)}>
-              <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} /> 清空
-            </Button>
-          )}
-          {selectedIds.size > 0 && (
-            <>
-              <Button variant="secondary" onClick={() => batchAction('approve')}>
-                <i className="fa-solid fa-check" style={{ fontSize: '12px' }} /> 通过
-              </Button>
-              <Button variant="secondary" onClick={() => batchAction('spam')}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> 垃圾
-              </Button>
-              <Button variant="danger" onClick={() => setBatchDeleteConfirm(true)}>
-                <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} /> 删除
-              </Button>
-            </>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && (setPage(1), fetchComments())}
-            placeholder="搜索评论内容 / 昵称 / 邮箱"
-            className="input"
-            style={{ width: '220px', fontSize: '13px' }}
-          />
-          <Button className="btn-square" title="搜索" onClick={() => { setPage(1); fetchComments(); }}>
-            <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
+      {/* Single row: 6 status tabs (natural width) + contextual
+          actions + search. The search bar flex-grows to push itself
+          to the far right and fill leftover space. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px' }}>
+        {statusTabs.map(s => (
+          <Button
+            key={s.key}
+            variant={status === s.key ? 'primary' : 'secondary'}
+            onClick={() => { setSearch(''); setSelectedIds(new Set()); setStatus(s.key); setPage(1); navigate(s.key ? `/comments/${s.key}` : '/comments'); }}
+            style={{ position: 'relative' }}
+          >
+            {s.label}
+            {s.count > 0 && (
+              <span style={{
+                position: 'absolute', top: '-6px', right: '-6px',
+                background: s.key === 'spam' ? '#f59e0b' : '#ef4444',
+                color: '#fff', fontSize: '10px', fontWeight: 700,
+                minWidth: '18px', height: '18px', borderRadius: '9px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 5px',
+              }}>
+                {s.count > 99 ? '99+' : s.count}
+              </span>
+            )}
           </Button>
-        </div>
+        ))}
+
+        {status === 'trash' && comments.length > 0 && (
+          <Button variant="danger" onClick={() => setEmptyTrash(true)}>
+            <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} /> 清空
+          </Button>
+        )}
+        {selectedIds.size > 0 && (
+          <>
+            <Button variant="secondary" onClick={() => batchAction('approve')}>
+              <i className="fa-solid fa-check" style={{ fontSize: '12px' }} /> 通过
+            </Button>
+            <Button variant="secondary" onClick={() => batchAction('spam')}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> 垃圾
+            </Button>
+            <Button variant="danger" onClick={() => setBatchDeleteConfirm(true)}>
+              <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} /> 删除
+            </Button>
+          </>
+        )}
+
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && (setPage(1), fetchComments())}
+          placeholder="搜索评论内容 / 昵称 / 邮箱"
+          className="input"
+          style={{ width: '220px', marginLeft: 'auto', fontSize: '13px' }}
+        />
+        <Button className="btn-square" title="搜索" onClick={() => { setPage(1); fetchComments(); }}>
+          <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
+        </Button>
       </div>
 
       <div className="card">

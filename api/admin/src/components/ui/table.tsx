@@ -7,9 +7,13 @@ interface TableProps {
   loading?: boolean;
   emptyText?: string;
   rowStyle?: (row: any) => React.CSSProperties | undefined;
+  // 'fixed' (default) = columns respect their widths strictly, good for
+  // dense data tables. 'auto' = columns can grow with content, needed
+  // when one column (e.g. inline tag list) should self-size to fit.
+  tableLayout?: 'fixed' | 'auto';
 }
 
-export function Table({ columns, data, keyField = 'id', loading, emptyText = '暂无数据', rowStyle }: TableProps) {
+export function Table({ columns, data, keyField = 'id', loading, emptyText = '暂无数据', rowStyle, tableLayout = 'fixed' }: TableProps) {
   if (!loading && data.length === 0) {
     return (
       <div className="text-dim" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px', fontSize: '14px' }}>
@@ -35,7 +39,7 @@ export function Table({ columns, data, keyField = 'id', loading, emptyText = '�
           </svg>
         </div>
       )}
-      <table className="table" style={{ width: '100%', tableLayout: 'fixed' }}>
+      <table className="table" style={{ width: '100%', tableLayout }}>
         <thead>
           <tr>
             {columns.map((col) => (

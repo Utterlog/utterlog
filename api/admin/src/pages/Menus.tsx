@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { optionsApi } from '@/lib/api';
+import { useEffect, useRef, useState } from 'react';
+import { optionsApi, postsApi, categoriesApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui';
 
@@ -8,6 +8,23 @@ interface MenuItem {
   label: string;
   children?: MenuItem[];
 }
+
+// Built-in blog pages — slugs must mirror the route table in
+// api/internal/handler and the theme's default menu. Kept in sync
+// with Pages.tsx's builtinPages list.
+const BUILTIN_PAGES: { label: string; href: string }[] = [
+  { label: '首页',   href: '/' },
+  { label: '关于',   href: '/about' },
+  { label: '归档',   href: '/archives' },
+  { label: '说说',   href: '/moments' },
+  { label: '相册',   href: '/albums' },
+  { label: '音乐',   href: '/music' },
+  { label: '电影',   href: '/movies' },
+  { label: '图书',   href: '/books' },
+  { label: '好物',   href: '/goods' },
+  { label: '友链',   href: '/links' },
+  { label: '订阅',   href: '/feeds' },
+];
 
 type Position = { key: string; label: string; hint: string };
 
@@ -69,8 +86,36 @@ export default function MenusPage() {
   const [positions, setPositions] = useState<Position[]>(FALLBACK_POSITIONS);
   const [activeTheme, setActiveTheme] = useState('');
   const [activePos, setActivePos] = useState('header');
+  const [customPages, setCustomPages] = useState<{ id: number; title: string; slug: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
+  const [pickerOpen, setPickerOpen] = useState<null | { target: 'root' | number }>(null);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => { fetchMenus(); }, []);
+  useEffect(() => { fetchMenus(); fetchSources(); }, []);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(null);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [pickerOpen]);
+
+  const fetchSources = async () => {
+    try {
+      const r: any = await postsApi.list({ limit: 200, type: 'page' } as any);
+      const list = r.data?.posts || r.data || [];
+      setCustomPages(list.map((p: any) => ({ id: p.id, title: p.title, slug: p.slug })));
+    } catch { /* silent — picker just shows builtin pages */ }
+    try {
+      const r: any = await categoriesApi.list();
+      const list = r.data?.categories || r.data || [];
+      setCategories(list.map((c: any) => ({ id: c.id, name: c.name, slug: c.slug })));
+    } catch { /* silent */ }
+  };
 
   const fetchMenus = async () => {
     setLoading(true);
@@ -110,6 +155,22 @@ export default function MenusPage() {
     parent.children = [...(parent.children || []), { href: '/', label: '子项目' }];
     items[parentIdx] = parent;
     updateItems(items);
+  };
+
+  // Add a picked page/category as either a new top-level item
+  // (target === 'root') or as a child of the given parent index.
+  const addPick = (label: string, href: string) => {
+    if (!pickerOpen) return;
+    const items = [...(menus[activePos] || [])];
+    if (pickerOpen.target === 'root') {
+      items.push({ href, label });
+    } else {
+      const parent = { ...items[pickerOpen.target] };
+      parent.children = [...(parent.children || []), { href, label }];
+      items[pickerOpen.target] = parent;
+    }
+    updateItems(items);
+    setPickerOpen(null);
   };
 
   const updateItem = (idx: number, field: 'href' | 'label', value: string) => {
@@ -252,7 +313,11 @@ export default function MenusPage() {
                 onChange={e => updateItem(idx, 'href', e.target.value)}
                 placeholder="/path 或 https://..."
               />
-              <button onClick={() => addChild(idx)} title="添加子菜单"
+              <button onClick={() => setPickerOpen({ target: idx })} title="从已有页面添加子菜单"
+                style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', cursor: 'pointer' }}>
+                <i className="fa-regular fa-list-tree" style={{ fontSize: '12px' }} />
+              </button>
+              <button onClick={() => addChild(idx)} title="添加空白子菜单"
                 style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', cursor: 'pointer' }}>
                 <i className="fa-regular fa-diagram-subtask" style={{ fontSize: '12px' }} />
               </button>
@@ -291,9 +356,82 @@ export default function MenusPage() {
           </div>
         ))}
 
-        <Button variant="secondary" onClick={addItem} style={{ alignSelf: 'flex-start' }}>
-          <i className="fa-regular fa-plus" style={{ fontSize: '13px' }} /> 添加菜单项
-        </Button>
+        <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-start', position: 'relative' }}>
+          <Button variant="secondary" onClick={addItem}>
+            <i className="fa-regular fa-plus" style={{ fontSize: '13px' }} /> 添加菜单项
+          </Button>
+          <Button variant="secondary" onClick={() => setPickerOpen({ target: 'root' })}>
+            <i className="fa-regular fa-file-lines" style={{ fontSize: '13px' }} /> 从已有页面添加
+          </Button>
+
+          {pickerOpen && (
+            <div
+              ref={pickerRef}
+              style={{
+                position: 'absolute', top: '100%', left: 0, marginTop: '6px',
+                width: '320px', maxHeight: '420px', overflowY: 'auto',
+                background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.08)', zIndex: 10,
+              }}
+            >
+              <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--color-border)' }}>
+                内置页面
+              </div>
+              {BUILTIN_PAGES.map(p => (
+                <button
+                  key={p.href}
+                  onClick={() => addPick(p.label, p.href)}
+                  style={{ display: 'flex', width: '100%', padding: '8px 12px', fontSize: '13px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'space-between' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-soft)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >
+                  <span className="text-main">{p.label}</span>
+                  <code style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>{p.href}</code>
+                </button>
+              ))}
+
+              {customPages.length > 0 && (
+                <>
+                  <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
+                    自定义页面
+                  </div>
+                  {customPages.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => addPick(p.title, `/${p.slug}`)}
+                      style={{ display: 'flex', width: '100%', padding: '8px 12px', fontSize: '13px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'space-between' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-soft)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      <span className="text-main">{p.title}</span>
+                      <code style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>/{p.slug}</code>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {categories.length > 0 && (
+                <>
+                  <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
+                    分类
+                  </div>
+                  {categories.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => addPick(c.name, `/category/${c.slug}`)}
+                      style={{ display: 'flex', width: '100%', padding: '8px 12px', fontSize: '13px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'space-between' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-soft)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      <span className="text-main">{c.name}</span>
+                      <code style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>/category/{c.slug}</code>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

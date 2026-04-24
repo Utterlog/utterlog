@@ -532,6 +532,10 @@ body {
 }
 
 /* Action icon button — square with icon */
+/* Admin table/list action buttons — square, semantic colors.
+   Default (no modifier) = neutral gray for reads/previews/toggles.
+   Variants change the icon color; hover tint matches. Keep borders
+   neutral so a row of mixed actions still reads as a unit. */
 .action-btn {
   width: 30px;
   height: 30px;
@@ -544,11 +548,11 @@ body {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--color-bg-card);
   cursor: pointer;
   color: var(--color-text-sub);
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -556,8 +560,14 @@ body {
   background: var(--color-bg-soft);
   color: var(--color-text-main);
 }
+.action-btn.primary { color: var(--color-primary); }
+.action-btn.primary:hover { background: color-mix(in srgb, var(--color-primary) 8%, var(--color-bg-card)); border-color: var(--color-primary); }
+.action-btn.success { color: #16a34a; }
+.action-btn.success:hover { background: #f0fdf4; border-color: #86efac; }
+.action-btn.warning { color: #f59e0b; }
+.action-btn.warning:hover { background: #fffbeb; border-color: #fcd34d; }
 .action-btn.danger { color: #dc2626; }
-.action-btn.danger:hover { background: #fef2f2; }
+.action-btn.danger:hover { background: #fef2f2; border-color: #fca5a5; }
 
 /* Archive category card — background icon hover */
 .archive-cat-card { transition: box-shadow 0.3s ease; }

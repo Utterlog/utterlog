@@ -171,7 +171,7 @@ export default function CategoriesPage() {
     { key: 'count', title: '文章数', width: '90px' },
     { key: 'actions', title: '操作', width: '100px', render: (row: any) => (
       <div style={{ display: 'flex', gap: '4px' }}>
-        <button onClick={() => openEdit(row)} className="action-btn"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+        <button onClick={() => openEdit(row)} className="action-btn primary"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
         <button onClick={() => setDeleteId(row.id)} className="action-btn danger"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
       </div>
     )},

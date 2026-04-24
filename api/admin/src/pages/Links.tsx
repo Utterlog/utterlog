@@ -192,24 +192,27 @@ export default function LinksPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <span className="text-dim" style={{ fontSize: '13px' }}>共 {links.length} 条友链</span>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <Button variant="secondary" onClick={refreshIcons} loading={busy === 'icon'} disabled={busy !== null}>
-            <i className="fa-regular fa-image" style={{ marginRight: 6 }} />
-            一键刷新 ico
+          <Button variant="secondary" onClick={refreshIcons} loading={busy === 'icon'} disabled={busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
+            <i className="fa-regular fa-image" />
+            刷新 ico
           </Button>
-          <Button variant="secondary" onClick={clearCache} loading={busy === 'cache'} disabled={busy !== null}>
-            <i className="fa-regular fa-broom-wide" style={{ marginRight: 6 }} />
-            一键清空缓存
+          <Button variant="secondary" onClick={clearCache} loading={busy === 'cache'} disabled={busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
+            <i className="fa-regular fa-broom-wide" />
+            清空缓存
           </Button>
-          <Button variant="secondary" onClick={clearRSSCache} loading={busy === 'rss'} disabled={busy !== null}>
-            <i className="fa-regular fa-trash-can" style={{ marginRight: 6 }} />
-            一键清空 RSS 缓存
+          <Button variant="secondary" onClick={clearRSSCache} loading={busy === 'rss'} disabled={busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
+            <i className="fa-regular fa-trash-can" />
+            清空 RSS
           </Button>
-          <Button variant="secondary" onClick={refreshFeeds} loading={refreshingFeeds} disabled={refreshingFeeds || busy !== null}>
-            <i className="fa-regular fa-arrows-rotate" style={{ marginRight: 6 }} />
-            手动刷新订阅
+          <Button variant="secondary" onClick={refreshFeeds} loading={refreshingFeeds} disabled={refreshingFeeds || busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
+            <i className="fa-regular fa-arrows-rotate" />
+            刷新订阅
           </Button>
-          <Button variant="secondary" onClick={() => setShowGroupModal(true)}>分类管理</Button>
-          <Button onClick={openCreate}><i className="fa-regular fa-plus" style={{ fontSize: '16px' }} /> 添加友链</Button>
+          <Button variant="secondary" onClick={() => setShowGroupModal(true)} style={{ padding: '0 18px' }}>分类</Button>
+          <Button onClick={openCreate} style={{ padding: '0 20px', gap: '8px' }}>
+            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />
+            添加
+          </Button>
         </div>
       </div>
 
@@ -254,7 +257,7 @@ export default function LinksPage() {
             </thead>
             <tbody>
               {filteredLinks.map((link: any, i: number) => {
-                const baseFavicon = link.logo || (() => { try { return `https://ico.bluecdn.com/${new URL(link.url).hostname}`; } catch { return ''; } })();
+                const baseFavicon = link.logo || (() => { try { return `https://favicon.im/${new URL(link.url).hostname}?larger=true`; } catch { return ''; } })();
                 const favicon = baseFavicon ? `${baseFavicon}${baseFavicon.includes('?') ? '&' : '?'}v=${iconBust}` : '';
                 return (
                   <tr key={link.id} className="hover:bg-soft" style={{ transition: 'background-color 0.1s' }}>
@@ -323,7 +326,7 @@ export default function LinksPage() {
               {(form.logo || form.url) && (
                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', background: 'var(--color-bg-soft)', flexShrink: 0 }}>
                   <img
-                    src={form.logo || (form.url ? `https://ico.bluecdn.com/${(() => { try { return new URL(form.url).hostname; } catch { return ''; } })()}` : '')}
+                    src={form.logo || (form.url ? `https://favicon.im/${(() => { try { return new URL(form.url).hostname; } catch { return ''; } })()}?larger=true` : '')}
                     alt=""
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -340,7 +343,7 @@ export default function LinksPage() {
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} disabled={avatarUploading} />
               </label>
             </div>
-            <p className="text-dim" style={{ fontSize: '11px', marginTop: '4px' }}>不填写则自动从 ico.bluecdn.com 获取站点图标</p>
+            <p className="text-dim" style={{ fontSize: '11px', marginTop: '4px' }}>不填写则自动从 favicon.im 获取站点图标</p>
           </div>
           <Input label="RSS 地址" value={form.rss_url} onChange={e => setForm({ ...form, rss_url: e.target.value })} placeholder="https://example.com/feed（可选）" />
 

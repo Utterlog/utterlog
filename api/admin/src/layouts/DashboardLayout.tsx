@@ -154,7 +154,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     pathname.startsWith('/posts/categories') ||
     pathname.startsWith('/posts/tags') ||
     pathname === '/pages' ||
-    pathname === '/comments';
+    pathname === '/comments' ||
+    pathname.startsWith('/comments/');
 
   return (
     <div className="dashboard-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>

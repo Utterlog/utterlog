@@ -165,10 +165,10 @@ export default function AlbumsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span className="text-dim" style={{ fontSize: '12px' }}>{album.photo_count} 张照片</span>
                   <div style={{ display: 'flex', gap: '4px' }}>
-                    <button onClick={() => toggleStatus(album)} className="action-btn" title={album.status === 'public' ? '设为私有' : '公开'}>
+                    <button onClick={() => toggleStatus(album)} className={`action-btn${album.status === 'private' ? ' warning' : ''}`} title={album.status === 'public' ? '设为私有' : '公开'}>
                       {album.status === 'public' ? <i className="fa-regular fa-eye-slash" style={{ fontSize: '14px' }} /> : <i className="fa-regular fa-eye" style={{ fontSize: '14px' }} />}
                     </button>
-                    <button onClick={() => { setEditAlbum(album); setForm({ title: album.title, slug: album.slug, description: album.description, status: album.status }); }} className="action-btn">
+                    <button onClick={() => { setEditAlbum(album); setForm({ title: album.title, slug: album.slug, description: album.description, status: album.status }); }} className="action-btn primary">
                       <i className="fa-regular fa-pen" style={{ fontSize: '14px' }} />
                     </button>
                     <button onClick={() => handleDelete(album.id)} className="action-btn danger">

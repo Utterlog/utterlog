@@ -105,8 +105,8 @@ export default function MediaPage() {
         {/* Only show storage selector if multiple drivers configured */}
         <label className="cursor-pointer flex-shrink-0">
           <input type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.zip,.rar,.7z" onChange={handleUpload} className="hidden" />
-          <span className="btn-primary btn inline-flex items-center">
-            <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px', marginRight: '6px' }} />
+          <span className="btn-primary btn inline-flex items-center" style={{ padding: '0 24px', gap: '10px' }}>
+            <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />
             {uploading ? '上传中...' : '上传文件'}
           </span>
         </label>
@@ -128,10 +128,6 @@ export default function MediaPage() {
             <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
           </svg>
           <p className="text-dim" style={{ fontSize: '14px', fontWeight: 500 }}>暂无文件</p>
-          <p className="text-dim" style={{ fontSize: '12px' }}>上传您的第一个媒体文件</p>
-          <Button style={{ marginTop: '4px' }} onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}>
-            <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} /> 上传文件
-          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">

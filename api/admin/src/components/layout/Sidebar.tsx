@@ -81,8 +81,11 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           <button
             onClick={() => toggleExpand(item.to)}
             style={{
+              // Match the NavLink padding below so rows with an expand
+              // chevron render at the same height as plain rows.
               display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-              padding: '15px 14px', fontSize: 13, background: 'none', border: 'none',
+              padding: '8px 14px', fontSize: 13, background: 'none', border: 'none',
+              borderLeft: '2px solid transparent',
               color: 'var(--color-text-sub)', cursor: 'pointer',
             }}
           >
