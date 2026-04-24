@@ -44,28 +44,14 @@ function getSourceColor(name: string) {
   return sourceColors[Math.abs(hash) % sourceColors.length];
 }
 
-// Generate scattered positions for cards in a grid-like pattern with overlap
-function getCardPositions(count: number) {
-  const cols = 4;
-  const cardW = 260;
-  const cardH = 300;
-  const gapX = 40;
-  const gapY = 30;
-  const positions: { x: number; y: number; rotation: number }[] = [];
-  for (let i = 0; i < count; i++) {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    // Base grid position with random offset for overlap effect
-    const seed = i * 7 + 13;
-    const offsetX = ((seed * 17) % 60) - 30;
-    const offsetY = ((seed * 23) % 50) - 25;
-    positions.push({
-      x: col * (cardW + gapX) + offsetX,
-      y: row * (cardH + gapY) + offsetY,
-      rotation: rotations[i % rotations.length],
-    });
-  }
-  return positions;
+// Decode HTML entities that RSS feeds embed in text fields (e.g. "Kevin&#039;s").
+// Uses the browser's own parser so numeric + named entities are all handled.
+function decodeEntities(s: string): string {
+  if (!s || typeof window === 'undefined') return s;
+  if (!s.includes('&')) return s;
+  const el = document.createElement('textarea');
+  el.innerHTML = s;
+  return el.value;
 }
 
 export default function FeedsPage() {
@@ -81,6 +67,7 @@ export default function FeedsPage() {
   const [activeCard, setActiveCard] = useState<number | null>(null);
   const [topZ, setTopZ] = useState(100);
   const [cardZs, setCardZs] = useState<Record<number, number>>({});
+  const [faviconLoaded, setFaviconLoaded] = useState<Record<number, boolean>>({});
   const [isMobile, setIsMobile] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -200,28 +187,37 @@ export default function FeedsPage() {
         /* Mobile: simple vertical list */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '500px', margin: '0 auto' }}>
           {items.map((item, i) => {
-            const name = item.sourceName || item.site_name || '';
+            const name = decodeEntities(item.sourceName || item.site_name || '');
             const siteUrl = item.sourceUrl || item.site_url || '';
             const color = getSourceColor(name);
             const date = item.pubDate || item.pub_date || '';
-            const favicon = siteUrl ? `https://ico.bluecdn.com/${new URL(siteUrl).hostname}` : '';
+            const favicon = siteUrl ? `https://favicon.im/${new URL(siteUrl).hostname}?larger=true` : '';
             const initial = name ? name[0].toUpperCase() : '?';
+            const showInitial = !favicon || !faviconLoaded[i];
             return (
               <a key={i} href={item.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
                 <div style={{ background: '#fff', borderRadius: '2px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, overflow: 'hidden', position: 'relative' }}>
-                        <span>{initial}</span>
-                        {favicon && <img src={favicon} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                      <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#fff', color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, overflow: 'hidden', position: 'relative' }}>
+                        {showInitial && <span>{initial}</span>}
+                        {favicon && (
+                          <img
+                            src={favicon}
+                            alt=""
+                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                            onLoad={() => setFaviconLoaded(prev => ({ ...prev, [i]: true }))}
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        )}
                       </div>
                       <span style={{ fontSize: '12px', color: '#7a7670', fontWeight: 500 }}>{name}</span>
                     </div>
                     <span style={{ fontSize: '10px', color: '#b8b4ad' }}>{timeAgo(date)}</span>
                   </div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 700, lineHeight: 1.5, color: '#2b2a28', marginBottom: '8px' }}>{item.title}</h3>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, lineHeight: 1.5, color: '#2b2a28', marginBottom: '8px' }}>{decodeEntities(item.title)}</h3>
                   {item.description && (
-                    <p style={{ fontSize: '13px', lineHeight: 1.7, color: '#7a7670', display: '-webkit-box', WebkitLineClamp: 8, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+                    <p style={{ fontSize: '13px', lineHeight: 1.7, color: '#7a7670', display: '-webkit-box', WebkitLineClamp: 8, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{decodeEntities(item.description)}</p>
                   )}
                 </div>
               </a>
@@ -229,10 +225,6 @@ export default function FeedsPage() {
           })}
         </div>
       ) : (() => {
-        const positions = getCardPositions(items.length);
-        const totalRows = Math.ceil(items.length / 4);
-        const containerH = totalRows * 330 + 100;
-
         const handleCardClick = (e: React.MouseEvent, i: number, link: string) => {
           e.stopPropagation();
           if (activeCard === i) {
@@ -248,30 +240,37 @@ export default function FeedsPage() {
         return (
           <div
             onClick={(e) => { if (e.target === e.currentTarget) setActiveCard(null); }}
-            style={{ position: 'relative', maxWidth: '1300px', margin: '0 auto', height: containerH }}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+              gap: '32px 24px',
+              maxWidth: '1300px',
+              margin: '0 auto',
+              // Extra vertical padding gives the subtle card rotation headroom
+              // so rotated corners can't clip into the neighbouring row.
+              padding: '12px 0',
+            }}
           >
             {items.map((item, i) => {
-              const pos = positions[i];
-              const name = item.sourceName || item.site_name || '';
+              const name = decodeEntities(item.sourceName || item.site_name || '');
               const siteUrl = item.sourceUrl || item.site_url || '';
               const color = getSourceColor(name);
               const date = item.pubDate || item.pub_date || '';
-              const favicon = siteUrl ? `https://ico.bluecdn.com/${new URL(siteUrl).hostname}` : '';
+              const favicon = siteUrl ? `https://favicon.im/${new URL(siteUrl).hostname}?larger=true` : '';
               const initial = name ? name[0].toUpperCase() : '?';
+              const showInitial = !favicon || !faviconLoaded[i];
               const isActive = activeCard === i;
-              const z = cardZs[i] || (items.length - i);
+              const z = cardZs[i] || 1;
+              const rotation = rotations[i % rotations.length];
 
               return (
                 <div
                   key={i}
                   onClick={(e) => handleCardClick(e, i, item.link)}
                   style={{
-                    position: 'absolute',
-                    left: pos.x + 40,
-                    top: pos.y + 20,
-                    width: '260px',
-                    transform: `rotate(${isActive ? 0 : pos.rotation}deg) scale(${isActive ? 1.02 : 1})`,
-                    zIndex: z,
+                    position: 'relative',
+                    transform: `rotate(${isActive ? 0 : rotation * 0.4}deg) scale(${isActive ? 1.02 : 1})`,
+                    zIndex: isActive ? topZ : z,
                     cursor: isActive ? 'pointer' : 'default',
                     transition: 'transform 0.25s ease, box-shadow 0.25s ease',
                   }}
@@ -288,25 +287,26 @@ export default function FeedsPage() {
                   >
                     {/* Top row: avatar + name | time */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                         <div style={{
                           width: '28px', height: '28px', borderRadius: '50%',
-                          background: color, color: '#fff',
+                          background: '#fff', color: color,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: '12px', fontWeight: 700, flexShrink: 0,
                           overflow: 'hidden', position: 'relative',
                         }}>
-                          <span>{initial}</span>
+                          {showInitial && <span>{initial}</span>}
                           {favicon && (
                             <img
                               src={favicon}
                               alt=""
                               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                              onLoad={() => setFaviconLoaded(prev => ({ ...prev, [i]: true }))}
                               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                             />
                           )}
                         </div>
-                        <span style={{ fontSize: '12px', color: '#7a7670', fontWeight: 500 }}>{name}</span>
+                        <span style={{ fontSize: '12px', color: '#7a7670', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                       </div>
                       <span style={{ fontSize: '10px', color: '#b8b4ad', letterSpacing: '0.05em', flexShrink: 0 }}>
                         {timeAgo(date)}
@@ -318,7 +318,7 @@ export default function FeedsPage() {
                       fontSize: '15px', fontWeight: 700, lineHeight: 1.5,
                       color: '#2b2a28', marginBottom: '12px',
                     }}>
-                      {item.title}
+                      {decodeEntities(item.title)}
                     </h3>
 
                     {/* Description */}
@@ -327,7 +327,7 @@ export default function FeedsPage() {
                         fontSize: '13px', lineHeight: 1.8, color: '#7a7670',
                         ...(isActive ? {} : { display: '-webkit-box', WebkitLineClamp: 8, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }),
                       }}>
-                        {item.description}
+                        {decodeEntities(item.description)}
                       </p>
                     )}
 

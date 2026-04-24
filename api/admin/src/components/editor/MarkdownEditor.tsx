@@ -238,7 +238,7 @@ function ShortcodeRenderer({ content }: { content: string }) {
     <>
       {parts.map((part, i) => {
         if (part.type === 'md') {
-          return <ReactMarkdown key={i} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeHighlight, rehypeSlug]}>{part.content}</ReactMarkdown>;
+          return <ReactMarkdown key={i} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeHighlight, rehypeSlug]}>{part.content.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>')}</ReactMarkdown>;
         }
         if (part.type === 'collapse') {
           return (
@@ -248,7 +248,7 @@ function ShortcodeRenderer({ content }: { content: string }) {
                 {part.attrs?.title || '点击展开'}
               </summary>
               <div style={{ padding: '12px 16px', borderTop: '1px dashed var(--color-border)', fontSize: '14px', lineHeight: 1.7 }}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{part.content.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>')}</ReactMarkdown>
               </div>
             </details>
           );
@@ -312,7 +312,7 @@ function SafePreview({ value }: { value: string }) {
   return (
     <PreviewErrorBoundary>
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeHighlight, rehypeSlug]}>
-        {value}
+        {value.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>')}
       </ReactMarkdown>
     </PreviewErrorBoundary>
   );

@@ -10,12 +10,7 @@ interface ImageGridProps {
 
 function getGridClass(count: number, cols?: number): string {
   if (cols) return `image-grid image-grid-cols-${cols}`;
-  if (count === 1) return 'image-grid image-grid-1';
-  if (count === 2) return 'image-grid image-grid-2';
-  if (count === 3) return 'image-grid image-grid-3';
-  if (count === 4) return 'image-grid image-grid-4';
-  if (count === 5) return 'image-grid image-grid-5';
-  if (count === 6) return 'image-grid image-grid-6';
+  if (count >= 1 && count <= 10) return `image-grid image-grid-${count}`;
   return 'image-grid image-grid-overflow';
 }
 

@@ -17,7 +17,7 @@ interface Link {
 function getFavicon(url: string) {
   try {
     const u = new URL(url);
-    return `https://ico.bluecdn.com/${u.hostname}`;
+    return `https://favicon.im/${u.hostname}?larger=true`;
   } catch { return ''; }
 }
 

@@ -555,13 +555,15 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   opacity: 1;
 }
 
-/* Blog image: lazy load with blur-fade effect */
+/* Blog image: lazy load with blur-fade effect.
+   Single image = 80% width centered + 16:9. Multi-image grid images
+   get their own aspect-ratio overrides below. */
 .blog-image {
   position: relative;
   display: block;
   overflow: hidden;
   margin: 1.5rem 0;
-  border-radius: 6px;
+  border-radius: 0;
   min-height: 80px;
   cursor: zoom-in;
   background: var(--color-bg-soft);
@@ -569,7 +571,7 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
 .blog-image img {
   display: block;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
   filter: blur(20px);
   opacity: 0;
@@ -605,7 +607,7 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   font-size: 13px;
   color: #fff;
   background: rgba(0, 0, 0, 0.4);
-  border-radius: 2px;
+  border-radius: 0;
   cursor: default;
   line-height: 1.4;
   max-width: 70%;
@@ -618,13 +620,16 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   display: grid;
   gap: 6px;
   margin: 1.5rem 0;
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .image-grid .blog-image {
   margin: 0;
   border-radius: 0;
   min-height: 0;
+  /* Grid children should fill their cell, not inherit the single-
+     image 80% width cap. */
+  width: 100%;
 }
 .image-grid .blog-image img {
   aspect-ratio: 4 / 3;
@@ -644,36 +649,63 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   object-fit: contain;
 }
 
-/* 2 images: side by side */
+/* 2 images: side by side, 4:3 each */
 .image-grid-2 { grid-template-columns: 1fr 1fr; }
-.image-grid-2 .blog-image img { aspect-ratio: 3 / 2; }
+.image-grid-2 .blog-image img { aspect-ratio: 4 / 3; }
 
-/* 3 images: 3 columns */
+/* 3 images: 3 columns, square each */
 .image-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.image-grid-3 .blog-image img { aspect-ratio: 1 / 1; }
 
-/* 4 images: 2x2 */
-.image-grid-4 { grid-template-columns: 1fr 1fr; }
+/* 4 images: single row */
+.image-grid-4 { grid-template-columns: repeat(4, 1fr); }
 
 /* 5 images: 2 on top (span 3 each) + 3 on bottom (span 2 each) */
 .image-grid-5 { grid-template-columns: repeat(6, 1fr); }
 .image-grid-5 .blog-image:nth-child(-n+2) { grid-column: span 3; }
 .image-grid-5 .blog-image:nth-child(n+3) { grid-column: span 2; }
 
-/* 6 images: 3x2 */
-.image-grid-6 { grid-template-columns: 1fr 1fr 1fr; }
+/* 6 images: 3 + 3 */
+.image-grid-6 { grid-template-columns: repeat(3, 1fr); }
 
-/* 7+ images: 3 columns flowing */
+/* 7 images: 3 (top) + 4 (bottom) over 12-col LCM */
+.image-grid-7 { grid-template-columns: repeat(12, 1fr); }
+.image-grid-7 .blog-image:nth-child(-n+3) { grid-column: span 4; }
+.image-grid-7 .blog-image:nth-child(n+4) { grid-column: span 3; }
+
+/* 8 images: 4 + 4 */
+.image-grid-8 { grid-template-columns: repeat(4, 1fr); }
+
+/* 9 images: 3 x 3 */
+.image-grid-9 { grid-template-columns: repeat(3, 1fr); }
+
+/* 10 images: 3 + 3 + 4 over 12-col LCM */
+.image-grid-10 { grid-template-columns: repeat(12, 1fr); }
+.image-grid-10 .blog-image:nth-child(-n+6) { grid-column: span 4; }
+.image-grid-10 .blog-image:nth-child(n+7) { grid-column: span 3; }
+
+/* 11+ images: 3 columns flowing */
 .image-grid-overflow { grid-template-columns: 1fr 1fr 1fr; }
 
-/* Responsive: mobile collapse */
+/* Responsive: mobile collapse — single-row layouts (2/3/4) wrap, and
+   the larger custom grids drop back to a plain 2-column flow. */
 @media (max-width: 640px) {
   .image-grid-3,
+  .image-grid-4,
   .image-grid-5,
   .image-grid-6,
+  .image-grid-7,
+  .image-grid-8,
+  .image-grid-9,
+  .image-grid-10,
   .image-grid-overflow {
     grid-template-columns: 1fr 1fr;
   }
-  .image-grid-5 .blog-image { grid-column: span 1 !important; }
+  .image-grid-5 .blog-image,
+  .image-grid-7 .blog-image,
+  .image-grid-10 .blog-image {
+    grid-column: span 1 !important;
+  }
   .image-grid-1 { max-width: 100%; }
 }
 @media (max-width: 400px) {
@@ -699,7 +731,7 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   color: #fff;
   font-size: 12px;
   border: none;
-  border-radius: 50%;
+  border-radius: 0;
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s;
@@ -717,7 +749,7 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   color: #fff;
   font-size: 12px;
   line-height: 1.6;
-  border-radius: 6px;
+  border-radius: 0;
   white-space: nowrap;
 }
 .blog-image-exif-panel .exif-row {

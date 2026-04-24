@@ -212,7 +212,7 @@ function ExternalLink({ href, children, ...props }: React.AnchorHTMLAttributes<H
       {...props}
     >
       <img
-        src={`https://ico.bluecdn.com/${(() => { try { return new URL(href!).hostname; } catch { return ''; } })()}`}
+        src={`https://favicon.im/${(() => { try { return new URL(href!).hostname; } catch { return ''; } })()}?larger=true`}
         alt=""
         width={16}
         height={16}
@@ -294,13 +294,18 @@ function processShortcodes(text: string): string {
     }
   );
   // [video]url[/video]
+  //
+  // Embedded iframes don't expose their intrinsic aspect ratio, so we
+  // pin them to 16:9 via aspect-ratio. The native <video> element DOES
+  // expose its aspect ratio, so letting width:100% + height:auto do its
+  // thing gives a letterbox-free, correctly proportioned player.
   text = text.replace(/\[video\]([\s\S]*?)\[\/video\]/g, (_, url) => {
     const u = url.trim();
     const ytMatch = u.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-    if (ytMatch) return `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" style="width:100%;height:400px;border:none" allowfullscreen></iframe>`;
+    if (ytMatch) return `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" style="display:block;width:100%;aspect-ratio:16/9;border:none" allowfullscreen></iframe>`;
     const bvMatch = u.match(/(BV[a-zA-Z0-9]+)/);
-    if (bvMatch) return `<iframe src="https://player.bilibili.com/player.html?bvid=${bvMatch[1]}&autoplay=0" style="width:100%;height:400px;border:none" allowfullscreen></iframe>`;
-    return `<video controls style="width:100%;max-height:400px"><source src="${u}" /></video>`;
+    if (bvMatch) return `<iframe src="https://player.bilibili.com/player.html?bvid=${bvMatch[1]}&autoplay=0" style="display:block;width:100%;aspect-ratio:16/9;border:none" allowfullscreen></iframe>`;
+    return `<video controls style="display:block;width:100%;height:auto"><source src="${u}" /></video>`;
   });
   // [collapse title="xxx"]content[/collapse]
   text = text.replace(/\[collapse\s+title="([^"]*)"\]\n?([\s\S]*?)\[\/collapse\]/g, (_, title, body) => {
@@ -314,6 +319,10 @@ function processShortcodes(text: string): string {
   text = text.replace(/\[color=([^\]]+)\]([\s\S]*?)\[\/color\]/g, (_, color, t) => {
     return `<span style="color:${color}">${t}</span>`;
   });
+  // ==highlight== — editor inserts this shape but remarkGfm doesn't
+  // understand it, so without this preprocess the ==...== would leak
+  // out as literal text in the rendered post.
+  text = text.replace(/==([^=\n]+?)==/g, (_, t) => `<mark>${t}</mark>`);
   // [grid cols=N]images[/grid]
   text = text.replace(/\[grid(?:\s+cols=(\d+))?\]([\s\S]*?)\[\/grid\]/g, (_, cols, body) => {
     const imgRe = /!\[([^\]]*)\]\(([^)]+)\)/g;
