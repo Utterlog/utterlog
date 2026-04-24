@@ -6,12 +6,43 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/smtp"
 	"strings"
 	"time"
 )
+
+// encodeHeader applies RFC 2047 "B" (base64) encoding when the value
+// contains non-ASCII characters. Plain ASCII returns unchanged. Without
+// this, Chinese subjects and display names are transmitted as raw UTF-8
+// bytes, which some relays strip or replace — in the worst case the
+// relay reinterprets the whole header block and drops the body, so the
+// recipient sees a mangled subject and an empty message.
+func encodeHeader(s string) string {
+	for _, r := range s {
+		if r > 127 {
+			return mime.BEncoding.Encode("UTF-8", s)
+		}
+	}
+	return s
+}
+
+// encodeFromAddress builds a From header value. When the display name
+// is non-ASCII, it gets RFC 2047 encoded; otherwise it's quoted per
+// RFC 5322.
+func encodeFromAddress(addr, name string) string {
+	if name == "" {
+		return addr
+	}
+	for _, r := range name {
+		if r > 127 {
+			return fmt.Sprintf("%s <%s>", mime.BEncoding.Encode("UTF-8", name), addr)
+		}
+	}
+	return fmt.Sprintf("%q <%s>", name, addr)
+}
 
 type EmailConfig struct {
 	Host       string
@@ -44,14 +75,18 @@ func SendEmail(cfg EmailConfig, to, subject, body string) error {
 		from = cfg.User
 	}
 
-	// Build message
-	fromHeader := from
-	if cfg.FromName != "" {
-		fromHeader = fmt.Sprintf("%s <%s>", cfg.FromName, from)
-	}
+	// Build message. Headers must be RFC 2047 encoded for non-ASCII so
+	// relays don't mangle the block — previously Chinese subjects were
+	// sent raw and some servers dropped the body in response.
+	fromHeader := encodeFromAddress(from, cfg.FromName)
+	subjectHeader := encodeHeader(subject)
+
+	// Normalize body line endings to CRLF (RFC 5321) — most templates
+	// have bare \n which some stricter relays treat as malformed data.
+	bodyCRLF := strings.ReplaceAll(strings.ReplaceAll(body, "\r\n", "\n"), "\n", "\r\n")
 
 	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
-		fromHeader, to, subject, body)
+		fromHeader, to, subjectHeader, bodyCRLF)
 
 	addr := net.JoinHostPort(cfg.Host, cfg.Port)
 

@@ -19,6 +19,7 @@ import (
 	"html/template"
 	"net/url"
 	"strings"
+
 	"utterlog-go/config"
 	"utterlog-go/internal/model"
 )
@@ -109,6 +110,12 @@ func extractDomain(rawURL string) string {
 }
 
 // Render a named template (e.g. "new_comment") with data.
+//
+// An empty result is treated as an error — silently sending a blank
+// email wastes the recipient's attention and hides the real bug.
+// Every template in tpl/ has static markup outside the {{define}}
+// blocks, so a zero-length render means something went wrong in
+// html/template's escape-context pass.
 func Render(name string, data any) (string, error) {
 	var buf bytes.Buffer
 	tpl := parsedTemplates.Lookup(name + ".html")
@@ -118,7 +125,11 @@ func Render(name string, data any) (string, error) {
 	if err := tpl.Execute(&buf, data); err != nil {
 		return "", fmt.Errorf("render %s: %w", name, err)
 	}
-	return buf.String(), nil
+	out := buf.String()
+	if strings.TrimSpace(out) == "" {
+		return "", fmt.Errorf("render %s: empty output (template produced no content)", name)
+	}
+	return out, nil
 }
 
 /* ========================================================================
