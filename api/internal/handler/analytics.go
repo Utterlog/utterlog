@@ -114,6 +114,22 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 		}
 	}
 
+	// Behavioral bot gate — catches crawlers that spoof a real browser
+	// UA (so IsBot() misses them) by looking at request rate. A human
+	// reader almost never opens 8+ distinct pages inside 60s; a tag /
+	// archive scraper routinely does. Once an IP trips the gate we
+	// stop logging them for the rest of the minute, which keeps the
+	// access_logs table clean without a background cleanup job.
+	if dedupKey != "" {
+		var recent int
+		config.DB.Get(&recent, fmt.Sprintf(
+			"SELECT COUNT(*) FROM %s WHERE COALESCE(NULLIF(visitor_id,''), ip) = $1 AND created_at >= $2",
+			config.T("access_logs")), dedupKey, now-60)
+		if recent >= 8 {
+			return
+		}
+	}
+
 	device, browser, browserVer, os, osVer := parseUserAgent(ua)
 	refHost := ""
 	if referer != "" {
