@@ -342,6 +342,32 @@ func InitDB() error {
 		T("ai_providers"),
 	))
 
+	// 2026-04: collapse the per-feature AI purpose slots from 8 to 2.
+	//
+	// Earlier rev introduced one option key per feature
+	// (ai_purpose_summary_provider, _slug_provider, _tags_provider,
+	// _polish_provider, _reader-chat_provider, _questions_provider,
+	// _query_provider). User asked to merge those into just
+	// 'content' (every text-generation feature) and 'chat' (every
+	// conversational feature including reader-chat). The new keys
+	// are ai_purpose_content_provider + ai_purpose_chat_provider —
+	// dispatch already ignores the old ones, but admins with
+	// strong-typing instincts deserve a clean options table.
+	//
+	// Idempotent. Won't touch the two new keys.
+	DB.Exec(fmt.Sprintf(
+		"DELETE FROM %s WHERE name IN ("+
+			"'ai_purpose_summary_provider',"+
+			"'ai_purpose_slug_provider',"+
+			"'ai_purpose_tags_provider',"+
+			"'ai_purpose_polish_provider',"+
+			"'ai_purpose_reader-chat_provider',"+
+			"'ai_purpose_questions_provider',"+
+			"'ai_purpose_query_provider'"+
+			")",
+		T("options"),
+	))
+
 	return nil
 }
 
