@@ -70,6 +70,12 @@ export default function FeedsPage() {
   const [faviconLoaded, setFaviconLoaded] = useState<Record<number, boolean>>({});
   const [isMobile, setIsMobile] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // Refs to each desktop card wrapper. Used to measure the natural
+  // collapsed offsetHeight on first expand, so we can lock the grid
+  // cell to that height while the inner card lifts into position:
+  // absolute and overlays the rows below.
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [collapsedHeights, setCollapsedHeights] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -231,6 +237,16 @@ export default function FeedsPage() {
             window.open(link, '_blank', 'noopener,noreferrer');
             return;
           }
+          // Capture the collapsed wrapper height BEFORE we transition
+          // to active. Once active=i, the inner card flips to
+          // position:absolute and the wrapper would otherwise collapse
+          // to 0 — we'd lose the grid-row anchor and everything below
+          // would shift up. Re-measure each click in case the user has
+          // resized the window since the last expansion.
+          const el = cardRefs.current[i];
+          if (el) {
+            setCollapsedHeights(prev => ({ ...prev, [i]: el.offsetHeight }));
+          }
           const newZ = topZ + 1;
           setTopZ(newZ);
           setCardZs(prev => ({ ...prev, [i]: newZ }));
@@ -266,6 +282,7 @@ export default function FeedsPage() {
               return (
                 <div
                   key={i}
+                  ref={(el) => { cardRefs.current[i] = el; }}
                   onClick={(e) => handleCardClick(e, i, item.link)}
                   style={{
                     position: 'relative',
@@ -273,6 +290,14 @@ export default function FeedsPage() {
                     zIndex: isActive ? topZ : z,
                     cursor: isActive ? 'pointer' : 'default',
                     transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+                    // When active, freeze the wrapper at its captured
+                    // collapsed height. The inner card lifts into
+                    // position:absolute below and overflows downward
+                    // to overlay the row beneath us, but the grid
+                    // track stays exactly where it was.
+                    minHeight: isActive && collapsedHeights[i]
+                      ? `${collapsedHeights[i]}px`
+                      : undefined,
                   }}
                 >
                   <div
@@ -283,6 +308,13 @@ export default function FeedsPage() {
                       boxShadow: isActive
                         ? '0 12px 40px rgba(0,0,0,0.15)'
                         : '0 2px 12px rgba(0,0,0,0.06)',
+                      // Lift out of normal flow when expanded so the
+                      // wrapper's locked minHeight (above) is what the
+                      // grid sees. The card itself grows downward to
+                      // its natural full-content height.
+                      ...(isActive
+                        ? { position: 'absolute' as const, top: 0, left: 0, right: 0 }
+                        : {}),
                     }}
                   >
                     {/* Top row: avatar + name | time */}

@@ -63,31 +63,38 @@ const (
 	// DefaultCoverPrompt — used by AICover to build the prompt sent
 	// to the image-generation provider.
 	//
-	// User-supplied default (2026-04). Self-contained Chinese
-	// template with style + text policy hard-coded into the wording
-	// rather than via {style}/{text_policy} placeholders — so the
-	// admin's 图片风格 / 文字策略 dropdown choices don't apply
-	// unless the admin manually re-introduces those placeholders.
-	// That's an intentional opt-in trade: the template reads more
-	// naturally for image-gen models than mixed Chinese-English
-	// directive concatenation.
+	// Why excerpt-first instead of title-first: image-gen models
+	// (gpt-image, qwen-image, imagen) treat any string near the
+	// front of the prompt as text-to-render. If the title contains
+	// English words, code identifiers, or version numbers — e.g.
+	// "Debian + 宝塔 安装phpMyAdmin 6" — the model paints a garbled
+	// version of those literals onto the canvas. {excerpt_block}
+	// describes what the article is about in natural prose, which
+	// the model interprets as subject matter instead of label text.
+	// {title} is kept only as a low-weight topic hint at the tail.
 	//
-	// Placeholders still recognised:
-	//   {title}         — article title verbatim
+	// Why "no text" runs at both ends: image models weight leading
+	// tokens far more than trailing ones, so a single "不要文字" at
+	// the bottom is the weakest possible position. We open with a
+	// strong English+Chinese no-text directive, then repeat it at
+	// the close as a guard.
+	//
+	// Placeholders recognised:
+	//   {title}         — article title (topic hint only)
 	//   {excerpt}       — raw excerpt or empty
 	//   {excerpt_block} — '文章主题：<excerpt>\n' OR empty
-	//   {style}         — coverStylePhrase output (English directive)
-	//   {text_policy}   — coverTextPolicyPhrase output (English directive)
+	//   {style}         — coverStylePhrase output (admin dropdown)
+	//   {text_policy}   — coverTextPolicyPhrase output (admin dropdown)
 	//
 	// Admin can clear the textarea + 保存 to fall back to this
 	// constant, or edit freely.
-	DefaultCoverPrompt = `现代博客封面图，{title}，
-构图简洁，极简风格，专业光影，
-柔和渐变背景，避免人物，
-轻微纹理，空间层次感，
-中间或左侧留白用于标题，
-高质量，细节丰富，16:9，
-不要文字，不要水印，不要logo`
+	DefaultCoverPrompt = `Absolutely no text, no letters, no numbers, no words, no logos, no watermarks, no UI elements anywhere in the image. 纯视觉画面，禁止出现任何文字字符。
+
+{excerpt_block}主题参考：{title}
+
+极简风格的现代博客封面插画，抽象柔和的视觉意象，低饱和度配色，柔和渐变背景，轻微颗粒纹理，留白构图，专业柔光，空间层次感，中间或左侧大面积留白便于后期叠加标题文字，高质量数字插画，16:9 横版，避免人物面部特写。
+
+再次强调：画面中不得出现任何文字、字母、数字或符号。`
 )
 
 // renderPrompt performs literal {placeholder} substitution. A missing
