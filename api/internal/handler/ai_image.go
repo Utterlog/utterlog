@@ -376,19 +376,34 @@ func extFromMimeFuzzy(mime string) string {
 }
 
 // generateOpenAICompatImage handles OpenAI + DashScope-compatible-mode +
-// any other provider exposing /v1/images/generations. Asks for
-// b64_json so we can save the image without a second HTTP round-trip;
-// falls back to following the URL if the provider only returned that.
+// any other provider exposing /v1/images/generations. Falls back to
+// following the URL if the provider only returned that.
+//
+// response_format quirk:
+//   - dall-e-2 / dall-e-3: accepts response_format ("url" | "b64_json").
+//     Default is "url", so asking for "b64_json" saves a HTTP round-trip
+//     when downloading the image bytes.
+//   - gpt-image-1 / gpt-image-2: rejects response_format with
+//     HTTP 400 'Unknown parameter: response_format'. These models
+//     ALWAYS return b64_json by default, so omitting the field is
+//     both required (else 400) and correct (no roundtrip needed).
+//   - DashScope (通义万相 / qwen-image) compatible-mode: accepts the
+//     parameter but defaults to URL. We omit it for safety; the
+//     URL-fetch fallback path handles their response cleanly.
+//
+// Rule: only send response_format when the model name starts with
+// 'dall-e' (which is the only family that needs it AND accepts it).
 func generateOpenAICompatImage(p model.AIProvider, prompt, size string, n int) ([]byte, string, error) {
-	// gpt-image-1 only returns b64; dall-e-3 supports both. Always
-	// asking for b64_json works for both (and skips a fetch hop).
-	body, _ := json.Marshal(map[string]interface{}{
-		"model":           p.Model,
-		"prompt":          prompt,
-		"n":               n,
-		"size":            size,
-		"response_format": "b64_json",
-	})
+	payload := map[string]interface{}{
+		"model":  p.Model,
+		"prompt": prompt,
+		"n":      n,
+		"size":   size,
+	}
+	if strings.HasPrefix(strings.ToLower(p.Model), "dall-e") {
+		payload["response_format"] = "b64_json"
+	}
+	body, _ := json.Marshal(payload)
 	req, err := http.NewRequest("POST", p.Endpoint, bytes.NewReader(body))
 	if err != nil {
 		return nil, "", err
