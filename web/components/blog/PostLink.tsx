@@ -11,10 +11,13 @@ interface PostLinkProps extends LinkPropsNoHref {
   post: {
     id?: number;
     slug?: string;
+    title?: string;
     published_at?: string | null;
     created_at?: string | number;
     categories?: { slug?: string }[];
   };
+  /** Optional fragment to append, e.g. "comment-123" → /posts/x#comment-123. */
+  hash?: string;
   children?: ReactNode;
 }
 
@@ -28,9 +31,10 @@ interface PostLinkProps extends LinkPropsNoHref {
  * Lives outside the `(blog)` group so PostNavigation (shared with
  * admin previews) can import it without a circular path.
  */
-export default function PostLink({ post, children, ...rest }: PostLinkProps) {
+export default function PostLink({ post, hash, children, ...rest }: PostLinkProps) {
   const { options } = useThemeContext();
-  const href = buildPermalink(post, options?.permalink_structure);
+  let href = buildPermalink(post, options?.permalink_structure);
+  if (hash) href += '#' + hash;
   return (
     <Link href={href} {...rest}>
       {children}
