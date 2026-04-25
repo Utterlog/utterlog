@@ -247,12 +247,12 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                     feedback through globals.css. */}
                 <PostLink post={heroPost} style={{ display: 'block', textDecoration: 'none' }}>
                   <FadeCover src={heroSrc} alt={heroPost.title} style={{ width: '100%', height: heroHeight }} />
-                  {/* Title strip: a single bar sized to exactly one
-                      left-sidebar tab so the title vertically aligns
-                      with the last tab. Frosted glass (backdrop blur)
-                      + dark tint stays readable over both bright and
-                      bright-white covers; text-shadow is the safety
-                      net for browsers that drop backdrop-filter. */}
+                  {/* Title strip: same height as one left-sidebar tab
+                      so the baseline lines up with the last tab. No
+                      background overlay — readability comes entirely
+                      from text-shadow, two layers stacked so white
+                      text stays legible over both dark and bright
+                      covers without dimming the image itself. */}
                   <div style={{
                     position: 'absolute',
                     bottom: 0, left: 0, right: 0,
@@ -260,11 +260,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                     display: 'flex',
                     alignItems: 'center',
                     padding: '0 24px',
-                    background: 'rgba(15, 23, 42, 0.45)',
-                    backdropFilter: 'blur(14px) saturate(150%)',
-                    WebkitBackdropFilter: 'blur(14px) saturate(150%)',
-                    borderTop: '1px solid rgba(255,255,255,0.08)',
-                    boxShadow: '0 -8px 24px rgba(0,0,0,0.18)',
+                    pointerEvents: 'none',
                   }}>
                     <h2 style={{
                       margin: 0,
@@ -276,7 +272,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
-                      textShadow: '0 1px 4px rgba(0,0,0,0.55)',
+                      textShadow: '0 2px 6px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.8)',
                     }}>{heroPost.title}</h2>
                   </div>
                 </PostLink>
