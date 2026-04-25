@@ -4,7 +4,6 @@ import TableOfContents from '@/components/blog/TableOfContents';
 import AISummary from '@/components/blog/AISummary';
 import PostNavigation from '@/components/blog/PostNavigation';
 import FadeCover from '@/components/blog/FadeCover';
-import { randomCoverUrl } from '@/lib/blog-image';
 import { getCategoryIcon } from './constants';
 import { CommentCount, CommentSection } from './PostInteractive';
 
@@ -13,39 +12,58 @@ function formatDate(ts: string | number) {
   return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai' });
 }
 
-export default function PostPage({ post, options }: { post: any; options?: Record<string, string> }) {
-  const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
+export default function PostPage({ post }: { post: any; options?: Record<string, string> }) {
+  // Article banner uses ONLY post.cover_url. See Azure/PostPage for
+  // why we no longer fall back to randomCoverUrl on article pages.
+  const coverUrl = post.cover_url || '';
+  const hasCover = !!coverUrl;
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
 
   return (
     <div style={{ padding: '0' }}>
-      {/* Featured image */}
-      <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
-        <FadeCover src={coverUrl} alt={post.title}
-          style={{ width: '100%', height: '400px' }} />
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',
-          padding: '60px 32px 24px',
-        }}>
-          {/* Breadcrumb */}
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Link href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>首页</Link>
+      {hasCover ? (
+        <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
+          <FadeCover src={coverUrl} alt={post.title}
+            style={{ width: '100%', height: '400px' }} />
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',
+            padding: '60px 32px 24px',
+          }}>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Link href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>首页</Link>
+              <span>/</span>
+              {catName && (
+                <>
+                  <Link href={`/categories/${post.categories[0].slug}`} style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>{catName}</Link>
+                  <span>/</span>
+                </>
+              )}
+            </div>
+            <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', lineHeight: 1.3, letterSpacing: '-0.02em' }}>
+              {post.title}
+            </h1>
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: '40px 32px 24px', borderBottom: '1px solid #e5e5e5' }}>
+          <div style={{ fontSize: '12px', color: 'var(--color-text-dim, #9aa5b0)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Link href="/" style={{ color: 'var(--color-text-dim, #9aa5b0)', textDecoration: 'none' }}>首页</Link>
             <span>/</span>
             {catName && (
               <>
-                <Link href={`/categories/${post.categories[0].slug}`} style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>{catName}</Link>
+                <Link href={`/categories/${post.categories[0].slug}`} style={{ color: 'var(--color-text-dim, #9aa5b0)', textDecoration: 'none' }}>{catName}</Link>
                 <span>/</span>
               </>
             )}
           </div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', lineHeight: 1.3, letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--color-text-main, #0d1a2d)', lineHeight: 1.25, letterSpacing: '-0.02em', margin: 0 }}>
             {post.title}
           </h1>
         </div>
-      </div>
+      )}
 
       {/* Meta bar */}
       <div style={{
