@@ -5,15 +5,34 @@ import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import GlobalMiniPlayer from '@/components/layout/GlobalMiniPlayer';
 
-// Apply theme from localStorage before paint
+// Apply admin color-theme from localStorage before paint.
+//
+// CRITICAL: this attribute (`data-theme`) is shared with the blog
+// theme system. (blog)/layout.tsx server-injects `data-theme="Chred"`
+// (or whatever blog theme is active) so that themes/Chred/styles.css
+// rules like `[data-theme="Chred"] .post-related-card-cover {
+// position: relative; aspect-ratio: 16/10 }` actually match.
+//
+// If we unconditionally overwrite that with a color-theme value
+// here ('steel', 'blue', etc.), every blog theme's structural rules
+// silently no-op — which manifested as related-card images escaping
+// their `position: absolute; inset: 0` containers and filling the
+// entire viewport.
+//
+// So: only write if the slot is empty or already a color-theme name.
+// If it's a blog theme name, leave it alone.
+const COLOR_THEMES = ['steel', 'blue', 'green', 'mint', 'claude', 'ocean', 'dark'];
 function useThemeInit() {
   useEffect(() => {
     try {
+      const current = document.documentElement.dataset.theme;
+      // Blog theme already stamped by (blog)/layout — don't clobber.
+      if (current && !COLOR_THEMES.includes(current)) return;
       const t = localStorage.getItem('utterlog-theme');
       if (t) {
         const d = JSON.parse(t);
         const v = d?.state?.theme;
-        if (v && ['steel', 'blue', 'green', 'mint', 'claude', 'ocean', 'dark'].includes(v)) {
+        if (v && COLOR_THEMES.includes(v)) {
           document.documentElement.dataset.theme = v;
         }
       }

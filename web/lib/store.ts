@@ -185,23 +185,33 @@ interface ThemeState {
   setTheme: (t: Theme) => void;
 }
 
+// Color themes (admin/dashboard color tokens). The active value is
+// written to <html data-theme="..."> — same attribute that blog
+// themes use. To avoid the color theme clobbering a blog theme stamp
+// from (blog)/layout.tsx, the writes below first check that we're
+// not on a blog route (i.e. data-theme isn't currently set to a
+// non-color value). See app/providers.tsx for the full rationale.
+const COLOR_THEMES_SET = ['steel', 'blue', 'green', 'mint', 'claude', 'ocean', 'dark'];
+function safeWriteColorTheme(theme: string) {
+  if (typeof document === 'undefined') return;
+  const current = document.documentElement.dataset.theme;
+  if (current && !COLOR_THEMES_SET.includes(current)) return;
+  document.documentElement.dataset.theme = theme;
+}
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
       theme: 'steel',
       setTheme: (theme: Theme) => {
-        if (typeof document !== 'undefined') {
-          document.documentElement.dataset.theme = theme;
-        }
+        safeWriteColorTheme(theme);
         set({ theme });
       },
     }),
     {
       name: 'utterlog-theme',
       onRehydrateStorage: () => (state) => {
-        if (state?.theme && typeof document !== 'undefined') {
-          document.documentElement.dataset.theme = state.theme;
-        }
+        if (state?.theme) safeWriteColorTheme(state.theme);
       },
     }
   )
