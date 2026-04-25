@@ -29,7 +29,7 @@ var AIPresets = gin.H{
 	"openai":   gin.H{"name": "OpenAI", "endpoint": "https://api.openai.com/v1/chat/completions", "models": []string{"gpt-5.5", "gpt-5", "gpt-4.1", "gpt-4.1-mini", "o3-mini"}},
 	"deepseek": gin.H{"name": "DeepSeek", "endpoint": "https://api.deepseek.com/chat/completions", "models": []string{"deepseek-v4", "deepseek-v3", "deepseek-chat", "deepseek-reasoner"}},
 	"gemini":   gin.H{"name": "Google Gemini", "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "models": []string{"gemini-2.5-pro", "gemini-2.5-flash"}},
-	"qwen":     gin.H{"name": "通义千问", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "models": []string{"qwen3-max", "qwen-plus", "qwen-turbo"}},
+	"qwen":     gin.H{"name": "Qwen · 文本", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "models": []string{"qwen3-max", "qwen-plus", "qwen-turbo"}},
 	"kimi":     gin.H{"name": "Kimi", "endpoint": "https://api.moonshot.cn/v1/chat/completions", "models": []string{"kimi-k2.6", "kimi-k2.5", "kimi-latest"}},
 	"minimax":  gin.H{"name": "MiniMax", "endpoint": "https://api.minimax.chat/v1/text/chatcompletion_v2", "models": []string{"MiniMax-M2.5"}},
 	"zhipu":    gin.H{"name": "智谱 AI", "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions", "models": []string{"glm-4.7-flash"}},
@@ -48,7 +48,7 @@ var AIPresets = gin.H{
 	// endpoint 404s and the model name was fictional, so the preset
 	// produced a 'looks legit, never works' provider entry. Removed.
 	"openai-embedding": gin.H{"name": "OpenAI Embedding", "endpoint": "https://api.openai.com/v1/embeddings", "models": []string{"text-embedding-3-small", "text-embedding-3-large"}, "type": "embedding"},
-	"qwen-embedding":   gin.H{"name": "通义千问 Embedding", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings", "models": []string{"text-embedding-v3"}, "type": "embedding"},
+	"qwen-embedding":   gin.H{"name": "Qwen · Embedding", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings", "models": []string{"text-embedding-v3"}, "type": "embedding"},
 
 	// Image-generation presets — wired to handler/ai_image.go
 	// GenerateAIImage. Three families are dispatched there based on
@@ -69,20 +69,27 @@ var AIPresets = gin.H{
 	// that haven't been granted gpt-image-2 access yet.
 	"openai-image": gin.H{"name": "OpenAI 图像", "endpoint": "https://api.openai.com/v1/images/generations", "models": []string{"gpt-image-2", "gpt-image-1", "dall-e-3"}, "type": "image"},
 	// Aliyun DashScope qwen-image (synchronous multimodal-generation
-	// endpoint). Single request returns the rendered image URL — no
-	// async polling. Beijing region by default; switch to the intl
-	// host (dashscope-intl.aliyuncs.com) by editing the endpoint
-	// after applying the preset if you're outside mainland China.
+	// endpoint) on the latest qwen-image-2.0-pro. Single request
+	// returns the rendered image URL — no async polling. Beijing
+	// region by default; switch to dashscope-intl.aliyuncs.com if
+	// outside mainland China.
 	//
-	// Backend dispatches via handler/ai_image.go
-	// generateQwenMultimodalImage.
-	"qwen-image": gin.H{"name": "通义千问图像", "endpoint": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation", "models": []string{"qwen-image-2.0-pro"}, "type": "image"},
-	// Older 万相 (wanx) async API. Kept as a separate preset so users
-	// who specifically need wanx2.x (free quota / cheaper) can still
-	// pick it without hand-editing the endpoint. Backend dispatches
-	// via generateDashScopeImage which polls task_id until SUCCEEDED.
-	"wanx": gin.H{"name": "通义万相 (wanx async)", "endpoint": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis", "models": []string{"wanx2.1-t2i-turbo", "wanx2.1-t2i-plus", "wanx-v1"}, "type": "image"},
-	"imagen":       gin.H{"name": "Google Imagen", "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-06:predict", "models": []string{"imagen-4.0-generate-preview-06-06", "imagen-3.0-generate-002"}, "type": "image"},
+	// 'Qwen · 文本' / 'Qwen · Embedding' / 'Qwen · 图像' naming so
+	// the three Aliyun chips visually cluster in the 添加提供商
+	// modal. They still produce three separate ai_providers rows
+	// because dispatch reads the type column (text / embedding /
+	// image) — but the family relationship is now obvious.
+	//
+	// 万相 (wanx) async API was previously a sibling preset here.
+	// Removed per user request — wanx requires task_id polling and
+	// kept the picker noisy alongside the simpler sync qwen-image
+	// path. Users who specifically want wanx can still hand-edit a
+	// provider's endpoint to:
+	//   https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis
+	// with a wanx2.x model id; handler/ai_image.go still recognises
+	// that pattern and routes to generateDashScopeImage with polling.
+	"qwen-image": gin.H{"name": "Qwen · 图像", "endpoint": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation", "models": []string{"qwen-image-2.0-pro"}, "type": "image"},
+	"imagen":     gin.H{"name": "Google Imagen", "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-06:predict", "models": []string{"imagen-4.0-generate-preview-06-06", "imagen-3.0-generate-002"}, "type": "image"},
 }
 
 func GetAIProviders(c *gin.Context) {
