@@ -13,8 +13,8 @@ function formatDate(ts: string | number) {
   return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai' });
 }
 
-export default function PostPage({ post }: { post: any }) {
-  const coverUrl = post.cover_url || randomCoverUrl(post.id);
+export default function PostPage({ post, options }: { post: any; options?: Record<string, string> }) {
+  const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';

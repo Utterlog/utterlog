@@ -64,5 +64,12 @@ export default async function PermalinkPage({ params }: Props) {
 
   const theme = getThemeComponents(themeName);
   const ThemePostPage = theme.PostPage;
-  return <ThemePostPage post={post} />;
+
+  // Same pattern as /posts/[slug]/page.tsx: pass options so the
+  // theme's PostPage banner falls back through the same admin-
+  // configured random_image_api as PostCard / HomePage hero.
+  const optionsRes = await getOptions().catch(() => ({ data: {} } as any));
+  const options = (optionsRes?.data || {}) as Record<string, string>;
+
+  return <ThemePostPage post={post} options={options} />;
 }

@@ -13,11 +13,12 @@ function formatDate(ts: string | number) {
   return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai' });
 }
 
-export default function PostPage({ post }: { post: any }) {
-  // PostPage runs as a Server Component; admin's random_image_api is
-  // not threaded through here yet, so we use the default template.
-  // To honour the option, accept `options` as a prop and forward.
-  const coverUrl = post.cover_url || randomCoverUrl(post.id);
+export default function PostPage({ post, options }: { post: any; options?: Record<string, string> }) {
+  // Caller (app/(blog)/posts/[slug]/page.tsx and [...permalink]) now
+  // server-fetches options and threads them in, so PostPage's banner
+  // fallback uses the same admin-configured random_image_api as the
+  // home cards / hero — no more "首页有图、内页一张默认 img.et" mismatch.
+  const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';

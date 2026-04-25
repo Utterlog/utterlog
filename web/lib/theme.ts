@@ -39,7 +39,7 @@ export interface ThemeComponents {
   Header: React.ComponentType<any>;
   Footer: React.ComponentType<any>;
   HomePage: React.ComponentType<any>;
-  PostPage: React.ComponentType<{ post: any }>;
+  PostPage: React.ComponentType<{ post: any; options?: Record<string, string> }>;
   PostCard: React.ComponentType<{ post: any }>;
   CommentSection: React.ComponentType<{ postId: number }>;
   Layout: React.ComponentType<{ children: React.ReactNode }>;

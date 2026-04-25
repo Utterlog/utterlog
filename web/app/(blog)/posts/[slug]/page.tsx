@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getPostBySlug, getActiveTheme } from '@/lib/blog-api';
+import { getPostBySlug, getActiveTheme, getOptions } from '@/lib/blog-api';
 import { getThemeComponents } from '@/lib/theme';
 
 interface PostPageProps {
@@ -66,5 +66,13 @@ export default async function PostPage({ params }: PostPageProps) {
   const theme = getThemeComponents(themeName);
   const ThemePostPage = theme.PostPage;
 
-  return <ThemePostPage post={post} />;
+  // Pass admin options into the theme so a missing post.cover_url
+  // falls back through randomCoverUrl(post.id, options) — which
+  // honours `random_image_api` and `random_image_enabled`. Without
+  // this PostPage was using the helper's hardcoded default, making
+  // the article banner inconsistent with the home cover.
+  const optionsRes = await getOptions().catch(() => ({ data: {} } as any));
+  const options = (optionsRes?.data || {}) as Record<string, string>;
+
+  return <ThemePostPage post={post} options={options} />;
 }
