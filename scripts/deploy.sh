@@ -35,11 +35,11 @@ err()  { printf "%s✗%s %s\n" "$C_RED$C_BOLD" "$C_RESET" "$*" >&2; }
 # Step 1: ensure docker is installed
 # ============================================================
 if ! command -v docker >/dev/null 2>&1; then
-  err "docker not found. Install Docker first: https://docs.docker.com/engine/install/"
+  err "未检测到 docker，请先安装：https://docs.docker.com/engine/install/"
   exit 1
 fi
 if ! docker compose version >/dev/null 2>&1; then
-  err "docker compose plugin not found. Install with: sudo apt install docker-compose-plugin"
+  err "未检测到 docker compose 插件，请先安装：sudo apt install docker-compose-plugin"
   exit 1
 fi
 
@@ -81,10 +81,10 @@ if [ "$PULL_MODE" -eq -1 ]; then
     total_mb=$((total_kb / 1024))
     if [ "$total_mb" -lt 1800 ]; then
       PULL_MODE=1
-      log "Detected ${total_mb}MB RAM → using pre-built images from ghcr.io (safer on small VPS)"
+      log "检测到 ${total_mb}MB 内存 → 拉取 ghcr.io 预构建镜像（小内存 VPS 更稳）"
     else
       PULL_MODE=0
-      log "Detected ${total_mb}MB RAM → building images locally (faster iteration on code changes)"
+      log "检测到 ${total_mb}MB 内存 → 本地编译镜像（改源码后迭代更快）"
     fi
   elif [ "$(uname)" = "Darwin" ]; then
     # macOS dev machine — always plenty of RAM
@@ -97,20 +97,20 @@ fi
 
 if [ ! -f .env ]; then
   if [ ! -f .env.example ]; then
-    err ".env.example not found — is this an Utterlog checkout?"
+    err "找不到 .env.example —— 当前目录看起来不是 Utterlog 项目"
     exit 1
   fi
 
   if [ "$INTERACTIVE" -eq 1 ] && [ -t 0 ]; then
     # --- Interactive mode: prompt user ---
-    log "Interactive setup. Press Enter to auto-generate, or type your own value."
+    log "交互式配置。直接回车使用随机值，或输入自定义值。"
     echo
     suggested_db=$(rand_str 16)
     suggested_jwt=$(rand_str 48)
-    printf "  DB_PASSWORD (16-char random by default): "
+    printf "  DB_PASSWORD（默认 16 位随机）: "
     read -r USER_DB_PASSWORD
     [ -z "$USER_DB_PASSWORD" ] && USER_DB_PASSWORD="$suggested_db"
-    printf "  JWT_SECRET  (48-char random by default): "
+    printf "  JWT_SECRET （默认 48 位随机）: "
     read -r USER_JWT_SECRET
     [ -z "$USER_JWT_SECRET" ] && USER_JWT_SECRET="$suggested_jwt"
     cp .env.example .env
@@ -120,12 +120,12 @@ if [ ! -f .env ]; then
     DB_PASSWORD_GEN="$USER_DB_PASSWORD"
     JWT_SECRET_GEN="$USER_JWT_SECRET"
     GENERATED=1
-    ok ".env created"
+    ok "已生成 .env"
   else
     # --- Auto mode: generate randoms ---
-    log "Generating .env with cryptographically random secrets (/dev/urandom)..."
-    log "  — each deploy produces unique values; no shared defaults."
-    log "  — run 'make deploy-interactive' if you prefer to supply your own."
+    log "自动生成 .env（密码使用 /dev/urandom 随机）..."
+    log "  — 每次部署都使用全新随机值，不存在共享默认密码"
+    log "  — 如需自定义密码：make deploy-interactive"
     DB_PASSWORD_GEN=$(rand_str 16)
     JWT_SECRET_GEN=$(rand_str 48)
     cp .env.example .env
@@ -135,10 +135,10 @@ if [ ! -f .env ]; then
       rm -f .env.bak
     fi
     GENERATED=1
-    ok ".env created with auto-generated credentials"
+    ok "已生成 .env 及随机凭据"
   fi
 else
-  ok ".env exists — using your configured values (not regenerating)"
+  ok ".env 已存在，沿用现有配置（不会重新生成密码）"
 fi
 
 # Source .env
@@ -150,15 +150,15 @@ set +a
 # Step 3: find a free port (starting from UTTERLOG_PORT)
 # ============================================================
 START_PORT="${UTTERLOG_PORT:-9260}"
-log "Checking port $START_PORT availability ..."
+log "检查端口 $START_PORT 是否可用 ..."
 
 if ! NEW_PORT=$(bash scripts/find-free-port.sh "$START_PORT" 50); then
-  err "No free port found in range $START_PORT-$((START_PORT+49))"
+  err "范围 $START_PORT-$((START_PORT+49)) 内没有空闲端口"
   exit 1
 fi
 
 if [ "$NEW_PORT" != "$START_PORT" ]; then
-  warn "Port $START_PORT is busy — using $NEW_PORT instead"
+  warn "端口 $START_PORT 被占用 —— 改用 $NEW_PORT"
   if grep -q "^UTTERLOG_PORT=" .env; then
     sed -i.bak "s|^UTTERLOG_PORT=.*|UTTERLOG_PORT=$NEW_PORT|" .env
   else
@@ -167,7 +167,7 @@ if [ "$NEW_PORT" != "$START_PORT" ]; then
   rm -f .env.bak
   UTTERLOG_PORT="$NEW_PORT"
 else
-  ok "Port $START_PORT is available"
+  ok "端口 $START_PORT 可用"
 fi
 
 # ============================================================
@@ -177,12 +177,12 @@ if [ "$TLS_MODE" -eq 1 ]; then
   if [ -z "${DOMAIN:-}" ]; then
     if [ -t 0 ]; then
       echo
-      log "TLS mode enabled. Caddy will auto-acquire a Let's Encrypt certificate."
-      printf "  Enter your domain (e.g. blog.example.com): "
+      log "已启用 TLS 模式 —— Caddy 会自动申请 Let's Encrypt 证书"
+      printf "  请输入域名（例：blog.example.com）: "
       read -r DOMAIN
     fi
     if [ -z "${DOMAIN:-}" ]; then
-      err "DOMAIN is required in TLS mode. Re-run:"
+      err "TLS 模式必须指定 DOMAIN。重新运行："
       err "  DOMAIN=blog.example.com make deploy-tls"
       exit 1
     fi
@@ -199,7 +199,7 @@ if [ "$TLS_MODE" -eq 1 ]; then
     sed -i.bak "s|^APP_URL=.*|APP_URL=https://$DOMAIN|" .env && rm -f .env.bak
   fi
   export COMPOSE_PROFILES=tls
-  ok "TLS mode: $DOMAIN"
+  ok "TLS 模式：$DOMAIN"
 fi
 
 # ============================================================
@@ -213,45 +213,45 @@ fi
 EXTERNAL_OVERLAY=""
 if [ "${UTTERLOG_DB_MODE:-bundled}" = "external" ] || [ "${UTTERLOG_REDIS_MODE:-bundled}" = "external" ]; then
   EXTERNAL_OVERLAY="-f docker-compose.external-db.yml"
-  log "Using existing host services (UTTERLOG_DB_MODE=$UTTERLOG_DB_MODE, UTTERLOG_REDIS_MODE=$UTTERLOG_REDIS_MODE)"
+  log "复用宿主服务（UTTERLOG_DB_MODE=$UTTERLOG_DB_MODE, UTTERLOG_REDIS_MODE=$UTTERLOG_REDIS_MODE）"
 fi
 
 if [ "$PULL_MODE" -eq 1 ]; then
   # Pull pre-built images from GHCR — skips all local compilation
   COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml $EXTERNAL_OVERLAY"
-  log "Pulling pre-built images from ghcr.io/utterlog ..."
+  log "拉取 ghcr.io/utterlog 预构建镜像 ..."
   $COMPOSE pull
-  log "Starting containers ..."
+  log "启动容器 ..."
   $COMPOSE up -d
 elif [ "$NO_BUILD" -eq 1 ]; then
   COMPOSE="docker compose -f docker-compose.prod.yml $EXTERNAL_OVERLAY"
-  log "Starting containers (no rebuild) ..."
+  log "启动容器（不重新构建）..."
   $COMPOSE up -d
 else
   COMPOSE="docker compose -f docker-compose.prod.yml $EXTERNAL_OVERLAY"
-  log "Building & starting containers locally (first run ~3-5 min, needs 2GB+ RAM) ..."
-  log "  Tip: use 'make deploy-pull' instead to skip local build (pulls from ghcr.io)"
+  log "本地构建并启动容器（首次约 3-5 分钟，需要 2GB+ 内存）..."
+  log "  提示：低配机可改用 'make deploy-pull' 拉预构建镜像，跳过本地编译"
   $COMPOSE up -d --build
 fi
 
 # ============================================================
 # Step 5: wait for api to respond
 # ============================================================
-log "Waiting for API to be healthy (up to 180s) ..."
+log "等待 API 就绪（最长 180 秒）..."
 HEALTHY=0
 for i in $(seq 1 36); do
   if curl -fsS "http://127.0.0.1:$UTTERLOG_PORT/api/v1/install/status" >/dev/null 2>&1; then
     HEALTHY=1
-    ok "API responding after ${i}×5s"
+    ok "API 已响应（用时 ${i}×5 秒）"
     break
   fi
-  printf "   %s... still starting (%ds)%s\r" "$C_DIM" "$((i*5))" "$C_RESET"
+  printf "   %s... 启动中 (%ds)%s\r" "$C_DIM" "$((i*5))" "$C_RESET"
   sleep 5
 done
 echo
 
 if [ "$HEALTHY" -eq 0 ]; then
-  err "API did not respond within 180s. Showing last 40 lines of api logs:"
+  err "API 在 180 秒内未响应。下方是最近 40 行日志："
   $COMPOSE logs api --tail=40
   exit 1
 fi
@@ -263,66 +263,66 @@ if [ "$TLS_MODE" -eq 1 ]; then
   cat <<EOF
 
 ${C_GREEN}${C_BOLD}============================================================${C_RESET}
-${C_GREEN}${C_BOLD}  Utterlog is live at https://$DOMAIN ${C_RESET}
+${C_GREEN}${C_BOLD}  Utterlog 已上线：https://$DOMAIN ${C_RESET}
 ${C_GREEN}${C_BOLD}============================================================${C_RESET}
 
-  ${C_BOLD}Caddy is obtaining Let's Encrypt cert in the background.${C_RESET}
-  First visit may take 5-30 seconds while the cert is issued.
+  ${C_BOLD}Caddy 正在后台申请 Let's Encrypt 证书${C_RESET}
+  首次访问可能需要 5-30 秒等待证书签发
 
-  ${C_BOLD}Check cert status:${C_RESET}
+  ${C_BOLD}查看证书状态：${C_RESET}
     $COMPOSE logs caddy | grep -i "certificate obtained\|error"
 
-  ${C_BOLD}Next:${C_RESET}
-    Open https://$DOMAIN  →  /install wizard creates the admin user
+  ${C_BOLD}下一步：${C_RESET}
+    打开 https://$DOMAIN  →  /install 向导创建管理员账户
 
 EOF
 else
   cat <<EOF
 
 ${C_GREEN}${C_BOLD}============================================================${C_RESET}
-${C_GREEN}${C_BOLD}  Utterlog is ready!${C_RESET}
+${C_GREEN}${C_BOLD}  Utterlog 部署完成${C_RESET}
 ${C_GREEN}${C_BOLD}============================================================${C_RESET}
 
-  ${C_BOLD}Access URL:${C_RESET}
-    http://127.0.0.1:$UTTERLOG_PORT  (loopback only, not public)
+  ${C_BOLD}访问地址：${C_RESET}
+    http://127.0.0.1:$UTTERLOG_PORT  （仅本机环回，公网不可见）
 
-  ${C_BOLD}Point your reverse proxy at 127.0.0.1:$UTTERLOG_PORT${C_RESET}
+  ${C_BOLD}下一步：把反向代理指向 127.0.0.1:$UTTERLOG_PORT${C_RESET}
 
-  ${C_BOLD}Quick setup by tool:${C_RESET}
-    • 1Panel / 宝塔 / AAPanel → see deploy/1panel.md
-    • nginx (your own)        → see deploy/nginx.conf.example
-    • Caddy (your own)        → see deploy/Caddyfile.example
-    • No reverse proxy yet?   → re-run: DOMAIN=your.site make deploy-tls
-                                 (bundled Caddy takes 80/443)
+  ${C_BOLD}各场景配置参考：${C_RESET}
+    • 1Panel / 宝塔 / AAPanel → 见 deploy/1panel.md
+    • 自建 nginx              → 见 deploy/nginx.conf.example
+    • 自建 Caddy              → 见 deploy/Caddyfile.example
+    • 还没有反代？            → 重跑：DOMAIN=你的域名 make deploy-tls
+                                  （启用内置 Caddy 占用 80/443）
 
-  ${C_BOLD}SSH tunnel to test locally (before domain setup):${C_RESET}
+  ${C_BOLD}本地隧道测试（域名还没指过来时）：${C_RESET}
     ssh -L 9260:127.0.0.1:$UTTERLOG_PORT your-vps
-    # then open http://localhost:9260 in your local browser
+    # 然后浏览器打开 http://localhost:9260
 
 EOF
 fi
 
 if [ "$GENERATED" -eq 1 ]; then
   cat <<EOF
-  ${C_YELLOW}${C_BOLD}⚠  Save these credentials (auto-generated, only shown once):${C_RESET}
+  ${C_YELLOW}${C_BOLD}⚠  请妥善保存以下随机生成的凭据（只显示一次）：${C_RESET}
 
     DB_PASSWORD = $DB_PASSWORD
     JWT_SECRET  = $JWT_SECRET
 
-  Both are stored in .env — back up that file somewhere safe.
+  两者都已写入 .env，建议把 .env 备份到安全的地方。
 
 EOF
 fi
 
 cat <<EOF
-  ${C_BOLD}Useful commands:${C_RESET}
-    $COMPOSE logs -f              # tail all logs
-    $COMPOSE logs -f api          # only api logs
-    $COMPOSE ps                   # container status
-    $COMPOSE down                 # stop
-    make deploy                   # redeploy (same as bash scripts/deploy.sh)
+  ${C_BOLD}常用命令：${C_RESET}
+    $COMPOSE logs -f              # 实时查看全部日志
+    $COMPOSE logs -f api          # 只看 api 日志
+    $COMPOSE ps                   # 容器状态
+    $COMPOSE down                 # 停止
+    make deploy                   # 重新部署（等价于 bash scripts/deploy.sh）
 
-  ${C_BOLD}Reverse proxy snippets:${C_RESET} see deploy/ directory
+  ${C_BOLD}反代配置示例：${C_RESET}见 deploy/ 目录
 
 ${C_DIM}============================================================${C_RESET}
 

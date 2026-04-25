@@ -42,7 +42,7 @@ err()  { printf "%s✗%s %s\n" "$C_RED$C_BOLD" "$C_RESET" "$*" >&2; }
 
 cat <<BANNER
 
-${C_BOLD}  Utterlog — one-line installer${C_RESET}
+${C_BOLD}  Utterlog — 一键安装脚本${C_RESET}
   ${C_BOLD}═══════════════════════════════════════${C_RESET}
 
 BANNER
@@ -51,31 +51,31 @@ BANNER
 # Step 1: check for Docker
 # ============================================================
 if ! command -v docker >/dev/null 2>&1; then
-  err "Docker is not installed."
+  err "未检测到 Docker"
   echo
-  echo "  Install Docker first:"
+  echo "  请先安装 Docker："
   echo "    curl -fsSL https://get.docker.com | sh"
-  echo "    sudo usermod -aG docker \$USER   # log out and back in"
+  echo "    sudo usermod -aG docker \$USER   # 装完需要重新登录一次"
   echo
   exit 1
 fi
 if ! docker compose version >/dev/null 2>&1; then
-  err "Docker Compose plugin is not installed."
+  err "未检测到 Docker Compose 插件"
   echo
-  echo "  Install with:"
-  echo "    sudo apt install -y docker-compose-plugin   # Debian/Ubuntu"
-  echo "    sudo yum install -y docker-compose-plugin   # RHEL/CentOS"
+  echo "  安装命令："
+  echo "    sudo apt install -y docker-compose-plugin   # Debian / Ubuntu"
+  echo "    sudo yum install -y docker-compose-plugin   # RHEL / CentOS"
   echo
   exit 1
 fi
-ok "Docker $(docker --version | awk '{print $3}' | tr -d ',')"
+ok "Docker 版本：$(docker --version | awk '{print $3}' | tr -d ',')"
 
 # ============================================================
 # Step 2: check for git (or fall back to tarball)
 # ============================================================
 USE_GIT=1
 if ! command -v git >/dev/null 2>&1; then
-  warn "git not found — will download tarball instead (no auto-update via 'make update')"
+  warn "未检测到 git —— 将通过 tarball 下载源码（不影响安装，但 'make update' 自动升级会失效）"
   USE_GIT=0
 fi
 
@@ -83,25 +83,25 @@ fi
 # Step 3: clone or download
 # ============================================================
 if [ -d "$INSTALL_DIR" ]; then
-  warn "$INSTALL_DIR already exists"
+  warn "目录 $INSTALL_DIR 已存在"
   if [ -d "$INSTALL_DIR/.git" ] && [ "$USE_GIT" -eq 1 ]; then
-    log "Pulling latest code ..."
+    log "拉取最新代码 ..."
     (cd "$INSTALL_DIR" && git pull --ff-only)
   else
-    log "Using existing directory (no update)"
+    log "保留现有目录（不更新代码）"
   fi
 else
   if [ "$USE_GIT" -eq 1 ]; then
-    log "Cloning Utterlog into $INSTALL_DIR ..."
+    log "克隆 Utterlog 到 $INSTALL_DIR ..."
     git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
   else
-    log "Downloading tarball into $INSTALL_DIR ..."
+    log "下载源码 tarball 到 $INSTALL_DIR ..."
     mkdir -p "$INSTALL_DIR"
     curl -fsSL "https://github.com/utterlog/utterlog/archive/refs/heads/main.tar.gz" \
       | tar -xz --strip-components=1 -C "$INSTALL_DIR"
   fi
 fi
-ok "Code ready at $INSTALL_DIR"
+ok "代码就绪：$INSTALL_DIR"
 
 cd "$INSTALL_DIR"
 
@@ -125,47 +125,47 @@ if [ -z "$REDIS_MODE" ] && [ -f .env ] && grep -q '^UTTERLOG_REDIS_MODE=' .env; 
 fi
 
 if [ -z "$DB_MODE" ] && [ -t 0 ]; then
-  log "Scanning for existing PostgreSQL + Redis on this host ..."
+  log "扫描本机已有的 PostgreSQL / Redis 服务 ..."
   eval "$(bash scripts/detect-services.sh)"
 
   echo
   if [ "$PG_DETECTED" = 1 ]; then
     if [ -n "$PG_CONTAINER" ]; then
-      ok "PostgreSQL detected: $PG_CONTAINER ($PG_IMAGE) on 127.0.0.1:$PG_PORT"
+      ok "检测到 PostgreSQL：$PG_CONTAINER ($PG_IMAGE)，监听 127.0.0.1:$PG_PORT"
     else
-      ok "PostgreSQL detected on 127.0.0.1:$PG_PORT (no docker container — system-installed?)"
+      ok "检测到 PostgreSQL 在 127.0.0.1:$PG_PORT（非 Docker 容器，应该是宿主机原生安装）"
     fi
   else
-    printf "  ${C_DIM}—${C_RESET} no PostgreSQL on 127.0.0.1:$PG_PORT\n"
+    printf "  ${C_DIM}—${C_RESET} 127.0.0.1:$PG_PORT 没有 PostgreSQL\n"
   fi
 
   if [ "$REDIS_DETECTED" = 1 ]; then
     if [ -n "$REDIS_CONTAINER" ]; then
-      ok "Redis detected: $REDIS_CONTAINER ($REDIS_IMAGE) on 127.0.0.1:$REDIS_PORT"
+      ok "检测到 Redis：$REDIS_CONTAINER ($REDIS_IMAGE)，监听 127.0.0.1:$REDIS_PORT"
     else
-      ok "Redis detected on 127.0.0.1:$REDIS_PORT"
+      ok "检测到 Redis 在 127.0.0.1:$REDIS_PORT"
     fi
   else
-    printf "  ${C_DIM}—${C_RESET} no Redis on 127.0.0.1:$REDIS_PORT\n"
+    printf "  ${C_DIM}—${C_RESET} 127.0.0.1:$REDIS_PORT 没有 Redis\n"
   fi
 
   echo
   if [ "$PG_DETECTED" = 1 ] || [ "$REDIS_DETECTED" = 1 ]; then
     cat <<MENU
-${C_BOLD}Choose a deployment mode:${C_RESET}
+${C_BOLD}请选择部署模式：${C_RESET}
 
-  ${C_BOLD}1)${C_RESET} ${C_GREEN}Bundled${C_RESET} (recommended) — Utterlog brings its own postgres + redis
-       containers. Fully isolated from other apps on this host. ~150MB
-       memory footprint.
+  ${C_BOLD}1)${C_RESET} ${C_GREEN}独立容器（默认推荐）${C_RESET} — Utterlog 自带 postgres + redis，
+       完全隔离不影响其他应用，约占 ~150MB 内存。
 
-  ${C_BOLD}2)${C_RESET} ${C_YELLOW}Reuse host services${C_RESET} — connect to the postgres + redis above
-       (saves ~70MB). Auto-installs pgvector if the host postgres
-       doesn't have it yet. You'll be asked for the postgres
-       superuser password so we can CREATE EXTENSION + a dedicated
-       \`utterlog\` database with a random password.
+  ${C_BOLD}2)${C_RESET} ${C_YELLOW}复用宿主服务${C_RESET} — 直接连接上面已有的 postgres + redis
+       （省 ~70MB 内存）。如果 postgres 没装 pgvector 扩展会自动
+       帮你装上（apk add postgresql-pgvector / apt install
+       postgresql-XX-pgvector）。需要你提供 postgres 超级用户的
+       密码，用来 CREATE EXTENSION 和创建 utterlog 专用数据库
+       （会随机生成密码隔离权限）。
 
 MENU
-    printf "  Choice [1]: "
+    printf "  请选择 [1]: "
     read -r CHOICE
     CHOICE="${CHOICE:-1}"
     if [ "$CHOICE" = "2" ]; then
@@ -176,7 +176,7 @@ MENU
       REDIS_MODE="bundled"
     fi
   else
-    log "No host services found — using bundled containers (the only option)"
+    log "本机没有现成的 postgres / redis —— 使用独立容器模式（唯一可选）"
     DB_MODE="bundled"
     REDIS_MODE="bundled"
   fi
@@ -196,13 +196,13 @@ if [ "$DB_MODE" = "external" ]; then
   fi
 
   if [ "${PG_DETECTED:-0}" != "1" ]; then
-    err "UTTERLOG_DB_MODE=external requires a reachable postgres on 127.0.0.1:5432"
-    err "Start one first, or run with UTTERLOG_DB_MODE=bundled."
+    err "UTTERLOG_DB_MODE=external 需要 127.0.0.1:5432 上有可访问的 PostgreSQL"
+    err "请先启动 postgres，或者改用 UTTERLOG_DB_MODE=bundled。"
     exit 1
   fi
 
   echo
-  log "Provisioning utterlog database in the existing postgres ..."
+  log "在已有 PostgreSQL 中为 utterlog 准备数据库 ..."
 
   # Random per-install creds for the dedicated `utterlog` role —
   # keeps utterlog's data isolated from anything else sharing this
@@ -216,10 +216,10 @@ if [ "$DB_MODE" = "external" ]; then
   }
   UTTERLOG_DB_PASSWORD=$(rand_pw)
 
-  printf "  Postgres superuser [postgres]: "
+  printf "  PostgreSQL 超级用户名 [postgres]: "
   read -r PG_SUPER
   PG_SUPER="${PG_SUPER:-postgres}"
-  printf "  Postgres superuser password (input hidden): "
+  printf "  PostgreSQL 超级用户密码（输入不显示）: "
   stty -echo
   read -r PG_SUPERPASS
   stty echo
@@ -234,8 +234,8 @@ if [ "$DB_MODE" = "external" ]; then
         --superuser "$PG_SUPER" --superpass "$PG_SUPERPASS" \
         --db utterlog --user utterlog --pass "$UTTERLOG_DB_PASSWORD" \
         ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}; then
-    err "pgvector setup failed — falling back is up to you."
-    err "Re-run with UTTERLOG_DB_MODE=bundled to use the isolated containers instead."
+    err "pgvector 配置失败"
+    err "可以重新运行并选择 UTTERLOG_DB_MODE=bundled 改用独立容器模式"
     exit 1
   fi
 fi
@@ -278,7 +278,7 @@ if [ "$REDIS_MODE" = "external" ]; then
   upsert_env "REDIS_PORT" "${REDIS_PORT:-6379}"
 fi
 
-ok "Mode: db=$DB_MODE, redis=$REDIS_MODE"
+ok "已选模式：数据库=$DB_MODE，Redis=$REDIS_MODE"
 
 # ============================================================
 # Step 6: run the deploy script
@@ -286,10 +286,10 @@ ok "Mode: db=$DB_MODE, redis=$REDIS_MODE"
 DEPLOY_ARGS=()
 if [ -n "${DOMAIN:-}" ]; then
   DEPLOY_ARGS+=(--tls)
-  log "DOMAIN=$DOMAIN detected → enabling TLS mode (bundled Caddy)"
+  log "检测到 DOMAIN=$DOMAIN → 启用 TLS 模式（自动配置 Caddy + Let's Encrypt）"
 fi
 
-log "Running scripts/deploy.sh ..."
+log "调用 scripts/deploy.sh ..."
 echo
 # ${ARR[@]+"${ARR[@]}"} expands safely under set -u even when empty.
 bash scripts/deploy.sh ${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"}

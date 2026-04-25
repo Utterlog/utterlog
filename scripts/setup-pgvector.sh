@@ -82,7 +82,7 @@ psql_exec() {
     PGPASSWORD="$PG_SUPERPASS" psql -h "$PG_HOST" -p "$PG_PORT" \
       -U "$PG_SUPER" -d "$db" -tAc "$sql"
   else
-    err "Neither --container nor host-side psql available — install postgresql-client or pass --container"
+    err "未指定 --container，宿主机也没有 psql 命令 —— 请安装 postgresql-client 或传入 --container"
     exit 2
   fi
 }
@@ -91,12 +91,12 @@ psql_exec() {
 # Step 1: connectivity check
 # ============================================================
 if ! psql_exec 'SELECT 1' postgres >/dev/null 2>&1; then
-  err "Can't connect to PostgreSQL at $PG_HOST:$PG_PORT as $PG_SUPER"
-  err "  - Is the password correct?"
-  err "  - Does the user have superuser privileges? (needed for CREATE EXTENSION)"
+  err "无法连接 PostgreSQL ($PG_HOST:$PG_PORT，用户 $PG_SUPER)"
+  err "  - 密码是否正确？"
+  err "  - 该用户是否有超级用户权限？(CREATE EXTENSION 需要)"
   exit 2
 fi
-ok "Connected to PostgreSQL at $PG_HOST:$PG_PORT"
+ok "已连接 PostgreSQL ($PG_HOST:$PG_PORT)"
 
 # ============================================================
 # Step 2: check + install pgvector binary
@@ -104,12 +104,12 @@ ok "Connected to PostgreSQL at $PG_HOST:$PG_PORT"
 HAS_VECTOR=$(psql_exec "SELECT 1 FROM pg_available_extensions WHERE name='vector'" postgres || true)
 
 if [ "$HAS_VECTOR" != "1" ]; then
-  warn "pgvector binary not present in this PostgreSQL — attempting auto-install"
+  warn "PostgreSQL 中没有 pgvector 扩展 —— 尝试自动安装"
 
   if [ -z "$CONTAINER" ]; then
-    err "No --container given; cannot auto-install. To install manually:"
-    err "  Debian/Ubuntu host: sudo apt install postgresql-\$(pg_config --version | grep -oE '[0-9]+' | head -1)-pgvector"
-    err "  Then re-run this script."
+    err "未提供 --container，无法自动安装。手动安装步骤："
+    err "  Debian/Ubuntu 宿主机： sudo apt install postgresql-\$(pg_config --version | grep -oE '[0-9]+' | head -1)-pgvector"
+    err "  装完后重新运行本脚本"
     exit 3
   fi
 
@@ -124,36 +124,35 @@ if [ "$HAS_VECTOR" != "1" ]; then
       # We only need the runtime package. Bitcode is for JIT-compiled
       # queries (rarely needed for blog-scale workloads) and -dev is
       # headers for compiling other extensions against pgvector.
-      printf "  installing via 'apk add postgresql-pgvector' inside %s ... " "$CONTAINER"
+      printf "  在容器 %s 内执行 'apk add postgresql-pgvector' ... " "$CONTAINER"
       if docker exec "$CONTAINER" sh -c 'apk update >/dev/null 2>&1 && apk add --no-cache postgresql-pgvector' >/dev/null 2>&1; then
-        ok "installed"
+        ok "已安装"
       else
-        err "apk add postgresql-pgvector failed."
-        err "  pgvector may not be in this Alpine version's repos. Options:"
-        err "    1. Switch the postgres image to pgvector/pgvector:pg\$(major) — same data dir, just adds the extension binary."
-        err "    2. Run utterlog with bundled postgres (re-run install.sh and pick option 1)."
+        err "apk add postgresql-pgvector 失败"
+        err "  当前 Alpine 仓库可能没有这个包。备选方案："
+        err "    1. 把 postgres 镜像换成 pgvector/pgvector:pg\$(主版本号) —— 数据目录兼容，只多了 vector 扩展"
+        err "    2. 改用独立容器模式（重新运行 install.sh 选择第 1 项）"
         exit 3
       fi
       ;;
     debian)
       # Need the major version to pick the right apt package.
       PG_MAJOR=$(psql_exec "SHOW server_version_num" postgres | awk '{ printf "%d", $1/10000 }')
-      printf "  installing via 'apt install postgresql-%s-pgvector' inside %s ... " "$PG_MAJOR" "$CONTAINER"
+      printf "  在容器 %s 内执行 'apt install postgresql-%s-pgvector' ... " "$CONTAINER" "$PG_MAJOR"
       if docker exec "$CONTAINER" bash -c "apt-get update >/dev/null && apt-get install -y postgresql-${PG_MAJOR}-pgvector >/dev/null"; then
-        ok "installed"
+        ok "已安装"
       else
-        err "apt install postgresql-${PG_MAJOR}-pgvector failed."
-        err "  This package isn't in the default Debian repos for older PG versions."
-        err "  Options:"
-        err "    1. Switch the postgres image to pgvector/pgvector:pg${PG_MAJOR} — drop-in replacement."
-        err "    2. Run utterlog with bundled postgres (re-run install.sh and pick option 1)."
+        err "apt install postgresql-${PG_MAJOR}-pgvector 失败"
+        err "  默认 Debian 仓库对老版本 PG 可能没有这个包。备选方案："
+        err "    1. 把 postgres 镜像换成 pgvector/pgvector:pg${PG_MAJOR} —— 完全兼容直接替换"
+        err "    2. 改用独立容器模式（重新运行 install.sh 选择第 1 项）"
         exit 3
       fi
       ;;
     *)
-      err "Unknown postgres flavor — can't auto-install pgvector."
-      err "  To install manually, exec into the postgres container/host and run the right package install."
-      err "  Or switch the image to pgvector/pgvector:pg\$major and re-run this script."
+      err "未知的 PostgreSQL 镜像类型 —— 无法自动安装 pgvector"
+      err "  请进入 postgres 容器/宿主机手动安装对应的包"
+      err "  或者把镜像换成 pgvector/pgvector:pg\$(主版本号) 后重新运行本脚本"
       exit 3
       ;;
   esac
@@ -163,11 +162,11 @@ if [ "$HAS_VECTOR" != "1" ]; then
   # immediate. If not, surface a clear error.
   HAS_VECTOR=$(psql_exec "SELECT 1 FROM pg_available_extensions WHERE name='vector'" postgres || true)
   if [ "$HAS_VECTOR" != "1" ]; then
-    err "pgvector still not detected after install. Try restarting the postgres container."
+    err "安装完仍未检测到 pgvector，请尝试重启 postgres 容器后再运行"
     exit 3
   fi
 else
-  ok "pgvector binary already available"
+  ok "pgvector 扩展已就绪"
 fi
 
 # ============================================================
@@ -175,42 +174,42 @@ fi
 # ============================================================
 HAS_ROLE=$(psql_exec "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" postgres || true)
 if [ "$HAS_ROLE" = "1" ]; then
-  ok "Role '$DB_USER' already exists — updating password"
+  ok "用户 '$DB_USER' 已存在 —— 更新密码"
   # Single-quote-escape the password for safe SQL embedding.
   esc=$(printf '%s' "$DB_PASS" | sed "s/'/''/g")
   psql_exec "ALTER ROLE \"${DB_USER}\" WITH LOGIN PASSWORD '${esc}'" postgres >/dev/null
 else
   esc=$(printf '%s' "$DB_PASS" | sed "s/'/''/g")
   psql_exec "CREATE ROLE \"${DB_USER}\" WITH LOGIN PASSWORD '${esc}'" postgres >/dev/null
-  ok "Role '$DB_USER' created"
+  ok "已创建用户 '$DB_USER'"
 fi
 
 HAS_DB=$(psql_exec "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" postgres || true)
 if [ "$HAS_DB" = "1" ]; then
-  ok "Database '$DB_NAME' already exists"
+  ok "数据库 '$DB_NAME' 已存在"
 else
   psql_exec "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\"" postgres >/dev/null
-  ok "Database '$DB_NAME' created (owner: $DB_USER)"
+  ok "已创建数据库 '$DB_NAME' (Owner: $DB_USER)"
 fi
 
 # ============================================================
 # Step 4: enable extension inside the utterlog DB
 # ============================================================
 if ! psql_exec "CREATE EXTENSION IF NOT EXISTS vector" "$DB_NAME" >/dev/null; then
-  err "CREATE EXTENSION vector failed in $DB_NAME — see error above"
+  err "在数据库 $DB_NAME 中执行 CREATE EXTENSION vector 失败 —— 详见上方错误"
   exit 4
 fi
-ok "Extension 'vector' active in database '$DB_NAME'"
+ok "数据库 '$DB_NAME' 已启用 vector 扩展"
 
 cat <<EOF
 
-${C_GREEN}${C_BOLD}pgvector setup complete.${C_RESET}
-${C_DIM}Use these connection settings in utterlog's .env:${C_RESET}
+${C_GREEN}${C_BOLD}pgvector 配置完成${C_RESET}
+${C_DIM}请在 utterlog 的 .env 中使用以下连接配置：${C_RESET}
 
   DB_HOST=$PG_HOST
   DB_PORT=$PG_PORT
   DB_NAME=$DB_NAME
   DB_USER=$DB_USER
-  DB_PASSWORD=<the password you provided>
+  DB_PASSWORD=<刚才提供的密码>
 
 EOF
