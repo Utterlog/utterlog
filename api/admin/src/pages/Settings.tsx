@@ -65,8 +65,11 @@ export default function SettingsPage() {
         site_title: s.site_title || '',
         site_subtitle: s.site_subtitle || '',
         admin_email: s.admin_email || '',
-        site_description: s.site_description || '',
-        site_keywords: s.site_keywords || '',
+        // site_description / site_keywords moved to SEO tab as
+        // seo_default_description / seo_default_keywords. The DB
+        // columns are still read by the layout.tsx metadata fallback
+        // for back-compat with sites that haven't migrated yet, but
+        // the General tab no longer exposes editing.
         site_url: s.site_url || '',
         site_logo: s.site_logo || '',
         site_logo_dark: s.site_logo_dark || '',
@@ -196,7 +199,7 @@ export default function SettingsPage() {
     // vanishes (the save POST just doesn't include that key, so the DB
     // row stays unchanged and on reload the field reverts).
     general: [
-      'site_title', 'site_subtitle', 'site_url', 'site_description', 'site_keywords',
+      'site_title', 'site_subtitle', 'site_url',
       'admin_email', 'site_since',
       'site_logo', 'site_logo_dark', 'site_favicon',
       'beian_gongan', 'beian_icp',
@@ -383,9 +386,7 @@ export default function SettingsPage() {
                 <FormRowInputC label="副标题" register={register('site_subtitle')} placeholder="一句话 Slogan" />
                 <FormRowInputC label="站点网址" register={register('site_url')} placeholder="https://yourdomain.com" />
                 <FormRowInputC label="管理员邮箱" type="email" register={register('admin_email')} placeholder="admin@yourdomain.com" hint="接收系统升级、安全通知等消息" />
-                <FormRowTextareaC label="站点描述" rows={2} register={register('site_description')} placeholder="一句话描述你的站点" />
-                <FormRowInputC label="站点关键词" register={register('site_keywords')} placeholder="博客,技术,生活" />
-                <FormRowInputC label="建站时间" type="date" register={register('site_since')} hint="留空则从第一篇文章算起" last />
+                <FormRowInputC label="建站时间" type="date" register={register('site_since')} hint="留空则从第一篇文章算起。站点描述和关键词请到 SEO 与 AI tab 设置。" last />
               </FormSectionC>
 
               <FormSectionC title="Logo & Favicon" icon="fa-regular fa-image" footerHint="上传后自动保存为固定地址（logo.格式 / dark-logo.格式 / favicon.格式），不压缩不转换。">

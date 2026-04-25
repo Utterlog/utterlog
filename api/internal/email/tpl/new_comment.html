@@ -12,11 +12,11 @@
   {{.Content}}
 </div>
 
-<a href="{{.PostURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#fff;background:#0052d9;text-decoration:none;margin:14px 6px 0 0;">查看文章</a>
-<a href="{{.ManageCommentURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#0052d9;background:#fff;border:1px solid #0052d9;text-decoration:none;margin:14px 6px 0 0;">管理评论</a>
+<a ses:no-track href="{{.PostURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#fff;background:#0052d9;text-decoration:none;margin:14px 6px 0 0;">查看文章</a>
+<a ses:no-track href="{{.ManageCommentURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#0052d9;background:#fff;border:1px solid #0052d9;text-decoration:none;margin:14px 6px 0 0;">管理评论</a>
 
 <p style="font-size:12px;color:#8ea0b4;margin:20px 0 0;line-height:1.7;">
-  这封邮件由 <b>{{.Site.Title}}</b> 自动发送。关闭通知请到 <a href="{{.Site.AdminURL}}/settings" style="color:#0052d9;text-decoration:none;">后台 → 评论设置</a>。
+  这封邮件由 <b>{{.Site.Title}}</b> 自动发送。关闭通知请到 <a ses:no-track href="{{.Site.AdminURL}}/settings" style="color:#0052d9;text-decoration:none;">后台 → 评论设置</a>。
 </p>
 
 {{template "_footer" .}}

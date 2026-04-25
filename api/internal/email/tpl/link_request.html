@@ -9,7 +9,7 @@
 </td>
 <td valign="middle" style="padding-left:14px;">
 <div style="font-size:14px;font-weight:600;color:#0d1a2d;">{{.RequesterName}}</div>
-<div style="font-size:12px;color:#5a6b7f;margin-top:2px;"><a href="{{.RequesterURL}}" style="color:#0052d9;text-decoration:none;">{{.RequesterURL}}</a></div>
+<div style="font-size:12px;color:#5a6b7f;margin-top:2px;"><a ses:no-track href="{{.RequesterURL}}" style="color:#0052d9;text-decoration:none;">{{.RequesterURL}}</a></div>
 {{if .Email}}<div style="font-size:12px;color:#8ea0b4;margin-top:2px;">{{.Email}}</div>{{end}}
 </td>
 </tr>
@@ -17,12 +17,12 @@
 
 <div style="font-size:13px;line-height:1.9;color:#5a6b7f;">
   {{if .Description}}<div><b style="display:inline-block;min-width:80px;color:#0d1a2d;font-weight:500;">站点描述</b>{{.Description}}</div>{{end}}
-  {{if .RSSURL}}<div><b style="display:inline-block;min-width:80px;color:#0d1a2d;font-weight:500;">RSS</b><a href="{{.RSSURL}}" style="color:#0052d9;text-decoration:none;">{{.RSSURL}}</a></div>{{end}}
+  {{if .RSSURL}}<div><b style="display:inline-block;min-width:80px;color:#0d1a2d;font-weight:500;">RSS</b><a ses:no-track href="{{.RSSURL}}" style="color:#0052d9;text-decoration:none;">{{.RSSURL}}</a></div>{{end}}
   {{if .UtterlogID}}<div><b style="display:inline-block;min-width:80px;color:#0d1a2d;font-weight:500;">Utterlog ID</b>{{.UtterlogID}}（已认证 ✓）</div>{{end}}
 </div>
 
-{{if .ApproveURL}}<a href="{{.ApproveURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#fff;background:#0052d9;text-decoration:none;margin:14px 6px 0 0;">批准申请</a>{{end}}
-{{if .RejectURL}}<a href="{{.RejectURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#0052d9;background:#fff;border:1px solid #0052d9;text-decoration:none;margin:14px 6px 0 0;">拒绝</a>{{end}}
+{{if .ApproveURL}}<a ses:no-track href="{{.ApproveURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#fff;background:#0052d9;text-decoration:none;margin:14px 6px 0 0;">批准申请</a>{{end}}
+{{if .RejectURL}}<a ses:no-track href="{{.RejectURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#0052d9;background:#fff;border:1px solid #0052d9;text-decoration:none;margin:14px 6px 0 0;">拒绝</a>{{end}}
 
 <p style="font-size:12px;color:#8ea0b4;margin:20px 0 0;line-height:1.7;">
   批准后对方会收到确认邮件，并出现在你的友链页面。

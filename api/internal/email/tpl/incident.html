@@ -20,11 +20,11 @@
   {{if .UserImpact}}<div><b style="display:inline-block;min-width:80px;color:#0d1a2d;font-weight:500;">用户影响</b>{{.UserImpact}}</div>{{end}}
 </div>
 
-{{if .LogsURL}}<a href="{{.LogsURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#fff;background:#dc2626;text-decoration:none;margin:14px 6px 0 0;">立即查看日志</a>{{end}}
-{{if .StatusURL}}<a href="{{.StatusURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#0052d9;background:#fff;border:1px solid #0052d9;text-decoration:none;margin:14px 6px 0 0;">查看系统状态</a>{{end}}
+{{if .LogsURL}}<a ses:no-track href="{{.LogsURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#fff;background:#dc2626;text-decoration:none;margin:14px 6px 0 0;">立即查看日志</a>{{end}}
+{{if .StatusURL}}<a ses:no-track href="{{.StatusURL}}" style="display:inline-block;padding:10px 26px;font-size:13px;font-weight:500;color:#0052d9;background:#fff;border:1px solid #0052d9;text-decoration:none;margin:14px 6px 0 0;">查看系统状态</a>{{end}}
 
 <p style="font-size:12px;color:#8ea0b4;margin:20px 0 0;line-height:1.7;">
-  此警报由健康检查自动触发。配置警报阈值请到 <a href="{{.Site.AdminURL}}/security" style="color:#0052d9;text-decoration:none;">后台 → 安全设置</a>。
+  此警报由健康检查自动触发。配置警报阈值请到 <a ses:no-track href="{{.Site.AdminURL}}/security" style="color:#0052d9;text-decoration:none;">后台 → 安全设置</a>。
 </p>
 
 {{template "_footer" .}}
