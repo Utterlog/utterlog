@@ -16,8 +16,9 @@ const defaultNavItems = [
 export default function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { menus } = useThemeContext();
+  const { menus, site } = useThemeContext();
   const navItems = menus.header?.length ? menus.header : defaultNavItems;
+  const siteName = site.title || 'Utterlog';
 
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href);
 
@@ -31,11 +32,11 @@ export default function Header() {
         height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         {/* Logo */}
-        <Link href="/" style={{
-          textDecoration: 'none', fontSize: '20px', fontWeight: 700,
+        <Link href="/" className="site-title" style={{
+          textDecoration: 'none', fontSize: '22px', fontWeight: 700,
           color: '#202020', letterSpacing: '-0.02em',
         }}>
-          Utterlog
+          {siteName}
         </Link>
 
         {/* Desktop nav */}

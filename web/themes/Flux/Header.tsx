@@ -46,8 +46,8 @@ export default function Header() {
             </svg>
           </div>
           <span
-            className="flux-brand-text"
-            style={{ fontSize: 16, fontWeight: 500, color: '#011E0F', letterSpacing: 0 }}
+            className="flux-brand-text site-title"
+            style={{ fontSize: 18, fontWeight: 500, color: '#011E0F', letterSpacing: 0 }}
           >
             {siteTitle}
           </span>

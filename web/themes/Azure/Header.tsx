@@ -57,7 +57,7 @@ export default function Header() {
               <path d="M17.008 17.29H11.44a5.57 5.57 0 0 1-5.562-5.567A5.57 5.57 0 0 1 11.44 6.16a5.57 5.57 0 0 1 5.567 5.563Z" fill="white" />
             </svg>
           )}
-          <span style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.02em' }}>{siteName}</span>
+          <span className="site-title" style={{ fontSize: '20px', fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.02em' }}>{siteName}</span>
         </Link>
 
         {/* Center Nav */}

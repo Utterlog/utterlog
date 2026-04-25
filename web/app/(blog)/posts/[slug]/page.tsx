@@ -12,10 +12,29 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   try {
     const response = await getPostBySlug(slug);
     const post = response.data;
+    const title = post.seo?.title || post.title;
+    const description = post.seo?.description || post.excerpt || '';
+    const image = post.cover_url || undefined;
     return {
-      title: post.seo?.title || post.title,
-      description: post.seo?.description || post.excerpt || '',
+      title,
+      description,
       keywords: post.seo?.keywords || '',
+      // Per-post overrides for OG / Twitter cards. The root layout
+      // already set sensible site-wide defaults (description /
+      // og:image / twitter card style); here we override with the
+      // article-specific values when present, falling back to the
+      // root metadata otherwise.
+      openGraph: {
+        title,
+        description,
+        type: 'article',
+        ...(image ? { images: [{ url: image }] } : {}),
+      },
+      twitter: {
+        title,
+        description,
+        ...(image ? { images: [image] } : {}),
+      },
     };
   } catch {
     return { title: '文章未找到' };

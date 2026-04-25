@@ -16,7 +16,7 @@ const subTitleRow = { display: 'flex', justifyContent: 'space-between', alignIte
 
 // Tab IDs recognized on #hash so deep links like /settings#update land
 // directly on the right pane. Keep in sync with `tabs` below.
-const VALID_TABS = new Set(['general', 'email', 'telegram', 'comment', 'media', 'image', 'update']);
+const VALID_TABS = new Set(['general', 'seo', 'email', 'telegram', 'comment', 'media', 'image', 'update']);
 
 function initialTabFromHash(): string {
   if (typeof window === 'undefined') return 'general';
@@ -79,6 +79,15 @@ export default function SettingsPage() {
         slot_sidebar_top: s.slot_sidebar_top || '',
         slot_sidebar_bottom: s.slot_sidebar_bottom || '',
         site_since: s.site_since || '',
+        // SEO + AI
+        ai_crawl_allowed: s.ai_crawl_allowed ?? true,
+        llms_txt_enabled: s.llms_txt_enabled ?? true,
+        llms_full_enabled: s.llms_full_enabled ?? false,
+        seo_default_description: s.seo_default_description || '',
+        seo_default_keywords: s.seo_default_keywords || '',
+        seo_default_image: s.seo_default_image || '',
+        seo_twitter_handle: s.seo_twitter_handle || '',
+        seo_twitter_card: s.seo_twitter_card || 'summary_large_image',
         // 邮件
         email_provider: s.email_provider || 'smtp',
         email_from: s.email_from || '',
@@ -125,7 +134,13 @@ export default function SettingsPage() {
         image_strip_exif: s.image_strip_exif ?? true,
         // 图片处理
         random_image_api: s.random_image_api || '',
-        random_image_enabled: s.random_image_enabled ?? false,
+        // Default true so saving the General tab doesn't silently
+        // write `false` for users who never visited 图片处理. The
+        // helper randomCoverUrl() reads === 'false' as the explicit
+        // off signal, so undefined / unset / true all keep showing
+        // covers; only an admin actively flipping the toggle off
+        // disables them.
+        random_image_enabled: s.random_image_enabled ?? true,
         tinypng_api_key: s.tinypng_api_key || '',
         tinypng_enabled: s.tinypng_enabled ?? false,
         image_lazy_load: s.image_lazy_load ?? true,
@@ -186,6 +201,11 @@ export default function SettingsPage() {
       'site_logo', 'site_logo_dark', 'site_favicon',
       'beian_gongan', 'beian_icp',
       'custom_head_code',
+    ],
+    seo: [
+      'ai_crawl_allowed', 'llms_txt_enabled', 'llms_full_enabled',
+      'seo_default_description', 'seo_default_keywords', 'seo_default_image',
+      'seo_twitter_handle', 'seo_twitter_card',
     ],
     email: ['email_provider', 'email_from', 'email_from_name', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_encryption', 'resend_api_key', 'sendflare_api_key'],
     telegram: ['telegram_bot_token', 'telegram_chat_id', 'telegram_webhook_secret', 'tg_notify_comment', 'tg_notify_follow', 'tg_notify_publish', 'tg_daily_report', 'tg_comment_approve', 'tg_comment_reply', 'tg_publish_moment', 'tg_upload_media'],
@@ -305,6 +325,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'general', label: '常规设置', icon: 'fa-regular fa-globe' },
+    { id: 'seo', label: 'SEO 与 AI', icon: 'fa-regular fa-magnifying-glass' },
     { id: 'email', label: '邮件设置', icon: 'fa-regular fa-envelope' },
     { id: 'telegram', label: 'Telegram', icon: 'fa-brands fa-telegram' },
     { id: 'comment', label: '评论设置', icon: 'fa-regular fa-comments' },
@@ -435,6 +456,80 @@ export default function SettingsPage() {
                   register={register('custom_head_code')}
                   placeholder={'<!-- Google Analytics / 百度统计 / Clarity 等 -->\n<script async src="https://..."></script>'}
                   hint="支持任意 <script> / <meta> / <link> 标签。保存后立即生效。"
+                  last
+                />
+              </FormSectionC>
+            </>
+          )}
+
+          {/* ==================== SEO 与 AI ==================== */}
+          {activeTab === 'seo' && (
+            <>
+              <FormSectionC
+                title="AI 抓取策略"
+                icon="fa-regular fa-robot"
+                footerHint="生成的 /robots.txt 会按这些选项设置 GPTBot / ClaudeBot / CCBot / PerplexityBot / Google-Extended 的 Allow / Disallow。"
+              >
+                <FormRowToggleC
+                  label="允许 AI 爬虫读取站点"
+                  hint="关闭后 robots.txt 会拒绝所有 AI 训练爬虫；普通搜索引擎不受影响。"
+                  register={register('ai_crawl_allowed')}
+                />
+                <FormRowToggleC
+                  label="生成 /llms.txt 站点索引"
+                  hint="LLM 友好的 markdown 索引（标题 + 描述 + 文章列表），是 llmstxt.org 提议的新规范。"
+                  register={register('llms_txt_enabled')}
+                />
+                <FormRowToggleC
+                  label="生成 /llms-full.txt 全文版"
+                  hint="包含每篇文章 markdown 全文，体积更大；建议同时开启 ai_crawl_allowed 才有意义。"
+                  register={register('llms_full_enabled')}
+                  last
+                />
+              </FormSectionC>
+
+              <FormSectionC
+                title="默认 SEO 元信息"
+                icon="fa-regular fa-tag"
+                footerHint="单篇文章未自定时使用这些值；文章自带的 cover_url / excerpt 会优先生效。"
+              >
+                <FormRowTextareaC
+                  label="默认描述"
+                  rows={2}
+                  register={register('seo_default_description')}
+                  placeholder="一句话描述站点 — 用作 meta description / og:description 兜底"
+                />
+                <FormRowInputC
+                  label="默认关键词"
+                  register={register('seo_default_keywords')}
+                  placeholder="博客,技术,生活"
+                />
+                <FormRowInputC
+                  label="默认分享图 URL"
+                  register={register('seo_default_image')}
+                  placeholder="https://yourdomain.com/og-image.jpg"
+                  hint="建议 1200×630。X / Facebook / 微信卡片图兜底。"
+                  last
+                />
+              </FormSectionC>
+
+              <FormSectionC
+                title="X (Twitter) 卡片"
+                icon="fa-brands fa-x-twitter"
+              >
+                <FormRowInputC
+                  label="X 用户名"
+                  register={register('seo_twitter_handle')}
+                  placeholder="@yourhandle"
+                  hint="带 @ 前缀；用于 twitter:site 标签。"
+                />
+                <FormRowSelectC
+                  label="卡片样式"
+                  register={register('seo_twitter_card')}
+                  options={[
+                    { value: 'summary_large_image', label: '大图卡片 — summary_large_image (推荐)' },
+                    { value: 'summary', label: '小图卡片 — summary' },
+                  ]}
                   last
                 />
               </FormSectionC>

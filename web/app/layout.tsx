@@ -3,14 +3,26 @@ import { Providers } from './providers';
 
 const API_BASE = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || '';
 
-// Resolves <title>, description, and favicon from site options at runtime.
-// During `next build` (docker image build) there's no API running and
-// INTERNAL_API_URL is blank — we skip the fetch entirely so prerender
-// doesn't hang. At runtime ISR takes over and refreshes these every 60s.
+// Resolves <title>, description, favicon, and full OG / Twitter card
+// metadata from site options at runtime. During `next build` (docker
+// image build) there's no API running and INTERNAL_API_URL is blank —
+// we skip the fetch entirely so prerender doesn't hang. At runtime
+// ISR takes over and refreshes these every 60s.
+//
+// SEO option fallback chain (admin Settings → SEO 与 AI):
+//   description: seo_default_description → site_description → default
+//   keywords:    seo_default_keywords    → site_keywords
+//   og:image:    seo_default_image
+//   twitter:     seo_twitter_card type + seo_twitter_handle
 export async function generateMetadata() {
   let favicon = '/favicon.ico';
   let title = 'Utterlog!';
   let description = '一个简洁优雅的博客';
+  let keywords: string[] | undefined;
+  let siteUrl = '';
+  let ogImage = '';
+  let twitterHandle = '';
+  let twitterCard: 'summary' | 'summary_large_image' = 'summary_large_image';
   if (API_BASE) {
     try {
       const ac = new AbortController();
@@ -22,14 +34,41 @@ export async function generateMetadata() {
         const opts = json.data || json || {};
         if (opts.site_favicon) favicon = opts.site_favicon;
         if (opts.site_title) title = opts.site_title;
-        if (opts.site_description) description = opts.site_description;
+        // Description: SEO override beats site_description.
+        const desc = (opts.seo_default_description || opts.site_description || '').trim();
+        if (desc) description = desc;
+        const kw = (opts.seo_default_keywords || opts.site_keywords || '').trim();
+        if (kw) keywords = kw.split(/[,，]\s*/).filter(Boolean);
+        if (opts.site_url) siteUrl = String(opts.site_url).replace(/\/$/, '');
+        if (opts.seo_default_image) ogImage = opts.seo_default_image;
+        if (opts.seo_twitter_handle) twitterHandle = opts.seo_twitter_handle;
+        if (opts.seo_twitter_card === 'summary') twitterCard = 'summary';
       }
     } catch {}
   }
+  const og = ogImage ? { images: [{ url: ogImage }] } : {};
   return {
     title,
     description,
+    keywords,
     icons: { icon: favicon, shortcut: favicon, apple: favicon },
+    metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+    openGraph: {
+      title,
+      description,
+      url: siteUrl || undefined,
+      siteName: title,
+      type: 'website',
+      ...og,
+    },
+    twitter: {
+      card: twitterCard,
+      title,
+      description,
+      site: twitterHandle || undefined,
+      creator: twitterHandle || undefined,
+      images: ogImage ? [ogImage] : undefined,
+    },
   };
 }
 
@@ -67,6 +106,10 @@ export default function RootLayout({
             to R2 (101 unicode-range slices, ~5MB total but each page
             only loads the slices it actually uses). */}
         <link rel="stylesheet" href="https://static.utterlog.com/fonts/noto-sans-sc/result.css" />
+        {/* Alimama FangYuanTi VF — site-title display font. Variable
+            font split into ~110 unicode-range woff2 slices; only the
+            chars in the title actually load. */}
+        <link rel="stylesheet" href="https://static.utterlog.com/fonts/AlimamaFangYuanTi/result.css" />
       </head>
       <body className="font-sans antialiased bg-page text-primary">
         {/* Squircle clip-path (matches Utterlog logo shape) */}

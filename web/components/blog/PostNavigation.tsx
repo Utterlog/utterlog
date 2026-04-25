@@ -45,7 +45,13 @@ function LazyCardImage({ src, alt }: { src: string; alt: string }) {
             width: '100%', height: '100%', objectFit: 'cover', display: 'block',
             opacity: loaded ? 1 : 0,
             filter: loaded ? 'blur(0)' : 'blur(20px)',
-            transition: 'opacity 0.5s ease-in-out, filter 0.5s linear',
+            // Include `transform` here so the parent .cover-zoom hover
+            // scale eases instead of jumping. Inline style wins over
+            // CSS class declarations, so the transition declared in
+            // globals.css for .cover-zoom is otherwise overridden and
+            // the hover looks "卡顿" — same root cause as the fade
+            // shorthand bug fixed earlier.
+            transition: 'opacity 0.5s ease-in-out, filter 0.5s linear, transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         />
       )}

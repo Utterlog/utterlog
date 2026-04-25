@@ -95,6 +95,11 @@ func main() {
 	r.GET("/favicon.png", func(c *gin.Context) { c.File("./public/favicon.png") })
 	r.GET("/favicon.ico", func(c *gin.Context) { c.File("./public/favicon.png") })
 
+	// SEO + AI discovery (admin Settings → SEO 与 AI tab drives output).
+	r.GET("/robots.txt", handler.RobotsTxt)
+	r.GET("/llms.txt", handler.LlmsTxt)
+	r.GET("/llms-full.txt", handler.LlmsFullTxt)
+
 	api := r.Group("/api/v1")
 
 	// Security middleware

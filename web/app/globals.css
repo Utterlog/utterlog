@@ -440,6 +440,17 @@ body {
 /* Logo font */
 .font-logo { font-family: "Ubuntu", "Fugaz One", sans-serif; }
 
+/* Site title — display font for the header brand. Loads the variable
+   Alimama FangYuanTi from static.utterlog.com (linked in layout.tsx);
+   falls back to Noto Sans SC + system if the woff2 slice for a given
+   character isn't there. Themes apply this class on their site-name
+   <span>; future v1.2.4+ may expose font choice in admin settings. */
+.site-title {
+  font-family: "Alimama FangYuanTi VF", "Noto Sans SC", "Ubuntu",
+               "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-feature-settings: "palt";
+}
+
 /* Primary accent text (for links, active tabs) */
 .text-primary-themed { color: var(--color-primary); }
 .hover\:text-primary-themed:hover { color: var(--color-primary-hover); }
@@ -1180,8 +1191,11 @@ html[data-img-effect="fade"] :where(
 ) {
   background-color: var(--color-bg-soft);
   filter: blur(20px);
-  -webkit-transition: .5s ease-in-out opacity;
-  transition: .5s ease-in-out opacity;
+  /* `transition` is a shorthand — listing only opacity here would wipe
+     out the transform transition declared by `.cover-zoom`. Append
+     transform so the hover-zoom keeps its 0.6s cubic-bezier easing. */
+  -webkit-transition: opacity .5s ease-in-out, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity .5s ease-in-out, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 /* Post-load: blur releases linearly, opacity pinned to 1. */
 html[data-img-effect="fade"] :where(
@@ -1190,8 +1204,8 @@ html[data-img-effect="fade"] :where(
 ) {
   filter: blur(0);
   opacity: 1;
-  -webkit-transition: .5s filter linear, .5s -webkit-filter linear;
-  transition: .5s filter linear, .5s -webkit-filter linear;
+  -webkit-transition: filter .5s linear, -webkit-filter .5s linear, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: filter .5s linear, -webkit-filter .5s linear, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 2. pixel — 10×10 mosaic of dark tiles lifting off the image in a
