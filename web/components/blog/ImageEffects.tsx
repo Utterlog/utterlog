@@ -38,7 +38,11 @@ export default function ImageEffects({ effect, durationMs }: Props) {
 
     const raw = (durationMs ?? '').toString().trim();
     const d = parseInt(raw, 10);
-    root.style.setProperty('--img-effect-duration', `${Number.isFinite(d) && d > 0 ? d : 400}ms`);
+    // Fallback 500ms matches both globals.css `:root { --img-effect-duration: 500ms }`
+    // and the historical hard-coded LazyImage fade. Admin form pre-fills 300 when
+    // the field is empty, but if the user never visits Settings → 图片处理 the
+    // DB key stays unset and we land here.
+    root.style.setProperty('--img-effect-duration', `${Number.isFinite(d) && d > 0 ? d : 500}ms`);
 
     // ── (2) load tracking ──────────────────────────────────────────
     // Mark already-loaded images (browser finished the download

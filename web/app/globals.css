@@ -1138,10 +1138,14 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
  * gallery tiles, moment photos). Keeps the effect off of chrome
  * (logos, avatars, nav icons).
  * ============================================================ */
-/* Default duration mirrors the old hard-coded LazyImage behaviour
-   (500ms) so the admin "fade" option feels identical to what the blog
-   had before the effect system existed. Admin can still override
-   via Settings → 图片处理 → 动画时长. */
+/* Default 500ms mirrors the old hard-coded LazyImage behaviour so
+   the blog feels identical out-of-the-box. ImageEffects.tsx writes
+   --img-effect-duration on <html> from the admin's Settings → 图片处理
+   → 动画时长 (defaults 300ms in the form, but settings.go falls
+   back to 500ms if unset, so :root here matches that fallback).
+   Every effect rule below now reads this variable — fade transitions
+   on opacity/filter, pixel tile animation, and scale keyframes all
+   honour the admin setting. */
 :root { --img-effect-duration: 500ms; }
 
 /* Base targeting. Any `<img data-blog-image>` (theme covers via
@@ -1215,9 +1219,15 @@ html[data-img-effect="fade"] :where(
   filter: blur(20px);
   /* `transition` is a shorthand — listing only opacity here would wipe
      out the transform transition declared by `.cover-zoom`. Append
-     transform so the hover-zoom keeps its 0.6s cubic-bezier easing. */
-  -webkit-transition: opacity .5s ease-in-out, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
-  transition: opacity .5s ease-in-out, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
+     transform so the hover-zoom keeps its 0.6s cubic-bezier easing.
+     The opacity timing reads --img-effect-duration so the admin's
+     Settings → 图片处理 → 动画时长 actually moves this effect (was
+     previously hard-coded 500ms regardless of the setting). transform
+     stays fixed because it's a hover-zoom unrelated to image-load
+     animation — bumping it with the load duration would slow the
+     mouse-over feel. */
+  -webkit-transition: opacity var(--img-effect-duration) ease-in-out, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity var(--img-effect-duration) ease-in-out, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 /* Post-load: blur releases linearly, opacity pinned to 1. */
 html[data-img-effect="fade"] :where(
@@ -1226,8 +1236,8 @@ html[data-img-effect="fade"] :where(
 ) {
   filter: blur(0);
   opacity: 1;
-  -webkit-transition: filter .5s linear, -webkit-filter .5s linear, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
-  transition: filter .5s linear, -webkit-filter .5s linear, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-transition: filter var(--img-effect-duration) linear, -webkit-filter var(--img-effect-duration) linear, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: filter var(--img-effect-duration) linear, -webkit-filter var(--img-effect-duration) linear, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 2. pixel — 10×10 mosaic of dark tiles lifting off the image in a
@@ -1248,7 +1258,15 @@ html[data-img-effect="fade"] :where(
 }
 .pixel-tile {
   background: rgba(0, 0, 0, 0.9);
-  animation: pixel-reveal 0.5s forwards;
+  /* Each tile's fade animation duration tracks the admin's
+     Settings → 图片处理 → 动画时长 (was previously hard-coded 500ms).
+     The per-tile stagger stays at 50ms × --delay because CSS calc()
+     can't multiply two durations or convert a duration to a number,
+     so we can't make the stagger proportional without JS. 50ms is a
+     reasonable spread regardless of the per-tile duration: at the
+     default 500ms a tile-by-tile reveal still feels coordinated, and
+     at 200ms (snappy) or 1500ms (slow) the pattern is still legible. */
+  animation: pixel-reveal var(--img-effect-duration) forwards;
   animation-delay: calc(var(--delay, 0) * 0.05s);
 }
 @keyframes pixel-reveal {
