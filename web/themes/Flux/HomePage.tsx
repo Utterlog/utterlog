@@ -4,6 +4,8 @@ import PostCard from './PostCard';
 import Sidebar from './Sidebar';
 import Pagination from '@/components/blog/Pagination';
 import FadeCover from '@/components/blog/FadeCover';
+import { randomCoverUrl } from '@/lib/blog-image';
+import { useThemeContext } from '@/lib/theme-context';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { getCategoryIcon } from './constants';
@@ -154,7 +156,8 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
 
   // 文章列表始终显示全部（分类标签只影响 hero 轮播）
 
-  const heroSrc = heroPost?.cover_url || (heroPost ? `https://img.et/1920/1080?type=landscape&r=${heroPost.id}` : '');
+  const { options } = useThemeContext();
+  const heroSrc = heroPost?.cover_url || (heroPost ? randomCoverUrl(heroPost.id, options) : '');
 
   // Hero height = tabs count * tab height (tabs: 1 全部 + categories + 1 playback row)
   const tabCount = 1 + categories.length; // 全部 + categories

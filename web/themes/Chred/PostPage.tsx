@@ -6,6 +6,7 @@ import PostNavigation from '@/components/blog/PostNavigation';
 import CommentList from '@/components/blog/CommentList';
 import AIReaderChat from '@/components/blog/AIReaderChat';
 import FadeCover from '@/components/blog/FadeCover';
+import { randomCoverUrl } from '@/lib/blog-image';
 import Sidebar from './Sidebar';
 import { getCategoryIcon } from './constants';
 
@@ -15,7 +16,7 @@ function formatDate(ts: string | number) {
 }
 
 export default function PostPage({ post }: { post: any }) {
-  const coverUrl = post.cover_url || `https://img.et/1920/1080?type=landscape&r=${post.id}`;
+  const coverUrl = post.cover_url || randomCoverUrl(post.id);
   const catName = post.categories?.[0]?.name;
   const cat0 = post.categories?.[0];
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';

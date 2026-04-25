@@ -8,6 +8,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { getCategoryIcon } from './constants';
 import { useThemeContext } from '@/lib/theme-context';
+import { randomCoverUrl } from '@/lib/blog-image';
 import PostLink from '@/components/blog/PostLink';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
@@ -27,7 +28,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   // becomes a static navigation link in the hero sidebar instead of
   // the auto-generated category filter tabs. Empty ⇒ fall back to
   // the category auto-list behavior.
-  const { menus: ctxMenus } = useThemeContext();
+  const { menus: ctxMenus, options } = useThemeContext();
   const sidebarMenu = Array.isArray(ctxMenus?.sidebar) ? ctxMenus.sidebar : [];
   const useCustomSidebar = sidebarMenu.length > 0;
   const [modeIdx, setModeIdx] = useState(0);
@@ -162,7 +163,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
 
   // 文章列表始终显示全部（分类标签只影响 hero 轮播）
 
-  const heroSrc = heroPost?.cover_url || (heroPost ? `https://img.et/1920/1080?type=landscape&r=${heroPost.id}` : '');
+  const heroSrc = heroPost?.cover_url || (heroPost ? randomCoverUrl(heroPost.id, options) : '');
 
   // Hero height — tab row count depends on which sidebar mode we're in.
   // Custom menu uses its own length; default uses 1 全部 + N categories.

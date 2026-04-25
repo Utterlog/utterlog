@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { coverProps } from '@/lib/blog-image';
+import { coverProps, randomCoverUrl } from '@/lib/blog-image';
+import { useThemeContext } from '@/lib/theme-context';
 import PostLink from '@/components/blog/PostLink';
 
 function formatDate(ts: string | number) {
@@ -20,7 +21,8 @@ export default function PostCard({ post, priority }: { post: any; priority?: boo
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
   const isNew = (Date.now() - (typeof post.created_at === 'number' ? post.created_at * 1000 : new Date(post.created_at).getTime())) < 7 * 86400 * 1000;
-  const coverUrl = post.cover_url || `https://img.et/1920/1080?type=landscape&r=${post.id}`;
+  const { options } = useThemeContext();
+  const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
   const [hovered, setHovered] = useState(false);
 
   return (

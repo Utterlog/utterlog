@@ -1,5 +1,33 @@
 import type { CSSProperties, ImgHTMLAttributes } from 'react';
 
+const DEFAULT_RANDOM_TEMPLATE = 'https://img.et/1920/1080?type=landscape&r={id}';
+
+/**
+ * Resolve a fallback random-cover URL for a post that has no cover_url.
+ *
+ * Honours the admin "图片处理 → 随机图片 API" setting:
+ *   - random_image_enabled === "false"  → return ""  (callers should
+ *     either skip rendering the cover or use a static placeholder).
+ *   - random_image_enabled !== "false" → use random_image_api as the
+ *     URL template; supports {id}, {w}, {h} placeholders. Empty /
+ *     missing template falls back to img.et so existing posts don't
+ *     visually regress on first deploy.
+ *
+ * Pure function — caller passes admin options explicitly so the helper
+ * can be used from both client (useThemeContext) and server contexts.
+ */
+export function randomCoverUrl(
+  postId: number | string,
+  options?: { random_image_enabled?: string; random_image_api?: string },
+): string {
+  if (options?.random_image_enabled === 'false') return '';
+  const template = options?.random_image_api?.trim() || DEFAULT_RANDOM_TEMPLATE;
+  return template
+    .replace(/\{id\}/g, String(postId))
+    .replace(/\{w\}/g, '1920')
+    .replace(/\{h\}/g, '1080');
+}
+
 export interface CoverPropsInput {
   src: string;
   alt?: string;

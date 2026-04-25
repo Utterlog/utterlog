@@ -4,6 +4,7 @@ import TableOfContents from '@/components/blog/TableOfContents';
 import AISummary from '@/components/blog/AISummary';
 import PostNavigation from '@/components/blog/PostNavigation';
 import FadeCover from '@/components/blog/FadeCover';
+import { randomCoverUrl } from '@/lib/blog-image';
 import { getCategoryIcon } from './constants';
 import { CommentCount, CommentSection } from './PostInteractive';
 
@@ -13,7 +14,7 @@ function formatDate(ts: string | number) {
 }
 
 export default function PostPage({ post }: { post: any }) {
-  const coverUrl = post.cover_url || `https://img.et/1920/1080?type=landscape&r=${post.id}`;
+  const coverUrl = post.cover_url || randomCoverUrl(post.id);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';

@@ -1,6 +1,7 @@
 'use client';
 
-import { coverProps } from '@/lib/blog-image';
+import { coverProps, randomCoverUrl } from '@/lib/blog-image';
+import { useThemeContext } from '@/lib/theme-context';
 import PostLink from '@/components/blog/PostLink';
 
 function formatDate(ts: string | number) {
@@ -9,7 +10,8 @@ function formatDate(ts: string | number) {
 }
 
 export default function PostCard({ post, priority }: { post: any; priority?: boolean }) {
-  const coverUrl = post.cover_url || `https://img.et/1920/1080?type=landscape&r=${post.id}`;
+  const { options } = useThemeContext();
+  const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
 
   return (
     <PostLink post={post} style={{ textDecoration: 'none', display: 'block' }}>

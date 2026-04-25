@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { getCategoryIcon } from './constants';
-import { coverProps } from '@/lib/blog-image';
+import { coverProps, randomCoverUrl } from '@/lib/blog-image';
+import { useThemeContext } from '@/lib/theme-context';
 import PostLink from '@/components/blog/PostLink';
 
 const ACCENT = '#0052D9';
@@ -21,7 +22,8 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
   const isNew = isNewest === true;
-  const coverUrl = post.cover_url || `https://img.et/1920/1080?type=landscape&r=${post.id}`;
+  const { options } = useThemeContext();
+  const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
   const [hovered, setHovered] = useState(false);
 
   return (
