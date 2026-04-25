@@ -331,18 +331,30 @@ export default function AiSettingsPage() {
           </div>
           <Modal isOpen={!!editing} onClose={() => setEditing(null)} title={editing?.id ? '编辑提供商' : '添加提供商'}>
             {editing && (
-              <div className="space-y-4">
+              /* Modal form spacing matches the established admin pattern
+                 (Movies / MusicPlaylists / SyncSitesPanel etc.): explicit
+                 flex column with a single consistent row gap rather than
+                 Tailwind space-y-4. 18px gives the label/input pairs
+                 enough breathing room — space-y-4 (16px) made labels read
+                 as if they were stuck to the input above them. */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 {!editing.id && Object.keys(presets).length > 0 && (
-                  <div>
-                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>快速预设</label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {Object.entries(presets).map(([key, p]: [string, any]) => (
-                        <Button key={key} variant="secondary" size="sm" onClick={() => applyPreset(key)}>{p.name}</Button>
-                      ))}
+                  <>
+                    <div>
+                      <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>快速预设</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {Object.entries(presets).map(([key, p]: [string, any]) => (
+                          <Button key={key} variant="secondary" size="sm" onClick={() => applyPreset(key)}>{p.name}</Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                    {/* Divider — same color/weight as FormSectionC dividers
+                        in Settings.tsx so the modal feels like part of the
+                        same UI family. */}
+                    <div style={{ height: '1px', background: 'var(--color-border)' }} />
+                  </>
                 )}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <Input label="名称" value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} placeholder="如: OpenAI" />
                   <Select label="类型" value={editing.type} onChange={e => setEditing({ ...editing, type: e.target.value })}>
                     <option value="text">文本</option>
@@ -358,14 +370,18 @@ export default function AiSettingsPage() {
                   <Input label="模型" value={editing.model} onChange={e => setEditing({ ...editing, model: e.target.value })} placeholder="gpt-4.1-mini" />
                 )}
                 <Input label="API Key" type="password" value={editing.api_key} onChange={e => setEditing({ ...editing, api_key: e.target.value })} placeholder="sk-..." />
-                <div className="grid grid-cols-2 gap-x-4">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div>
-                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>温度 ({editing.temperature})</label>
+                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>温度 ({editing.temperature})</label>
                     <input type="range" min="0" max="2" step="0.1" value={editing.temperature} onChange={e => setEditing({ ...editing, temperature: parseFloat(e.target.value) })} style={{ width: '100%' }} />
                   </div>
                   <Input label="超时(秒)" type="number" value={editing.timeout} onChange={e => setEditing({ ...editing, timeout: parseInt(e.target.value) })} />
                 </div>
-                <div className="space-y-3" style={{ paddingTop: '4px' }}>
+                {/* Toggle group — light divider above so booleans read as
+                    a separate concern from the connection fields. 14px
+                    inner gap matches the per-row spacing of the form. */}
+                <div style={{ height: '1px', background: 'var(--color-border)' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <Toggle label="启用" checked={editing.is_active} onChange={e => setEditing({ ...editing, is_active: e.target.checked })} />
                   <Toggle label="设为默认" checked={editing.is_default} onChange={e => setEditing({ ...editing, is_default: e.target.checked })} />
                 </div>

@@ -20,19 +20,35 @@ import (
 )
 
 // Presets
+//
+// Newest model id is listed first in each models slice so the admin
+// form's <select> defaults to the latest option when a preset is
+// applied. Older models stay in the list for users who want to pin
+// to a specific generation (cost, behaviour stability, etc.).
 var AIPresets = gin.H{
-	"openai":  gin.H{"name": "OpenAI", "endpoint": "https://api.openai.com/v1/chat/completions", "models": []string{"gpt-4.1", "gpt-4.1-mini", "o3-mini"}},
-	"deepseek": gin.H{"name": "DeepSeek", "endpoint": "https://api.deepseek.com/chat/completions", "models": []string{"deepseek-chat", "deepseek-reasoner"}},
-	"gemini":  gin.H{"name": "Google Gemini", "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "models": []string{"gemini-2.5-flash", "gemini-2.5-pro"}},
-	"qwen":   gin.H{"name": "通义千问", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "models": []string{"qwen3-max", "qwen-plus", "qwen-turbo"}},
-	"kimi":   gin.H{"name": "Kimi", "endpoint": "https://api.moonshot.cn/v1/chat/completions", "models": []string{"kimi-k2.5", "kimi-latest"}},
-	"minimax": gin.H{"name": "MiniMax", "endpoint": "https://api.minimax.chat/v1/text/chatcompletion_v2", "models": []string{"MiniMax-M2.5"}},
-	"zhipu":  gin.H{"name": "智谱 AI", "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions", "models": []string{"glm-4.7-flash"}},
-	"doubao": gin.H{"name": "豆包", "endpoint": "https://ark.cn-beijing.volces.com/api/v3/chat/completions", "models": []string{"doubao-seed-1.8"}},
-	// Embedding presets
-	"openai-embedding":  gin.H{"name": "OpenAI Embedding", "endpoint": "https://api.openai.com/v1/embeddings", "models": []string{"text-embedding-3-small", "text-embedding-3-large"}, "type": "embedding"},
-	"qwen-embedding":    gin.H{"name": "通义千问 Embedding", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings", "models": []string{"text-embedding-v3"}, "type": "embedding"},
-	"deepseek-embedding": gin.H{"name": "DeepSeek Embedding", "endpoint": "https://api.deepseek.com/embeddings", "models": []string{"deepseek-embedding"}, "type": "embedding"},
+	"openai":   gin.H{"name": "OpenAI", "endpoint": "https://api.openai.com/v1/chat/completions", "models": []string{"gpt-5.5", "gpt-5", "gpt-4.1", "gpt-4.1-mini", "o3-mini"}},
+	"deepseek": gin.H{"name": "DeepSeek", "endpoint": "https://api.deepseek.com/chat/completions", "models": []string{"deepseek-v4", "deepseek-v3", "deepseek-chat", "deepseek-reasoner"}},
+	"gemini":   gin.H{"name": "Google Gemini", "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "models": []string{"gemini-2.5-pro", "gemini-2.5-flash"}},
+	"qwen":     gin.H{"name": "通义千问", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "models": []string{"qwen3-max", "qwen-plus", "qwen-turbo"}},
+	"kimi":     gin.H{"name": "Kimi", "endpoint": "https://api.moonshot.cn/v1/chat/completions", "models": []string{"kimi-k2.6", "kimi-k2.5", "kimi-latest"}},
+	"minimax":  gin.H{"name": "MiniMax", "endpoint": "https://api.minimax.chat/v1/text/chatcompletion_v2", "models": []string{"MiniMax-M2.5"}},
+	"zhipu":    gin.H{"name": "智谱 AI", "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions", "models": []string{"glm-4.7-flash"}},
+	"doubao":   gin.H{"name": "豆包", "endpoint": "https://ark.cn-beijing.volces.com/api/v3/chat/completions", "models": []string{"doubao-seed-1.8"}},
+	// Anthropic Claude. Endpoint is Anthropic's native /v1/messages
+	// (NOT an OpenAI-compatible /chat/completions). The Go AI caller
+	// auto-detects the api.anthropic.com host and switches request
+	// format accordingly; if you proxy Claude through a third-party
+	// gateway that exposes an OpenAI-compat /chat/completions, change
+	// the endpoint after applying the preset.
+	"anthropic": gin.H{"name": "Anthropic Claude", "endpoint": "https://api.anthropic.com/v1/messages", "models": []string{"claude-opus-4-7", "claude-sonnet-4-7", "claude-opus-4-5", "claude-sonnet-4-5"}},
+	// Embedding presets — only providers that actually expose an
+	// OpenAI-compatible /embeddings endpoint. DeepSeek used to live
+	// here as 'deepseek-embedding' pointing at api.deepseek.com/
+	// embeddings but DeepSeek only ships chat completions; that
+	// endpoint 404s and the model name was fictional, so the preset
+	// produced a 'looks legit, never works' provider entry. Removed.
+	"openai-embedding": gin.H{"name": "OpenAI Embedding", "endpoint": "https://api.openai.com/v1/embeddings", "models": []string{"text-embedding-3-small", "text-embedding-3-large"}, "type": "embedding"},
+	"qwen-embedding":   gin.H{"name": "通义千问 Embedding", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings", "models": []string{"text-embedding-v3"}, "type": "embedding"},
 }
 
 func GetAIProviders(c *gin.Context) {
