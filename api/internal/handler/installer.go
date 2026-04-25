@@ -27,19 +27,20 @@ func InstallPage(c *gin.Context) {
 	c.Data(http.StatusOK, "text/html; charset=utf-8", installerHTML)
 }
 
-// FaviconSVG serves /favicon.svg. If the admin uploaded a custom SVG
-// favicon (saved as public/favicon.svg by UploadBranding), serve that
-// instead; otherwise fall back to the embedded Utterlog brand SVG so
-// the install page + a fresh install always have a working favicon.
+// FaviconSVG serves /favicon.svg. Same persist-first-then-legacy-then-
+// embedded fallback chain as the other branding routes:
 //
-// Why a fallback dance instead of just letting the wildcard
-// /favicon.:ext serve from disk: gin matches the explicit
-// "/favicon.svg" route before the ":ext" pattern, so without this
-// handler reading from disk the user's uploaded favicon.svg would be
-// shadowed forever by the embedded brand. We can't drop the embed
-// either — fresh installs (and the install wizard itself) need a
-// working /favicon.svg before any upload has happened.
+//   1. public/uploads/branding/favicon.svg  (volumized, survives upgrade)
+//   2. public/favicon.svg                   (legacy, pre-persistence rev)
+//   3. embedded Utterlog brand SVG          (default for fresh installs +
+//                                            the install wizard, which
+//                                            needs a working favicon
+//                                            before any upload happens)
 func FaviconSVG(c *gin.Context) {
+	if _, err := os.Stat("./public/uploads/branding/favicon.svg"); err == nil {
+		c.File("./public/uploads/branding/favicon.svg")
+		return
+	}
 	if _, err := os.Stat("./public/favicon.svg"); err == nil {
 		c.File("./public/favicon.svg")
 		return

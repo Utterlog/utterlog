@@ -88,21 +88,43 @@ func main() {
 	r.Static("/themes", "./public/themes") // theme preview assets (screenshot.svg etc.)
 
 	// Branding files at root: logo / dark-logo / favicon. UploadBranding
-	// (handler/media.go) saves uploads as public/<purpose>.<ext> for any
-	// of png/jpg/jpeg/gif/webp/avif/ico/svg, so the routes here use a
-	// wildcard `:ext` so every uploaded extension is reachable. The
-	// previous code hard-coded /favicon.png and /favicon.ico (the ICO
-	// route even returned the PNG file regardless of the URL), which
-	// meant users who uploaded a .svg/.webp/.jpg favicon got a 404.
+	// (handler/media.go) saves uploads to public/uploads/branding/<purpose>.<ext>
+	// — that path lives inside the persistent uploads/ volume so
+	// admin-uploaded branding survives container recreation
+	// (docker compose pull && up -d). Earlier rev wrote to
+	// public/<purpose>.<ext> which is in the container's writable
+	// layer and got wiped on every image upgrade.
+	//
+	// Each route serves the persistent file first, falling back to
+	// public/<purpose>.<ext> for installs where the legacy file is
+	// still around (the upload handler also tries to clean these up
+	// on next save). If neither file exists, c.File returns 404.
+	//
+	// Wildcard :ext covers any of png/jpg/jpeg/gif/webp/avif/ico/svg
+	// — admins who uploaded a .webp / .ico favicon previously got a
+	// 404 because the routes hard-coded .png/.ico paths.
 	//
 	// /favicon.svg is registered ABOVE this block (FaviconSVG handler)
 	// and falls back to the embedded Utterlog brand SVG when the user
 	// hasn't uploaded their own — see installer.go:FaviconSVG. Gin
 	// routes explicit paths before pattern routes, so /favicon.svg
 	// keeps that override; the pattern below covers everything else.
-	r.GET("/logo.:ext", func(c *gin.Context) { c.File("./public/logo." + c.Param("ext")) })
-	r.GET("/dark-logo.:ext", func(c *gin.Context) { c.File("./public/dark-logo." + c.Param("ext")) })
-	r.GET("/favicon.:ext", func(c *gin.Context) { c.File("./public/favicon." + c.Param("ext")) })
+	servePersistent := func(purpose string) func(c *gin.Context) {
+		return func(c *gin.Context) {
+			ext := c.Param("ext")
+			persisted := "./public/uploads/branding/" + purpose + "." + ext
+			if _, err := os.Stat(persisted); err == nil {
+				c.File(persisted)
+				return
+			}
+			// Legacy fallback for installs that uploaded under the
+			// old non-persistent path. Will return 404 if file missing.
+			c.File("./public/" + purpose + "." + ext)
+		}
+	}
+	r.GET("/logo.:ext", servePersistent("logo"))
+	r.GET("/dark-logo.:ext", servePersistent("dark-logo"))
+	r.GET("/favicon.:ext", servePersistent("favicon"))
 
 	// SEO + AI discovery (admin Settings → SEO 与 AI tab drives output).
 	r.GET("/robots.txt", handler.RobotsTxt)

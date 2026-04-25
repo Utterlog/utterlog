@@ -633,20 +633,39 @@ func UploadBranding(c *gin.Context) {
 	// Fixed filename: logo.ext / dark-logo.ext / favicon.ext
 	filename := purpose + "." + ext
 
-	// Remove old files with same purpose but different extension
-	oldExts := []string{"png", "jpg", "jpeg", "gif", "webp", "avif", "ico", "svg"}
-	for _, oe := range oldExts {
-		old := filepath.Join("public", purpose+"."+oe)
-		if old != filepath.Join("public", filename) {
-			os.Remove(old)
-		}
+	// Persist into public/uploads/branding/ — the existing uploads/
+	// volume mount (./uploads:/app/public/uploads in compose) means
+	// these files survive container recreation. The previous code
+	// saved into public/ at the image root, which lives in the
+	// container's writable layer and gets wiped on every
+	// `docker compose pull && up -d`. Result: every upgrade nuked
+	// the admin's uploaded logo / favicon / dark-logo back to the
+	// baked-in defaults.
+	brandingDir := filepath.Join("public", "uploads", "branding")
+	if err := os.MkdirAll(brandingDir, 0755); err != nil {
+		util.Error(c, 500, "SAVE_FAILED", "创建 branding 目录失败：" + err.Error())
+		return
 	}
 
-	// Save file directly to public root — no compression, no conversion
-	fullPath := filepath.Join("public", filename)
+	// Remove old files with same purpose but different extension —
+	// in BOTH the new persistent location AND the legacy public/
+	// root (so an upgrade from a previous install doesn't leave a
+	// stale public/favicon.png shadowing the new uploads/branding/
+	// favicon.svg).
+	oldExts := []string{"png", "jpg", "jpeg", "gif", "webp", "avif", "ico", "svg"}
+	for _, oe := range oldExts {
+		oldName := purpose + "." + oe
+		if oldName == filename {
+			continue
+		}
+		os.Remove(filepath.Join(brandingDir, oldName))
+		os.Remove(filepath.Join("public", oldName))
+	}
+
+	fullPath := filepath.Join(brandingDir, filename)
 	out, err := os.Create(fullPath)
 	if err != nil {
-		util.Error(c, 500, "SAVE_FAILED", "保存文件失败")
+		util.Error(c, 500, "SAVE_FAILED", "保存文件失败：" + err.Error())
 		return
 	}
 	defer out.Close()
@@ -656,11 +675,11 @@ func UploadBranding(c *gin.Context) {
 		return
 	}
 
-	// Build URL — root path, e.g. domain.com/logo.png. PublicBaseURL()
-	// reads the admin-configured site_url option first and only falls
-	// back to APP_URL env var if unset, so uploaded branding URLs
-	// reflect the real public origin instead of the install-time
-	// http://localhost:9260 placeholder.
+	// Returned URL stays at the short root path (/logo.png etc.) —
+	// that's what site_favicon / site_logo store, and the gin route
+	// /<purpose>.:ext maps it to the actual disk file (which is now
+	// in the persistent branding dir). Browsers also auto-fetch
+	// /favicon.ico, so keeping the root route is required regardless.
 	url := strings.TrimRight(config.PublicBaseURL(), "/") + "/" + filename
 
 	util.Success(c, gin.H{
