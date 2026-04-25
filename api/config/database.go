@@ -99,6 +99,14 @@ func InitDB() error {
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS utterlog_id VARCHAR(100) DEFAULT ''", T("users")))
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS utterlog_avatar VARCHAR(500) DEFAULT ''", T("users")))
 
+	// Password reset (forgot-password): one-time token + expiry stored
+	// on the user row, cleared on successful reset. Partial index lets
+	// the reset endpoint look up by token in O(log n) without indexing
+	// the empty rows that 99 % of users sit at.
+	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS reset_token VARCHAR(64) DEFAULT ''", T("users")))
+	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS reset_token_expires_at BIGINT DEFAULT 0", T("users")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_users_reset_token ON %s (reset_token) WHERE reset_token != ''", T("users")))
+
 	// 2FA: TOTP fields on users
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(64) DEFAULT ''", T("users")))
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT false", T("users")))

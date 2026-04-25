@@ -149,11 +149,14 @@ export default function Login() {
     if (!forgotEmail) return;
     setForgotSending(true);
     try {
-      // TODO: backend endpoint not implemented — simulated success for now
-      await new Promise((r) => setTimeout(r, 800));
+      // Backend always returns success regardless of whether the
+      // email is registered (anti-enumeration). The success screen
+      // tells the user to check inbox + spam — if the address isn't
+      // in the system nothing went out, but they shouldn't know that.
+      await authApi.forgotPassword(forgotEmail);
       setForgotSent(true);
-    } catch {
-      toast.error('发送失败');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || '发送失败，请稍后再试');
     }
     setForgotSending(false);
   };

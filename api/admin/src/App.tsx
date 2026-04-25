@@ -52,6 +52,7 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, { failed: bo
 
 // Eager-loaded (used on almost every navigation)
 import Login from '@/pages/Login';
+import ResetPassword from '@/pages/ResetPassword';
 import NotFound from '@/pages/NotFound';
 import DashboardHome from '@/pages/DashboardHome';
 
@@ -152,6 +153,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route element={<AuthGate />}>
         <Route path="/" element={<DashboardHome />} />

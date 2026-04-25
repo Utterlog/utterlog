@@ -127,6 +127,10 @@ func main() {
 	auth.GET("/me", middleware.Auth(), handler.Me)
 	auth.PUT("/password", middleware.Auth(), handler.ChangePassword)
 
+	// Forgot / reset password (no-auth public endpoints; gated by token)
+	auth.POST("/forgot-password", handler.ForgotPassword)
+	auth.POST("/reset-password", handler.ResetPassword)
+
 	// 2FA (TOTP)
 	auth.POST("/totp/setup", middleware.Auth(), handler.TOTPSetup)
 	auth.POST("/totp/verify", middleware.Auth(), handler.TOTPVerify)

@@ -211,3 +211,10 @@ type VerifyCodeData struct {
 	Purpose     string // "登录" / "注册" / "修改密码" 等
 	SupportURL  string
 }
+
+type PasswordResetData struct {
+	Site       SiteData
+	UserName   string
+	ResetURL   string
+	ExpireMins int // typically 60
+}

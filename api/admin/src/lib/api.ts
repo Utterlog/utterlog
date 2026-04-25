@@ -80,6 +80,9 @@ export const authApi = {
   passkeyLoginFinish: (data: any, sessionId: string) =>
     api.post('/auth/passkey/login/finish', data, { headers: { 'X-WebAuthn-Session': sessionId } }),
   passkeyAvailable: () => api.get('/auth/passkey/available'),
+  forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token: string, newPassword: string) =>
+    api.post('/auth/reset-password', { token, new_password: newPassword }),
 };
 
 // Posts API
