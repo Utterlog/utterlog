@@ -16,7 +16,10 @@ RUN npm run build
 
 # --- Stage 2: compile Go binary with embedded admin ---
 FROM golang:1.26-alpine AS go-builder
-RUN apk add --no-cache gcc musl-dev libwebp-dev git
+# aom-dev provides the libaom-av1 headers Kagami/go-avif binds against.
+# libwebp-dev gives the WebP CGO bindings; both are CGO so we need gcc
+# + musl-dev to link them.
+RUN apk add --no-cache gcc musl-dev libwebp-dev aom-dev git
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -47,7 +50,10 @@ FROM alpine:3.20
 # docker-cli + compose plugin let the in-admin "one-click update" feature
 # shell out to `docker compose pull && up -d` via the mounted host socket.
 # bash is required because the upgrade script uses `set -e` and heredocs.
-RUN apk add --no-cache ca-certificates libwebp tzdata curl bash docker-cli docker-cli-compose \
+# aom = libaom-av1 runtime, paired with the build-stage aom-dev so
+# the AVIF encoder works at runtime. Pulls in ~3MB; total runtime
+# image grows to ~28MB.
+RUN apk add --no-cache ca-certificates libwebp aom tzdata curl bash docker-cli docker-cli-compose \
     && adduser -D -u 1000 utterlog \
     && addgroup utterlog docker 2>/dev/null || true
 

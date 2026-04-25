@@ -17,9 +17,9 @@ import (
 	"utterlog-go/internal/model"
 	"utterlog-go/internal/storage"
 
+	"github.com/Kagami/go-avif"
 	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
-	"github.com/gen2brain/avif"
 )
 
 // SyncContentMedia downloads external cover images and stores them in the media library.
@@ -91,7 +91,10 @@ func SyncContentMedia(contentType string, contentID int, coverURL string) {
 					webp.Encode(&buf, img, &webp.Options{Quality: float32(quality)})
 					finalMime = "image/webp"
 				case "avif":
-					if encErr := avif.Encode(&buf, img, avif.Options{Quality: quality}); encErr != nil {
+					// Same CGO libaom path as media.go upload handler.
+					// avifQuantizerFor lives in media.go (same package).
+					avifQ := avifQuantizerFor(quality)
+					if encErr := avif.Encode(&buf, img, &avif.Options{Quality: avifQ, Speed: 8}); encErr != nil {
 						buf.Reset()
 						finalExt = "webp"
 						webp.Encode(&buf, img, &webp.Options{Quality: float32(quality)})

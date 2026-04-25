@@ -14,6 +14,7 @@ RUN apk add --no-cache \
     gcc \
     musl-dev \
     libwebp-dev \
+    aom-dev \
     nodejs \
     npm \
     bash \
