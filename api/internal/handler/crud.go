@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
@@ -98,12 +100,85 @@ func UpdateOptions(c *gin.Context) {
 	var req map[string]interface{}
 	c.ShouldBindJSON(&req)
 	t := config.T("options")
+
+	// Capture pre-save site_url so we can migrate references in DB
+	// (cover URLs, media URLs) when the admin changes the site origin —
+	// e.g. https://www.xifeng.net → https://xifeng.net. Prevents the
+	// "I edited site_url but my old www links still show" footgun.
+	oldSiteURL := model.GetOption("site_url")
+
 	for k, v := range req {
 		val := fmt.Sprintf("%v", v)
 		config.DB.Exec(fmt.Sprintf("INSERT INTO %s (name, value, created_at, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT (name) DO UPDATE SET value = $2, updated_at = $4", t),
 			k, val, 0, 0)
 	}
+
+	if rawNew, ok := req["site_url"]; ok {
+		newSiteURL := fmt.Sprintf("%v", rawNew)
+		migrateSiteOrigin(oldSiteURL, newSiteURL)
+	}
+
 	util.Success(c, nil)
+}
+
+// migrateSiteOrigin rewrites absolute URLs in user-data tables when the
+// admin changes the site_url's origin (scheme + host + port). Only runs
+// REPLACE on prefix matches (`LIKE 'oldOrigin/%'`) so a URL that
+// happens to contain the old host inside its path or query — e.g. a
+// post body that quotes a third-party article that happens to mention
+// the old domain — stays untouched. Scope is limited to the columns
+// that store our own asset URLs (cover_url, media.url); post bodies
+// and comments are left for a future opt-in admin tool because they
+// can mix our links with quoted external content.
+func migrateSiteOrigin(oldVal, newVal string) {
+	oldOrigin := normaliseOrigin(oldVal)
+	newOrigin := normaliseOrigin(newVal)
+	if oldOrigin == "" || newOrigin == "" || oldOrigin == newOrigin {
+		return
+	}
+	if config.DB == nil {
+		return
+	}
+	// Trailing slash insulates against accidentally rewriting an
+	// origin that's a prefix of another one (https://foo.com vs
+	// https://foo.com.attacker.io). The pattern matches `oldOrigin/`
+	// only, then REPLACE drops the slash too — substituting the
+	// origin alone keeps every path/query character intact.
+	likePat := oldOrigin + "/%"
+	posts := config.T("posts")
+	media := config.T("media")
+	res, err := config.DB.Exec(
+		fmt.Sprintf("UPDATE %s SET cover_url = REPLACE(cover_url, $1, $2) WHERE cover_url LIKE $3", posts),
+		oldOrigin, newOrigin, likePat,
+	)
+	if err == nil {
+		n, _ := res.RowsAffected()
+		log.Printf("[site_url-migrate] %s.cover_url: %d rows %s → %s", posts, n, oldOrigin, newOrigin)
+	}
+	res, err = config.DB.Exec(
+		fmt.Sprintf("UPDATE %s SET url = REPLACE(url, $1, $2) WHERE url LIKE $3", media),
+		oldOrigin, newOrigin, likePat,
+	)
+	if err == nil {
+		n, _ := res.RowsAffected()
+		log.Printf("[site_url-migrate] %s.url: %d rows %s → %s", media, n, oldOrigin, newOrigin)
+	}
+}
+
+// normaliseOrigin strips trailing slashes and any path/query fragment
+// from a URL string, leaving just `scheme://host[:port]`. Returns ""
+// for anything not parseable as a URL with both scheme and host so a
+// malformed admin save can't accidentally rewrite the whole DB.
+func normaliseOrigin(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return ""
+	}
+	return strings.TrimRight(u.Scheme+"://"+u.Host, "/")
 }
 
 // Test email
