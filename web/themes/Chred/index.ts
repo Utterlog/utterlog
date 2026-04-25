@@ -1,6 +1,6 @@
 /**
  * Chred Theme — Minimal, content-focused, red accent (#F53102 — cloned from Azure)
- * Features: Fixed header, large typography, azure blue accent, heatmap
+ * Features: Fixed header, large typography, red accent, heatmap
  */
 
 export { default as Header } from './Header';
