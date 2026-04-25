@@ -61,6 +61,60 @@ cd utterlog && make update
 
 ---
 
+## 复用现有的 PostgreSQL / Redis（低配 VPS / 1Panel / 宝塔 用户）
+
+如果你机器上已经跑了 PostgreSQL 和 Redis（比如 1Panel 自带、或者宝塔装的应用商店服务），不用再让 utterlog 起一对独占的容器 —— `install.sh` 会自动检测并询问：
+
+```
+Scanning for existing PostgreSQL + Redis on this host ...
+
+  ✓ PostgreSQL detected: 1Panel-postgresql-z8nZ (postgres:18.3-alpine) on 127.0.0.1:5432
+  ✓ Redis detected: 1Panel-redis-EGkk (redis:8.6.2) on 127.0.0.1:6379
+
+Choose a deployment mode:
+
+  1) Bundled (recommended) — Utterlog 带自己的 postgres + redis 容器，完全隔离。
+     占用 ~150MB。
+  2) Reuse host services    — 接到上面的 postgres + redis（省 ~70MB 内存）。
+     pgvector 缺失会自动装（apk add postgresql-pgvector / apt install
+     postgresql-XX-pgvector）。会问你 postgres 超级用户密码用来 CREATE EXTENSION
+     和建立 utterlog 专用数据库。
+
+  Choice [1]: 2
+
+  Postgres superuser [postgres]:
+  Postgres superuser password (input hidden): ...
+  ✓ Connected to PostgreSQL at 127.0.0.1:5432
+  ✓ pgvector binary already available
+  ✓ Role 'utterlog' created
+  ✓ Database 'utterlog' created (owner: utterlog)
+  ✓ Extension 'vector' active in database 'utterlog'
+```
+
+**如果不需要交互**（自动化部署），直接用环境变量跳过向导：
+
+```bash
+# 强制 bundled（默认，跟旧版一致）
+UTTERLOG_DB_MODE=bundled curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | bash
+
+# 强制复用 host 服务（要求你已配好 .env 里的 DB_HOST / DB_PASSWORD 等）
+UTTERLOG_DB_MODE=external curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | bash
+```
+
+**给已经跑起来想切到外部服务的老站**：编辑 `.env`，加 `UTTERLOG_DB_MODE=external` + 必要的 DB 连接配置，然后重跑 `bash scripts/deploy.sh`。`docker-compose.external-db.yml` overlay 自动启用，旧的 utterlog-postgres / utterlog-redis 容器会被 stop 掉（数据保留在 ./pgdata 里，需要手动迁移到外部 postgres）。
+
+**手动跑 pgvector 安装**（绕过 install.sh）：
+
+```bash
+bash scripts/setup-pgvector.sh \
+    --host 127.0.0.1 --port 5432 \
+    --container 1Panel-postgresql-z8nZ --flavor alpine \
+    --superuser postgres --superpass <你的密码> \
+    --db utterlog --user utterlog --pass <随机密码>
+```
+
+---
+
 ## 初次部署成功后
 
 看到：

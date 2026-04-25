@@ -1,0 +1,58 @@
+# ============================================================
+# Utterlog — external DB / Redis overlay
+# ------------------------------------------------------------
+# Disables the bundled postgres + redis services and points the api
+# container at services already running on the host (e.g. 1Panel's
+# managed postgres + redis, or a shared cluster).
+#
+# Usage:
+#   docker compose \
+#     -f docker-compose.prod.yml \
+#     -f docker-compose.pull.yml \
+#     -f docker-compose.external-db.yml \
+#     up -d
+#
+# install.sh adds this overlay automatically when the user picks
+# "use existing services" — see scripts/deploy.sh for the wiring.
+#
+# Required .env vars:
+#   DB_HOST=host.docker.internal   (or a real LAN IP)
+#   DB_PORT=5432
+#   DB_USER=...
+#   DB_PASSWORD=...
+#   DB_NAME=utterlog
+#   REDIS_HOST=host.docker.internal
+#   REDIS_PORT=6379
+#
+# Why host.docker.internal:
+#   - On Linux, Compose resolves this to the host gateway IP via the
+#     extra_hosts entry below (host-gateway alias is built into modern
+#     Docker, 20.10+).
+#   - On macOS / Windows it Just Works (Docker Desktop handles it).
+#   - We keep it consistent across platforms so the same .env works
+#     on a developer laptop and a production VPS.
+# ============================================================
+
+services:
+  # `replicas: 0` would still create the service in newer Compose
+  # versions. Cleanest portable way to disable a service inherited
+  # from a base file is the "disabled" profile — services with a
+  # profile name only spin up when that profile is explicitly
+  # activated, and we never activate "disabled".
+  postgres:
+    profiles: ["disabled"]
+
+  redis:
+    profiles: ["disabled"]
+
+  api:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Drop the `depends_on: postgres/redis` from the base file —
+    # those services are now disabled and waiting on them deadlocks
+    # the start. !reset clears the inherited array.
+    depends_on: !reset null
+
+  web:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

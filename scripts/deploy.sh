@@ -204,20 +204,31 @@ fi
 
 # ============================================================
 # Step 4: build & start containers
+# ------------------------------------------------------------
+# UTTERLOG_DB_MODE=external (set by install.sh when the user picks
+# "use existing host services") adds the external-db overlay, which
+# disables the bundled postgres + redis services and rewires api/web
+# to reach the host via host.docker.internal.
 # ============================================================
+EXTERNAL_OVERLAY=""
+if [ "${UTTERLOG_DB_MODE:-bundled}" = "external" ] || [ "${UTTERLOG_REDIS_MODE:-bundled}" = "external" ]; then
+  EXTERNAL_OVERLAY="-f docker-compose.external-db.yml"
+  log "Using existing host services (UTTERLOG_DB_MODE=$UTTERLOG_DB_MODE, UTTERLOG_REDIS_MODE=$UTTERLOG_REDIS_MODE)"
+fi
+
 if [ "$PULL_MODE" -eq 1 ]; then
   # Pull pre-built images from GHCR — skips all local compilation
-  COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml"
+  COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml $EXTERNAL_OVERLAY"
   log "Pulling pre-built images from ghcr.io/utterlog ..."
   $COMPOSE pull
   log "Starting containers ..."
   $COMPOSE up -d
 elif [ "$NO_BUILD" -eq 1 ]; then
-  COMPOSE="docker compose -f docker-compose.prod.yml"
+  COMPOSE="docker compose -f docker-compose.prod.yml $EXTERNAL_OVERLAY"
   log "Starting containers (no rebuild) ..."
   $COMPOSE up -d
 else
-  COMPOSE="docker compose -f docker-compose.prod.yml"
+  COMPOSE="docker compose -f docker-compose.prod.yml $EXTERNAL_OVERLAY"
   log "Building & starting containers locally (first run ~3-5 min, needs 2GB+ RAM) ..."
   log "  Tip: use 'make deploy-pull' instead to skip local build (pulls from ghcr.io)"
   $COMPOSE up -d --build
