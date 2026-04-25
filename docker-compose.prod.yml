@@ -39,7 +39,10 @@ services:
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    # Redis 8 — backwards compatible with 7 RDB/AOF files, so existing
+    # deployments upgrade in place: docker compose pull && up -d. The
+    # redisdata volume is preserved across the swap, no rebuild needed.
+    image: redis:8-alpine
     restart: unless-stopped
     volumes:
       - redisdata:/data

@@ -105,7 +105,7 @@ Utterlog 仅绑 `127.0.0.1:9260`，公网不可见，需反代：
 | 博客前端 | Next.js 16 + React 19 + TypeScript 6 |
 | 管理后台 | Vite + React + Zustand + TanStack Query（go:embed 内嵌） |
 | 后端 | Go 1.26 + Gin + sqlx |
-| 数据 | PostgreSQL 18 (pgvector) + Redis 7 |
+| 数据 | PostgreSQL 18 (pgvector) + Redis 8 |
 | 部署 | Docker Compose + 可选内置 Caddy |
 
 ## 📖 文档
