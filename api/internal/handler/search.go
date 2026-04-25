@@ -148,22 +148,32 @@ func generateAIQuestions(postID int) {
 		return
 	}
 
-	prompt := fmt.Sprintf("根据以下文章，生成3个读者可能感兴趣的问题，每行一个问题，不要编号，不要解释，不要使用任何emoji：\n\n标题：%s", p.Title)
+	// Use the admin-customisable Questions prompt (default constant
+	// in handler/ai_prompts.go DefaultQuestionsPrompt). Same template
+	// + placeholder substitution shape as AISummary etc.
+	excerpt := ""
+	excerptSection := ""
 	if p.Excerpt != nil && *p.Excerpt != "" {
-		prompt += "\n摘要：" + *p.Excerpt
+		excerpt = *p.Excerpt
+		excerptSection = "摘要：" + excerpt + "\n"
 	}
+	contentText := ""
 	if p.Content != nil {
-		text := stripMarkdown(*p.Content)
-		runes := []rune(text)
+		t := stripMarkdown(*p.Content)
+		runes := []rune(t)
 		if len(runes) > 2000 {
-			text = string(runes[:2000])
+			t = string(runes[:2000])
 		}
-		prompt += "\n内容：" + text
+		contentText = t
 	}
 
-	// 'questions' purpose — same model wired to AI 设置 → 功能模型
-	// 分配 → 批量问答生成. Background prep job for the front-end
-	// 'related questions' chip row.
+	tpl := resolvePrompt(getOption("ai_questions_prompt"), DefaultQuestionsPrompt)
+	prompt := renderPrompt(tpl, map[string]string{
+		"title":           p.Title,
+		"content":         contentText,
+		"excerpt":         excerpt,
+		"excerpt_section": excerptSection,
+	})
 	result := callAIWithPurpose("content", prompt, 200)
 	if result == "" {
 		return
@@ -220,27 +230,35 @@ func generateAISummary(postID int) {
 	if minLen < 50 {
 		minLen = 50
 	}
-	customPrompt := strings.TrimSpace(getOption("ai_summary_prompt"))
 
-	var prompt string
-	if customPrompt != "" {
-		prompt = fmt.Sprintf("%s\n字数控制在 %d-%d 字之间。不要任何前缀、Markdown 标记或emoji。\n\n标题：%s",
-			customPrompt, minLen, maxLen, p.Title)
-	} else {
-		prompt = fmt.Sprintf("用中文总结以下文章，%d-%d字之间，直接输出总结内容，不要任何前缀、Markdown 标记或emoji。内容需完整概括文章要点，不要只写一句话：\n\n标题：%s",
-			minLen, maxLen, p.Title)
-	}
+	// Resolve prompt template (admin override or built-in default in
+	// handler/ai_prompts.go DefaultSummaryPrompt). Then substitute
+	// the post-level fields. Background path mirrors foreground
+	// AISummary so admins customising 摘要提示词 affect both.
+	excerpt := ""
+	excerptSection := ""
 	if p.Excerpt != nil && *p.Excerpt != "" {
-		prompt += "\n摘要：" + *p.Excerpt
+		excerpt = *p.Excerpt
+		excerptSection = "摘要：" + excerpt + "\n"
 	}
+	contentText := ""
 	if p.Content != nil {
-		text := stripMarkdown(*p.Content)
-		runes := []rune(text)
+		t := stripMarkdown(*p.Content)
+		runes := []rune(t)
 		if len(runes) > 2000 {
-			text = string(runes[:2000])
+			t = string(runes[:2000])
 		}
-		prompt += "\n内容：" + text
+		contentText = t
 	}
+	tpl := resolvePrompt(getOption("ai_summary_prompt"), DefaultSummaryPrompt)
+	prompt := renderPrompt(tpl, map[string]string{
+		"title":           p.Title,
+		"content":         contentText,
+		"excerpt":         excerpt,
+		"excerpt_section": excerptSection,
+		"min_len":         strconv.Itoa(minLen),
+		"max_len":         strconv.Itoa(maxLen),
+	})
 
 	// ~2 tokens per Chinese char as a rough budget; double the target
 	// to leave the model room to write before hitting the cutoff.
@@ -248,9 +266,6 @@ func generateAISummary(postID int) {
 	if maxTokens < 200 {
 		maxTokens = 200
 	}
-	// 'summary' purpose — same wiring as the foreground AISummary
-	// handler so the admin's 功能模型分配 picks one model for both
-	// on-demand and background summarisation.
 	result := callAIWithPurpose("content", prompt, maxTokens)
 	if result == "" {
 		return

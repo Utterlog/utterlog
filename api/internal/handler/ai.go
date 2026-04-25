@@ -101,10 +101,18 @@ func GetAIProviders(c *gin.Context) {
 	// purposes lets the admin frontend render the
 	// 功能模型分配 dropdowns dynamically — adding a new purpose
 	// is a server-side-only change, no admin SPA rebuild needed.
+	//
+	// prompt_defaults exposes the built-in Chinese fallback prompts
+	// (handler/ai_prompts.go) so the admin form can pre-fill the
+	// 自定义提示词 textareas with the actual default rather than
+	// a vague placeholder. Editing then saving over the default
+	// stores a custom value; clearing the textarea and saving
+	// restores default behaviour.
 	util.Success(c, gin.H{
-		"providers": providers,
-		"presets":   AIPresets,
-		"purposes":  AIPurposes,
+		"providers":        providers,
+		"presets":          AIPresets,
+		"purposes":         AIPurposes,
+		"prompt_defaults":  AIPromptDefaults,
 	})
 }
 
@@ -609,7 +617,11 @@ func AISlug(c *gin.Context) {
 	var req struct { Title string `json:"title"`; Content string `json:"content"` }
 	c.ShouldBindJSON(&req)
 	if req.Title == "" { util.BadRequest(c, "标题不能为空"); return }
-	content := callAIWithPurpose("content", "Generate a concise SEO-friendly URL slug for: "+req.Title+". Return ONLY the slug.", 50)
+	tpl := resolvePrompt(model.GetOption("ai_slug_prompt"), DefaultSlugPrompt)
+	prompt := renderPrompt(tpl, map[string]string{
+		"title": req.Title,
+	})
+	content := callAIWithPurpose("content", prompt, 50)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	util.Success(c, gin.H{"slug": content})
 }
@@ -619,7 +631,32 @@ func AISummary(c *gin.Context) {
 	c.ShouldBindJSON(&req)
 	if req.Content == "" { util.BadRequest(c, "内容不能为空"); return }
 	text := req.Content; if len(text) > 2000 { text = text[:2000] }
-	content := callAIWithPurpose("content", "Write a compelling article summary/excerpt in the same language as the original content. The summary should be 100-200 characters (Chinese) or 50-100 words (English), capturing the key points and tone of the article. Do NOT use phrases like '本文讲述' or 'This article'. Write it as an engaging standalone paragraph that makes readers want to read the full article. Title: "+req.Title+"\n\nContent:\n"+text, 500)
+
+	// Same min/max length resolution as the background generateAISummary
+	// path so foreground ✨ button and batch jobs honour the same admin
+	// 摘要长度 setting. Defaults to 200 ±50 if option absent.
+	maxLen := 200
+	if v := strings.TrimSpace(model.GetOption("ai_summary_max_length")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 50 && n <= 1000 { maxLen = n }
+	}
+	minLen := maxLen / 2
+	if minLen < 50 { minLen = 50 }
+
+	excerptSection := ""
+	// req.Content carries the full article body; AISummary doesn't take
+	// excerpt separately, so leave the {excerpt_section} placeholder
+	// blank for the foreground call. (background generateAISummary
+	// fills it when the post has its own excerpt.)
+
+	tpl := resolvePrompt(model.GetOption("ai_summary_prompt"), DefaultSummaryPrompt)
+	prompt := renderPrompt(tpl, map[string]string{
+		"title":           req.Title,
+		"content":         text,
+		"min_len":         strconv.Itoa(minLen),
+		"max_len":         strconv.Itoa(maxLen),
+		"excerpt_section": excerptSection,
+	})
+	content := callAIWithPurpose("content", prompt, 500)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	util.Success(c, gin.H{"summary": content})
 }
@@ -629,7 +666,13 @@ func AITags(c *gin.Context) {
 	c.ShouldBindJSON(&req)
 	if req.Title == "" && req.Content == "" { util.BadRequest(c, "标题或内容不能为空"); return }
 	text := req.Content; if len(text) > 1000 { text = text[:1000] }
-	content := callAIWithPurpose("content", "Extract exactly 3 keywords/tags from this article, return ONLY comma-separated tags in the same language as the content, no explanations: "+req.Title+" - "+text, 100)
+	tpl := resolvePrompt(model.GetOption("ai_keywords_prompt"), DefaultKeywordsPrompt)
+	prompt := renderPrompt(tpl, map[string]string{
+		"title":       req.Title,
+		"content":     text,
+		"tags_count":  "3",
+	})
+	content := callAIWithPurpose("content", prompt, 100)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	// Parse comma-separated tags
 	tags := []string{}
@@ -644,7 +687,11 @@ func AIFormat(c *gin.Context) {
 	var req struct { Content string `json:"content"` }
 	c.ShouldBindJSON(&req)
 	if req.Content == "" { util.BadRequest(c, "内容不能为空"); return }
-	content := callAIWithPurpose("content", "Improve formatting and readability, keep original language, use Markdown: "+req.Content, 4096)
+	tpl := resolvePrompt(model.GetOption("ai_polish_prompt"), DefaultPolishPrompt)
+	prompt := renderPrompt(tpl, map[string]string{
+		"content": req.Content,
+	})
+	content := callAIWithPurpose("content", prompt, 4096)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	util.Success(c, gin.H{"content": content})
 }

@@ -68,6 +68,14 @@ export default function AiSettingsPage() {
   // (api/internal/handler/ai.go AIPurposes) doesn't require a SPA
   // rebuild — the form rows are rendered by mapping over this array.
   const [purposes, setPurposes] = useState<Array<{ key: string; label: string; hint?: string }>>([]);
+  // Built-in default prompts loaded from the same /ai/providers
+  // payload. The 自定义提示词 textareas pre-fill with the value
+  // for the matching key (summary / slug / keywords / polish /
+  // questions), so admins see exactly what runs when they leave a
+  // field empty. Clearing the textarea + saving = restore default
+  // (the option key gets stored as ''; backend's resolvePrompt
+  // falls back to the constant).
+  const [promptDefaults, setPromptDefaults] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -87,14 +95,20 @@ export default function AiSettingsPage() {
     ai_chat_position: 'right',
     ai_summary_auto: 'false',
     ai_summary_max_length: '200',
+    // Prompt textareas start empty — load() pre-fills them with the
+    // built-in Chinese defaults from the backend (handler/ai_prompts.go
+    // AIPromptDefaults) when the corresponding option is empty.
+    // Clearing the textarea + 保存 stores '' which makes backend
+    // resolvePrompt fall back to the constant on every call.
     ai_summary_prompt: '',
+    ai_slug_prompt: '',
+    ai_keywords_prompt: '',
+    ai_polish_prompt: '',
+    ai_questions_prompt: '',
     ai_image_auto: 'false',
     ai_slug_auto: 'false',
     ai_keywords_auto: 'false',
     ai_polish_auto: 'false',
-    ai_slug_prompt: 'Generate a concise, SEO-friendly URL slug in English for this article. Output only the slug, lowercase, hyphens instead of spaces, no special characters.',
-    ai_keywords_prompt: 'Extract 3-5 keywords/tags from this article. Output as comma-separated list. Use the same language as the article.',
-    ai_polish_prompt: 'Polish and improve the writing quality: fix grammar, improve flow, make it more engaging. Keep the same language and meaning. Output in Markdown.',
     // ai_image_model removed: was a placebo label that didn't drive
     // dispatch (real provider lookup goes through ai_providers).
     ai_image_ratio: '16:9',
@@ -123,9 +137,11 @@ export default function AiSettingsPage() {
       const p = provR.data?.providers || provR.providers || [];
       const pr = provR.data?.presets || provR.presets || {};
       const pu = provR.data?.purposes || provR.purposes || [];
+      const pd = provR.data?.prompt_defaults || provR.prompt_defaults || {};
       setProviders(p);
       setPresets(pr);
       setPurposes(pu);
+      setPromptDefaults(pd);
 
       // Load AI options
       const opts = optR.data || optR || {};
@@ -133,6 +149,30 @@ export default function AiSettingsPage() {
       Object.keys(newConfig).forEach(key => {
         if (opts[key] !== undefined && opts[key] !== '') newConfig[key] = opts[key];
       });
+
+      // Pre-fill prompt textareas with the built-in default when the
+      // admin hasn't saved a custom value yet. The textarea always
+      // shows real text (not a placeholder), so admins can edit/copy
+      // it directly. Backend resolvePrompt sees '' as 'use default',
+      // so saving an unedited default-filled box is identical to
+      // saving an empty box — both restore default behaviour on the
+      // server. Mapping: prompt_defaults key → option key.
+      const promptKeyMap: Record<string, string> = {
+        summary:   'ai_summary_prompt',
+        slug:      'ai_slug_prompt',
+        keywords:  'ai_keywords_prompt',
+        polish:    'ai_polish_prompt',
+        questions: 'ai_questions_prompt',
+      };
+      Object.entries(promptKeyMap).forEach(([defaultKey, optKey]) => {
+        const saved = opts[optKey];
+        if (saved && String(saved).trim() !== '') {
+          newConfig[optKey] = String(saved);
+        } else if (pd[defaultKey]) {
+          newConfig[optKey] = pd[defaultKey];
+        }
+      });
+
       // Also pick up any ai_purpose_*_provider keys we got back from
       // the API. These aren't in the initial useState because the
       // purposes list is server-driven (AIPurposes in handler/ai.go),
@@ -218,13 +258,48 @@ export default function AiSettingsPage() {
     setSavingConfig(true);
     try {
       const aiOpts: Record<string, string> = {};
-      Object.entries(config).forEach(([k, v]) => { if (k.startsWith('ai_')) aiOpts[k] = v; });
+      // Map prompt option key → matching default key so we can detect
+      // 'value equals current default' and store '' instead. That way
+      // an admin who never customised a prompt automatically gets any
+      // future default-prompt update without having to re-edit. Only
+      // textareas where the user explicitly typed a different version
+      // persist as a stored value.
+      const promptOptToDefaultKey: Record<string, string> = {
+        ai_summary_prompt:   'summary',
+        ai_slug_prompt:      'slug',
+        ai_keywords_prompt:  'keywords',
+        ai_polish_prompt:    'polish',
+        ai_questions_prompt: 'questions',
+      };
+      Object.entries(config).forEach(([k, v]) => {
+        if (!k.startsWith('ai_')) return;
+        const defaultKey = promptOptToDefaultKey[k];
+        if (defaultKey) {
+          const def = promptDefaults[defaultKey] ?? '';
+          // Compare trimmed strings — admins occasionally append a
+          // trailing newline, that shouldn't count as a custom edit.
+          if ((v ?? '').trim() === def.trim()) {
+            aiOpts[k] = '';
+            return;
+          }
+        }
+        aiOpts[k] = v;
+      });
       await api.put('/options', aiOpts);
       toast.success('设置已保存');
     } catch {
       toast.error('保存失败');
     }
     setSavingConfig(false);
+  };
+
+  // Reset a prompt textarea to the built-in default. Doesn't save —
+  // user has to click 保存 to persist. Lets users preview the default
+  // without committing in case they want to discard the reset.
+  const resetPrompt = (optionKey: string, defaultKey: string) => {
+    const def = promptDefaults[defaultKey] ?? '';
+    updateConfig(optionKey, def);
+    toast.success('已恢复默认提示词，记得点保存');
   };
 
   // Provider CRUD
@@ -539,15 +614,11 @@ export default function AiSettingsPage() {
                 value={config.ai_summary_max_length}
                 onChange={v => updateConfig('ai_summary_max_length', v)}
               />
-              <FormRowTextareaC
-                label="自定义提示词（可选）"
-                hint="例如：请用轻松幽默的语气总结"
-                rows={3}
-                value={config.ai_summary_prompt}
-                onChange={v => updateConfig('ai_summary_prompt', v)}
-                placeholder="留空使用默认提示词"
-                last
-              />
+              {/* The 摘要提示词 textarea now lives in the
+                  「自定义提示词」section below alongside Slug /
+                  关键词 / 润色 — keeping the prompt editor in one
+                  place avoids the previous bug where this section
+                  had its own duplicate field. */}
             </FormSectionC>
           )}
 
@@ -622,37 +693,49 @@ export default function AiSettingsPage() {
           <FormSectionC
             title="自定义提示词"
             icon="fa-regular fa-terminal"
-            description="自定义每个 AI 功能的指令，留空使用内置默认提示词"
+            description="文本框默认填入内置提示词模板（中文版），可直接编辑保存。清空后保存即恢复默认；点「恢复默认」按钮把当前默认填回输入框（不会自动保存）。占位符 {title} {content} {excerpt} {min_len} {max_len} {tags_count} 会在调用时替换。"
           >
-            <FormRowTextareaC
-              label="摘要提示词"
-              rows={3}
-              value={config.ai_summary_prompt}
-              onChange={v => updateConfig('ai_summary_prompt', v)}
-              placeholder="留空使用默认：根据文章内容生成简洁摘要"
-            />
-            <FormRowTextareaC
-              label="Slug 提示词"
-              rows={3}
-              value={config.ai_slug_prompt}
-              onChange={v => updateConfig('ai_slug_prompt', v)}
-              placeholder="留空使用默认：生成 SEO 友好的英文 URL 别名"
-            />
-            <FormRowTextareaC
-              label="关键词提示词"
-              rows={3}
-              value={config.ai_keywords_prompt}
-              onChange={v => updateConfig('ai_keywords_prompt', v)}
-              placeholder="留空使用默认：从文章中提取 3-5 个关键词"
-            />
-            <FormRowTextareaC
-              label="润色提示词"
-              rows={3}
-              value={config.ai_polish_prompt}
-              onChange={v => updateConfig('ai_polish_prompt', v)}
-              placeholder="留空使用默认：润色优化文章质量"
-              last
-            />
+            {([
+              { key: 'summary',   label: '摘要提示词',   rows: 8 },
+              { key: 'slug',      label: 'Slug 提示词',  rows: 6 },
+              { key: 'keywords',  label: '关键词提示词', rows: 5 },
+              { key: 'polish',    label: '润色提示词',   rows: 8 },
+              { key: 'questions', label: '推荐问题提示词', rows: 5 },
+            ] as const).map((row, idx, arr) => {
+              const optKey = `ai_${row.key}_prompt`;
+              const def = promptDefaults[row.key] ?? '';
+              const current = String(config[optKey] ?? '');
+              const isDefault = current.trim() === def.trim();
+              return (
+                <div key={row.key} style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--color-border)', paddingBottom: idx === arr.length - 1 ? 0 : '14px', marginBottom: idx === arr.length - 1 ? 0 : '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="text-sub" style={{ fontSize: '13px', fontWeight: 500 }}>{row.label}</label>
+                    <button
+                      type="button"
+                      onClick={() => resetPrompt(optKey, row.key)}
+                      disabled={isDefault}
+                      title={isDefault ? '当前已是默认' : '把内置默认提示词填回这个输入框'}
+                      style={{
+                        background: 'none', border: 'none', padding: '2px 6px',
+                        fontSize: '12px', cursor: isDefault ? 'default' : 'pointer',
+                        color: isDefault ? 'var(--color-text-dim)' : 'var(--color-primary)',
+                      }}
+                    >
+                      <i className="fa-regular fa-rotate-left" style={{ fontSize: '11px', marginRight: '3px' }} />
+                      恢复默认
+                    </button>
+                  </div>
+                  <textarea
+                    className="input focus-ring"
+                    rows={row.rows}
+                    value={current}
+                    onChange={e => updateConfig(optKey, e.target.value)}
+                    placeholder="清空保存即恢复默认"
+                    style={{ fontSize: '12px', fontFamily: 'var(--font-mono, monospace)', resize: 'vertical' }}
+                  />
+                </div>
+              );
+            })}
           </FormSectionC>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
