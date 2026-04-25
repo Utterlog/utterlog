@@ -79,15 +79,17 @@ export default function PostCard({ post, priority }: { post: any; priority?: boo
       </div>
 
       {/* Cover image */}
-      <PostLink post={post} style={{ display: 'block', position: 'relative', height: '320px', overflow: 'hidden' }}>
-        <img
-          {...coverProps({
-            src: coverUrl,
-            alt: post.title,
-            priority,
-            style: { height: '320px' },
-          })}
-        />
+      <PostLink post={post} className="cover-zoom" style={{ display: 'block', position: 'relative', height: '320px', overflow: 'hidden' }}>
+        {coverUrl && (
+          <img
+            {...coverProps({
+              src: coverUrl,
+              alt: post.title,
+              priority,
+              style: { height: '320px' },
+            })}
+          />
+        )}
         {/* Right edge red bar on hover */}
         <div style={{
           position: 'absolute', top: 0, right: 0, bottom: 0, width: '4px',

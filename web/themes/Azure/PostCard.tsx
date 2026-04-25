@@ -94,16 +94,17 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
       </div>
 
       {/* Cover image */}
-      <PostLink post={post} className="azure-img-hover-wrap" style={{ display: 'block', position: 'relative', overflow: 'hidden', height: '320px' }}>
-        <img
-          {...coverProps({
-            src: coverUrl,
-            alt: post.title,
-            priority,
-            className: 'azure-img-hover',
-            style: { height: '320px' },
-          })}
-        />
+      <PostLink post={post} className="cover-zoom" style={{ display: 'block', position: 'relative', overflow: 'hidden', height: '320px' }}>
+        {coverUrl && (
+          <img
+            {...coverProps({
+              src: coverUrl,
+              alt: post.title,
+              priority,
+              style: { height: '320px' },
+            })}
+          />
+        )}
       </PostLink>
 
       {/* Excerpt — prefer AI summary when present, fall back to manual

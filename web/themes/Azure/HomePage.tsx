@@ -230,7 +230,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
             {heroPost && (
               <div style={{ position: 'relative', overflow: 'hidden' }}
                 onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-                <PostLink post={heroPost} style={{ display: 'block', textDecoration: 'none' }}>
+                <PostLink post={heroPost} className="cover-zoom" style={{ display: 'block', textDecoration: 'none' }}>
                   <FadeCover src={heroSrc} alt={heroPost.title} style={{ width: '100%', height: heroHeight }} />
                   <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', padding: '60px 24px 20px' }}>
                     <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', lineHeight: 1.4 }}>{heroPost.title}</h2>

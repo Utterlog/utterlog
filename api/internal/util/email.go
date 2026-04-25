@@ -202,11 +202,17 @@ func sendViaSendflare(cfg EmailConfig, to, subject, body string) error {
 	if cfg.FromName != "" {
 		from = fmt.Sprintf("%s <%s>", cfg.FromName, cfg.From)
 	}
+	// Sendflare's API uses the `body` key for the HTML body (verified by
+	// probing the live endpoint with 8 different field names — only
+	// `body` actually surfaces in the delivered email; `html`,
+	// `htmlBody`, `html_body`, `body_html`, `content`, `message`, `text`
+	// are all silently accepted by the API but never rendered. Earlier
+	// `"html"` here meant every comment-notification email arrived blank.
 	payload, _ := json.Marshal(map[string]interface{}{
 		"from":    from,
 		"to":      to,
 		"subject": subject,
-		"html":    body,
+		"body":    body,
 	})
 	req, _ := http.NewRequest("POST", "https://api.sendflare.com/v1/send", bytes.NewReader(payload))
 	req.Header.Set("Authorization", "Bearer "+cfg.SendflareAPIKey)

@@ -1129,6 +1129,28 @@ img[data-blog-image][data-loaded="0"] {
   background-color: var(--color-bg-soft, #f0f0f0);
 }
 
+/* ────────────────────────────────────────────────────────────────
+   .cover-zoom — single, theme-agnostic hover-scale wrapper.
+   Apply to any <a> / <div> wrapping a <img data-blog-image> (PostCard,
+   HomePage hero, prev/next nav, related cards). Replaces the previous
+   per-theme classes (.azure-img-hover-wrap, .post-prev-next-link
+   hover rule etc.) so every cover shares one transition.
+   ──────────────────────────────────────────────────────────────── */
+.cover-zoom :where([data-blog-image] img, img[data-blog-image]) {
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cover-zoom:hover :where([data-blog-image] img, img[data-blog-image]) {
+  transform: translate3d(0, 0, 0) scale(1.04);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cover-zoom :where([data-blog-image] img, img[data-blog-image]),
+  .cover-zoom:hover :where([data-blog-image] img, img[data-blog-image]) {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 /* 1. fade — reverts to the original LazyImage behaviour: pre-load
       we show a blurred, transparent placeholder; the real image fades
       in only once the browser reports load. A keyframe animation

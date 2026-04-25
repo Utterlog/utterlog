@@ -23,9 +23,22 @@ interface FadeCoverProps {
   style?: React.CSSProperties;
   className?: string;
   priority?: boolean;
+  /**
+   * Optional class applied to the inner <img>. Most callers can leave
+   * this unset — wrap the FadeCover (or its parent link) in the
+   * system-wide `.cover-zoom` class instead, which targets any
+   * `[data-blog-image]` descendant via globals.css. Kept here as an
+   * escape hatch for one-off cases that want a custom transition.
+   */
+  imgClassName?: string;
 }
 
-export default function FadeCover({ src, alt, style, className, priority = true }: FadeCoverProps) {
+export default function FadeCover({ src, alt, style, className, priority = true, imgClassName }: FadeCoverProps) {
+  // Guard: empty src (random_image_enabled=false, hero post still
+  // loading, etc.) would emit a Next.js warning and trigger a
+  // wasted re-fetch of the page URL. Render the sized placeholder
+  // wrapper without an <img> so layout space stays reserved.
+  const hasSrc = !!src && src.trim() !== '';
   return (
     <div
       className={className}
@@ -36,7 +49,7 @@ export default function FadeCover({ src, alt, style, className, priority = true 
         ...style,
       }}
     >
-      <img {...coverProps({ src, alt, priority })} />
+      {hasSrc && <img {...coverProps({ src, alt, priority, className: imgClassName })} />}
     </div>
   );
 }

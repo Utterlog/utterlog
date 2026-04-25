@@ -249,7 +249,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  /* hover transform/transition unified into globals.css :.cover-zoom */
 }
 .post-prev-next-cover::after {
   content: '';
@@ -257,7 +257,6 @@
   inset: 0;
   background: rgba(0,0,0,0.55);
 }
-.post-prev-next-link:hover .post-prev-next-cover img { transform: translate3d(0,0,0) scale(1.04); }
 .post-prev-next-text {
   flex: 1;
   display: flex;
@@ -466,12 +465,6 @@
   opacity: 1;
 }
 
-/* 图片悬浮缓慢放大 */
-.azure-img-hover {
-  transform: translate3d(0,0,0) scale(1);
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  backface-visibility: hidden;
-}
-.azure-img-hover-wrap:hover .azure-img-hover {
-  transform: translate3d(0,0,0) scale(1.04);
-}
+/* Cover hover-zoom is now system-level: see .cover-zoom in
+   app/globals.css. Theme-prefixed .azure-img-hover* classes were
+   removed; main-content covers should wrap in .cover-zoom instead. */

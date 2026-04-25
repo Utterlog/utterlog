@@ -251,7 +251,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  /* hover transform/transition unified into globals.css :.cover-zoom */
 }
 [data-theme="Azure"] .post-prev-next-cover::after {
   content: '';
@@ -259,7 +259,6 @@
   inset: 0;
   background: rgba(0,0,0,0.55);
 }
-[data-theme="Azure"] .post-prev-next-link:hover .post-prev-next-cover img { transform: translate3d(0,0,0) scale(1.04); }
 [data-theme="Azure"] .post-prev-next-text {
   flex: 1;
   display: flex;
@@ -450,18 +449,6 @@
 [data-theme="Azure"] .blog-prose th { background-color: var(--color-bg-soft); text-align: left; padding: 0.5rem 1rem; font-weight: 600; font-size: 0.875rem; border: 1px solid var(--color-border); }
 [data-theme="Azure"] .blog-prose td { padding: 0.5rem 1rem; font-size: 0.875rem; border: 1px solid var(--color-border); }
 
-/* ====== Azure 主题图片基准样式 ====== */
-
-/* .azure-img-lazy 淡入规则已删除 —— PostNavigation 内的 LazyCardImage
-   用 inline style 管理 opacity/filter transition（见 FadeCover 实现），
-   原 class-based 规则只是残留遮蔽，没有任何真实作用。 */
-
-/* 图片悬浮缓慢放大 */
-[data-theme="Azure"] .azure-img-hover {
-  transform: translate3d(0,0,0) scale(1);
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  backface-visibility: hidden;
-}
-[data-theme="Azure"] .azure-img-hover-wrap:hover .azure-img-hover {
-  transform: translate3d(0,0,0) scale(1.04);
-}
+/* Cover hover-zoom is now system-level: see .cover-zoom in
+   app/globals.css. Theme-prefixed .azure-img-hover* classes were
+   removed; main-content covers should wrap in .cover-zoom instead. */

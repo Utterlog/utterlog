@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import PostLink from './PostLink';
 import SharedFadeCover from './FadeCover';
+import { randomCoverUrl } from '@/lib/blog-image';
+import { useThemeContext } from '@/lib/theme-context';
 
 function LazyCardImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -22,25 +24,28 @@ function LazyCardImage({ src, alt }: { src: string; alt: string }) {
 
   return (
     <div ref={ref} style={{ position: 'absolute', inset: 0 }}>
-      {inView && (
+      {inView && src && (
         // Prev/next covers and related-card thumbnails deliberately
         // hard-code the classic blur→sharp fade regardless of the
         // admin's image_display_effect choice — a scattered pixel or
         // blinds reveal here looked aggressive in the footer. No
-        // `data-blog-image` = escapes the global effect selector.
-        // `transform` is kept in the transition list so the
-        // `.azure-img-hover-wrap:hover` scale(1.04) zoom stays smooth
-        // instead of snapping instantly.
+        // `data-blog-image` = escapes the global effect selector,
+        // but the parent .cover-zoom still triggers the hover scale
+        // because the rule targets img regardless of data attr when
+        // we add a data-blog-image stamp; here we keep the inline
+        // transition since this <img> is intentionally outside the
+        // global system to preserve the hard-coded blur→sharp.
         <img
           src={src}
           alt={alt}
+          data-blog-image=""
+          data-loaded={loaded ? '1' : '0'}
           onLoad={() => setLoaded(true)}
-          className={`azure-img-hover ${loaded ? 'azure-img-lazy loaded' : 'azure-img-lazy'}`}
           style={{
             width: '100%', height: '100%', objectFit: 'cover', display: 'block',
             opacity: loaded ? 1 : 0,
             filter: loaded ? 'blur(0)' : 'blur(20px)',
-            transition: 'opacity 0.5s ease-in-out, filter 0.5s linear, transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'opacity 0.5s ease-in-out, filter 0.5s linear',
           }}
         />
       )}
@@ -98,6 +103,7 @@ interface NavigationData {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 export default function PostNavigation({ postId, coverUrl }: { postId: number; coverUrl?: string }) {
+  const { options } = useThemeContext();
   const [data, setData] = useState<NavigationData | null>(null);
   const [activeTab, setActiveTab] = useState('related');
   const [refreshing, setRefreshing] = useState(false);
@@ -155,13 +161,13 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
       {(data.prev || data.next) && (
         <div className="post-prev-next">
           {data.prev ? (
-            <PostLink post={data.prev} className="post-prev-next-link prev">
+            <PostLink post={data.prev} className="post-prev-next-link prev cover-zoom">
               <div className="post-prev-next-text">
                 <span className="post-prev-next-label"><i className="fa-regular fa-arrow-left" style={{ fontSize: '12px' }} /> 上一篇</span>
                 <span className="post-prev-next-title">{data.prev.title}</span>
               </div>
               <div className="post-prev-next-cover">
-                <FadeCover src={data.prev.cover_url || `https://img.et/1920/1080?type=landscape&r=${data.prev.id}`} />
+                <FadeCover src={data.prev.cover_url || randomCoverUrl(data.prev.id, options)} />
               </div>
             </PostLink>
           ) : (
@@ -175,9 +181,9 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
             </div>
           )}
           {data.next ? (
-            <PostLink post={data.next} className="post-prev-next-link next">
+            <PostLink post={data.next} className="post-prev-next-link next cover-zoom">
               <div className="post-prev-next-cover">
-                <FadeCover src={data.next.cover_url || `https://img.et/1920/1080?type=landscape&r=${data.next.id}`} />
+                <FadeCover src={data.next.cover_url || randomCoverUrl(data.next.id, options)} />
               </div>
               <div className="post-prev-next-text">
                 <span className="post-prev-next-label">下一篇 <i className="fa-regular fa-arrow-right" style={{ fontSize: '12px' }} /></span>
@@ -250,11 +256,11 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
             {/* 普通文章卡片 */}
             {activeTab !== 'feeds' && activeItems.map(post => {
               const cat = post.categories?.[0];
-              const coverSrc = post.cover_url || `https://img.et/1920/1080?type=landscape&r=${post.id}`;
+              const coverSrc = post.cover_url || randomCoverUrl(post.id, options);
               const date = new Date((post.created_at || 0) * 1000);
               const mon = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
               return (
-                <PostLink key={post.id} post={post} className="post-related-card azure-img-hover-wrap">
+                <PostLink key={post.id} post={post} className="post-related-card cover-zoom">
                   <div className="post-related-card-cover">
                     <LazyCardImage src={coverSrc} alt={post.title} />
                     <span className="post-related-card-date">{mon}</span>

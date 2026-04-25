@@ -25,14 +25,16 @@ export default function PostCard({ post, priority }: { post: any; priority?: boo
         onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#e9e9e9'; }}
       >
         {/* Cover image */}
-        <div style={{ width: '100%', height: '200px', position: 'relative', overflow: 'hidden' }}>
-          <img
-            {...coverProps({
-              src: coverUrl,
-              alt: post.title,
-              priority,
-            })}
-          />
+        <div className="cover-zoom" style={{ width: '100%', height: '200px', position: 'relative', overflow: 'hidden' }}>
+          {coverUrl && (
+            <img
+              {...coverProps({
+                src: coverUrl,
+                alt: post.title,
+                priority,
+              })}
+            />
+          )}
         </div>
 
         <div style={{ padding: '16px 20px' }}>
