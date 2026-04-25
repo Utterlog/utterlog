@@ -165,7 +165,7 @@ export default function FeedsPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 32px', borderBottom: '1px solid #e5e5e5' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="fa-sharp fa-light fa-rss" style={{ fontSize: '24px', color: '#0052D9' }} />
+          <i className="fa-sharp fa-light fa-rss" style={{ fontSize: '24px', color: 'var(--color-primary, #0052D9)' }} />
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1a1a1a' }}>订阅</h1>
         </div>
         <div style={{ padding: '6px 14px', border: '1px solid #d9d9d9', fontSize: '13px', color: '#666' }}>
@@ -357,7 +357,7 @@ export default function FeedsPage() {
               onClick={() => loadFeeds(page + 1, false)}
               style={{
                 padding: '10px 28px', fontSize: '13px', fontWeight: 500,
-                background: '#fff', color: '#0052D9', border: '1px solid #0052D9',
+                background: '#fff', color: 'var(--color-primary, #0052D9)', border: '1px solid var(--color-primary, #0052D9)',
                 cursor: 'pointer',
               }}
             >

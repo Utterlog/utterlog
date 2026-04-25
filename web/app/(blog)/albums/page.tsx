@@ -73,7 +73,7 @@ export default function AlbumsPage() {
     return (
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
         <button onClick={() => { setSelectedAlbum(null); setPhotos([]); }} style={{
-          background: 'none', border: 'none', cursor: 'pointer', color: '#0052D9',
+          background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary, #0052D9)',
           fontSize: '14px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '6px',
         }}>
           <i className="fa-solid fa-arrow-left" /> All Albums

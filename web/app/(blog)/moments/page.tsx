@@ -470,7 +470,7 @@ export default function MomentsPage() {
                   width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   borderRadius: '50%', border: 'none', cursor: 'pointer',
                   background: (filterYear !== null || showCalendar) ? 'rgba(0,82,217,0.08)' : 'transparent',
-                  color: (filterYear !== null || showCalendar) ? '#0052D9' : '#7a7670', transition: 'background 0.2s',
+                  color: (filterYear !== null || showCalendar) ? 'var(--color-primary, #0052D9)' : '#7a7670', transition: 'background 0.2s',
                 }}
                 onMouseEnter={e => { if (filterYear === null && !showCalendar) e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; }}
                 onMouseLeave={e => { if (filterYear === null && !showCalendar) e.currentTarget.style.background = 'transparent'; }}
@@ -502,7 +502,7 @@ export default function MomentsPage() {
                         onClick={() => { setFilterYear(null); setFilterMonth(null); setShowCalendar(false); }}
                         style={{
                           width: '100%', padding: '6px 0', marginBottom: '8px', fontSize: '12px',
-                          color: '#0052D9', background: 'none', border: 'none', cursor: 'pointer',
+                          color: 'var(--color-primary, #0052D9)', background: 'none', border: 'none', cursor: 'pointer',
                           borderBottom: '1px solid #f0f0f0',
                         }}
                       >
@@ -515,7 +515,7 @@ export default function MomentsPage() {
                         <button
                           onClick={() => { setFilterYear(year); setFilterMonth(null); setShowCalendar(false); }}
                           style={{
-                            fontSize: '13px', fontWeight: 600, color: filterYear === year ? '#0052D9' : '#1a1a1a',
+                            fontSize: '13px', fontWeight: 600, color: filterYear === year ? 'var(--color-primary, #0052D9)' : '#1a1a1a',
                             background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', width: '100%', textAlign: 'left',
                           }}
                         >
@@ -528,8 +528,8 @@ export default function MomentsPage() {
                               onClick={() => { setFilterYear(year); setFilterMonth(month); setShowCalendar(false); }}
                               style={{
                                 padding: '3px 8px', fontSize: '11px', borderRadius: '4px',
-                                border: filterYear === year && filterMonth === month ? '1px solid #0052D9' : '1px solid #e5e5e5',
-                                background: filterYear === year && filterMonth === month ? '#0052D9' : '#fafafa',
+                                border: filterYear === year && filterMonth === month ? '1px solid var(--color-primary, #0052D9)' : '1px solid #e5e5e5',
+                                background: filterYear === year && filterMonth === month ? 'var(--color-primary, #0052D9)' : '#fafafa',
                                 color: filterYear === year && filterMonth === month ? '#fff' : '#666',
                                 cursor: 'pointer', transition: 'all 0.15s',
                               }}
@@ -556,7 +556,7 @@ export default function MomentsPage() {
                   width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   borderRadius: '50%', border: 'none', cursor: 'pointer',
                   background: (filterTag || showTagPanel) ? 'rgba(0,82,217,0.08)' : 'transparent',
-                  color: (filterTag || showTagPanel) ? '#0052D9' : '#7a7670', transition: 'background 0.2s',
+                  color: (filterTag || showTagPanel) ? 'var(--color-primary, #0052D9)' : '#7a7670', transition: 'background 0.2s',
                   fontSize: '16px', fontWeight: 700,
                 }}
                 onMouseEnter={e => { if (!filterTag && !showTagPanel) e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; }}
@@ -583,7 +583,7 @@ export default function MomentsPage() {
                         onClick={() => { setFilterTag(null); setShowTagPanel(false); }}
                         style={{
                           width: '100%', padding: '6px 0', marginBottom: '8px', fontSize: '12px',
-                          color: '#0052D9', background: 'none', border: 'none', cursor: 'pointer',
+                          color: 'var(--color-primary, #0052D9)', background: 'none', border: 'none', cursor: 'pointer',
                           borderBottom: '1px solid #f0f0f0',
                         }}
                       >
@@ -641,7 +641,7 @@ export default function MomentsPage() {
           {/* 数量 */}
           <div style={{ padding: '0 12px', fontSize: '11px', color: '#999' }}>
             {filterYear !== null ? (
-              <span style={{ color: '#0052D9', fontWeight: 500 }}>{filterYear}{filterMonth !== null ? `·${filterMonth + 1}月` : ''}</span>
+              <span style={{ color: 'var(--color-primary, #0052D9)', fontWeight: 500 }}>{filterYear}{filterMonth !== null ? `·${filterMonth + 1}月` : ''}</span>
             ) : (
               <span>{moments.length} 条</span>
             )}

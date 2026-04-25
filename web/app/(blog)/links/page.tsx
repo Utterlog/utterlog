@@ -93,7 +93,7 @@ export default function LinksPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 32px', borderBottom: '1px solid #e5e5e5' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="fa-sharp fa-light fa-link" style={{ fontSize: '24px', color: '#0052D9' }} />
+          <i className="fa-sharp fa-light fa-link" style={{ fontSize: '24px', color: 'var(--color-primary, #0052D9)' }} />
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1a1a1a' }}>友情链接</h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -101,13 +101,13 @@ export default function LinksPage() {
             onClick={() => setShowApply(true)}
             style={{
               padding: '6px 16px', fontSize: '13px', fontWeight: 600,
-              border: '1px solid #0052D9', color: '#0052D9',
+              border: '1px solid var(--color-primary, #0052D9)', color: 'var(--color-primary, #0052D9)',
               background: '#fff', cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', gap: '6px',
               transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#0052D9'; e.currentTarget.style.color = '#fff'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#0052D9'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary, #0052D9)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = 'var(--color-primary, #0052D9)'; }}
           >
             <i className="fa-regular fa-handshake" style={{ fontSize: '12px' }} />
             我要申请
@@ -126,8 +126,8 @@ export default function LinksPage() {
               <button key={g} onClick={() => setActiveGroup(g)} style={{
                 padding: '6px 16px', fontSize: '13px', fontWeight: activeGroup === g ? 600 : 400,
                 border: '1px solid',
-                borderColor: activeGroup === g ? '#0052D9' : '#d9d9d9',
-                background: activeGroup === g ? '#0052D9' : '#fff',
+                borderColor: activeGroup === g ? 'var(--color-primary, #0052D9)' : '#d9d9d9',
+                background: activeGroup === g ? 'var(--color-primary, #0052D9)' : '#fff',
                 color: activeGroup === g ? '#fff' : '#555',
                 cursor: 'pointer', transition: 'all 0.15s',
               }}>
@@ -148,7 +148,7 @@ export default function LinksPage() {
               {/* Group title — only show when viewing all */}
               {activeGroup === 'all' && groups.length > 2 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <i className="fa-regular fa-folder" style={{ color: '#0052D9', fontSize: '14px' }} />
+                  <i className="fa-regular fa-folder" style={{ color: 'var(--color-primary, #0052D9)', fontSize: '14px' }} />
                   <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a1a' }}>{groupName}</h2>
                   <span style={{ fontSize: '12px', color: '#999' }}>{groupLinks.length} 个</span>
                 </div>
@@ -168,7 +168,7 @@ export default function LinksPage() {
                       textDecoration: 'none', transition: 'border-color 0.15s, box-shadow 0.15s',
                       background: '#fff',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#0052D9'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,82,217,0.08)'; }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary, #0052D9)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,82,217,0.08)'; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e5e5'; e.currentTarget.style.boxShadow = 'none'; }}
                   >
                     <img
@@ -219,7 +219,7 @@ export default function LinksPage() {
             {/* Modal header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #e5e5e5' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="fa-regular fa-handshake" style={{ color: '#0052D9', fontSize: '16px' }} />
+                <i className="fa-regular fa-handshake" style={{ color: 'var(--color-primary, #0052D9)', fontSize: '16px' }} />
                 <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a1a' }}>申请友链</h2>
               </div>
               <button
@@ -248,49 +248,49 @@ export default function LinksPage() {
                   <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>站点名称 *</label>
                   <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="我的博客"
                     style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #d9d9d9', outline: 'none', background: '#fff', color: '#1a1a1a', boxSizing: 'border-box' }}
-                    onFocus={e => (e.currentTarget.style.borderColor = '#0052D9')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
+                    onFocus={e => (e.currentTarget.style.borderColor = 'var(--color-primary, #0052D9)')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
                   />
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>站点地址 *</label>
                   <input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://example.com"
                     style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #d9d9d9', outline: 'none', background: '#fff', color: '#1a1a1a', boxSizing: 'border-box' }}
-                    onFocus={e => (e.currentTarget.style.borderColor = '#0052D9')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
+                    onFocus={e => (e.currentTarget.style.borderColor = 'var(--color-primary, #0052D9)')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
                   />
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>站点描述</label>
                   <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="一句话介绍你的站点"
                     style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #d9d9d9', outline: 'none', background: '#fff', color: '#1a1a1a', boxSizing: 'border-box' }}
-                    onFocus={e => (e.currentTarget.style.borderColor = '#0052D9')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
+                    onFocus={e => (e.currentTarget.style.borderColor = 'var(--color-primary, #0052D9)')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
                   />
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>站点图标</label>
                   <input value={form.logo} onChange={e => setForm({ ...form, logo: e.target.value })} placeholder="留空自动获取"
                     style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #d9d9d9', outline: 'none', background: '#fff', color: '#1a1a1a', boxSizing: 'border-box' }}
-                    onFocus={e => (e.currentTarget.style.borderColor = '#0052D9')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
+                    onFocus={e => (e.currentTarget.style.borderColor = 'var(--color-primary, #0052D9)')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
                   />
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>头像地址</label>
                   <input value={form.avatar} onChange={e => setForm({ ...form, avatar: e.target.value })} placeholder="https://example.com/avatar.png"
                     style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #d9d9d9', outline: 'none', background: '#fff', color: '#1a1a1a', boxSizing: 'border-box' }}
-                    onFocus={e => (e.currentTarget.style.borderColor = '#0052D9')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
+                    onFocus={e => (e.currentTarget.style.borderColor = 'var(--color-primary, #0052D9)')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
                   />
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>RSS / Feed 地址</label>
                   <input value={form.rss_url} onChange={e => setForm({ ...form, rss_url: e.target.value })} placeholder="https://example.com/feed.xml"
                     style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #d9d9d9', outline: 'none', background: '#fff', color: '#1a1a1a', boxSizing: 'border-box' }}
-                    onFocus={e => (e.currentTarget.style.borderColor = '#0052D9')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
+                    onFocus={e => (e.currentTarget.style.borderColor = 'var(--color-primary, #0052D9)')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
                   />
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>联系邮箱</label>
                   <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="方便通知审核结果（选填）" type="email"
                     style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #d9d9d9', outline: 'none', background: '#fff', color: '#1a1a1a', boxSizing: 'border-box' }}
-                    onFocus={e => (e.currentTarget.style.borderColor = '#0052D9')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
+                    onFocus={e => (e.currentTarget.style.borderColor = 'var(--color-primary, #0052D9)')} onBlur={e => (e.currentTarget.style.borderColor = '#d9d9d9')}
                   />
                 </div>
               </div>
@@ -314,7 +314,7 @@ export default function LinksPage() {
                 disabled={applying}
                 style={{
                   padding: '8px 24px', fontSize: '13px', fontWeight: 600,
-                  border: 'none', background: '#0052D9', color: '#fff',
+                  border: 'none', background: 'var(--color-primary, #0052D9)', color: '#fff',
                   cursor: applying ? 'wait' : 'pointer', opacity: applying ? 0.6 : 1,
                 }}
               >
