@@ -27,7 +27,23 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as typeof error.config & { _retry?: boolean };
 
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    // Don't run the refresh-and-retry dance on the auth endpoints
+    // themselves. Earlier rev would catch the 401 from a wrong-
+    // password POST /auth/login, find no refresh_token in the
+    // store (user isn't logged in yet), call logout(), and
+    // redirect to /admin/login — which is the page the user is
+    // already on, except the navigation unmounts the form before
+    // the '密码错误' toast renders. Net effect: typing the wrong
+    // password gave zero feedback. Skip the refresh path for any
+    // auth.* request so the actual error reaches the form.
+    const url = (originalRequest?.url || '').toLowerCase();
+    const isAuthRequest =
+      url.startsWith('/auth/login') ||
+      url.startsWith('/auth/refresh') ||
+      url.startsWith('/auth/totp/validate') ||
+      url.startsWith('/auth/passkey/');
+
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthRequest) {
       originalRequest._retry = true;
 
       try {
