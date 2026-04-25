@@ -199,6 +199,8 @@ func generateAIImageAndPersist(prompt, size string, n int) (interface{}, error) 
 		imgBytes, mimeType, err = generateOpenAICompatImage(provider, prompt, size, n)
 	case "imagen":
 		imgBytes, mimeType, err = generateImagenImage(provider, prompt, size, n)
+	case "dashscope":
+		imgBytes, mimeType, err = generateDashScopeImage(provider, prompt, size, n)
 	default:
 		return nil, fmt.Errorf("UNSUPPORTED_ENDPOINT")
 	}
@@ -345,9 +347,16 @@ func detectImageFlavor(endpoint string) string {
 		return "imagen"
 	case strings.Contains(e, "googleapis.com") && strings.Contains(e, "imagen"):
 		return "imagen"
+	// Aliyun DashScope native async API. Probed 2026-04 confirms:
+	// dashscope.aliyuncs.com/compatible-mode/v1/images/generations
+	// returns HTTP 404 — Aliyun never shipped an OpenAI-compat
+	// image endpoint. The native /services/aigc/text2image path
+	// is async (POST returns task_id, then poll until SUCCEEDED).
+	case strings.Contains(e, "dashscope.aliyuncs.com/api/v1/services/aigc/text2image"):
+		return "dashscope"
 	// Everything else with a /images/generations-style path is
-	// treated as OpenAI-compatible. Covers OpenAI proper, DashScope
-	// (通义万相 in compatible-mode), Together AI, OpenRouter, etc.
+	// treated as OpenAI-compatible. Covers OpenAI proper, OpenRouter,
+	// Together AI, and any user-installed gateway.
 	default:
 		return "openai"
 	}
@@ -552,6 +561,136 @@ func generateImagenImage(p model.AIProvider, prompt, size string, n int) ([]byte
 	if mime == "" {
 		mime = "image/png"
 	}
+	return imgBytes, mime, nil
+}
+
+// generateDashScopeImage handles Aliyun DashScope's native async API
+// for the wanx2.x text-to-image models. Three-step flow:
+//
+//   1. POST .../text2image/image-synthesis with X-DashScope-Async:
+//      enable. Server returns { output: { task_id, task_status } }.
+//   2. Poll GET .../tasks/{task_id} every 2s until task_status is
+//      SUCCEEDED (results[].url) or FAILED (output.message).
+//   3. Download the image from the returned URL.
+//
+// Aliyun never shipped an OpenAI-compat /images/generations endpoint
+// (verified 2026-04 — that path returns HTTP 404). The compat-mode
+// prefix is reserved for chat completions and embeddings.
+//
+// Size format quirk: Aliyun uses "1024*1024" (asterisk separator)
+// rather than the OpenAI / Imagen "1024x1024". Convert at the
+// boundary so callers can keep using the OpenAI-style size string.
+func generateDashScopeImage(p model.AIProvider, prompt, size string, n int) ([]byte, string, error) {
+	dashSize := strings.ReplaceAll(size, "x", "*")
+
+	// --- Step 1: kick off the async task ---
+	body, _ := json.Marshal(map[string]interface{}{
+		"model": p.Model,
+		"input": map[string]interface{}{
+			"prompt": prompt,
+		},
+		"parameters": map[string]interface{}{
+			"size": dashSize,
+			"n":    n,
+		},
+	})
+	req, err := http.NewRequest("POST", p.Endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+p.APIKey)
+	req.Header.Set("X-DashScope-Async", "enable")
+
+	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("submit task: %v", err)
+	}
+	rawBody, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return nil, "", fmt.Errorf("HTTP %d on task submit: %s", resp.StatusCode, truncate(string(rawBody), 400))
+	}
+
+	var startResp struct {
+		Output struct {
+			TaskID     string `json:"task_id"`
+			TaskStatus string `json:"task_status"`
+		} `json:"output"`
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	if jerr := json.Unmarshal(rawBody, &startResp); jerr != nil {
+		return nil, "", fmt.Errorf("submit response parse: %v (body: %s)", jerr, truncate(string(rawBody), 200))
+	}
+	if startResp.Output.TaskID == "" {
+		return nil, "", fmt.Errorf("no task_id in response (code=%s msg=%s)", startResp.Code, startResp.Message)
+	}
+	taskID := startResp.Output.TaskID
+
+	// --- Step 2: poll for completion (max ~120s, 2s interval) ---
+	pollURL := "https://dashscope.aliyuncs.com/api/v1/tasks/" + taskID
+	var imageURL string
+	deadline := time.Now().Add(120 * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(2 * time.Second)
+		preq, _ := http.NewRequest("GET", pollURL, nil)
+		preq.Header.Set("Authorization", "Bearer "+p.APIKey)
+		presp, perr := (&http.Client{Timeout: 15 * time.Second}).Do(preq)
+		if perr != nil {
+			// Transient network blip — keep polling. Real failures
+			// surface via the deadline timeout below.
+			continue
+		}
+		pbody, _ := io.ReadAll(presp.Body)
+		presp.Body.Close()
+		if presp.StatusCode >= 400 {
+			return nil, "", fmt.Errorf("HTTP %d on poll: %s", presp.StatusCode, truncate(string(pbody), 400))
+		}
+
+		var pollResp struct {
+			Output struct {
+				TaskStatus string `json:"task_status"`
+				Message    string `json:"message"`
+				Results    []struct {
+					URL string `json:"url"`
+				} `json:"results"`
+			} `json:"output"`
+		}
+		if jerr := json.Unmarshal(pbody, &pollResp); jerr != nil {
+			return nil, "", fmt.Errorf("poll response parse: %v", jerr)
+		}
+		switch pollResp.Output.TaskStatus {
+		case "SUCCEEDED":
+			if len(pollResp.Output.Results) == 0 || pollResp.Output.Results[0].URL == "" {
+				return nil, "", fmt.Errorf("task succeeded but no result URL")
+			}
+			imageURL = pollResp.Output.Results[0].URL
+		case "FAILED", "UNKNOWN":
+			return nil, "", fmt.Errorf("task %s: %s", pollResp.Output.TaskStatus, pollResp.Output.Message)
+		case "PENDING", "RUNNING":
+			continue
+		}
+		if imageURL != "" {
+			break
+		}
+	}
+	if imageURL == "" {
+		return nil, "", fmt.Errorf("task did not complete within 120s")
+	}
+
+	// --- Step 3: download the image bytes ---
+	imgResp, err := (&http.Client{Timeout: 60 * time.Second}).Get(imageURL)
+	if err != nil {
+		return nil, "", fmt.Errorf("fetch image url: %v", err)
+	}
+	defer imgResp.Body.Close()
+	imgBytes, _ := io.ReadAll(imgResp.Body)
+	if len(imgBytes) == 0 {
+		return nil, "", fmt.Errorf("downloaded image is empty")
+	}
+
+	mime := http.DetectContentType(imgBytes)
 	return imgBytes, mime, nil
 }
 

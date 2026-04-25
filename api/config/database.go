@@ -320,6 +320,19 @@ func InitDB() error {
 		T("options"),
 	))
 
+	// 2026-04: heal user-saved 通义万相 providers that point at the
+	// non-existent OpenAI-compat path. Aliyun never shipped
+	// /compatible-mode/v1/images/generations — that URL has returned
+	// HTTP 404 since day one — but an earlier rev of this app's
+	// 'qwen-image' preset suggested it. Auto-rewrite to the working
+	// native async endpoint so existing installs don't have to
+	// hand-edit the provider row. Idempotent.
+	DB.Exec(fmt.Sprintf(
+		"UPDATE %s SET endpoint = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis' "+
+			"WHERE type = 'image' AND endpoint = 'https://dashscope.aliyuncs.com/compatible-mode/v1/images/generations'",
+		T("ai_providers"),
+	))
+
 	return nil
 }
 
