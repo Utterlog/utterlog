@@ -899,22 +899,47 @@ export default function SettingsPage() {
                     const drivers = storageStats.drivers || {};
                     const local = drivers['local'] || { files: 0, size: 0 };
                     const cloud = drivers['s3'] || drivers['r2'] || { files: 0, size: 0 };
+                    // Cloud driver still uses the admin-configured GB
+                    // budget — there's no host filesystem to measure
+                    // for S3/R2.
                     const limitBytes = (Number(storageLimitGb) || 10) * 1024 * 1024 * 1024;
-                    const localRatio = local.size / limitBytes;
                     const cloudRatio = cloud.size / limitBytes;
+
+                    // Local: real disk usage of the host filesystem
+                    // hosting the uploads directory (statfs in
+                    // backend). Falls back to the synthetic budget
+                    // if the disk info is missing (very rare — only
+                    // hits if statfs syscall failed entirely).
+                    const disk = storageStats.disk || {};
+                    const diskTotal = Number(disk.total) || 0;
+                    const diskUsed  = Number(disk.used)  || 0;
+                    const diskFree  = Number(disk.free)  || 0;
+                    const useDisk = diskTotal > 0;
+                    const localRatio = useDisk ? diskUsed / diskTotal : (local.size / limitBytes);
+
                     return (<>
-                      {/* Local */}
+                      {/* Local — real host disk when available */}
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <span className="text-sm text-sub" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <i className="fa-regular fa-hard-drive" style={{ fontSize: '12px' }} /> 本地存储
                             <span className="text-dim" style={{ fontSize: '12px' }}>({local.files} 个文件)</span>
                           </span>
-                          <span className="text-xs text-sub font-mono">{formatSize(local.size)}</span>
+                          <span className="text-xs text-sub font-mono">
+                            {useDisk
+                              ? <>{formatSize(diskUsed)} / {formatSize(diskTotal)}<span className="text-dim" style={{ marginLeft: 6 }}>剩余 {formatSize(diskFree)}</span></>
+                              : formatSize(local.size)
+                            }
+                          </span>
                         </div>
                         <div style={{ height: '6px', background: 'var(--color-border)', overflow: 'hidden' }}>
                           <div style={{ width: `${Math.min(localRatio * 100, 100)}%`, height: '100%', background: localRatio > 0.9 ? '#dc2626' : localRatio > 0.7 ? '#f59e0b' : 'var(--color-primary)', transition: 'width 0.3s ease' }} />
                         </div>
+                        {useDisk && (
+                          <div className="text-dim" style={{ fontSize: '11px', marginTop: '4px' }}>
+                            其中 utterlog 上传文件 {formatSize(local.size)}（占主机磁盘 {((local.size / diskTotal) * 100).toFixed(1)}%）
+                          </div>
+                        )}
                       </div>
                       {/* Cloud (show when configured or has data) */}
                       {(mediaDriver === 's3' || mediaDriver === 'r2' || cloud.files > 0) && (

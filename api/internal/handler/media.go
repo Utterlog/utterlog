@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"utterlog-go/config"
 	"utterlog-go/internal/model"
@@ -669,7 +670,10 @@ func UploadBranding(c *gin.Context) {
 	})
 }
 
-// MediaStats returns file count and total size per storage driver
+// MediaStats returns file count and total size per storage driver,
+// plus the real host disk usage of the uploads directory so the
+// admin progress bar can show actual free space (not a synthetic
+// admin-configured quota).
 func MediaStats(c *gin.Context) {
 	t := config.T("media")
 	type driverStat struct {
@@ -691,10 +695,43 @@ func MediaStats(c *gin.Context) {
 		byDriver[s.Driver] = s
 	}
 
+	// Real disk usage of the uploads directory (or its parent if
+	// uploads doesn't exist yet on a fresh install). statfs reports
+	// the underlying filesystem regardless of bind-mount layering, so
+	// in the dev container it sees the host's mounted disk and in
+	// production it sees whatever volume the operator mounted to
+	// /app/public/uploads. Falls back to the api process working
+	// directory if the uploads path can't be stat'd.
+	disk := getUploadsDiskInfo()
+
 	util.Success(c, gin.H{
-		"files": totalFiles, "size": totalSize,
+		"files":   totalFiles,
+		"size":    totalSize,
 		"drivers": byDriver,
+		"disk":    disk,
 	})
+}
+
+// getUploadsDiskInfo runs statfs against the uploads directory and
+// returns total / used / free in bytes plus a percent-used integer
+// 0-100. Cross-platform via syscall.Statfs_t (Linux + macOS dev).
+// Returns zero values on failure rather than an error so the admin
+// just sees a missing bar instead of a 500.
+func getUploadsDiskInfo() gin.H {
+	target := "./public/uploads"
+	if _, err := os.Stat(target); err != nil {
+		// Fresh install before any upload — fall back to the api's
+		// CWD which should sit on the same filesystem.
+		target = "."
+	}
+	total, used, free, percent := statfsBytes(target)
+	return gin.H{
+		"total":   total,
+		"used":    used,
+		"free":    free,
+		"percent": percent,
+		"path":    target,
+	}
 }
 
 // TestStorageConnection tests S3/R2 connectivity
@@ -725,4 +762,34 @@ func TestStorageConnection(c *gin.Context) {
 		return
 	}
 	util.Success(c, gin.H{"message": "连接成功"})
+}
+
+// statfsBytes returns total / used / free disk bytes plus a 0-100
+// percent-used integer for the filesystem hosting the given path.
+//
+// Uses syscall.Statfs_t which works on Linux + macOS (the only OSes
+// utterlog runs on). The Bsize field type differs between platforms
+// (int64 on Linux, uint32 on darwin), but a single int64 cast covers
+// both since neither value approaches int64 overflow.
+//
+// Bavail (available to non-root) is preferred over Bfree (total free)
+// because reserved root-only blocks aren't actually usable for
+// uploads — surfacing them as "free" would let the bar reach 100%
+// while writes start failing with ENOSPC.
+//
+// Failure returns zeros so the admin UI just hides the bar gracefully
+// instead of crashing the request.
+func statfsBytes(path string) (total, used, free uint64, percent int) {
+	var buf syscall.Statfs_t
+	if err := syscall.Statfs(path, &buf); err != nil {
+		return 0, 0, 0, 0
+	}
+	bsize := uint64(buf.Bsize) //nolint:gosec // bsize is always small + non-negative
+	total = uint64(buf.Blocks) * bsize
+	free = uint64(buf.Bavail) * bsize
+	used = total - free
+	if total > 0 {
+		percent = int(used * 100 / total)
+	}
+	return
 }
