@@ -69,7 +69,20 @@ func enabledOptionKey(kind ExtensionKind) string {
 // builtInThemes — themes compiled into the Next.js bundle (web/themes/*).
 // They live in the web container, not the Go container, so we hard-code
 // their manifest so the admin can list + activate them.
+//
+// Utterlog (renamed from Westlife in 2026-04) is the official default
+// theme. The "Utterlog 2026" theme was removed in the same change —
+// any site whose active_theme is still "2026" or "Westlife" falls
+// through to Utterlog via the default fallback in listExtensions.
 var builtInThemes = []Extension{
+	{
+		ID: "Utterlog", Name: "Utterlog", Version: "1.0.0",
+		Author:      "Utterlog Team",
+		Description: "Utterlog 官方默认主题 — 优雅功能丰富的博客主题",
+		Kind:        "theme",
+		Builtin:     true,
+		Preview:     "/themes/Utterlog/screenshot.svg",
+	},
 	{
 		ID: "Azure", Name: "Azure", Version: "1.0.0",
 		Author:      "Utterlog Team",
@@ -87,28 +100,12 @@ var builtInThemes = []Extension{
 		Preview:     "/themes/Flux/screenshot.svg",
 	},
 	{
-		ID: "2026", Name: "Utterlog 2026", Version: "1.0.0",
-		Author:      "Utterlog Team",
-		Description: "官方默认主题 — 经典布局、响应式设计、热力图归档",
-		Kind:        "theme",
-		Builtin:     true,
-		Preview:     "/themes/2026/screenshot.svg",
-	},
-	{
 		ID: "Chred", Name: "Chred", Version: "1.0.0",
 		Author:      "Utterlog Team",
 		Description: "红色商务主题 — 卡片式布局，高对比度",
 		Kind:        "theme",
 		Builtin:     true,
 		Preview:     "/themes/Chred/screenshot.svg",
-	},
-	{
-		ID: "Westlife", Name: "Westlife", Version: "1.0.0",
-		Author:      "Utterlog Team",
-		Description: "生活博客主题 — 暖色调、优雅排版",
-		Kind:        "theme",
-		Builtin:     true,
-		Preview:     "/themes/Westlife/screenshot.svg",
 	},
 }
 
@@ -123,7 +120,7 @@ func listExtensions(kind ExtensionKind) []Extension {
 	if kind == KindTheme {
 		activeTheme = model.GetOption("active_theme")
 		if activeTheme == "" {
-			activeTheme = "Azure" // sensible default
+			activeTheme = "Utterlog" // official default theme
 		}
 	} else {
 		raw := model.GetOption("active_plugins")

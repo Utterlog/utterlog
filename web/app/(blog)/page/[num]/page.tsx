@@ -1,5 +1,5 @@
 import { getPosts, getOptions } from '@/lib/blog-api';
-import { getThemeComponents } from '@/lib/theme';
+import { getThemeComponents, DEFAULT_THEME } from '@/lib/theme';
 
 interface PageProps {
   params: Promise<{ num: string }>;
@@ -15,12 +15,12 @@ export default async function PaginatedPage({ params }: PageProps) {
   }
 
   let perPage = 10;
-  let themeName = 'Azure';
+  let themeName = DEFAULT_THEME;
   try {
     const opts = await getOptions();
     const data = opts.data || opts;
     perPage = Number(data.posts_per_page) || 10;
-    themeName = data.active_theme || 'Azure';
+    themeName = data.active_theme || DEFAULT_THEME;
   } catch {}
 
   let posts: any[] = [];

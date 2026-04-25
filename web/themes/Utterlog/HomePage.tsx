@@ -4,7 +4,7 @@ import Pagination from '@/components/blog/Pagination';
 export default function HomePage({ posts, page, totalPages }: { posts: any[]; page: number; totalPages: number }) {
   return (
     <div>
-      {/* Profile card — Westlife style */}
+      {/* Profile card — Utterlog style */}
       <div style={{
         background: '#fff', borderRadius: '12px', padding: '24px',
         marginBottom: '24px', border: '1px solid #e9e9e9',

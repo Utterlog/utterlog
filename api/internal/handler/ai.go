@@ -230,7 +230,7 @@ func buildAdminSystemPrompt() string {
 
 	if perms["theme_info"] {
 		theme := model.GetOption("active_theme")
-		if theme == "" { theme = "Azure" }
+		if theme == "" { theme = "Utterlog" }
 		ctx.WriteString("\n\n## 主题\n当前主题：" + theme)
 	}
 

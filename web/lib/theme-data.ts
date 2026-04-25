@@ -1,6 +1,6 @@
 import { getOptions, getCategories, getTags, getArchiveStats } from './blog-api';
 import type { ThemeContextData, MenuItem } from './theme-context';
-import { getThemeManifest } from './theme';
+import { getThemeManifest, DEFAULT_THEME } from './theme';
 
 // Server-side first: INTERNAL_API_URL points at the api container
 // (http://api:8080/api/v1) so SSR fetches actually reach the backend.
@@ -94,7 +94,7 @@ export async function getThemeContextData(): Promise<ThemeContextData> {
     }
   }
 
-  const themeName = opts.active_theme || 'Azure';
+  const themeName = opts.active_theme || DEFAULT_THEME;
   const manifest = getThemeManifest(themeName);
 
   // Resolve owner avatar based on avatar_source

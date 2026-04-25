@@ -1,16 +1,16 @@
 {
-  "name": "2026",
+  "name": "Utterlog",
   "version": "1.0.18",
-  "description": "Utterlog 2026 默认主题 — 简洁优雅的博客主题",
+  "description": "Utterlog 官方默认主题 — 优雅功能丰富的博客主题",
   "author": "Utterlog Team",
   "screenshot": "screenshot.png",
   "colors": {
-    "primary": "#5F7383",
-    "background": "#F5F7FA"
+    "primary": "#3368d9",
+    "background": "#f4f6f8"
   },
   "layout": {
-    "maxWidth": "720px",
-    "headerStyle": "minimal"
+    "maxWidth": "800px",
+    "headerStyle": "dynamic"
   },
   "menuPositions": [
     { "key": "header", "label": "顶部导航", "description": "网站顶部 Header 的导航菜单" }

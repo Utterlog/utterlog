@@ -53,42 +53,44 @@ export interface ThemeComponents {
 }
 
 // Theme registry — import all themes statically (components + styles)
-import * as Theme2026 from '@/themes/2026';
+import * as Utterlog from '@/themes/Utterlog';
 import * as Azure from '@/themes/Azure';
 import * as Chred from '@/themes/Chred';
-import * as Westlife from '@/themes/Westlife';
 import * as Flux from '@/themes/Flux';
 
 // 主题 CSS 按需加载：public/themes/{name}/styles.css，由 blog layout 动态 <link> 引入
 
-import Theme2026Manifest from '@/themes/2026/theme.json';
+import UtterlogManifest from '@/themes/Utterlog/theme.json';
 import AzureManifest from '@/themes/Azure/theme.json';
 import ChredManifest from '@/themes/Chred/theme.json';
-import WestlifeManifest from '@/themes/Westlife/theme.json';
 import FluxManifest from '@/themes/Flux/theme.json';
 
 const themeRegistry: Record<string, ThemeComponents> = {
-  '2026': Theme2026 as unknown as ThemeComponents,
+  Utterlog: Utterlog as unknown as ThemeComponents,
   Azure: Azure as unknown as ThemeComponents,
   Chred: Chred as unknown as ThemeComponents,
-  Westlife: Westlife as unknown as ThemeComponents,
   Flux: Flux as unknown as ThemeComponents,
 };
 
 const manifestRegistry: Record<string, ThemeManifest> = {
-  '2026': Theme2026Manifest as ThemeManifest,
+  Utterlog: UtterlogManifest as ThemeManifest,
   Azure: AzureManifest as ThemeManifest,
   Chred: ChredManifest as ThemeManifest,
-  Westlife: WestlifeManifest as ThemeManifest,
   Flux: FluxManifest as ThemeManifest,
 };
 
+// Utterlog (renamed from Westlife in 2026-04) is the official default
+// theme — served when no active_theme is set in the DB or when an
+// unknown theme name is requested. The previous default Azure now
+// stays available but is no longer the fallback.
+export const DEFAULT_THEME = 'Utterlog';
+
 export function getThemeComponents(themeName: string): ThemeComponents {
-  return themeRegistry[themeName] || themeRegistry['Azure'];
+  return themeRegistry[themeName] || themeRegistry[DEFAULT_THEME];
 }
 
 export function getThemeManifest(themeName: string): ThemeManifest {
-  return manifestRegistry[themeName] || manifestRegistry['Azure'];
+  return manifestRegistry[themeName] || manifestRegistry[DEFAULT_THEME];
 }
 
 export function getAllManifests(): Record<string, ThemeManifest> {

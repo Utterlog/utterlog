@@ -280,6 +280,15 @@ func InitDB() error {
 		T("posts"),
 	))
 
+	// 2026-04: Westlife → Utterlog rename + 2026 theme removed.
+	// Migrate any DB that still has those values pointing at active_theme
+	// so existing sites don't end up on the fallback path silently.
+	// Idempotent — WHERE clause ensures no-op once converted.
+	DB.Exec(fmt.Sprintf(
+		"UPDATE %s SET value = 'Utterlog' WHERE name = 'active_theme' AND value IN ('Westlife', '2026')",
+		T("options"),
+	))
+
 	return nil
 }
 

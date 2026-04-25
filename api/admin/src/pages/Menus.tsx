@@ -34,6 +34,9 @@ type Position = { key: string; label: string; hint: string };
 // sidebar, etc. Falls back to FALLBACK_POSITIONS for themes that aren't
 // in this map (custom / uploaded themes).
 const THEME_POSITIONS: Record<string, Position[]> = {
+  Utterlog: [
+    { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
+  ],
   Azure: [
     { key: 'header', label: '顶部导航', hint: 'Header 主菜单；留空则用主题默认菜单（首页/关于/归档/说说/友链/订阅）' },
     { key: 'sidebar', label: '首页 Hero 侧边栏', hint: '首页左侧大图旁的导航 tab；留空则自动列出全部分类' },
@@ -45,12 +48,6 @@ const THEME_POSITIONS: Record<string, Position[]> = {
   Chred: [
     { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
     { key: 'sidebar', label: '侧栏导航', hint: '首页左侧分类' },
-  ],
-  Westlife: [
-    { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
-  ],
-  '2026': [
-    { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
   ],
 };
 
@@ -122,7 +119,7 @@ export default function MenusPage() {
     try {
       const r: any = await optionsApi.list();
       const opts = r.data || r || {};
-      const theme = (opts.active_theme || 'Azure').toString();
+      const theme = (opts.active_theme || 'Utterlog').toString();
       const pos = THEME_POSITIONS[theme] || FALLBACK_POSITIONS;
       setActiveTheme(theme);
       setPositions(pos);

@@ -142,14 +142,14 @@ export async function searchPosts(q: string, limit = 10) {
   return fetchAPI<any>(`/search?q=${encodeURIComponent(q)}&limit=${limit}`);
 }
 
-// 当前活跃主题
+// 当前活跃主题（无设置时返回 Utterlog 官方默认主题）
 export async function getActiveTheme(): Promise<string> {
   try {
     const res = await fetchAPI<any>('/options');
     const data = res.data || res;
-    return data.active_theme || 'Azure';
+    return data.active_theme || 'Utterlog';
   } catch {
-    return 'Azure';
+    return 'Utterlog';
   }
 }
 

@@ -1,5 +1,5 @@
 import { getPosts, getActiveTheme, getOptions, getCategories, getArchiveStats } from '@/lib/blog-api';
-import { getThemeComponents } from '@/lib/theme';
+import { getThemeComponents, DEFAULT_THEME } from '@/lib/theme';
 
 interface HomePageProps {
   searchParams: Promise<{ page?: string }>;
@@ -10,12 +10,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const page = Number(params.page) || 1;
 
   let perPage = 10;
-  let themeName = 'Azure';
+  let themeName = DEFAULT_THEME;
   try {
     const opts = await getOptions();
     const data = opts.data || opts;
     perPage = Number(data.posts_per_page) || 10;
-    themeName = data.active_theme || 'Azure';
+    themeName = data.active_theme || DEFAULT_THEME;
   } catch {}
 
   let posts: any[] = [];

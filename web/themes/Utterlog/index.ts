@@ -1,6 +1,6 @@
 /**
- * Westlife Theme — Elegant, feature-rich blog theme
- * Inspired by the WordPress Westlife theme
+ * Utterlog Theme — Elegant, feature-rich blog theme
+ * Inspired by the WordPress Utterlog theme
  * Features: Card-based layout, profile card, blue accent, dark mode ready
  */
 
