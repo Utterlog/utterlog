@@ -64,12 +64,51 @@ const (
 // renderPrompt performs literal {placeholder} substitution. A missing
 // vars[k] silently leaves the placeholder visible in the output —
 // makes typos obvious during preview rather than crashing the call.
+//
+// Compat shim: if the template references NO known placeholders at
+// all (legacy admin-customised prompts written before placeholders
+// existed all looked like "Extract keywords from this article."
+// without any way to inject the article body), append a tail
+// containing 标题/内容 so the article actually reaches the model.
+// Without this, an old saved prompt produces requests where the AI
+// asks "please provide the article" because the body never made it
+// past the template.
 func renderPrompt(tpl string, vars map[string]string) string {
 	out := tpl
+	if !templateHasContentRef(tpl) {
+		// Append the standard article tail using whatever vars are
+		// available. excerpt_section already includes its own
+		// "摘要：...\n" wrapper when populated.
+		var tail strings.Builder
+		tail.WriteString("\n\n")
+		if _, ok := vars["title"]; ok {
+			tail.WriteString("标题：{title}\n")
+		}
+		if v, ok := vars["excerpt_section"]; ok && v != "" {
+			tail.WriteString("{excerpt_section}")
+		}
+		if _, ok := vars["content"]; ok {
+			tail.WriteString("内容：{content}")
+		}
+		out = out + tail.String()
+	}
 	for k, v := range vars {
 		out = strings.ReplaceAll(out, "{"+k+"}", v)
 	}
 	return out
+}
+
+// templateHasContentRef returns true if the template references at
+// least one of the post-content placeholders. We don't count
+// {min_len}/{max_len}/{tags_count} because those are knobs, not
+// the actual article body.
+func templateHasContentRef(tpl string) bool {
+	for _, k := range []string{"{title}", "{content}", "{excerpt}", "{excerpt_section}"} {
+		if strings.Contains(tpl, k) {
+			return true
+		}
+	}
+	return false
 }
 
 // resolvePrompt returns the admin-saved prompt (trimmed) when set,

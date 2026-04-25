@@ -342,6 +342,32 @@ func InitDB() error {
 		T("ai_providers"),
 	))
 
+	// 2026-04: drop the 3 stale English default prompts that an
+	// older rev of the admin form used to seed (ai_slug_prompt /
+	// ai_keywords_prompt / ai_polish_prompt). They got persisted
+	// when admins clicked Save with the form's pre-filled English
+	// values still untouched. The new flow (commit 37cdc28) uses
+	// Chinese defaults from handler/ai_prompts.go and stores '' to
+	// indicate "use default". The leftover English strings have no
+	// {title}/{content} placeholders, so the runtime prompt builder
+	// would send them verbatim and the model asks "please provide
+	// the article".
+	//
+	// Match exact text (the literal seed strings) to avoid wiping a
+	// user who deliberately wrote an English prompt.
+	DB.Exec(fmt.Sprintf(
+		"UPDATE %s SET value = '' WHERE name = 'ai_slug_prompt' AND value = 'Generate a concise, SEO-friendly URL slug in English for this article. Output only the slug, lowercase, hyphens instead of spaces, no special characters.'",
+		T("options"),
+	))
+	DB.Exec(fmt.Sprintf(
+		"UPDATE %s SET value = '' WHERE name = 'ai_keywords_prompt' AND value = 'Extract 3-5 keywords/tags from this article. Output as comma-separated list. Use the same language as the article.'",
+		T("options"),
+	))
+	DB.Exec(fmt.Sprintf(
+		"UPDATE %s SET value = '' WHERE name = 'ai_polish_prompt' AND value = 'Polish and improve the writing quality: fix grammar, improve flow, make it more engaging. Keep the same language and meaning. Output in Markdown.'",
+		T("options"),
+	))
+
 	// 2026-04: collapse the per-feature AI purpose slots from 8 to 2.
 	//
 	// Earlier rev introduced one option key per feature
