@@ -289,6 +289,19 @@ func InitDB() error {
 		T("options"),
 	))
 
+	// 2026-04: prune dead image-handling style options.
+	// image_lazy_load_placeholder and image_lightbox_style were
+	// surfaced in admin → 图片处理 with 5 and 4 choices respectively,
+	// but no front-end code ever read them. The toggles
+	// (image_lazy_load + image_lightbox) are kept and now actually
+	// work; the *_style multi-selects are removed from the form, so
+	// drop the residual DB rows so they don't haunt future debugging.
+	// Idempotent — DELETE is no-op if the rows are already gone.
+	DB.Exec(fmt.Sprintf(
+		"DELETE FROM %s WHERE name IN ('image_lazy_load_placeholder', 'image_lightbox_style')",
+		T("options"),
+	))
+
 	return nil
 }
 

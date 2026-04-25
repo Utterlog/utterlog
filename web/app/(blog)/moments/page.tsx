@@ -272,7 +272,13 @@ export default function MomentsPage() {
     );
   };
 
-  const openLightbox = (imgs: string[], index: number) => setLightbox({ images: imgs, index });
+  const openLightbox = (imgs: string[], index: number) => {
+    // Honour Settings → 图片处理 → 启用灯箱; ImageEffects.tsx writes
+    // data-img-lightbox on <html> so we can early-return when admin
+    // has the toggle off.
+    if (document.documentElement.dataset.imgLightbox === '0') return;
+    setLightbox({ images: imgs, index });
+  };
 
   return (
     <div

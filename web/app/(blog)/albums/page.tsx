@@ -93,7 +93,14 @@ export default function AlbumsPage() {
             gap: '12px',
           }}>
             {photos.map((photo, idx) => (
-              <div key={photo.id} onClick={() => setLightbox(idx)} style={{
+              <div key={photo.id} onClick={() => {
+                // Honour Settings → 图片处理 → 启用灯箱. When the
+                // admin toggles lightbox off, the click is a no-op
+                // (we keep cursor: pointer for SSR-stable styling;
+                // visually identical, just non-interactive).
+                if (document.documentElement.dataset.imgLightbox === '0') return;
+                setLightbox(idx);
+              }} style={{
                 aspectRatio: '4/3', overflow: 'hidden', cursor: 'pointer',
                 background: '#f3f4f6', position: 'relative',
               }}>

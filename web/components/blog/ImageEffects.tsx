@@ -4,14 +4,19 @@ import { useEffect } from 'react';
 
 // Applies the admin-configured image display effect to every blog
 // image and tracks load state for the global fade-in. Reads
-// `image_display_effect` + `image_display_duration` from theme
-// options and sets them as data-attribute + CSS variables on <html>,
-// so a small global stylesheet (app/globals.css) can key one of the
-// effect rules off the attribute selector.
+// `image_display_effect`, `image_display_duration`, `image_lazy_load`,
+// and `image_lightbox` from theme options and surfaces them as data
+// attributes / CSS variables on <html> so:
+//
+//   - globals.css can key effect rules off [data-img-effect=…]
+//   - PostContent / moments / albums click handlers can early-bail
+//     when [data-img-lightbox="0"] (lightbox disabled by admin)
+//   - This component itself sweeps `loading="lazy"` → `loading="eager"`
+//     across all blog images when [data-img-lazy="0"] (lazy disabled)
 //
 // Three responsibilities:
-//   1. Stamp <html data-img-effect=...> + --img-effect-duration so
-//      globals.css selectors fire.
+//   1. Stamp <html data-img-effect=…>, --img-effect-duration,
+//      data-img-lazy, data-img-lightbox so consumers can react.
 //   2. Track load state on every <img data-blog-image> via event
 //      delegation: flip `data-loaded` to "1" on `load`, and on mount
 //      sweep already-`complete` images so the hydration race doesn't
@@ -28,9 +33,26 @@ import { useEffect } from 'react';
 interface Props {
   effect: string | undefined;
   durationMs: string | number | undefined;
+  // String | bool because option values come from the API as strings
+  // ("true"/"false") but the legacy default is bool true. Falsy =
+  // disabled, anything else = enabled. We coerce to "0" / "1" before
+  // writing the data attribute so consumers can do strict string
+  // comparisons.
+  lazyLoad?: string | boolean | undefined;
+  lightbox?: string | boolean | undefined;
 }
 
-export default function ImageEffects({ effect, durationMs }: Props) {
+// Defaults to ON for both — the historical behaviour was "lazy load
+// always on, lightbox always on", and we don't want admins who never
+// visited 图片处理 to see a regression.
+function asBool(v: unknown, fallback = true): boolean {
+  if (v === undefined || v === null || v === '') return fallback;
+  if (typeof v === 'boolean') return v;
+  const s = String(v).toLowerCase();
+  return !(s === 'false' || s === '0' || s === 'no' || s === 'off');
+}
+
+export default function ImageEffects({ effect, durationMs, lazyLoad, lightbox }: Props) {
   useEffect(() => {
     const root = document.documentElement;
     const value = (effect || 'fade').toString().trim() || 'fade';
@@ -44,6 +66,14 @@ export default function ImageEffects({ effect, durationMs }: Props) {
     // DB key stays unset and we land here.
     root.style.setProperty('--img-effect-duration', `${Number.isFinite(d) && d > 0 ? d : 500}ms`);
 
+    // Surface the lazy / lightbox toggles. Default to ON (true) when
+    // unset so a brand-new install behaves like the historical hard-
+    // coded code that always lazy-loaded and always opened lightbox.
+    const lazyOn = asBool(lazyLoad, true);
+    const lightboxOn = asBool(lightbox, true);
+    root.dataset.imgLazy = lazyOn ? '1' : '0';
+    root.dataset.imgLightbox = lightboxOn ? '1' : '0';
+
     // ── (2) load tracking ──────────────────────────────────────────
     // Mark already-loaded images (browser finished the download
     // before React attached). Without this they stay on
@@ -56,6 +86,17 @@ export default function ImageEffects({ effect, durationMs }: Props) {
             img.dataset.loaded = '1';
           }
         });
+
+      // (extra) Honour the lazy-load toggle by overriding the
+      // `loading` attribute. Components render `loading="lazy"` in
+      // JSX (the historical default); when the admin turns lazy off
+      // we want eager loads instead. We also clear browser-native
+      // lazy gating so off-screen images start downloading immediately.
+      if (!lazyOn) {
+        document
+          .querySelectorAll<HTMLImageElement>('img[data-blog-image][loading="lazy"]')
+          .forEach((img) => { img.loading = 'eager'; });
+      }
     };
     sweep();
 
@@ -117,7 +158,7 @@ export default function ImageEffects({ effect, durationMs }: Props) {
       document.removeEventListener('load', onLoad, true);
       mo.disconnect();
     };
-  }, [effect, durationMs]);
+  }, [effect, durationMs, lazyLoad, lightbox]);
 
   return null;
 }

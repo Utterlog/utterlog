@@ -73,6 +73,8 @@ export default async function BlogLayout({
           <ImageEffects
             effect={ctx.options.image_display_effect}
             durationMs={ctx.options.image_display_duration}
+            lazyLoad={ctx.options.image_lazy_load}
+            lightbox={ctx.options.image_lightbox}
           />
           {children}
         </ThemeLayout>

@@ -430,6 +430,11 @@ export default function PostContent({ content, postId }: PostContentProps) {
     const handleClick = (e: MouseEvent) => {
       const img = (e.target as HTMLElement).closest('.blog-image img') as HTMLImageElement;
       if (!img) return;
+      // Honour Settings → 图片处理 → 启用灯箱. ImageEffects.tsx writes
+      // data-img-lightbox on <html> based on the admin's toggle; when
+      // disabled we let the browser's default click behaviour win
+      // (or the link-wrapped image follows its href).
+      if (document.documentElement.dataset.imgLightbox === '0') return;
       e.preventDefault();
       e.stopPropagation();
       const nodeList = el.querySelectorAll<HTMLImageElement>('.blog-image img');

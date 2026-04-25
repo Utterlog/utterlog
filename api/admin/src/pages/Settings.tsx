@@ -147,9 +147,7 @@ export default function SettingsPage() {
         tinypng_api_key: s.tinypng_api_key || '',
         tinypng_enabled: s.tinypng_enabled ?? false,
         image_lazy_load: s.image_lazy_load ?? true,
-        image_lazy_load_placeholder: s.image_lazy_load_placeholder || 'blur',
         image_lightbox: s.image_lightbox ?? true,
-        image_lightbox_style: s.image_lightbox_style || 'default',
         image_display_effect: s.image_display_effect || 'fade',
         image_display_duration: s.image_display_duration || 300,
         // S3/R2
@@ -218,12 +216,14 @@ export default function SettingsPage() {
       'image_convert_format', 'image_quality', 'image_max_width', 'image_strip_exif',
       'tinypng_enabled', 'tinypng_api_key',
       'random_image_enabled', 'random_image_api',
-      // Display effect + lightbox fields were rendered but missing
-      // from the whitelist — saves silently dropped them, so the
-      // front-end always saw the default 'fade' regardless of choice.
+      // Display effect + lazy/lightbox toggles. Earlier rev had two
+      // dead multi-selects here ('image_lazy_load_placeholder' and
+      // 'image_lightbox_style') with 5 + 4 options that no front-end
+      // code ever read. They've been removed from the form; the
+      // residual DB keys are cleaned up by the migration in
+      // api/config/database.go on next boot.
       'image_display_effect', 'image_display_duration',
-      'image_lazy_load', 'image_lazy_load_placeholder',
-      'image_lightbox', 'image_lightbox_style',
+      'image_lazy_load', 'image_lightbox',
     ],
   };
 
@@ -1166,36 +1166,12 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <FormSectionC title="懒加载" icon="fa-regular fa-hourglass-half" description="图片进入可视区域时才加载，提升页面加载速度">
-                <FormRowToggleC label="启用懒加载" register={register('image_lazy_load')} />
-                <FormRowSelectC
-                  label="占位效果"
-                  register={register('image_lazy_load_placeholder')}
-                  options={[
-                    { value: 'blur',     label: '模糊缩略图（推荐）' },
-                    { value: 'color',    label: '主色调占位' },
-                    { value: 'skeleton', label: '骨架屏' },
-                    { value: 'spinner',  label: '加载动画' },
-                    { value: 'none',     label: '空白' },
-                  ]}
-                  last
-                />
+              <FormSectionC title="懒加载" icon="fa-regular fa-hourglass-half" description="图片进入可视区域时才加载，提升页面加载速度。关闭后图片在页面打开时立即下载（适合幻灯片、长截图归档等场景）">
+                <FormRowToggleC label="启用懒加载" register={register('image_lazy_load')} last />
               </FormSectionC>
 
-              <FormSectionC title="图片灯箱" icon="fa-regular fa-expand" description="点击文章图片时全屏预览，支持缩放、拖拽、键盘导航、图片组切换">
-                <FormRowToggleC label="启用灯箱" register={register('image_lightbox')} />
-                <FormRowSelectC
-                  label="灯箱风格"
-                  hint="基于 ViewImage.js 实现，支持触屏手势和键盘操作"
-                  register={register('image_lightbox_style')}
-                  options={[
-                    { value: 'default',  label: '默认（深色遮罩 + 缩放）' },
-                    { value: 'minimal',  label: '极简（无边框，纯图片）' },
-                    { value: 'gallery',  label: '画廊（底部缩略图导航）' },
-                    { value: 'slide',    label: '滑动（左右滑动切换）' },
-                  ]}
-                  last
-                />
+              <FormSectionC title="图片灯箱" icon="fa-regular fa-expand" description="点击文章图片时全屏预览，支持缩放、拖拽、键盘导航、图片组切换。关闭后点击图片不响应（图片若包在链接里则跟随链接跳转）">
+                <FormRowToggleC label="启用灯箱" register={register('image_lightbox')} last />
               </FormSectionC>
             </>
           )}
