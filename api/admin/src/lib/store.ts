@@ -193,7 +193,7 @@ export const useThemeStore = create<ThemeState>()(
       theme: 'steel',
       setTheme: (theme: Theme) => {
         if (typeof document !== 'undefined') {
-          document.documentElement.dataset.theme = theme;
+          document.documentElement.dataset.color = theme;
         }
         set({ theme });
       },
@@ -202,7 +202,7 @@ export const useThemeStore = create<ThemeState>()(
       name: 'utterlog-theme',
       onRehydrateStorage: () => (state) => {
         if (state?.theme && typeof document !== 'undefined') {
-          document.documentElement.dataset.theme = state.theme;
+          document.documentElement.dataset.color = state.theme;
         }
       },
     }

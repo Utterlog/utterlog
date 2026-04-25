@@ -3,6 +3,31 @@ import { Providers } from './providers';
 
 const API_BASE = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || '';
 
+// Pull just the active blog theme name. Done in root layout so we
+// can stamp <html data-theme="…"> as a server-rendered attribute,
+// which means themes/{name}/styles.css [data-theme="…"] selectors
+// match on first paint with no client script needed (Next.js 16's
+// React rejects inline <script> tags inside React-rendered output
+// with a console warning, so we can't use the obvious dangerously-
+// SetInnerHTML trick). Falls back silently to 'Utterlog' when the
+// API isn't reachable (build-time, dev cold-start, etc.) so we
+// never block render on options-fetching.
+async function getActiveBlogTheme(): Promise<string> {
+  if (!API_BASE) return 'Utterlog';
+  try {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 2000);
+    const res = await fetch(`${API_BASE}/options`, { next: { revalidate: 60 }, signal: ac.signal });
+    clearTimeout(timer);
+    if (!res.ok) return 'Utterlog';
+    const json = await res.json();
+    const opts = json.data || json || {};
+    return (opts.active_theme || 'Utterlog').toString().trim() || 'Utterlog';
+  } catch {
+    return 'Utterlog';
+  }
+}
+
 // Resolves <title>, description, favicon, and full OG / Twitter card
 // metadata from site options at runtime. During `next build` (docker
 // image build) there's no API running and INTERNAL_API_URL is blank —
@@ -72,13 +97,17 @@ export async function generateMetadata() {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Server-render the blog theme name onto <html data-theme="…">.
+  // Two-attribute split avoids fighting with the admin color theme
+  // (which writes data-color via providers.tsx + lib/store.ts).
+  const activeTheme = await getActiveBlogTheme();
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang="zh-CN" data-theme={activeTheme} suppressHydrationWarning>
       <head>
         {/* System-immutable assets (FA Pro 7.2.0, all webfonts including
             CJK) served from R2 + Cloudflare with Cache-Control immutable

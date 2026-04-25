@@ -252,7 +252,7 @@ html.lightbox-active body {
 }
 
 /* Steel — 已废弃，映射到 Azure 蓝色保持兼容 */
-[data-theme="steel"] {
+[data-color="steel"] {
   --color-primary: #0052D9;
   --color-primary-hover: #0044B8;
   --color-primary-active: #003A9E;
@@ -268,7 +268,7 @@ html.lightbox-active body {
 }
 
 /* Blue — Icons8 Office L 风格天蓝 */
-[data-theme="blue"] {
+[data-color="blue"] {
   --color-primary: #5B9BD5;
   --color-primary-hover: #4A8BC7;
   --color-primary-active: #3D7CB5;
@@ -284,7 +284,7 @@ html.lightbox-active body {
 }
 
 /* Green — 亲和/产品/转化 */
-[data-theme="green"] {
+[data-color="green"] {
   --color-primary: #4CAF73;
   --color-primary-hover: #3E9B62;
   --color-primary-active: #358753;
@@ -300,7 +300,7 @@ html.lightbox-active body {
 }
 
 /* Mint — 清新/薄荷绿 */
-[data-theme="mint"] {
+[data-color="mint"] {
   --color-primary: #00A88E;
   --color-primary-hover: #009078;
   --color-primary-active: #007A66;
@@ -316,7 +316,7 @@ html.lightbox-active body {
 }
 
 /* Claude — 温暖/优雅 */
-[data-theme="claude"] {
+[data-color="claude"] {
   --color-primary: #DA7756;
   --color-primary-hover: #C4633F;
   --color-primary-active: #B05535;
@@ -332,7 +332,7 @@ html.lightbox-active body {
 }
 
 /* Ocean — 纯白底 + 蔚蓝色 */
-[data-theme="ocean"] {
+[data-color="ocean"] {
   --color-primary: #0052D9;
   --color-primary-hover: #0044B8;
   --color-primary-active: #003A9E;
@@ -387,7 +387,7 @@ html.lightbox-active body {
 }
 
 /* Dark — 深色 */
-[data-theme="dark"] {
+[data-color="dark"] {
   --color-primary: #7CA0C4;
   --color-primary-hover: #93B5D5;
   --color-primary-active: #5A86B2;
@@ -1089,12 +1089,12 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
 .hljs-emphasis { font-style: italic; }
 .hljs-strong { font-weight: bold; }
 
-[data-theme="dark"] .hljs { color: #e5e7eb; background: #1e2130; }
-[data-theme="dark"] .hljs-comment, [data-theme="dark"] .hljs-quote { color: #6b7280; }
-[data-theme="dark"] .hljs-keyword { color: #f87171; }
-[data-theme="dark"] .hljs-string, [data-theme="dark"] .hljs-number { color: #fbbf24; }
-[data-theme="dark"] .hljs-title, [data-theme="dark"] .hljs-section { color: #60a5fa; }
-[data-theme="dark"] .hljs-attribute, [data-theme="dark"] .hljs-type { color: #34d399; }
+[data-color="dark"] .hljs { color: #e5e7eb; background: #1e2130; }
+[data-color="dark"] .hljs-comment, [data-color="dark"] .hljs-quote { color: #6b7280; }
+[data-color="dark"] .hljs-keyword { color: #f87171; }
+[data-color="dark"] .hljs-string, [data-color="dark"] .hljs-number { color: #fbbf24; }
+[data-color="dark"] .hljs-title, [data-color="dark"] .hljs-section { color: #60a5fa; }
+[data-color="dark"] .hljs-attribute, [data-color="dark"] .hljs-type { color: #34d399; }
 
 /* ========================================
    Animations

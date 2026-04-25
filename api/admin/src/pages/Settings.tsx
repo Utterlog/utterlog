@@ -48,7 +48,15 @@ export default function SettingsPage() {
   const mediaDriver = watch('media_driver', 'local');
   const imageQuality = watch('image_quality', 82);
   const storageLimitGb = watch('storage_limit_gb', 10);
-  const [storageStats, setStorageStats] = useState<{ files: number; size: number; drivers?: Record<string, { files: number; size: number }> }>({ files: 0, size: 0 });
+  const [storageStats, setStorageStats] = useState<{
+    files: number;
+    size: number;
+    drivers?: Record<string, { files: number; size: number }>;
+    // disk is the real host filesystem usage of the uploads directory
+    // (statfs in backend). Present when the api reports it; absent on
+    // very old api builds — UI falls back to the synthetic budget.
+    disk?: { total: number; used: number; free: number; percent: number; path?: string };
+  }>({ files: 0, size: 0 });
   const [testingStorage, setTestingStorage] = useState(false);
   const [tgChats, setTgChats] = useState<{ id: string; type: string; name: string }[]>([]);
   const [fetchingChatId, setFetchingChatId] = useState(false);
@@ -178,7 +186,12 @@ export default function SettingsPage() {
         const sr: any = await api.get('/media/stats');
         if (sr.success || sr.data) {
           const d = sr.data || sr;
-          setStorageStats({ files: d.files || 0, size: d.size || 0 });
+          setStorageStats({
+            files: d.files || 0,
+            size: d.size || 0,
+            drivers: d.drivers,
+            disk: d.disk,
+          });
         }
       } catch {}
     } catch {
@@ -908,12 +921,13 @@ export default function SettingsPage() {
                     // Local: real disk usage of the host filesystem
                     // hosting the uploads directory (statfs in
                     // backend). Falls back to the synthetic budget
-                    // if the disk info is missing (very rare — only
-                    // hits if statfs syscall failed entirely).
-                    const disk = storageStats.disk || {};
-                    const diskTotal = Number(disk.total) || 0;
-                    const diskUsed  = Number(disk.used)  || 0;
-                    const diskFree  = Number(disk.free)  || 0;
+                    // if the disk info is missing (only hits when
+                    // statfs syscall failed entirely or talking to
+                    // a pre-disk-payload api build).
+                    const disk = storageStats.disk;
+                    const diskTotal = disk ? (Number(disk.total) || 0) : 0;
+                    const diskUsed  = disk ? (Number(disk.used)  || 0) : 0;
+                    const diskFree  = disk ? (Number(disk.free)  || 0) : 0;
                     const useDisk = diskTotal > 0;
                     const localRatio = useDisk ? diskUsed / diskTotal : (local.size / limitBytes);
 
