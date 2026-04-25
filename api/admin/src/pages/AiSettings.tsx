@@ -495,6 +495,7 @@ export default function AiSettingsPage() {
                 onChange={v => updateConfig('ai_image_model', v)}
                 options={[
                   { value: '',            label: '使用默认图片提供商' },
+                  { value: 'gpt-image-2', label: 'ChatGPT 图像 2.0（最新）' },
                   { value: 'gpt-image-1', label: 'OpenAI GPT Image / DALL·E 3' },
                   { value: 'wanx',        label: '通义万相' },
                   { value: 'imagen',      label: 'Google Imagen' },

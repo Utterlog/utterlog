@@ -64,7 +64,10 @@ var AIPresets = gin.H{
 	// more placebo settings. Users can still self-add via the
 	// 添加提供商 modal if they have a working OpenAI-compat proxy
 	// in front of those services.
-	"openai-image": gin.H{"name": "OpenAI 图像", "endpoint": "https://api.openai.com/v1/images/generations", "models": []string{"gpt-image-1", "dall-e-3"}, "type": "image"},
+	// gpt-image-2 first (newest; the model behind 'ChatGPT 图像 2.0').
+	// gpt-image-1 + dall-e-3 stay listed for users on older API keys
+	// that haven't been granted gpt-image-2 access yet.
+	"openai-image": gin.H{"name": "OpenAI 图像", "endpoint": "https://api.openai.com/v1/images/generations", "models": []string{"gpt-image-2", "gpt-image-1", "dall-e-3"}, "type": "image"},
 	"qwen-image":   gin.H{"name": "通义万相", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/images/generations", "models": []string{"wanx2.1-t2i-turbo", "wanx2.1-t2i-plus", "wanx-v1"}, "type": "image"},
 	"imagen":       gin.H{"name": "Google Imagen", "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-06:predict", "models": []string{"imagen-4.0-generate-preview-06-06", "imagen-3.0-generate-002"}, "type": "image"},
 }
