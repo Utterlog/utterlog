@@ -302,6 +302,16 @@ func InitDB() error {
 		T("options"),
 	))
 
+	// 2026-04: prune dead TinyPNG settings. The admin form had a
+	// "TinyPNG 压缩" section with toggle + API key, but no Go code
+	// ever called the TinyPNG API. Uploads always went through the
+	// local re-encoder (webp/jpg/avif). Removed from the form;
+	// drop the residual DB rows here.
+	DB.Exec(fmt.Sprintf(
+		"DELETE FROM %s WHERE name IN ('tinypng_enabled', 'tinypng_api_key')",
+		T("options"),
+	))
+
 	return nil
 }
 

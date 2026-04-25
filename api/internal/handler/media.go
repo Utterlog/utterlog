@@ -24,6 +24,7 @@ import (
 
 	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
+	"github.com/gen2brain/avif"
 	"github.com/gin-gonic/gin"
 	goexif "github.com/rwcarlsen/goexif/exif"
 )
@@ -212,7 +213,7 @@ func UploadMedia(c *gin.Context) {
 			file.Seek(0, 0)
 		}
 
-		if convertFormat != "" && (convertFormat == "webp" || convertFormat == "jpg" || convertFormat == "png") {
+		if convertFormat != "" && (convertFormat == "webp" || convertFormat == "jpg" || convertFormat == "png" || convertFormat == "avif") {
 			finalExt = convertFormat
 		}
 
@@ -227,10 +228,35 @@ func UploadMedia(c *gin.Context) {
 			if maxWidth > 0 && img.Bounds().Dx() > maxWidth {
 				img = imaging.Resize(img, maxWidth, 0, imaging.Lanczos)
 			}
-			_ = stripExif
+			// EXIF handling note: Go's stdlib jpeg/png encoders + chai2010/webp
+			// + gen2brain/avif all encode WITHOUT writing an EXIF segment.
+			// So once we hit image.Decode → re-encode below, the output is
+			// guaranteed to have no EXIF metadata regardless of the
+			// stripExif flag. The flag's real job is upstream (line 207-213):
+			// it controls whether we read the original file's EXIF into
+			// the media row's exif_data column for later display in the
+			// post body (camera/lens/aperture readout). The label "去除
+			// EXIF 信息" is therefore lossy in practice — the only thing
+			// the toggle controls is whether the metadata is preserved
+			// for display, never whether it ships in the output bytes.
 			switch finalExt {
 			case "webp":
 				webp.Encode(&buf, img, &webp.Options{Quality: float32(quality)})
+			case "avif":
+				// Pure-Go AVIF encoder (gen2brain/avif via wazero WASM).
+				// No CGO dependency; bundle stays portable. Encoding is
+				// slower than WebP/JPEG (a 1080p image takes ~1-3s) but
+				// produces 30-50% smaller files at the same perceived
+				// quality. quality 0-100 maps directly through.
+				if encErr := avif.Encode(&buf, img, avif.Options{Quality: quality}); encErr != nil {
+					// Fall back to WebP on encoder failure rather than
+					// 500ing — corrupt-input AVIF encodes are easier to
+					// diagnose when a WebP succeeds and the user can see
+					// "oh, the AVIF path is what's failing".
+					buf.Reset()
+					finalExt = "webp"
+					webp.Encode(&buf, img, &webp.Options{Quality: float32(quality)})
+				}
 			case "png":
 				png.Encode(&buf, img)
 			default:
@@ -239,7 +265,7 @@ func UploadMedia(c *gin.Context) {
 			}
 		}
 
-		mimeMap := map[string]string{"jpg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
+		mimeMap := map[string]string{"jpg": "image/jpeg", "png": "image/png", "webp": "image/webp", "avif": "image/avif"}
 		mimeType := mimeMap[finalExt]
 		if mimeType == "" { mimeType = "image/" + finalExt }
 

@@ -19,6 +19,7 @@ import (
 
 	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
+	"github.com/gen2brain/avif"
 )
 
 // SyncContentMedia downloads external cover images and stores them in the media library.
@@ -70,7 +71,7 @@ func SyncContentMedia(contentType string, contentID int, coverURL string) {
 		if processable[ext] {
 			img, _, decErr := image.Decode(bytes.NewReader(data))
 			if decErr == nil {
-				if convertFormat == "webp" || convertFormat == "jpg" || convertFormat == "png" {
+				if convertFormat == "webp" || convertFormat == "jpg" || convertFormat == "png" || convertFormat == "avif" {
 					finalExt = convertFormat
 				}
 
@@ -89,6 +90,15 @@ func SyncContentMedia(contentType string, contentID int, coverURL string) {
 				case "webp":
 					webp.Encode(&buf, img, &webp.Options{Quality: float32(quality)})
 					finalMime = "image/webp"
+				case "avif":
+					if encErr := avif.Encode(&buf, img, avif.Options{Quality: quality}); encErr != nil {
+						buf.Reset()
+						finalExt = "webp"
+						webp.Encode(&buf, img, &webp.Options{Quality: float32(quality)})
+						finalMime = "image/webp"
+					} else {
+						finalMime = "image/avif"
+					}
 				case "png":
 					png.Encode(&buf, img)
 					finalMime = "image/png"

@@ -144,8 +144,6 @@ export default function SettingsPage() {
         // covers; only an admin actively flipping the toggle off
         // disables them.
         random_image_enabled: s.random_image_enabled ?? true,
-        tinypng_api_key: s.tinypng_api_key || '',
-        tinypng_enabled: s.tinypng_enabled ?? false,
         image_lazy_load: s.image_lazy_load ?? true,
         image_lightbox: s.image_lightbox ?? true,
         image_display_effect: s.image_display_effect || 'fade',
@@ -214,7 +212,11 @@ export default function SettingsPage() {
     media: ['media_driver', 's3_endpoint', 's3_region', 's3_bucket', 's3_access_key', 's3_secret_key', 's3_custom_domain', 'storage_limit_gb', 'max_upload_size', 'allowed_extensions', 'folder_driver_covers', 'folder_driver_books', 'folder_driver_movies', 'folder_driver_music', 'folder_driver_links', 'folder_driver_moments', 'folder_driver_albums', 'folder_driver_avatars'],
     image: [
       'image_convert_format', 'image_quality', 'image_max_width', 'image_strip_exif',
-      'tinypng_enabled', 'tinypng_api_key',
+      // tinypng_enabled / tinypng_api_key removed: no Go handler ever
+      // called the TinyPNG API. The form fields claimed to compress
+      // uploads via tinypng.com but uploads went straight through the
+      // local webp/jpg/avif encoder instead. Cleaned up by the
+      // migration in api/config/database.go on next boot.
       'random_image_enabled', 'random_image_api',
       // Display effect + lazy/lightbox toggles. Earlier rev had two
       // dead multi-selects here ('image_lazy_load_placeholder' and
@@ -1075,47 +1077,34 @@ export default function SettingsPage() {
           {/* ==================== 图片处理 ==================== */}
           {activeTab === 'image' && (
             <>
-              <FormSectionC title="压缩与转换" icon="fa-regular fa-file-image">
+              <FormSectionC title="压缩与转换" icon="fa-regular fa-file-image" description="上传图片时自动重新编码（仅 PNG/JPEG 输入会进入处理流程；WebP/AVIF/GIF/SVG 等直通保存）">
                 <FormRowSelectC
                   label="上传后自动转换格式"
                   register={register('image_convert_format')}
                   options={[
                     { value: '',     label: '不转换（保持原格式）' },
                     { value: 'webp', label: 'WebP（推荐，体积小兼容好）' },
+                    { value: 'avif', label: 'AVIF（体积更小，编码慢 1-3s/张）' },
                     { value: 'jpg',  label: 'JPEG' },
                   ]}
                 />
                 <FormRowInputC
                   label="压缩质量"
-                  hint={`当前 ${imageQuality}，推荐 75-85，越低体积越小但画质降低`}
+                  hint={`当前 ${imageQuality}，推荐 75-85，越低体积越小但画质降低（WebP / JPEG / AVIF 均生效）`}
                   type="range"
                   register={register('image_quality')}
                 />
                 <FormRowInputC
                   label="最大宽度 (px)"
-                  hint="留空不限制，建议 1920 或 2560。超过此宽度的图片会自动等比缩小"
+                  hint="留空不限制，建议 1920 或 2560。超过此宽度的图片会自动等比缩小（Lanczos 算法）"
                   type="number"
                   register={register('image_max_width')}
                   placeholder="1920"
                 />
                 <FormRowToggleC
                   label="去除 EXIF 信息"
-                  hint="保护隐私，减小体积"
+                  hint="编码后的图片本身一律不含 EXIF（重新编码自动去除）。此开关控制是否把原图的 EXIF 元数据（相机/镜头/光圈/拍摄日期）保存到数据库，供前台 LazyImage 显示拍摄参数。开启=不保存=前台不显示；关闭=保存=前台可显示"
                   register={register('image_strip_exif')}
-                  last
-                />
-              </FormSectionC>
-
-              <FormSectionC title="TinyPNG 压缩" icon="fa-regular fa-compress" description="使用 TinyPNG API 进行高质量无损压缩，每月免费 500 张">
-                <FormRowToggleC
-                  label="启用 TinyPNG"
-                  register={register('tinypng_enabled')}
-                />
-                <FormRowInputC
-                  label="API Key"
-                  type="password"
-                  register={register('tinypng_api_key')}
-                  placeholder="从 tinypng.com/developers 获取"
                   last
                 />
               </FormSectionC>
