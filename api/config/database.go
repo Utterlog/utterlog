@@ -320,16 +320,25 @@ func InitDB() error {
 		T("options"),
 	))
 
-	// 2026-04: heal user-saved 通义万相 providers that point at the
-	// non-existent OpenAI-compat path. Aliyun never shipped
-	// /compatible-mode/v1/images/generations — that URL has returned
-	// HTTP 404 since day one — but an earlier rev of this app's
-	// 'qwen-image' preset suggested it. Auto-rewrite to the working
-	// native async endpoint so existing installs don't have to
-	// hand-edit the provider row. Idempotent.
+	// 2026-04: heal user-saved 通义千问图像 providers that point at
+	// outdated endpoints. Two paths to clean up, in order of how the
+	// 'qwen-image' preset evolved:
+	//   1. /compatible-mode/v1/images/generations — never existed
+	//      (HTTP 404 day one).
+	//   2. /api/v1/services/aigc/text2image/image-synthesis — the
+	//      wanx async endpoint. Older rev of qwen-image preset
+	//      pointed here; replaced by the sync multimodal-generation
+	//      endpoint that Aliyun promotes for qwen-image-2.0-pro.
+	//
+	// Both rewrites land on the working sync URL. Idempotent.
+	// Users who specifically want wanx async can hand-edit back via
+	// the 'wanx' preset which now points at the async endpoint.
 	DB.Exec(fmt.Sprintf(
-		"UPDATE %s SET endpoint = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis' "+
-			"WHERE type = 'image' AND endpoint = 'https://dashscope.aliyuncs.com/compatible-mode/v1/images/generations'",
+		"UPDATE %s SET endpoint = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation', model = 'qwen-image-2.0-pro' "+
+			"WHERE type = 'image' AND endpoint IN ("+
+			"'https://dashscope.aliyuncs.com/compatible-mode/v1/images/generations',"+
+			"'https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis'"+
+			") AND model NOT LIKE 'wanx%%'",
 		T("ai_providers"),
 	))
 

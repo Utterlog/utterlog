@@ -199,6 +199,8 @@ func generateAIImageAndPersist(prompt, size string, n int) (interface{}, error) 
 		imgBytes, mimeType, err = generateOpenAICompatImage(provider, prompt, size, n)
 	case "imagen":
 		imgBytes, mimeType, err = generateImagenImage(provider, prompt, size, n)
+	case "qwen-multimodal":
+		imgBytes, mimeType, err = generateQwenMultimodalImage(provider, prompt, size, n)
 	case "dashscope":
 		imgBytes, mimeType, err = generateDashScopeImage(provider, prompt, size, n)
 	default:
@@ -347,11 +349,23 @@ func detectImageFlavor(endpoint string) string {
 		return "imagen"
 	case strings.Contains(e, "googleapis.com") && strings.Contains(e, "imagen"):
 		return "imagen"
-	// Aliyun DashScope native async API. Probed 2026-04 confirms:
-	// dashscope.aliyuncs.com/compatible-mode/v1/images/generations
-	// returns HTTP 404 — Aliyun never shipped an OpenAI-compat
-	// image endpoint. The native /services/aigc/text2image path
-	// is async (POST returns task_id, then poll until SUCCEEDED).
+	// Aliyun DashScope qwen-image (qwen-image-2.0-pro etc.) on the
+	// synchronous multimodal-generation endpoint — returns the image
+	// URL in a single request, no polling required. Both the cn-
+	// hangzhou (dashscope.aliyuncs.com) and intl Singapore
+	// (dashscope-intl.aliyuncs.com) hosts share this path shape.
+	case strings.Contains(e, "/services/aigc/multimodal-generation/generation"):
+		return "qwen-multimodal"
+	// Aliyun DashScope native async wanx API. Older path used for
+	// the 万相 line (wanx2.1-t2i-*). POST returns task_id, then
+	// poll until SUCCEEDED. Preserved for users who specifically
+	// want the wanx series; the sync qwen-image path above is the
+	// recommended default.
+	//
+	// Note: dashscope.aliyuncs.com/compatible-mode/v1/images/
+	// generations returns HTTP 404 — Aliyun never shipped an
+	// OpenAI-compat image endpoint. Earlier versions of this preset
+	// used that URL by mistake.
 	case strings.Contains(e, "dashscope.aliyuncs.com/api/v1/services/aigc/text2image"):
 		return "dashscope"
 	// Everything else with a /images/generations-style path is
@@ -561,6 +575,117 @@ func generateImagenImage(p model.AIProvider, prompt, size string, n int) ([]byte
 	if mime == "" {
 		mime = "image/png"
 	}
+	return imgBytes, mime, nil
+}
+
+// generateQwenMultimodalImage handles the qwen-image-2.0-pro family
+// on Aliyun DashScope's SYNCHRONOUS multimodal-generation endpoint.
+// Single request returns the image URL — no async polling, much
+// simpler than the wanx text2image flow.
+//
+// Endpoint variants (both reachable, choose by region):
+//   北京  : https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation
+//   新加坡: https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation
+//
+// Request shape (per Aliyun's qwen-image / qwen-vl docs):
+//   { model, input: { messages: [{ role, content: [{ text }] }] },
+//     parameters: { size, n } }
+//
+// Response shape:
+//   { output: { choices: [{ message: { content: [{ image: <url> }] } }] } }
+//
+// Aliyun returns the rendered image URL inside the assistant
+// message's content array, mixed format with possible text parts —
+// we walk every content entry looking for the first 'image' key
+// rather than assuming a fixed index.
+func generateQwenMultimodalImage(p model.AIProvider, prompt, size string, n int) ([]byte, string, error) {
+	dashSize := strings.ReplaceAll(size, "x", "*")
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"model": p.Model,
+		"input": map[string]interface{}{
+			"messages": []map[string]interface{}{
+				{
+					"role": "user",
+					"content": []map[string]interface{}{
+						{"text": prompt},
+					},
+				},
+			},
+		},
+		"parameters": map[string]interface{}{
+			"size": dashSize,
+			"n":    n,
+		},
+	})
+	req, err := http.NewRequest("POST", p.Endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+p.APIKey)
+
+	// Sync endpoint — Aliyun streams the response back once the
+	// model finishes; 120s deadline matches the wanx async path.
+	timeout := time.Duration(p.Timeout) * time.Second
+	if timeout < 60*time.Second {
+		timeout = 120 * time.Second
+	}
+	resp, err := (&http.Client{Timeout: timeout}).Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+
+	rawBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return nil, "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncate(string(rawBody), 400))
+	}
+
+	var result struct {
+		Output struct {
+			Choices []struct {
+				Message struct {
+					Content []map[string]interface{} `json:"content"`
+				} `json:"message"`
+			} `json:"choices"`
+		} `json:"output"`
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	if jerr := json.Unmarshal(rawBody, &result); jerr != nil {
+		return nil, "", fmt.Errorf("response parse: %v (body: %s)", jerr, truncate(string(rawBody), 200))
+	}
+	if len(result.Output.Choices) == 0 {
+		return nil, "", fmt.Errorf("empty choices (code=%s msg=%s body=%s)", result.Code, result.Message, truncate(string(rawBody), 200))
+	}
+
+	// Find the first content entry with an 'image' key. Walk all
+	// because the model occasionally interleaves a 'text' caption
+	// that would shadow a positional access.
+	var imageURL string
+	for _, item := range result.Output.Choices[0].Message.Content {
+		if v, ok := item["image"]; ok {
+			if s, ok := v.(string); ok && s != "" {
+				imageURL = s
+				break
+			}
+		}
+	}
+	if imageURL == "" {
+		return nil, "", fmt.Errorf("no image url in response content: %s", truncate(string(rawBody), 300))
+	}
+
+	imgResp, err := (&http.Client{Timeout: 60 * time.Second}).Get(imageURL)
+	if err != nil {
+		return nil, "", fmt.Errorf("fetch image url: %v", err)
+	}
+	defer imgResp.Body.Close()
+	imgBytes, _ := io.ReadAll(imgResp.Body)
+	if len(imgBytes) == 0 {
+		return nil, "", fmt.Errorf("downloaded image is empty")
+	}
+	mime := http.DetectContentType(imgBytes)
 	return imgBytes, mime, nil
 }
 

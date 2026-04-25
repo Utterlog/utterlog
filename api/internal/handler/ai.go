@@ -68,18 +68,20 @@ var AIPresets = gin.H{
 	// gpt-image-1 + dall-e-3 stay listed for users on older API keys
 	// that haven't been granted gpt-image-2 access yet.
 	"openai-image": gin.H{"name": "OpenAI 图像", "endpoint": "https://api.openai.com/v1/images/generations", "models": []string{"gpt-image-2", "gpt-image-1", "dall-e-3"}, "type": "image"},
-	// Aliyun DashScope native async API for the wanx text-to-image
-	// family. Aliyun never shipped an OpenAI-compat /images/
-	// generations endpoint — earlier rev of this preset pointed at
-	// /compatible-mode/v1/images/generations which returns HTTP 404
-	// (probed 2026-04). Native endpoint requires polling: backend
-	// dispatches via handler/ai_image.go generateDashScopeImage.
+	// Aliyun DashScope qwen-image (synchronous multimodal-generation
+	// endpoint). Single request returns the rendered image URL — no
+	// async polling. Beijing region by default; switch to the intl
+	// host (dashscope-intl.aliyuncs.com) by editing the endpoint
+	// after applying the preset if you're outside mainland China.
 	//
-	// Models:
-	//   wanx2.1-t2i-turbo — fast & cheap, ~5-15s
-	//   wanx2.1-t2i-plus  — higher quality, ~15-30s
-	//   wanx-v1           — original 万相, fallback
-	"qwen-image": gin.H{"name": "通义万相", "endpoint": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis", "models": []string{"wanx2.1-t2i-turbo", "wanx2.1-t2i-plus", "wanx-v1"}, "type": "image"},
+	// Backend dispatches via handler/ai_image.go
+	// generateQwenMultimodalImage.
+	"qwen-image": gin.H{"name": "通义千问图像", "endpoint": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation", "models": []string{"qwen-image-2.0-pro"}, "type": "image"},
+	// Older 万相 (wanx) async API. Kept as a separate preset so users
+	// who specifically need wanx2.x (free quota / cheaper) can still
+	// pick it without hand-editing the endpoint. Backend dispatches
+	// via generateDashScopeImage which polls task_id until SUCCEEDED.
+	"wanx": gin.H{"name": "通义万相 (wanx async)", "endpoint": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis", "models": []string{"wanx2.1-t2i-turbo", "wanx2.1-t2i-plus", "wanx-v1"}, "type": "image"},
 	"imagen":       gin.H{"name": "Google Imagen", "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-06:predict", "models": []string{"imagen-4.0-generate-preview-06-06", "imagen-3.0-generate-002"}, "type": "image"},
 }
 
