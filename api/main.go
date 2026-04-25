@@ -494,6 +494,7 @@ func main() {
 		authed.POST("/ai/providers", handler.SaveAIProvider)
 		authed.DELETE("/ai/providers/:id", handler.DeleteAIProvider)
 		authed.POST("/ai/test", handler.TestAIConnection)
+		authed.POST("/ai/generate-image", handler.GenerateAIImage)
 		authed.POST("/ai/chat", handler.AIChat)
 		authed.GET("/ai/conversations", handler.ListAIConversations)
 		authed.GET("/ai/conversations/:id", handler.GetAIConversation)

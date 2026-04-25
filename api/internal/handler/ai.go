@@ -49,6 +49,24 @@ var AIPresets = gin.H{
 	// produced a 'looks legit, never works' provider entry. Removed.
 	"openai-embedding": gin.H{"name": "OpenAI Embedding", "endpoint": "https://api.openai.com/v1/embeddings", "models": []string{"text-embedding-3-small", "text-embedding-3-large"}, "type": "embedding"},
 	"qwen-embedding":   gin.H{"name": "通义千问 Embedding", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings", "models": []string{"text-embedding-v3"}, "type": "embedding"},
+
+	// Image-generation presets — wired to handler/ai_image.go
+	// GenerateAIImage. Three families are dispatched there based on
+	// the endpoint URL:
+	//
+	//   - OpenAI Images API           (gpt-image-1 / dall-e-3)
+	//   - Aliyun DashScope compat     (通义万相 wanx2.x)
+	//   - Google Imagen native API    (imagen-4 / imagen-3 :predict)
+	//
+	// Other "image" presets (CogView / SeedDream / MiniMax / FLUX)
+	// are deliberately not added — none of them implement the
+	// OpenAI-compat shape natively and adding them would create
+	// more placebo settings. Users can still self-add via the
+	// 添加提供商 modal if they have a working OpenAI-compat proxy
+	// in front of those services.
+	"openai-image": gin.H{"name": "OpenAI 图像", "endpoint": "https://api.openai.com/v1/images/generations", "models": []string{"gpt-image-1", "dall-e-3"}, "type": "image"},
+	"qwen-image":   gin.H{"name": "通义万相", "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/images/generations", "models": []string{"wanx2.1-t2i-turbo", "wanx2.1-t2i-plus", "wanx-v1"}, "type": "image"},
+	"imagen":       gin.H{"name": "Google Imagen", "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-06:predict", "models": []string{"imagen-4.0-generate-preview-06-06", "imagen-3.0-generate-002"}, "type": "image"},
 }
 
 func GetAIProviders(c *gin.Context) {

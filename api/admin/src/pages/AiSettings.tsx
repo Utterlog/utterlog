@@ -488,21 +488,16 @@ export default function AiSettingsPage() {
 
           {/* 特色图设置 */}
           {config.ai_image_auto === 'true' && (
-            <FormSectionC title="特色图设置" icon="fa-regular fa-image">
-              <FormRowSelectC
-                label="图片生成模型"
+            <FormSectionC title="特色图设置" icon="fa-regular fa-image" description="实际调用的提供商在「提供商」标签页里配置（type=图片），这里只控制比例 / 风格等参数。后端支持三家：OpenAI 图像（DALL·E / GPT Image）、通义万相、Google Imagen。"><FormRowSelectC
+                label="预期模型族"
+                hint="只是给前台展示用的标签，真正生效的是「提供商」里启用的 type=图片 条目"
                 value={config.ai_image_model}
                 onChange={v => updateConfig('ai_image_model', v)}
                 options={[
                   { value: '',            label: '使用默认图片提供商' },
-                  { value: 'dall-e-3',    label: 'OpenAI DALL·E 3' },
-                  { value: 'gpt-image-1', label: 'OpenAI GPT Image' },
-                  { value: 'gemini',      label: 'Google Gemini Image' },
+                  { value: 'gpt-image-1', label: 'OpenAI GPT Image / DALL·E 3' },
                   { value: 'wanx',        label: '通义万相' },
-                  { value: 'cogview',     label: '智谱 CogView' },
-                  { value: 'doubao',      label: '豆包 SeedDream' },
-                  { value: 'minimax',     label: 'MiniMax Image' },
-                  { value: 'flux',        label: 'SiliconFlow FLUX' },
+                  { value: 'imagen',      label: 'Google Imagen' },
                 ]}
               />
               {/* 4 short fields paired into 2×2 — wrapping in a CSS grid
