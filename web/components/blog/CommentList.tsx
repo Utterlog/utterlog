@@ -260,17 +260,12 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
   return (
     <>
       <div
-        id={`comment-${comment.id}`}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
           display: 'flex', alignItems: 'flex-start', gap: isReply ? '0' : '12px',
           padding: isReply ? '10px 12px 10px 12px' : '12px 16px',
           position: 'relative',
-          // `scroll-margin-top` keeps the comment from being hidden
-          // under the sticky header when the URL has a #comment-{id}
-          // hash (sidebar "最新评论" jump or browser back/forward).
-          scrollMarginTop: '80px',
           ...(isReply ? {
             marginLeft: '16px', marginRight: '16px', marginTop: '8px',
             background: 'rgba(0, 82, 217, 0.03)',

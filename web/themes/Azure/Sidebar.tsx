@@ -216,7 +216,6 @@ export default function Sidebar() {
           <PostLink
             key={c.id}
             post={{ id: c.post_id, slug: c.post_slug, title: c.post_title, categories: c.post_categories }}
-            hash={`comment-${c.id}`}
             style={{
               display: 'flex', gap: '10px', padding: '10px 16px',
               borderBottom: idx < comments.length - 1 ? '1px solid #f5f5f5' : 'none',
@@ -238,12 +237,6 @@ export default function Sidebar() {
               <p style={{ fontSize: '12px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '2px 0 0' }}>
                 {c.content}
               </p>
-              {c.post_title && (
-                <p style={{ fontSize: '11px', color: '#0052D9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '4px 0 0' }}>
-                  <i className="fa-light fa-arrow-up-right-from-square" style={{ fontSize: '10px', marginRight: '3px' }} />
-                  {c.post_title}
-                </p>
-              )}
             </div>
           </PostLink>
         ))}
