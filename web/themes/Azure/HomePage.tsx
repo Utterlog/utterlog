@@ -174,6 +174,11 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   // Custom menu uses its own length; default uses 1 全部 + N categories.
   const tabCount = useCustomSidebar ? sidebarMenu.length : 1 + categories.length;
   const heroHeight = Math.max(280, tabCount * 56); // min 280px
+  // Title bar height = exactly one sidebar tab's height. When the
+  // hero is taller than tabCount * 56 (the min-280 floor kicks in
+  // for sites with very few categories), we still anchor on 56 so
+  // each row stays visually consistent.
+  const heroTitleH = tabCount > 0 ? heroHeight / tabCount : 56;
 
   return (
     <div>
@@ -242,8 +247,37 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                     feedback through globals.css. */}
                 <PostLink post={heroPost} style={{ display: 'block', textDecoration: 'none' }}>
                   <FadeCover src={heroSrc} alt={heroPost.title} style={{ width: '100%', height: heroHeight }} />
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', padding: '60px 24px 20px' }}>
-                    <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', lineHeight: 1.4 }}>{heroPost.title}</h2>
+                  {/* Title strip: a single bar sized to exactly one
+                      left-sidebar tab so the title vertically aligns
+                      with the last tab. Frosted glass (backdrop blur)
+                      + dark tint stays readable over both bright and
+                      bright-white covers; text-shadow is the safety
+                      net for browsers that drop backdrop-filter. */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0, left: 0, right: 0,
+                    height: heroTitleH,
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0 24px',
+                    background: 'rgba(15, 23, 42, 0.45)',
+                    backdropFilter: 'blur(14px) saturate(150%)',
+                    WebkitBackdropFilter: 'blur(14px) saturate(150%)',
+                    borderTop: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 -8px 24px rgba(0,0,0,0.18)',
+                  }}>
+                    <h2 style={{
+                      margin: 0,
+                      fontSize: '20px',
+                      fontWeight: 700,
+                      color: '#fff',
+                      lineHeight: 1.3,
+                      letterSpacing: '0.01em',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      textShadow: '0 1px 4px rgba(0,0,0,0.55)',
+                    }}>{heroPost.title}</h2>
                   </div>
                 </PostLink>
                 <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 2, background: MODES[modeIdx].color, color: '#fff', fontSize: '12px', fontWeight: 600, padding: '8px 6px', writingMode: 'vertical-rl' as const, letterSpacing: '0.1em', transition: 'background 0.3s' }}>
