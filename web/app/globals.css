@@ -364,6 +364,28 @@ html.lightbox-active body {
   --color-focus-ring: #0052D9;
 }
 
+/* Chred — 中国红极简（克隆 Azure 布局，主色 #F53102）。
+   Without this block, Chred fell through to :root's Azure tokens
+   and every `var(--color-primary)` rendered blue: Pagination,
+   blog-prose headings, quote bars, table thead, mark, list bullets,
+   prev/next chevrons, related-card hover etc. all wrong. Mirrors
+   Azure's neutral grays for text so red is reserved for accents. */
+[data-theme="Chred"],
+[data-theme="chred"] {
+  --color-primary: #F53102;
+  --color-primary-hover: #DC2C02;
+  --color-primary-active: #B82301;
+  --color-bg-main: #FFFFFF;
+  --color-bg-card: #FFFFFF;
+  --color-bg-soft: #FCF4F2;
+  --color-border: #ECE3E1;
+  --color-divider: #F5EFEE;
+  --color-text-main: #0D1A2D;
+  --color-text-sub: #5A6B7F;
+  --color-text-dim: #9AA5B0;
+  --color-focus-ring: #F53102;
+}
+
 /* Dark — 深色 */
 [data-theme="dark"] {
   --color-primary: #7CA0C4;
