@@ -3,6 +3,7 @@ package handler
 import (
 	_ "embed"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,9 +27,23 @@ func InstallPage(c *gin.Context) {
 	c.Data(http.StatusOK, "text/html; charset=utf-8", installerHTML)
 }
 
-// FaviconSVG serves the Utterlog brand favicon. Available in both setup-only
-// and full mode so the install page and any branding route always work.
+// FaviconSVG serves /favicon.svg. If the admin uploaded a custom SVG
+// favicon (saved as public/favicon.svg by UploadBranding), serve that
+// instead; otherwise fall back to the embedded Utterlog brand SVG so
+// the install page + a fresh install always have a working favicon.
+//
+// Why a fallback dance instead of just letting the wildcard
+// /favicon.:ext serve from disk: gin matches the explicit
+// "/favicon.svg" route before the ":ext" pattern, so without this
+// handler reading from disk the user's uploaded favicon.svg would be
+// shadowed forever by the embedded brand. We can't drop the embed
+// either — fresh installs (and the install wizard itself) need a
+// working /favicon.svg before any upload has happened.
 func FaviconSVG(c *gin.Context) {
+	if _, err := os.Stat("./public/favicon.svg"); err == nil {
+		c.File("./public/favicon.svg")
+		return
+	}
 	c.Header("Cache-Control", "public, max-age=86400")
 	c.Data(http.StatusOK, "image/svg+xml", faviconSVG)
 }

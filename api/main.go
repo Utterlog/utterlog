@@ -87,13 +87,22 @@ func main() {
 	r.Static("/uploads", "./public/uploads")
 	r.Static("/themes", "./public/themes") // theme preview assets (screenshot.svg etc.)
 
-	// Branding files at root (logo, dark-logo). /favicon.svg is the
-	// canonical favicon — served from the embedded Utterlog SVG above.
-	// Legacy PNG favicons can be fetched via /favicon.png explicitly.
+	// Branding files at root: logo / dark-logo / favicon. UploadBranding
+	// (handler/media.go) saves uploads as public/<purpose>.<ext> for any
+	// of png/jpg/jpeg/gif/webp/avif/ico/svg, so the routes here use a
+	// wildcard `:ext` so every uploaded extension is reachable. The
+	// previous code hard-coded /favicon.png and /favicon.ico (the ICO
+	// route even returned the PNG file regardless of the URL), which
+	// meant users who uploaded a .svg/.webp/.jpg favicon got a 404.
+	//
+	// /favicon.svg is registered ABOVE this block (FaviconSVG handler)
+	// and falls back to the embedded Utterlog brand SVG when the user
+	// hasn't uploaded their own — see installer.go:FaviconSVG. Gin
+	// routes explicit paths before pattern routes, so /favicon.svg
+	// keeps that override; the pattern below covers everything else.
 	r.GET("/logo.:ext", func(c *gin.Context) { c.File("./public/logo." + c.Param("ext")) })
 	r.GET("/dark-logo.:ext", func(c *gin.Context) { c.File("./public/dark-logo." + c.Param("ext")) })
-	r.GET("/favicon.png", func(c *gin.Context) { c.File("./public/favicon.png") })
-	r.GET("/favicon.ico", func(c *gin.Context) { c.File("./public/favicon.png") })
+	r.GET("/favicon.:ext", func(c *gin.Context) { c.File("./public/favicon." + c.Param("ext")) })
 
 	// SEO + AI discovery (admin Settings → SEO 与 AI tab drives output).
 	r.GET("/robots.txt", handler.RobotsTxt)
