@@ -7,8 +7,10 @@ import CommentList from '@/components/blog/CommentList';
 import AIReaderChat from '@/components/blog/AIReaderChat';
 
 function formatDate(ts: string | number) {
+  // Pin TZ to Asia/Shanghai so SSR (UTC inside container) and the
+  // browser agree — same hydration-mismatch fix as the other themes.
   const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai' });
 }
 
 export default function PostPage({ post }: { post: any }) {

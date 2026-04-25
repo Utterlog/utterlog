@@ -5,8 +5,17 @@ import { useThemeContext } from '@/lib/theme-context';
 import PostLink from '@/components/blog/PostLink';
 
 function formatDate(ts: string | number) {
+  // Pin timeZone to Asia/Shanghai so the server (which runs in UTC
+  // inside the container) and the client (browser local TZ) agree.
+  // Without this, a post created at 2026-02-26 00:30 +08:00 renders
+  // as 2026/02/25 on the server (UTC) and 2026/02/26 on a CN browser,
+  // tripping React's hydration-mismatch warning. Asia/Shanghai matches
+  // the rest of the codebase's date formatters (PostPage etc).
   const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  return d.toLocaleDateString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    timeZone: 'Asia/Shanghai',
+  });
 }
 
 export default function PostCard({ post, priority }: { post: any; priority?: boolean }) {

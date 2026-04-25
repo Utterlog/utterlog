@@ -235,7 +235,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
             {/* 友链更新 — 特殊渲染 */}
             {activeTab === 'feeds' && feeds.length > 0 && feeds.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE).map((item, idx) => {
               const date = new Date((item.pub_date || 0) * 1000);
-              const mon = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+              const mon = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', timeZone: 'Asia/Shanghai' });
               return (
                 <a key={idx} href={item.link} target="_blank" rel="noopener noreferrer" className="post-related-card">
                   <div className="post-related-card-cover" style={{ background: 'var(--color-bg-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -264,7 +264,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
               const cat = post.categories?.[0];
               const coverSrc = post.cover_url || randomCoverUrl(post.id, options);
               const date = new Date((post.created_at || 0) * 1000);
-              const mon = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+              const mon = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', timeZone: 'Asia/Shanghai' });
               return (
                 <PostLink key={post.id} post={post} className="post-related-card cover-zoom">
                   <div className="post-related-card-cover">

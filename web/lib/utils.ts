@@ -22,6 +22,8 @@ export function formatDate(date: string | number | Date): string {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    // Pin TZ so SSR (UTC inside container) and the browser agree.
+    timeZone: 'Asia/Shanghai',
   });
 }
 
