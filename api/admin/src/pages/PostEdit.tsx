@@ -255,7 +255,25 @@ export default function EditPostPage() {
                       onClick={async () => {
                         if (!title) { toast.error('请先填写标题'); return; }
                         setCoverAiLoading(true);
-                        try { const r: any = await api.post('/ai/cover', { title, content: content.slice(0, 500) }); if (r.data?.url || r.url) { setCoverUrl(r.data?.url || r.url); toast.success('封面已生成'); } else toast.error('生成失败'); } catch { toast.error('AI 服务不可用'); }
+                        // Surface the backend's real error message (NO_PROVIDER,
+                        // GENERATION_FAILED + provider response, etc.) instead of
+                        // the old blanket 'AI 服务不可用' toast which masked every
+                        // failure mode. Common causes shown verbatim:
+                        //   - 'NO_PROVIDER'        → user hasn't added a type=图片 provider
+                        //   - 'GENERATION_FAILED'  → API key wrong / model not granted / rate limit
+                        //   - 'UNSUPPORTED_ENDPOINT' → custom endpoint URL not recognised
+                        try {
+                          const r: any = await api.post('/ai/cover', { title, content: content.slice(0, 500) });
+                          const url = r.data?.url || r.url;
+                          if (url) { setCoverUrl(url); toast.success('封面已生成'); }
+                          else toast.error('生成失败：响应中没有 url');
+                        } catch (err: any) {
+                          const detail = err?.response?.data?.error?.message
+                                      || err?.response?.data?.message
+                                      || err?.message
+                                      || '请检查 AI 设置 → 提供商';
+                          toast.error('AI 生成封面失败：' + detail);
+                        }
                         setCoverAiLoading(false);
                       }}
                     >

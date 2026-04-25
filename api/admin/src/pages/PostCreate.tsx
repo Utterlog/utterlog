@@ -252,11 +252,19 @@ export default function CreatePostPage() {
                       onClick={async () => {
                         if (!title) { toast.error('请先填写标题'); return; }
                         setCoverAiLoading(true);
+                        // Surface real backend error — same change as PostEdit.tsx.
                         try {
                           const r: any = await api.post('/ai/cover', { title, content: content.slice(0, 500) });
-                          if (r.data?.url || r.url) { setCoverUrl(r.data?.url || r.url); toast.success('封面已生成'); }
-                          else toast.error('生成失败');
-                        } catch { toast.error('AI 服务不可用'); }
+                          const url = r.data?.url || r.url;
+                          if (url) { setCoverUrl(url); toast.success('封面已生成'); }
+                          else toast.error('生成失败：响应中没有 url');
+                        } catch (err: any) {
+                          const detail = err?.response?.data?.error?.message
+                                      || err?.response?.data?.message
+                                      || err?.message
+                                      || '请检查 AI 设置 → 提供商';
+                          toast.error('AI 生成封面失败：' + detail);
+                        }
                         setCoverAiLoading(false);
                       }}
                     >

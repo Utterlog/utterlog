@@ -203,6 +203,12 @@ func generateAIImageAndPersist(prompt, size string, n int) (interface{}, error) 
 		return nil, fmt.Errorf("UNSUPPORTED_ENDPOINT")
 	}
 	if err != nil {
+		// stdout log so the operator can `docker logs api` and see the
+		// real provider response without poking through the http
+		// response body. Same pattern as callOneProvider for chat
+		// completions.
+		fmt.Printf("[ai-image] generation failed via %q (model=%q endpoint=%s): %v\n",
+			provider.Name, provider.Model, provider.Endpoint, err)
 		return nil, fmt.Errorf("generation: %v", err)
 	}
 	if len(imgBytes) == 0 {
