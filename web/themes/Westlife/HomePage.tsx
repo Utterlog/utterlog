@@ -27,7 +27,7 @@ export default function HomePage({ posts, page, totalPages }: { posts: any[]; pa
       {/* Posts */}
       {posts.length > 0 ? (
         <div>
-          {posts.map(post => <PostCard key={post.id} post={post} />)}
+          {posts.map((post, idx) => <PostCard key={post.id} post={post} priority={idx === 0} />)}
         </div>
       ) : (
         <div style={{

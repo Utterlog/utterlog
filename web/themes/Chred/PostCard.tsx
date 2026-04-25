@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import LazyImage from '@/components/ui/LazyImage';
+import { coverProps } from '@/lib/blog-image';
 import PostLink from '@/components/blog/PostLink';
 
 function formatDate(ts: string | number) {
@@ -14,7 +14,7 @@ function formatDate(ts: string | number) {
 
 import { getCategoryIcon } from './constants';
 
-export default function PostCard({ post }: { post: any }) {
+export default function PostCard({ post, priority }: { post: any; priority?: boolean }) {
   const { mon, day } = formatDate(post.created_at);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
@@ -77,11 +77,14 @@ export default function PostCard({ post }: { post: any }) {
       </div>
 
       {/* Cover image */}
-      <PostLink post={post} style={{ display: 'block', position: 'relative' }}>
-        <LazyImage
-          src={coverUrl}
-          alt={post.title}
-          style={{ width: '100%', height: '320px' }}
+      <PostLink post={post} style={{ display: 'block', position: 'relative', height: '320px', overflow: 'hidden' }}>
+        <img
+          {...coverProps({
+            src: coverUrl,
+            alt: post.title,
+            priority,
+            style: { height: '320px' },
+          })}
         />
         {/* Right edge red bar on hover */}
         <div style={{

@@ -3,19 +3,27 @@
 import { useEffect } from 'react';
 
 // Applies the admin-configured image display effect to every blog
-// article image. Reads `image_display_effect` + `image_display_duration`
-// from theme options and sets them as data-attribute + CSS variables
-// on <html>, so a small global stylesheet (app/globals.css) can key
-// one of the eight @keyframes off the attribute selector.
+// image and tracks load state for the global fade-in. Reads
+// `image_display_effect` + `image_display_duration` from theme
+// options and sets them as data-attribute + CSS variables on <html>,
+// so a small global stylesheet (app/globals.css) can key one of the
+// effect rules off the attribute selector.
 //
-// We also run an IntersectionObserver for the effects that should
-// fire on-scroll (slide-up, scale) rather than on-load — those look
-// wrong without a clear entry moment. For the rest, the browser
-// decides; they all animate once per img element.
+// Three responsibilities:
+//   1. Stamp <html data-img-effect=...> + --img-effect-duration so
+//      globals.css selectors fire.
+//   2. Track load state on every <img data-blog-image> via event
+//      delegation: flip `data-loaded` to "1" on `load`, and on mount
+//      sweep already-`complete` images so the hydration race doesn't
+//      strand them on the placeholder forever.
+//   3. For the `scale` effect (which needs a scroll trigger to feel
+//      right), run an IntersectionObserver that flips
+//      `data-img-effect-visible="1"` when the image enters the
+//      viewport.
 //
-// Selector scope: `.blog-prose img` (markdown body) and any element
-// carrying `data-blog-image`. Chrome extensions / social widgets
-// outside the prose are untouched.
+// Selector scope: any element carrying `data-blog-image`. Themes
+// stamp this via `coverProps()` (lib/blog-image.ts); article-body
+// images stamp it directly in components/blog/LazyImage.tsx.
 
 interface Props {
   effect: string | undefined;
@@ -32,48 +40,78 @@ export default function ImageEffects({ effect, durationMs }: Props) {
     const d = parseInt(raw, 10);
     root.style.setProperty('--img-effect-duration', `${Number.isFinite(d) && d > 0 ? d : 400}ms`);
 
-    if (value === 'none') return;
-
-    // Scroll-triggered reveal — after trimming the admin option list
-    // down to fade / pixel / scale / none, only `scale` still needs
-    // a scroll trigger (the others either run on DOM-mount via CSS
-    // or are handled by their own LazyImage overlay).
-    const scrollTriggered = new Set(['scale']);
-    if (!scrollTriggered.has(value)) return;
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            (e.target as HTMLElement).dataset.imgEffectVisible = '1';
-            io.unobserve(e.target);
-          }
-        }
-      },
-      { rootMargin: '0px 0px -40px 0px' }
-    );
-
-    const attach = () => {
-      // Match the same selector scope as the CSS effect rules in
-      // globals.css — article-body images (.blog-prose/.blog-image)
-      // have their own self-contained fade and don't participate in
-      // the effect system, so skip them to avoid double-triggering.
+    // ── (2) load tracking ──────────────────────────────────────────
+    // Mark already-loaded images (browser finished the download
+    // before React attached). Without this they stay on
+    // `data-loaded="0"` forever and the placeholder never lifts.
+    const sweep = () => {
       document
-        .querySelectorAll<HTMLElement>('[data-blog-image] img, img[data-blog-image]')
-        .forEach((el) => {
-          if (el.dataset.imgEffectWatched) return;
-          el.dataset.imgEffectWatched = '1';
-          io.observe(el);
+        .querySelectorAll<HTMLImageElement>('img[data-blog-image][data-loaded="0"]')
+        .forEach((img) => {
+          if (img.complete && img.naturalWidth > 0) {
+            img.dataset.loaded = '1';
+          }
         });
     };
-    attach();
-    // Re-scan when new images get appended (dynamic comment renders etc.)
-    const mo = new MutationObserver(attach);
+    sweep();
+
+    // Capture-phase listener so we hear `load` events that don't
+    // bubble. One listener for the whole page covers every theme
+    // cover, hero, and article body image.
+    const onLoad = (e: Event) => {
+      const t = e.target as HTMLElement | null;
+      if (t && t.tagName === 'IMG' && (t as HTMLImageElement).dataset.blogImage !== undefined) {
+        (t as HTMLImageElement).dataset.loaded = '1';
+      }
+    };
+    document.addEventListener('load', onLoad, true);
+
+    // New images may stream in (PJAX page swap, comment renders, etc).
+    // Re-sweep on DOM mutation so they don't get stuck.
+    const mo = new MutationObserver(sweep);
     mo.observe(document.body, { childList: true, subtree: true });
 
+    // ── (3) scroll-triggered effects ──────────────────────────────
+    // Only `scale` still needs IO; fade is pure CSS keyed on
+    // `data-loaded`, and the rest were retired.
+    let io: IntersectionObserver | null = null;
+    if (value === 'scale') {
+      io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              (e.target as HTMLElement).dataset.imgEffectVisible = '1';
+              io!.unobserve(e.target);
+            }
+          }
+        },
+        { rootMargin: '0px 0px -40px 0px' }
+      );
+      const attachIo = () => {
+        document
+          .querySelectorAll<HTMLElement>('img[data-blog-image]')
+          .forEach((el) => {
+            if (el.dataset.imgEffectWatched) return;
+            el.dataset.imgEffectWatched = '1';
+            io!.observe(el);
+          });
+      };
+      attachIo();
+      // Reuse the same MutationObserver — re-attach on DOM changes.
+      const moIo = new MutationObserver(attachIo);
+      moIo.observe(document.body, { childList: true, subtree: true });
+
+      return () => {
+        document.removeEventListener('load', onLoad, true);
+        mo.disconnect();
+        moIo.disconnect();
+        io!.disconnect();
+      };
+    }
+
     return () => {
+      document.removeEventListener('load', onLoad, true);
       mo.disconnect();
-      io.disconnect();
     };
   }, [effect, durationMs]);
 

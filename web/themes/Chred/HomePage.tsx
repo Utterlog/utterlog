@@ -3,7 +3,6 @@
 import PostCard from './PostCard';
 import Sidebar from './Sidebar';
 import Pagination from '@/components/blog/Pagination';
-import LazyImage from '@/components/ui/LazyImage';
 import FadeCover from '@/components/blog/FadeCover';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
@@ -241,7 +240,7 @@ export default function HomePage({ posts, page, totalPages }: { posts: any[]; pa
               {posts.length > 0 ? (
                 posts.map((post, idx) => (
                   <div key={post.id} style={{ borderBottom: '1px solid #e5e5e5' }}>
-                    <PostCard post={post} />
+                    <PostCard post={post} priority={page === 1 && idx === 0} />
                   </div>
                 ))
               ) : (

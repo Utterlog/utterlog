@@ -1,6 +1,6 @@
 'use client';
 
-import LazyImage from '@/components/ui/LazyImage';
+import { coverProps } from '@/lib/blog-image';
 import PostLink from '@/components/blog/PostLink';
 
 function formatDate(ts: string | number) {
@@ -8,7 +8,7 @@ function formatDate(ts: string | number) {
   return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
-export default function PostCard({ post }: { post: any }) {
+export default function PostCard({ post, priority }: { post: any; priority?: boolean }) {
   const coverUrl = post.cover_url || `https://img.et/1920/1080?type=landscape&r=${post.id}`;
 
   return (
@@ -22,13 +22,16 @@ export default function PostCard({ post }: { post: any }) {
         onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = '#3368d9'; }}
         onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#e9e9e9'; }}
       >
-        {/* Cover image with lazy loading */}
-        <LazyImage
-          src={coverUrl}
-          alt={post.title}
-          style={{ width: '100%', height: '200px' }}
-          spinnerSize={24}
-        />
+        {/* Cover image */}
+        <div style={{ width: '100%', height: '200px', position: 'relative', overflow: 'hidden' }}>
+          <img
+            {...coverProps({
+              src: coverUrl,
+              alt: post.title,
+              priority,
+            })}
+          />
+        </div>
 
         <div style={{ padding: '16px 20px' }}>
           <h2 style={{ fontSize: '17px', fontWeight: 600, color: '#202020', lineHeight: 1.5, marginBottom: '8px' }}>

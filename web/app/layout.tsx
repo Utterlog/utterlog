@@ -41,10 +41,32 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.bluecdn.com" crossOrigin="anonymous" />
-        <link href="https://fonts.bluecdn.com/css2?family=Fugaz+One&family=Ubuntu:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        {/* Font Awesome Pro 7.2 */}
-        <link rel="stylesheet" href="https://icons.bluecdn.com/fontawesome-pro/css/all.min.css" />
+        {/* System-immutable assets (FA Pro 7.2.0, all webfonts including
+            CJK) served from R2 + Cloudflare with Cache-Control immutable
+            / 1y. Latin webfonts (Fugaz One / Ubuntu / Google Sans Code)
+            are declared via @font-face in globals.css. Chinese webfonts
+            ship as cn-font-split / Google-style unicode-range slices,
+            so we link their generated stylesheets directly — the browser
+            only downloads the slices a given page actually uses. */}
+        <link rel="preconnect" href="https://static.utterlog.com" crossOrigin="anonymous" />
+        {/* Preload the four FA Pro webfonts the page actually uses on first
+            paint (light/regular/solid/sharp-light) so they don't wait
+            on the CSS parse → @font-face → woff2 fetch waterfall. */}
+        <link rel="preload" as="font" type="font/woff2" crossOrigin="anonymous"
+              href="https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-light-300.woff2" />
+        <link rel="preload" as="font" type="font/woff2" crossOrigin="anonymous"
+              href="https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-regular-400.woff2" />
+        <link rel="preload" as="font" type="font/woff2" crossOrigin="anonymous"
+              href="https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-solid-900.woff2" />
+        <link rel="preload" as="font" type="font/woff2" crossOrigin="anonymous"
+              href="https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-sharp-light-300.woff2" />
+        {/* Font Awesome Pro 7.2.0 — official all.min.css, font-display
+            override applied via globals.css @font-face rules below. */}
+        <link rel="stylesheet" href="https://static.utterlog.com/libs/fontawesome/7.2.0/css/all.min.css" />
+        {/* Noto Sans SC — primary Chinese sans, mirrored from Google Fonts
+            to R2 (101 unicode-range slices, ~5MB total but each page
+            only loads the slices it actually uses). */}
+        <link rel="stylesheet" href="https://static.utterlog.com/fonts/noto-sans-sc/result.css" />
       </head>
       <body className="font-sans antialiased bg-page text-primary">
         {/* Squircle clip-path (matches Utterlog logo shape) */}

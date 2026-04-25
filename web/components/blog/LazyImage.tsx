@@ -56,6 +56,8 @@ export default function LazyImage({ src, alt, exifData, ...props }: LazyImagePro
         alt={alt || ''}
         loading="lazy"
         decoding="async"
+        data-blog-image=""
+        data-loaded={loaded ? '1' : '0'}
         onLoad={() => setLoaded(true)}
         {...props}
       />

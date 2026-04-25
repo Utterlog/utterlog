@@ -114,11 +114,118 @@ html.lightbox-active body {
   background: rgba(0,0,0,0.25);
 }
 
-/* PaperMono — code font */
+/* ────────────────────────────────────────────────────────────────
+   System webfonts — served from static.utterlog.com (R2 + CF, 1y
+   immutable cache). All declared font-display: swap so the page
+   renders in fallback fonts immediately and swaps in once the
+   woff2 lands; this is the single biggest FCP win for utterlog.
+
+   Latin only here — Noto Sans SC (Chinese) still rides the Google
+   Fonts mirror in <head> because css2 returns unicode-range-sliced
+   subsets that pre-built static hosting can't replicate cheaply.
+   ──────────────────────────────────────────────────────────────── */
+
+/* Logo / display — Fugaz One */
 @font-face {
-  font-family: "PaperMono";
-  src: url("/static/fonts/PaperMono-Regular.woff2") format("woff2");
+  font-family: "Fugaz One";
+  src: url("https://static.utterlog.com/fonts/fugaz-one-400.woff2") format("woff2");
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* UI text — Ubuntu (latin) */
+@font-face {
+  font-family: "Ubuntu";
+  src: url("https://static.utterlog.com/fonts/ubuntu-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ubuntu";
+  src: url("https://static.utterlog.com/fonts/ubuntu-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ubuntu";
+  src: url("https://static.utterlog.com/fonts/ubuntu-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Code — Google Sans Code (replaces PaperMono) */
+@font-face {
+  font-family: "Google Sans Code";
+  src: url("https://static.utterlog.com/fonts/google-sans-code-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Google Sans Code";
+  src: url("https://static.utterlog.com/fonts/google-sans-code-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   FontAwesome Pro 7.2.0 @font-face overrides.
+   FA's official all.min.css ships font-display: block — that's the
+   140ms FCP loss Lighthouse reports. We re-declare each used family
+   here AFTER the FA stylesheet loads (CSS source order: <head> link
+   above → globals.css below) with font-display: swap, so icons fall
+   back to invisible text for the swap period and never block FCP.
+
+   Only the families actually used in code are listed: light /
+   regular / solid / brands / sharp-light / sharp-solid. Other
+   families (thin / duotone / sharp-regular / sharp-thin / sharp-duotone
+   variants) remain on FA's default block behaviour — they're not
+   referenced and won't load anyway.
+   ──────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Font Awesome 7 Pro";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-light-300.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Font Awesome 7 Pro";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-regular-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Font Awesome 7 Pro";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-solid-900.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Font Awesome 7 Brands";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-brands-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Font Awesome 7 Sharp";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-sharp-light-300.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Font Awesome 7 Sharp";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-sharp-solid-900.woff2") format("woff2");
+  font-weight: 900;
   font-style: normal;
   font-display: swap;
 }
@@ -282,7 +389,7 @@ html.lightbox-active body {
   /* Fonts */
   --font-sans: "Noto Sans SC", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Noto Serif SC", "Source Han Serif SC", "Georgia", ui-serif, serif;
-  --font-mono: "PaperMono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-mono: "Google Sans Code", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
   --font-logo: "Ubuntu", "Fugaz One", sans-serif;
 }
 
@@ -1004,17 +1111,22 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
    via Settings → 图片处理 → 动画时长. */
 :root { --img-effect-duration: 500ms; }
 
-/* Base targeting. Article-body images (`.blog-image img`,
-   `.blog-prose img`) already have a fully self-contained blur→sharp
-   fade defined further up in the file — owned by <LazyImage> in
-   components/blog/. The effect system below only applies to opt-in
-   cover images marked with `data-blog-image` to avoid a
-   double-transition conflict (two `transition` declarations would
-   replace each other, flickering around the time ImageEffects
-   attaches `html[data-img-effect]`). */
+/* Base targeting. Any `<img data-blog-image>` (theme covers via
+   coverProps(), article-body images, gallery tiles) or any element
+   that wraps such an image. Article-body images additionally live
+   inside `.blog-image` wrappers for EXIF/caption UI; that wrapper
+   layer is purely structural now — the blur/fade is keyed off
+   `data-loaded` on the <img> itself, single source of truth. */
 :where([data-blog-image] img, img[data-blog-image]) {
   will-change: opacity, transform, filter, clip-path;
   backface-visibility: hidden;
+}
+
+/* Soft background while the image is still downloading. Sits on the
+   <img> itself so themes don't need to wrap covers in a colored
+   wrapper to avoid a flash of empty space. */
+img[data-blog-image][data-loaded="0"] {
+  background-color: var(--color-bg-soft, #f0f0f0);
 }
 
 /* 1. fade — reverts to the original LazyImage behaviour: pre-load
@@ -1126,3 +1238,45 @@ html[data-img-effect="none"] :where([data-blog-image] img, img[data-blog-image])
     clip-path: none !important;
   }
 }
+
+/* ────────────────────────────────────────────────────────────────
+   Available Chinese webfonts — hosted on static.utterlog.com
+   ────────────────────────────────────────────────────────────────
+   All entries below were sliced with cn-font-split (or Google's
+   unicode-range subsetting for Noto Sans SC) and uploaded to R2.
+   Only Noto Sans SC is link-loaded by default in layout.tsx —
+   it's the primary --font-sans fallback for CJK and every page
+   needs it. The rest are NOT linked at boot to keep FCP light;
+   activate one by adding `<link rel="stylesheet" href="<URL>">`
+   to layout.tsx (or a per-theme stylesheet) and then referencing
+   the family-name below in `font-family`.
+
+   Active by default:
+     • Noto Sans SC          — fonts/noto-sans-sc/result.css
+                               family: 'Noto Sans SC'  (400/500/600/700)
+
+   Available (link to enable):
+     • 霞鹜文楷 / Mono       — fonts/lxgwwenkai/<weight>/result.css
+                               family: 'LXGW WenKai' / 'LXGW WenKai Mono'
+                               weights: Light/Regular/Medium ×2
+     • 霞鹜文楷 Bright       — fonts/lxgwwenkaibright/<weight>/result.css
+                               family: 'LXGW Bright'  (Light/Regular/Medium + italic)
+     • 霞鹜漫黑              — fonts/lxgwmanhei/<weight>/result.css
+                               family: 'LXGW Marker Gothic'
+     • 霞鹜文楷屏幕阅读版    — fonts/lywkpmydb/<weight>/result.css
+                               family: 'LXGW WenKai Screen' / 'LXGW WenKai Mono Screen'
+     • 思源宋体              — fonts/syst/<weight>/result.css
+                               family: 'Source Han Serif CN VF'  (variable 250–900)
+     • 优设标题黑            — fonts/ysbth/<weight>/result.css
+                               family: 'YouSheBiaoTiHei'
+     • 斗鱼追光体            — fonts/dyzgt/<weight>/result.css
+                               family: 'DOUYU Font'
+     • 快看世界体            — fonts/kksjt/<weight>/result.css
+                               family: '快看世界体'
+     • TencentSans W7        — fonts/tencentsans-w7/result.css
+                               family: 'TencentSans W7'
+     • Maple Mono CN         — fonts/maple-mono-cn/<weight>/result.css
+                               family: 'Maple Mono CN'  (16 weights, 200–800 + italic)
+     • 阿里妈妈方圆体        — fonts/alimama-fangyuan/AlimamaFangYuanTiVF-Thin/result.css
+                               family: 'Alimama FangYuanTi VF'  (variable, Thin only)
+*/

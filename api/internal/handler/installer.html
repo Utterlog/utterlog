@@ -6,8 +6,15 @@
 <meta name="robots" content="noindex,nofollow" />
 <title>Utterlog 安装</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="stylesheet" href="https://icons.bluecdn.com/fontawesome-pro/css/all.min.css" />
-<link rel="stylesheet" href="https://utterlog.io/fonts/ubuntu.css" />
+<link rel="preconnect" href="https://static.utterlog.com" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://static.utterlog.com/libs/fontawesome/7.2.0/css/all.min.css" />
+<style>
+  /* Self-hosted webfonts mirroring web/app/globals.css so install
+     wizard text doesn't ship in fallback fonts. */
+  @font-face { font-family: "Ubuntu"; src: url("https://static.utterlog.com/fonts/ubuntu-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+  @font-face { font-family: "Ubuntu"; src: url("https://static.utterlog.com/fonts/ubuntu-500.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+  @font-face { font-family: "Ubuntu"; src: url("https://static.utterlog.com/fonts/ubuntu-700.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+</style>
 <style>
   :root {
     --color-primary: #0052D9;

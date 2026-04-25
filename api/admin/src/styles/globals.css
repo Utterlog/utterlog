@@ -101,11 +101,94 @@ body {
   background: rgba(0,0,0,0.25);
 }
 
-/* PaperMono — code font (served from admin/public/fonts/, mounted at /admin/fonts/) */
+/* ────────────────────────────────────────────────────────────────
+   System webfonts — served from static.utterlog.com (R2 + CF, 1y
+   immutable cache). Same set as web/app/globals.css so admin SPA
+   inherits the utterlog typography stack with zero local hosting.
+   All declared font-display: swap so the panel renders in fallback
+   immediately and swaps once woff2 lands.
+   ──────────────────────────────────────────────────────────────── */
+
+/* UI text — Ubuntu (latin) */
 @font-face {
-  font-family: "PaperMono";
-  src: url("/admin/fonts/PaperMono-Regular.woff2") format("woff2");
+  font-family: "Ubuntu";
+  src: url("https://static.utterlog.com/fonts/ubuntu-400.woff2") format("woff2");
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ubuntu";
+  src: url("https://static.utterlog.com/fonts/ubuntu-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ubuntu";
+  src: url("https://static.utterlog.com/fonts/ubuntu-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Code — Google Sans Code (replaces PaperMono) */
+@font-face {
+  font-family: "Google Sans Code";
+  src: url("https://static.utterlog.com/fonts/google-sans-code-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Google Sans Code";
+  src: url("https://static.utterlog.com/fonts/google-sans-code-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* FontAwesome Pro 7.2.0 — re-declare the families used by the admin
+   panel with font-display: swap to override FA's default block. */
+@font-face {
+  font-family: "Font Awesome 7 Pro";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-light-300.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Font Awesome 7 Pro";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-regular-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Font Awesome 7 Pro";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-solid-900.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Font Awesome 7 Brands";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-brands-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Font Awesome 7 Sharp";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-sharp-light-300.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Font Awesome 7 Sharp";
+  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-sharp-solid-900.woff2") format("woff2");
+  font-weight: 900;
   font-style: normal;
   font-display: swap;
 }
@@ -264,7 +347,7 @@ body {
   /* Fonts */
   --font-sans: "Noto Sans SC", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Noto Serif SC", "Source Han Serif SC", "Georgia", ui-serif, serif;
-  --font-mono: "PaperMono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-mono: "Google Sans Code", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
   --font-logo: "Ubuntu", "Fugaz One", sans-serif;
 }
 

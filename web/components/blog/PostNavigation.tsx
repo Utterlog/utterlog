@@ -63,7 +63,7 @@ function LazyCardImage({ src, alt }: { src: string; alt: string }) {
 // supplies a `width/height: 100%` container that drops nicely into
 // the existing `.post-prev-next-cover` slot without extra styling.
 function FadeCover({ src }: { src: string }) {
-  return <SharedFadeCover src={src} style={{ width: '100%', height: '100%' }} />;
+  return <SharedFadeCover src={src} priority={false} style={{ width: '100%', height: '100%' }} />;
 }
 
 interface NavPost {

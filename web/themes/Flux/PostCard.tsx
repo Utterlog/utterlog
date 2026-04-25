@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { getCategoryIcon } from './constants';
-import LazyImage from '@/components/ui/LazyImage';
+import { coverProps } from '@/lib/blog-image';
 import PostLink from '@/components/blog/PostLink';
 
 const ACCENT = '#0052D9';
@@ -15,7 +15,7 @@ function formatDate(ts: string | number) {
   return { mon, day };
 }
 
-export default function PostCard({ post, isNewest }: { post: any; isNewest?: boolean }) {
+export default function PostCard({ post, isNewest, priority }: { post: any; isNewest?: boolean; priority?: boolean }) {
   const { mon, day } = formatDate(post.created_at);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
@@ -92,12 +92,15 @@ export default function PostCard({ post, isNewest }: { post: any; isNewest?: boo
       </div>
 
       {/* Cover image */}
-      <PostLink post={post} className="azure-img-hover-wrap" style={{ display: 'block', position: 'relative', overflow: 'hidden' }}>
-        <LazyImage
-          src={coverUrl}
-          alt={post.title}
-          className="azure-img-hover"
-          style={{ width: '100%', height: '320px' }}
+      <PostLink post={post} className="azure-img-hover-wrap" style={{ display: 'block', position: 'relative', overflow: 'hidden', height: '320px' }}>
+        <img
+          {...coverProps({
+            src: coverUrl,
+            alt: post.title,
+            priority,
+            className: 'azure-img-hover',
+            style: { height: '320px' },
+          })}
         />
       </PostLink>
 
