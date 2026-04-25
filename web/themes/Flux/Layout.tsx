@@ -1,20 +1,11 @@
-'use client';
-
-import { useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  // Apply Flux theme scope to <html> so design tokens activate
-  useEffect(() => {
-    const prev = document.documentElement.dataset.theme;
-    document.documentElement.dataset.theme = 'Flux';
-    return () => {
-      if (prev !== undefined) document.documentElement.dataset.theme = prev;
-      else delete document.documentElement.dataset.theme;
-    };
-  }, []);
+// data-theme="Flux" stamping is now handled centrally by
+// app/(blog)/layout.tsx so it runs before paint (server-injected
+// inline script). Layout can stay a server component.
 
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="blog-shell flux-theme"

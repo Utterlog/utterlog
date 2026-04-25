@@ -48,6 +48,22 @@ export default async function BlogLayout({
 
   return (
     <>
+      {/* Stamp <html data-theme="..."> before hydration so themed CSS
+          rules ([data-theme="Chred"] .post-related-card-cover { ... })
+          actually match. The root <html> is owned by app/layout.tsx
+          and can't be re-rendered from a nested layout, so we inject
+          a tiny synchronous script that runs before any paint. Without
+          this, structural rules scoped under [data-theme="..."] (e.g.
+          aspect-ratio, position: relative) silently fail and absolute-
+          positioned descendants escape upward to the viewport — which
+          is what caused related-card images to fill the entire page
+          on cover-less posts. Only Flux happened to work because its
+          Layout already had a client useEffect doing the same stamp. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `document.documentElement.dataset.theme=${JSON.stringify(ctx.theme.name)};`,
+        }}
+      />
       <link rel="stylesheet" href={`/themes/${ctx.theme.name}/styles.css`} />
       <SlotHead options={ctx.options} />
       <Script src="https://id.utterlog.com/static/passport.js" strategy="lazyOnload" />
