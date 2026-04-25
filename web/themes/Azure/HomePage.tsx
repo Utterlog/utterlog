@@ -101,17 +101,22 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
     }
   }, [activeCatIdx, modeIdx, activeCatSlug]);
 
-  // Auto-rotate: next category + random mode, every 8s
+  // Auto-rotate: next category + random mode, every 5s.
   const advance = useCallback(() => {
     setActiveCatIdx(prev => (prev + 1) % (categories.length + 1));
     setModeIdx(Math.floor(Math.random() * MODES.length));
   }, [categories.length]);
 
+  // Restart the timer whenever activeCatIdx / modeIdx changes — that
+  // way clicking a tab (handleTabClick mutates these) wipes the
+  // existing countdown so the next auto-advance is a full 5s away,
+  // instead of firing in whatever fragment of the old 5s remained
+  // and snapping the user off the tab they just selected.
   useEffect(() => {
     if (paused) return;
-    timerRef.current = setInterval(advance, 8000);
+    timerRef.current = setInterval(advance, 5000);
     return () => clearInterval(timerRef.current);
-  }, [paused, advance, page]);
+  }, [paused, advance, page, activeCatIdx, modeIdx]);
 
   // Click same tab = cycle to next mode; click different tab = switch + random mode
   const handleTabClick = (idx: number) => {
