@@ -5,8 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +19,7 @@ import (
 	"utterlog-go/internal/storage"
 	"utterlog-go/internal/util"
 
+	"github.com/chai2010/webp"
 	"github.com/gin-gonic/gin"
 )
 
@@ -202,6 +207,17 @@ func generateAIImageAndPersist(prompt, size string, n int) (interface{}, error) 
 	}
 	if len(imgBytes) == 0 {
 		return nil, fmt.Errorf("provider returned empty image")
+	}
+
+	// Honour the admin's Settings → 图片处理 → 特色图设置 →
+	// 图片格式 / 压缩质量. The provider returns whatever its
+	// default is (gpt-image / imagen / wanx all give PNG, file
+	// sizes 1-3MB for 1024×1024). Without this re-encode step the
+	// admin's webp choice was a placebo and the bundled-too-large
+	// PNG ate disk + bandwidth.
+	if reEnc, reMime, ok := reencodeAIImage(imgBytes, mimeType); ok {
+		imgBytes = reEnc
+		mimeType = reMime
 	}
 
 	ext := extFromMimeFuzzy(mimeType)
@@ -525,4 +541,80 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "..."
+}
+
+// reencodeAIImage transcodes a generated image into the admin-chosen
+// 图片格式 + 压缩质量 (Settings → AI → 特色图设置). Returns
+// (newBytes, newMime, ok=true) when the re-encode actually changed
+// the format or improved size; (nil, "", ok=false) when we should
+// keep the original (input format already matches target, decode
+// fails, target = avif which the AI image path doesn't include
+// libavif because the savings aren't worth the encode latency for
+// once-per-post covers, etc.).
+//
+// Defensive: if the provider returned a format we can't decode (rare
+// but happens when an upstream proxy hands back an oversized JSON
+// blob or HTML error page accidentally typed as image/png), we fall
+// back to the original bytes rather than fail the whole generation.
+func reencodeAIImage(src []byte, srcMime string) ([]byte, string, bool) {
+	target := strings.ToLower(strings.TrimSpace(model.GetOption("ai_image_format")))
+	if target == "" {
+		target = "webp" // matches the form's default
+	}
+	// Skip: target already equal to what we got. Can't compare via
+	// extension because gpt-image returns 'image/png' but the option
+	// stores 'png' — normalise both sides through extFromMimeFuzzy.
+	if extFromMimeFuzzy(srcMime) == target {
+		return nil, "", false
+	}
+
+	q := 82
+	if v := strings.TrimSpace(model.GetOption("ai_image_quality")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 100 {
+			q = n
+		}
+	}
+
+	img, _, err := image.Decode(bytes.NewReader(src))
+	if err != nil {
+		// Couldn't decode (corrupt image / non-image bytes typed
+		// as image/png). Skip the re-encode and let the original
+		// bytes flow through; the admin will see the issue when
+		// trying to render the cover.
+		return nil, "", false
+	}
+
+	var out bytes.Buffer
+	var newMime string
+	switch target {
+	case "webp":
+		if err := webp.Encode(&out, img, &webp.Options{Quality: float32(q)}); err != nil {
+			return nil, "", false
+		}
+		newMime = "image/webp"
+	case "jpg", "jpeg":
+		if err := jpeg.Encode(&out, img, &jpeg.Options{Quality: q}); err != nil {
+			return nil, "", false
+		}
+		newMime = "image/jpeg"
+	case "png":
+		if err := png.Encode(&out, img); err != nil {
+			return nil, "", false
+		}
+		newMime = "image/png"
+	default:
+		// Unknown target — leave bytes alone. AVIF deliberately not
+		// included here because gen2brain's CGO encoder takes 1-3s
+		// for 1024×1024 and AI cover generation is already
+		// 30-90s wall time; an extra second is fine but the savings
+		// over webp are marginal at cover sizes.
+		return nil, "", false
+	}
+	// Only swap if the re-encode actually shrunk the file (or
+	// didn't grow it more than 5% — matching format conversion
+	// often slightly inflates a PNG that was already optimal).
+	if out.Len() > int(float64(len(src))*1.05) {
+		return nil, "", false
+	}
+	return out.Bytes(), newMime, true
 }

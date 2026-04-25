@@ -312,6 +312,14 @@ func InitDB() error {
 		T("options"),
 	))
 
+	// 2026-04: ai_image_model was a placebo dropdown — image-gen
+	// dispatch reads from ai_providers (type='image'), the field
+	// label was misleading. Form removed, DB row dropped.
+	DB.Exec(fmt.Sprintf(
+		"DELETE FROM %s WHERE name = 'ai_image_model'",
+		T("options"),
+	))
+
 	return nil
 }
 

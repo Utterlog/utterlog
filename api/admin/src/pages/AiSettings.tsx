@@ -90,7 +90,8 @@ export default function AiSettingsPage() {
     ai_slug_prompt: 'Generate a concise, SEO-friendly URL slug in English for this article. Output only the slug, lowercase, hyphens instead of spaces, no special characters.',
     ai_keywords_prompt: 'Extract 3-5 keywords/tags from this article. Output as comma-separated list. Use the same language as the article.',
     ai_polish_prompt: 'Polish and improve the writing quality: fix grammar, improve flow, make it more engaging. Keep the same language and meaning. Output in Markdown.',
-    ai_image_model: '',
+    // ai_image_model removed: was a placebo label that didn't drive
+    // dispatch (real provider lookup goes through ai_providers).
     ai_image_ratio: '16:9',
     ai_image_style: 'editorial',
     ai_image_format: 'webp',
@@ -488,19 +489,11 @@ export default function AiSettingsPage() {
 
           {/* 特色图设置 */}
           {config.ai_image_auto === 'true' && (
-            <FormSectionC title="特色图设置" icon="fa-regular fa-image" description="实际调用的提供商在「提供商」标签页里配置（type=图片），这里只控制比例 / 风格等参数。后端支持三家：OpenAI 图像（DALL·E / GPT Image）、通义万相、Google Imagen。"><FormRowSelectC
-                label="预期模型族"
-                hint="只是给前台展示用的标签，真正生效的是「提供商」里启用的 type=图片 条目"
-                value={config.ai_image_model}
-                onChange={v => updateConfig('ai_image_model', v)}
-                options={[
-                  { value: '',            label: '使用默认图片提供商' },
-                  { value: 'gpt-image-2', label: 'ChatGPT 图像 2.0（最新）' },
-                  { value: 'gpt-image-1', label: 'OpenAI GPT Image / DALL·E 3' },
-                  { value: 'wanx',        label: '通义万相' },
-                  { value: 'imagen',      label: 'Google Imagen' },
-                ]}
-              />
+            <FormSectionC title="特色图设置" icon="fa-regular fa-image" description="后端实际生效的提供商在「提供商」标签页里配置（type=图片，is_default）。下面四个参数（比例 / 风格 / 格式 / 质量 / 文字策略）会在文章编辑器点 ✨ AI 生成封面 时合成进 prompt 或用于上传后转码。">
+              {/* The old 'preferred model family' select was removed
+                  — the dispatch reads from ai_providers (type=image),
+                  so a UI hint that doesn't drive anything was just
+                  more noise. */}
               {/* 4 short fields paired into 2×2 — wrapping in a CSS grid
                   side-by-steps two FormRow*C in the same section row
                   while keeping the internal 32/68 label-value split. */}
