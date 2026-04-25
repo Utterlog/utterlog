@@ -211,9 +211,22 @@ fi
 # to reach the host via host.docker.internal.
 # ============================================================
 EXTERNAL_OVERLAY=""
-if [ "${UTTERLOG_DB_MODE:-bundled}" = "external" ] || [ "${UTTERLOG_REDIS_MODE:-bundled}" = "external" ]; then
+DB_M="${UTTERLOG_DB_MODE:-bundled}"
+RD_M="${UTTERLOG_REDIS_MODE:-bundled}"
+if [ "$DB_M" = "external" ] && [ "$RD_M" = "external" ]; then
+  # Both external → full external-db overlay (disables both bundled services)
   EXTERNAL_OVERLAY="-f docker-compose.external-db.yml"
-  log "复用宿主服务（UTTERLOG_DB_MODE=$UTTERLOG_DB_MODE, UTTERLOG_REDIS_MODE=$UTTERLOG_REDIS_MODE）"
+  log "复用宿主 PostgreSQL + Redis（UTTERLOG_DB_MODE=$DB_M, UTTERLOG_REDIS_MODE=$RD_M）"
+elif [ "$RD_M" = "external" ]; then
+  # Only redis external → narrower overlay so postgres stays bundled
+  EXTERNAL_OVERLAY="-f docker-compose.external-redis.yml"
+  log "复用宿主 Redis，PostgreSQL 仍走独立容器（UTTERLOG_REDIS_MODE=external）"
+elif [ "$DB_M" = "external" ]; then
+  # Only postgres external — no overlay file for this exact mix yet,
+  # so we fall through to bundled and warn. In practice users hit
+  # this mostly because they edited .env by hand; the inverse (only
+  # redis external) is far more common.
+  warn "UTTERLOG_DB_MODE=external 但 UTTERLOG_REDIS_MODE=bundled —— 暂不支持仅切 postgres，按全 bundled 启动"
 fi
 
 if [ "$PULL_MODE" -eq 1 ]; then

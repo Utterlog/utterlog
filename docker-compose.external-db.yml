@@ -1,44 +1,39 @@
 # ============================================================
-# Utterlog — external DB / Redis overlay
+# Utterlog — external Postgres + Redis overlay
 # ------------------------------------------------------------
-# Disables the bundled postgres + redis services and points the api
-# container at services already running on the host (e.g. 1Panel's
-# managed postgres + redis, or a shared cluster).
+# Disables BOTH bundled services and points api/web at host-bound
+# postgres + redis. Picked by scripts/deploy.sh when both
+# UTTERLOG_DB_MODE and UTTERLOG_REDIS_MODE are "external".
 #
-# Usage:
-#   docker compose \
-#     -f docker-compose.prod.yml \
-#     -f docker-compose.pull.yml \
-#     -f docker-compose.external-db.yml \
-#     up -d
+# For mixed scenarios use the more granular overlay instead:
+#   - bundled postgres + external redis  → docker-compose.external-redis.yml
+#   - external postgres + bundled redis  → would need a sibling overlay,
+#     not currently supported (no real-world ask — postgres is the
+#     hard one to share because of pgvector, redis is trivial).
 #
-# install.sh adds this overlay automatically when the user picks
-# "use existing services" — see scripts/deploy.sh for the wiring.
-#
-# Required .env vars:
-#   DB_HOST=host.docker.internal   (or a real LAN IP)
+# Required .env vars (provisioned by install.sh):
+#   DB_HOST=host.docker.internal   (or a LAN IP)
 #   DB_PORT=5432
 #   DB_USER=...
 #   DB_PASSWORD=...
 #   DB_NAME=utterlog
 #   REDIS_HOST=host.docker.internal
 #   REDIS_PORT=6379
+#   REDIS_PASSWORD=...             (empty if your redis has no auth)
 #
 # Why host.docker.internal:
 #   - On Linux, Compose resolves this to the host gateway IP via the
-#     extra_hosts entry below (host-gateway alias is built into modern
-#     Docker, 20.10+).
+#     extra_hosts entry below (host-gateway alias works in Docker 20.10+).
 #   - On macOS / Windows it Just Works (Docker Desktop handles it).
-#   - We keep it consistent across platforms so the same .env works
-#     on a developer laptop and a production VPS.
+#   - Same .env works on a developer laptop and a production VPS.
 # ============================================================
 
 services:
   # `replicas: 0` would still create the service in newer Compose
-  # versions. Cleanest portable way to disable a service inherited
-  # from a base file is the "disabled" profile — services with a
-  # profile name only spin up when that profile is explicitly
-  # activated, and we never activate "disabled".
+  # versions. The portable way to disable a service inherited from
+  # a base file is the "disabled" profile — services with a profile
+  # name only spin up when that profile is explicitly activated, and
+  # we never activate "disabled".
   postgres:
     profiles: ["disabled"]
 
@@ -48,10 +43,13 @@ services:
   api:
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    # Drop the `depends_on: postgres/redis` from the base file —
-    # those services are now disabled and waiting on them deadlocks
-    # the start. !reset clears the inherited array.
-    depends_on: !reset null
+    # Inherited depends_on includes both postgres + redis with
+    # service_healthy; with both disabled, that wait would deadlock.
+    # !reset followed by an empty `web`-only dict keeps the web
+    # ordering hint without blocking on either bundled DB service.
+    depends_on: !reset
+      web:
+        condition: service_started
 
   web:
     extra_hosts:

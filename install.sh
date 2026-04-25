@@ -157,28 +157,65 @@ ${C_BOLD}请选择部署模式：${C_RESET}
   ${C_BOLD}1)${C_RESET} ${C_GREEN}独立容器（默认推荐）${C_RESET} — Utterlog 自带 postgres + redis，
        完全隔离不影响其他应用，约占 ~150MB 内存。
 
-  ${C_BOLD}2)${C_RESET} ${C_YELLOW}复用宿主服务${C_RESET} — 直接连接上面已有的 postgres + redis
-       （省 ~70MB 内存）。如果 postgres 没装 pgvector 扩展会自动
-       帮你装上（apk add postgresql-pgvector / apt install
-       postgresql-XX-pgvector）。需要你提供 postgres 超级用户的
-       密码，用来 CREATE EXTENSION 和创建 utterlog 专用数据库
-       （会随机生成密码隔离权限）。
+  ${C_BOLD}2)${C_RESET} ${C_BLUE}仅复用宿主 Redis${C_RESET} — postgres 仍用独立容器（保护数据 +
+       pgvector 扩展），但 Redis 直连宿主已有的（省 ~10MB，避免
+       多个 redis 进程互相竞争内存）。如果宿主 Redis 有密码会
+       提示你输入。${C_BOLD}最适合 1Panel / 宝塔用户。${C_RESET}
+
+  ${C_BOLD}3)${C_RESET} ${C_YELLOW}两者都复用宿主${C_RESET} — postgres + redis 都连宿主（省 ~70MB）。
+       会自动给宿主 postgres 装 pgvector 扩展，建立 utterlog 专用
+       数据库。需要 postgres 超级用户密码。
 
 MENU
     printf "  请选择 [1]: "
     read -r CHOICE
     CHOICE="${CHOICE:-1}"
-    if [ "$CHOICE" = "2" ]; then
-      DB_MODE="external"
-      REDIS_MODE="external"
-    else
-      DB_MODE="bundled"
-      REDIS_MODE="bundled"
-    fi
+    case "$CHOICE" in
+      2)
+        DB_MODE="bundled"
+        REDIS_MODE="external"
+        ;;
+      3)
+        DB_MODE="external"
+        REDIS_MODE="external"
+        ;;
+      *)
+        DB_MODE="bundled"
+        REDIS_MODE="bundled"
+        ;;
+    esac
   else
     log "本机没有现成的 postgres / redis —— 使用独立容器模式（唯一可选）"
     DB_MODE="bundled"
     REDIS_MODE="bundled"
+  fi
+fi
+
+# ============================================================
+# Step 4a: external Redis — discover its password if any
+# ------------------------------------------------------------
+# When the user picks mode 2 or 3 we need REDIS_PASSWORD in the .env.
+# Try a no-auth ping first; if AUTH is required, prompt.
+# ============================================================
+DETECTED_REDIS_PASSWORD=""
+if [ "$REDIS_MODE" = "external" ] && [ -t 0 ]; then
+  if command -v redis-cli >/dev/null 2>&1; then
+    if redis-cli -h 127.0.0.1 -p "${REDIS_PORT:-6379}" ping >/dev/null 2>&1; then
+      ok "宿主 Redis 无密码"
+    else
+      printf "  宿主 Redis 密码（输入不显示，无密码直接回车）: "
+      stty -echo
+      read -r DETECTED_REDIS_PASSWORD
+      stty echo
+      echo
+      if [ -n "$DETECTED_REDIS_PASSWORD" ]; then
+        if redis-cli -h 127.0.0.1 -p "${REDIS_PORT:-6379}" -a "$DETECTED_REDIS_PASSWORD" --no-auth-warning ping >/dev/null 2>&1; then
+          ok "Redis 密码验证通过"
+        else
+          warn "密码验证未通过，先继续 —— 启动后 utterlog 连不上 Redis 时再回来改 .env 里的 REDIS_PASSWORD"
+        fi
+      fi
+    fi
   fi
 fi
 
@@ -274,8 +311,9 @@ if [ "$DB_MODE" = "external" ]; then
   upsert_env "DB_PASSWORD" "$UTTERLOG_DB_PASSWORD"
 fi
 if [ "$REDIS_MODE" = "external" ]; then
-  upsert_env "REDIS_HOST" "host.docker.internal"
-  upsert_env "REDIS_PORT" "${REDIS_PORT:-6379}"
+  upsert_env "REDIS_HOST"     "host.docker.internal"
+  upsert_env "REDIS_PORT"     "${REDIS_PORT:-6379}"
+  upsert_env "REDIS_PASSWORD" "$DETECTED_REDIS_PASSWORD"
 fi
 
 ok "已选模式：数据库=$DB_MODE，Redis=$REDIS_MODE"
