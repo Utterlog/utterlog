@@ -263,57 +263,74 @@ func generateAIImageAndPersist(prompt, size string, n int) (interface{}, error) 
 	}, nil
 }
 
-// buildCoverPrompt translates the post metadata + admin preferences
-// into an English image-gen prompt. The image models all speak
-// English better than CJK regardless of the post language, so the
-// natural-language directives stay English; the title/excerpt stay
-// in whatever the post is actually written in (the models are happy
-// to render based on a non-English subject phrase).
-func buildCoverPrompt(title, excerpt, style, textPolicy string) string {
-	var b strings.Builder
-
-	// Style preface — gives the model a clear visual direction.
+// coverStylePhrase maps the admin's 图片风格 dropdown choice to a
+// short English directive image-gen models respond well to. Kept
+// exposed so buildCoverPrompt can inject it into the {style}
+// placeholder.
+func coverStylePhrase(style string) string {
 	switch style {
 	case "realistic":
-		b.WriteString("Photorealistic professional photography, ")
+		return "Photorealistic professional photography, "
 	case "cinematic":
-		b.WriteString("Cinematic film still, dramatic lighting, shallow depth of field, ")
+		return "Cinematic film still, dramatic lighting, shallow depth of field, "
 	case "illustration":
-		b.WriteString("Polished digital illustration, vector-art clarity, ")
+		return "Polished digital illustration, vector-art clarity, "
 	case "minimal":
-		b.WriteString("Minimalist composition, clean negative space, muted palette, ")
+		return "Minimalist composition, clean negative space, muted palette, "
 	case "watercolor":
-		b.WriteString("Soft watercolor painting, delicate brush textures, ")
+		return "Soft watercolor painting, delicate brush textures, "
 	default: // editorial
-		b.WriteString("Editorial blog cover image, magazine-quality composition, ")
+		return "Editorial blog cover image, magazine-quality composition, "
 	}
+}
 
-	// Subject — title verbatim. Keeping the original language helps
-	// the models pick up cultural context that pure-English paraphrase
-	// would lose.
-	b.WriteString("for an article titled \"")
-	b.WriteString(title)
-	b.WriteString("\". ")
-
-	if excerpt != "" {
-		b.WriteString("Article context: ")
-		b.WriteString(excerpt)
-		b.WriteString(" ")
-	}
-
-	// Text policy.
+// coverTextPolicyPhrase maps 文字策略 dropdown choice to a short
+// English directive. Same exposure rationale as coverStylePhrase.
+func coverTextPolicyPhrase(textPolicy string) string {
 	switch textPolicy {
 	case "title_only":
-		b.WriteString("Optionally overlay the title text in a tasteful editorial typography. ")
+		return "Optionally overlay the title text in a tasteful editorial typography. "
 	case "subtle_caption":
-		b.WriteString("Optionally include subtle decorative text elements at the edges. ")
+		return "Optionally include subtle decorative text elements at the edges. "
 	default: // no_text
-		b.WriteString("Do not include any visible text, letters, or watermarks. ")
+		return "Do not include any visible text, letters, or watermarks. "
+	}
+}
+
+// buildCoverPrompt assembles the image-gen prompt from the article
+// metadata + admin's 图片风格 / 文字策略 choices, using the
+// admin-customisable template (option key 'ai_image_prompt') with
+// fallback to handler/ai_prompts.go DefaultCoverPrompt.
+//
+// Placeholders:
+//   {style}          — coverStylePhrase output (English directive)
+//   {text_policy}    — coverTextPolicyPhrase output (English directive)
+//   {title}          — article title verbatim (any language)
+//   {excerpt}        — raw excerpt or empty
+//   {excerpt_block}  — '文章主题：<excerpt>\n' OR empty when no excerpt
+//
+// The {excerpt_block} placeholder is a convenience so the default
+// template doesn't have to choose between "always show 文章主题:"
+// or "never". Empty excerpts collapse cleanly.
+//
+// Falls through to renderPrompt's no-placeholder tail-append shim if
+// the admin saved a custom prompt without any of the post-content
+// placeholders, so legacy custom strings still receive the article.
+func buildCoverPrompt(title, excerpt, style, textPolicy string) string {
+	tpl := resolvePrompt(model.GetOption("ai_image_prompt"), DefaultCoverPrompt)
+
+	excerptBlock := ""
+	if strings.TrimSpace(excerpt) != "" {
+		excerptBlock = "文章主题：" + excerpt + "\n"
 	}
 
-	// Universal trailers.
-	b.WriteString("High quality, professional composition, suitable for a blog post header.")
-	return b.String()
+	return renderPrompt(tpl, map[string]string{
+		"title":         title,
+		"excerpt":       excerpt,
+		"excerpt_block": excerptBlock,
+		"style":         coverStylePhrase(style),
+		"text_policy":   coverTextPolicyPhrase(textPolicy),
+	})
 }
 
 // pixelSizeForRatio maps the admin-configured aspect ratio string

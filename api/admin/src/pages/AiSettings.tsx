@@ -105,6 +105,7 @@ export default function AiSettingsPage() {
     ai_keywords_prompt: '',
     ai_polish_prompt: '',
     ai_questions_prompt: '',
+    ai_image_prompt: '',
     ai_image_auto: 'false',
     ai_slug_auto: 'false',
     ai_keywords_auto: 'false',
@@ -163,6 +164,7 @@ export default function AiSettingsPage() {
         keywords:  'ai_keywords_prompt',
         polish:    'ai_polish_prompt',
         questions: 'ai_questions_prompt',
+        cover:     'ai_image_prompt',
       };
       Object.entries(promptKeyMap).forEach(([defaultKey, optKey]) => {
         const saved = opts[optKey];
@@ -270,6 +272,7 @@ export default function AiSettingsPage() {
         ai_keywords_prompt:  'keywords',
         ai_polish_prompt:    'polish',
         ai_questions_prompt: 'questions',
+        ai_image_prompt:     'cover',
       };
       Object.entries(config).forEach(([k, v]) => {
         if (!k.startsWith('ai_')) return;
@@ -693,16 +696,20 @@ export default function AiSettingsPage() {
           <FormSectionC
             title="自定义提示词"
             icon="fa-regular fa-terminal"
-            description="文本框默认填入内置提示词模板（中文版），可直接编辑保存。清空后保存即恢复默认；点「恢复默认」按钮把当前默认填回输入框（不会自动保存）。占位符 {title} {content} {excerpt} {min_len} {max_len} {tags_count} 会在调用时替换。"
+            description="文本框默认填入内置提示词模板（中文版），可直接编辑保存。清空后保存即恢复默认；点「恢复默认」按钮把当前默认填回输入框（不会自动保存）。文本类占位符：{title} {content} {excerpt} {min_len} {max_len} {tags_count}。封面图额外占位符：{style}（自动填充选定的英文风格短语）、{text_policy}（文字策略短语）、{excerpt_block}（已格式化的『文章主题: ...\n』段落或空字符串）。"
           >
             {([
-              { key: 'summary',   label: '摘要提示词',   rows: 8 },
-              { key: 'slug',      label: 'Slug 提示词',  rows: 6 },
-              { key: 'keywords',  label: '关键词提示词', rows: 5 },
-              { key: 'polish',    label: '润色提示词',   rows: 8 },
-              { key: 'questions', label: '推荐问题提示词', rows: 5 },
+              { key: 'summary',   label: '摘要提示词',   rows: 8, optKey: 'ai_summary_prompt'   },
+              { key: 'slug',      label: 'Slug 提示词',  rows: 6, optKey: 'ai_slug_prompt'      },
+              { key: 'keywords',  label: '关键词提示词', rows: 5, optKey: 'ai_keywords_prompt'  },
+              { key: 'polish',    label: '润色提示词',   rows: 8, optKey: 'ai_polish_prompt'    },
+              { key: 'questions', label: '推荐问题提示词', rows: 5, optKey: 'ai_questions_prompt' },
+              // 封面 prompt 占位符不一样：{title} {excerpt} {excerpt_block}
+              // {style} {text_policy}. 改 admin 选项 → 风格 / 文字策略
+              // dropdown 决定 {style} / {text_policy} 实际填什么。
+              { key: 'cover',     label: '封面图提示词', rows: 6, optKey: 'ai_image_prompt'     },
             ] as const).map((row, idx, arr) => {
-              const optKey = `ai_${row.key}_prompt`;
+              const optKey = row.optKey;
               const def = promptDefaults[row.key] ?? '';
               const current = String(config[optKey] ?? '');
               const isDefault = current.trim() === def.trim();

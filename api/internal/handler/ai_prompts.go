@@ -59,6 +59,17 @@ const (
 
 标题：{title}
 {excerpt_section}内容：{content}`
+
+	// DefaultCoverPrompt — used by AICover to build the prompt sent
+	// to the image-generation provider. {style} and {text_policy} are
+	// short English directive phrases (image models respond best to
+	// concrete visual vocabulary in English regardless of the rest
+	// of the prompt language) that the handler resolves from the
+	// admin's 图片风格 / 文字策略 dropdown choices. {excerpt_block}
+	// is a pre-formatted "文章主题：..." line OR empty when the post
+	// has no excerpt — saves the template from needing conditional
+	// logic.
+	DefaultCoverPrompt = `{style}为文章《{title}》生成封面图。{excerpt_block}{text_policy}画质要求：高质量、专业构图、适合作为博客文章题图。`
 )
 
 // renderPrompt performs literal {placeholder} substitution. A missing
@@ -134,4 +145,5 @@ var AIPromptDefaults = map[string]string{
 	"keywords":  DefaultKeywordsPrompt,
 	"polish":    DefaultPolishPrompt,
 	"questions": DefaultQuestionsPrompt,
+	"cover":     DefaultCoverPrompt,
 }
