@@ -61,15 +61,33 @@ const (
 {excerpt_section}内容：{content}`
 
 	// DefaultCoverPrompt — used by AICover to build the prompt sent
-	// to the image-generation provider. {style} and {text_policy} are
-	// short English directive phrases (image models respond best to
-	// concrete visual vocabulary in English regardless of the rest
-	// of the prompt language) that the handler resolves from the
-	// admin's 图片风格 / 文字策略 dropdown choices. {excerpt_block}
-	// is a pre-formatted "文章主题：..." line OR empty when the post
-	// has no excerpt — saves the template from needing conditional
-	// logic.
-	DefaultCoverPrompt = `{style}为文章《{title}》生成封面图。{excerpt_block}{text_policy}画质要求：高质量、专业构图、适合作为博客文章题图。`
+	// to the image-generation provider.
+	//
+	// User-supplied default (2026-04). Self-contained Chinese
+	// template with style + text policy hard-coded into the wording
+	// rather than via {style}/{text_policy} placeholders — so the
+	// admin's 图片风格 / 文字策略 dropdown choices don't apply
+	// unless the admin manually re-introduces those placeholders.
+	// That's an intentional opt-in trade: the template reads more
+	// naturally for image-gen models than mixed Chinese-English
+	// directive concatenation.
+	//
+	// Placeholders still recognised:
+	//   {title}         — article title verbatim
+	//   {excerpt}       — raw excerpt or empty
+	//   {excerpt_block} — '文章主题：<excerpt>\n' OR empty
+	//   {style}         — coverStylePhrase output (English directive)
+	//   {text_policy}   — coverTextPolicyPhrase output (English directive)
+	//
+	// Admin can clear the textarea + 保存 to fall back to this
+	// constant, or edit freely.
+	DefaultCoverPrompt = `现代博客封面图，{title}，
+构图简洁，极简风格，专业光影，
+柔和渐变背景，避免人物，
+轻微纹理，空间层次感，
+中间或左侧留白用于标题，
+高质量，细节丰富，16:9，
+不要文字，不要水印，不要logo`
 )
 
 // renderPrompt performs literal {placeholder} substitution. A missing
