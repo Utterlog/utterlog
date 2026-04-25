@@ -17,6 +17,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # CGO system deps:
+      #   libwebp-dev — chai2010/webp (image upload re-encode path)
+      #   libaom-dev  — Kagami/go-avif (AVIF output for image-gen)
+      # Without these, `go vet ./...` on the api module fails to
+      # compile the underlying av1.c / encode.c bindings and the
+      # whole job dies before we ever get to the actual lint step.
+      # The runtime Docker image (api/Dockerfile.prod) installs the
+      # equivalent Alpine packages — this step keeps CI in sync.
+      - name: Install CGO image-codec headers
+        run: sudo apt-get update && sudo apt-get install -y libwebp-dev libaom-dev
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
