@@ -3,22 +3,24 @@ import PostContent from '@/components/blog/PostContent';
 import TableOfContents from '@/components/blog/TableOfContents';
 import AISummary from '@/components/blog/AISummary';
 import PostNavigation from '@/components/blog/PostNavigation';
-import CommentList from '@/components/blog/CommentList';
-import AIReaderChat from '@/components/blog/AIReaderChat';
 import FadeCover from '@/components/blog/FadeCover';
 import { randomCoverUrl } from '@/lib/blog-image';
-import Sidebar from './Sidebar';
 import { getCategoryIcon } from './constants';
+import { CommentCount, CommentSection } from './PostInteractive';
 
 function formatDate(ts: string | number) {
   const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai' });
 }
 
 export default function PostPage({ post, options }: { post: any; options?: Record<string, string> }) {
+  // Caller (app/(blog)/posts/[slug]/page.tsx and [...permalink]) now
+  // server-fetches options and threads them in, so PostPage's banner
+  // fallback uses the same admin-configured random_image_api as the
+  // home cards / hero — no more "首页有图、内页一张默认 img.et" mismatch.
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
-  const catName = post.categories?.[0]?.name;
   const cat0 = post.categories?.[0];
+  const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
 
   return (
@@ -55,63 +57,81 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         fontSize: '13px', color: '#999', borderBottom: '1px solid #eee',
       }}>
         <span><i className="fa-regular fa-calendar" style={{ marginRight: '4px' }} />{formatDate(post.created_at)}</span>
-        <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#f53004' }} />{post.view_count || 0} 阅读</span>
-        <span><i className="fa-regular fa-comment" style={{ marginRight: '4px' }} />{post.comment_count || 0} 评论</span>
+        <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#F53102' }} />{(post.view_count || 0) + 1} 阅读</span>
+        <span><i className="fa-regular fa-comment" style={{ marginRight: '4px' }} /><CommentCount initial={post.comment_count || 0} /></span>
+        {(post.word_count || 0) > 0 && (
+          <span><i className="fa-regular fa-font" style={{ marginRight: '4px' }} />{post.word_count.toLocaleString()} 字</span>
+        )}
+        <span><i className="fa-regular fa-clock" style={{ marginRight: '4px' }} />{Math.max(1, Math.ceil((post.word_count || 0) / 400))} 分钟</span>
         {catName && (
-          <Link href={`/categories/${post.categories[0].slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#f53004', textDecoration: 'none', marginLeft: 'auto' }}>
+          <Link href={`/categories/${post.categories[0].slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#F53102', textDecoration: 'none', marginLeft: 'auto' }}>
             <i className={catIcon} /> {catName}
           </Link>
         )}
       </div>
 
-      {/* Content + Sidebar */}
-      <div style={{ display: 'flex' }}>
-        {/* Main content */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ padding: '32px' }}>
-            {/* AI Summary */}
-            <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
+      {/* Content */}
+      <div style={{ padding: '32px' }}>
+        <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
 
-            {/* Content + TOC */}
-            <div style={{ position: 'relative' }}>
-              <article>
-                <PostContent content={post.content || ''} postId={post.id} />
-              </article>
-              <div className="blog-toc-outer hidden xl:block">
-                <TableOfContents content={post.content || ''} />
-              </div>
-            </div>
-
-            {/* Tags */}
-            {post.tags?.length > 0 && (
-              <div style={{ marginTop: '32px', paddingTop: '16px', borderTop: '1px solid #eee', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {post.tags.map((tag: any) => (
-                  <Link key={tag.id} href={`/tags/${tag.slug}`} style={{
-                    padding: '4px 12px', fontSize: '12px', color: '#f53004',
-                    border: '1px solid #f53004', textDecoration: 'none',
-                  }}>
-                    #{tag.name}
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {/* Post Navigation */}
-            <PostNavigation postId={post.id} />
-          </div>
-
-          {/* Comments */}
-          <div style={{ padding: '0 32px 32px', borderTop: '1px solid #eee' }}>
-            <CommentList postId={post.id} />
-            <AIReaderChat postId={post.id} title={post.title} excerpt={post.excerpt} />
+        <div style={{ position: 'relative' }}>
+          <article>
+            <PostContent content={post.content || ''} postId={post.id} />
+          </article>
+          <div className="blog-toc-outer hidden xl:block">
+            <TableOfContents content={post.content || ''} />
           </div>
         </div>
 
-        {/* Right sidebar */}
-        <div style={{ borderLeft: '1px solid #e5e5e5' }} className="hidden lg:block">
-          <Sidebar />
-        </div>
       </div>
+
+      {/* 版权 + 标签 */}
+      <div style={{
+        padding: '12px 32px',
+        borderTop: '1px solid #eee', borderBottom: '1px solid #eee',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px',
+      }}>
+        <div style={{ fontSize: '13px', color: '#999', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span>作者</span>
+          <img
+            src={post.author?.avatar || 'https://gravatar.bluecdn.com/avatar/0?s=40&d=mp'}
+            alt=""
+            referrerPolicy="no-referrer"
+            style={{ width: '20px', height: '20px', objectFit: 'cover', clipPath: 'url(#squircle)', background: '#f0f0f0' }}
+          />
+          <Link href="/" style={{ color: '#F53102', textDecoration: 'none', fontWeight: 600 }}>{post.author?.nickname || post.author?.username || '匿名'}</Link>
+          <span>本文采用</span>
+          <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer" style={{ color: '#999', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <i className="fa-brands fa-creative-commons" />
+            <span>CC BY-NC-SA 4.0</span>
+          </a>
+          <span>许可协议，转载请注明来源。</span>
+        </div>
+        {post.tags?.length > 0 && (
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'baseline' }}>
+            {post.tags.map((tag: any, idx: number) => (
+              <span key={tag.id} style={{ display: 'inline-flex', alignItems: 'baseline' }}>
+                <Link href={`/tags/${tag.slug}`} style={{
+                  fontSize: '13px', textDecoration: 'none',
+                  display: 'inline-flex', alignItems: 'baseline',
+                }}>
+                  <span style={{ color: '#F53102', fontWeight: 500 }}>#</span>
+                  <span style={{ color: 'var(--color-text-main, #333)' }}>{tag.name}</span>
+                  {tag.count > 0 && (
+                    <sup style={{ fontSize: '10px', color: 'var(--color-text-dim, #999)', fontWeight: 400, marginLeft: '1px' }}>{tag.count}</sup>
+                  )}
+                </Link>
+                {idx < post.tags.length - 1 && <span style={{ color: '#ccc', marginLeft: '2px' }}>,</span>}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 上一篇 / 下一篇 — 全宽 */}
+      <PostNavigation postId={post.id} coverUrl={coverUrl} />
+
+      <CommentSection postId={post.id} title={post.title} excerpt={post.excerpt} authorAvatar={post.author?.avatar} />
     </div>
   );
 }
