@@ -4,6 +4,7 @@ import TableOfContents from '@/components/blog/TableOfContents';
 import AISummary from '@/components/blog/AISummary';
 import PostNavigation from '@/components/blog/PostNavigation';
 import FadeCover from '@/components/blog/FadeCover';
+import { randomCoverUrl } from '@/lib/blog-image';
 import { getCategoryIcon } from './constants';
 import { CommentCount, CommentSection } from './PostInteractive';
 
@@ -13,66 +14,42 @@ function formatDate(ts: string | number) {
 }
 
 export default function PostPage({ post, options }: { post: any; options?: Record<string, string> }) {
-  // Article banner uses ONLY the post's own cover_url. Earlier we
-  // fell back to randomCoverUrl(post.id) but that puts a generic
-  // landscape image on top of every cover-less article and reads as
-  // a misleading "this is the post's hero image" — users couldn't
-  // tell whether the image had any relationship to the article they
-  // clicked. Home cards / hero still use random fallback because
-  // visual rhythm there is more important than per-card semantics.
-  const coverUrl = post.cover_url || '';
-  const hasCover = !!coverUrl;
+  // Caller (app/(blog)/posts/[slug]/page.tsx and [...permalink]) now
+  // server-fetches options and threads them in, so PostPage's banner
+  // fallback uses the same admin-configured random_image_api as the
+  // home cards / hero — no more "首页有图、内页一张默认 img.et" mismatch.
+  const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
 
   return (
     <div style={{ padding: '0' }}>
-      {/* Featured image — only when the post actually has a cover. */}
-      {hasCover ? (
-        <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
-          <FadeCover src={coverUrl} alt={post.title}
-            style={{ width: '100%', height: '400px' }} />
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',
-            padding: '60px 32px 24px',
-          }}>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Link href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>首页</Link>
-              <span>/</span>
-              {catName && (
-                <>
-                  <Link href={`/categories/${post.categories[0].slug}`} style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>{catName}</Link>
-                  <span>/</span>
-                </>
-              )}
-            </div>
-            <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', lineHeight: 1.3, letterSpacing: '-0.02em' }}>
-              {post.title}
-            </h1>
-          </div>
-        </div>
-      ) : (
-        /* Cover-less title block: clean white card, breadcrumb above
-           the headline, dark text. Same vertical rhythm as the cover
-           variant so list↔article transitions don't jolt. */
-        <div style={{ padding: '40px 32px 24px', borderBottom: '1px solid #e5e5e5' }}>
-          <div style={{ fontSize: '12px', color: 'var(--color-text-dim, #9aa5b0)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Link href="/" style={{ color: 'var(--color-text-dim, #9aa5b0)', textDecoration: 'none' }}>首页</Link>
+      {/* Featured image */}
+      <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
+        <FadeCover src={coverUrl} alt={post.title}
+          style={{ width: '100%', height: '400px' }} />
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',
+          padding: '60px 32px 24px',
+        }}>
+          {/* Breadcrumb */}
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Link href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>首页</Link>
             <span>/</span>
             {catName && (
               <>
-                <Link href={`/categories/${post.categories[0].slug}`} style={{ color: 'var(--color-text-dim, #9aa5b0)', textDecoration: 'none' }}>{catName}</Link>
+                <Link href={`/categories/${post.categories[0].slug}`} style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>{catName}</Link>
                 <span>/</span>
               </>
             )}
           </div>
-          <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--color-text-main, #0d1a2d)', lineHeight: 1.25, letterSpacing: '-0.02em', margin: 0 }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', lineHeight: 1.3, letterSpacing: '-0.02em' }}>
             {post.title}
           </h1>
         </div>
-      )}
+      </div>
 
       {/* Meta bar */}
       <div style={{
