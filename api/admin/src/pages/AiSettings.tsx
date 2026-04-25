@@ -306,8 +306,19 @@ export default function AiSettingsPage() {
                   </div>
                   <p className="text-dim" style={{ fontSize: '12px', marginTop: '2px' }}>{p.model} · {p.endpoint}</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(p)}><i className="fa-regular fa-pen" style={{ fontSize: '13px' }} /></Button>
-                <Button variant="ghost" size="sm" onClick={() => removeProvider(p.id)} style={{ color: '#dc2626' }}><i className="fa-regular fa-trash" style={{ fontSize: '13px' }} /></Button>
+                {/* Match the action-bar style used in Comments / Movies /
+                    Books / Plugins etc — bordered 30×30 buttons sitting
+                    in a flex container with a 4px gap, .action-btn class
+                    handles hover tint + variant colors (primary blue for
+                    edit, danger red for delete). */}
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button onClick={() => setEditing(p)} className="action-btn primary" title="编辑">
+                    <i className="fa-regular fa-pen" style={{ fontSize: '13px' }} />
+                  </button>
+                  <button onClick={() => removeProvider(p.id)} className="action-btn danger" title="删除">
+                    <i className="fa-regular fa-trash" style={{ fontSize: '13px' }} />
+                  </button>
+                </div>
               </div>
             ))}
             {providers.length === 0 && (
