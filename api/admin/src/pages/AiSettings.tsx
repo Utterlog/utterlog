@@ -294,7 +294,11 @@ export default function AiSettingsPage() {
             <SectionTitle icon="fa-regular fa-server" as="h2">AI 提供商</SectionTitle>
             <Button onClick={() => setEditing({ ...defaultProvider })}><i className="fa-regular fa-plus" style={{ fontSize: '14px' }} /> 添加</Button>
           </div>
-          <div className="space-y-2">
+          {/* Explicit flex gap — `space-y-2` (Tailwind 0.5rem) was the
+              previous spacer but it leaves the cards reading as a single
+              stuck-together strip. 10px gap matches the visual rhythm of
+              other admin list pages. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {providers.map((p: any) => (
               <div key={p.id} className="card" style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
