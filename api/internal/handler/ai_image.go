@@ -65,60 +65,150 @@ func GenerateAIImage(c *gin.Context) {
 		util.BadRequest(c, "prompt 不能为空")
 		return
 	}
-	if req.Size == "" {
-		req.Size = "1024x1024"
+
+	payload, err := generateAIImageAndPersist(req.Prompt, req.Size, req.N)
+	if err != nil {
+		// generateAIImageAndPersist returns errors with stable codes
+		// so the dispatch decision (400 vs 500) is centralised.
+		switch err.Error() {
+		case "NO_PROVIDER":
+			util.Error(c, 400, "NO_PROVIDER", "未配置图片生成提供商。请在 AI 设置 → 提供商 中添加一个 type=图片 的提供商并启用")
+		case "UNSUPPORTED_ENDPOINT":
+			util.Error(c, 400, "UNSUPPORTED_ENDPOINT", "不支持的图片提供商端点。受支持：OpenAI / DashScope (通义万相) / Google Imagen。")
+		default:
+			util.Error(c, 500, "GENERATION_FAILED", err.Error())
+		}
+		return
 	}
-	if req.N <= 0 {
-		req.N = 1
+	util.Success(c, payload)
+}
+
+// AICover — POST /api/v1/admin/ai/cover
+//
+// Endpoint hit by the post editor's '✨ AI 生成封面' button. Reads the
+// post's title + a content excerpt from the request body, blends in
+// the admin's preferred style + text policy + ratio from options
+// (Settings → 图片处理 → 特色图设置), builds an editorial prompt and
+// runs it through the same dispatch as GenerateAIImage so OpenAI /
+// 通义万相 / Imagen all work.
+//
+// This used to be wired in the admin UI but the backend handler was
+// never written — the front-end caught the resulting 404 as
+// 'AI 服务不可用'. That made the spark button look broken even when
+// the user had a working image provider configured.
+func AICover(c *gin.Context) {
+	var req struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
 	}
-	if req.N > 4 {
-		req.N = 4 // hard cap so a typo doesn't burn API credits
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.BadRequest(c, "请求体解析失败：" + err.Error())
+		return
+	}
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		util.BadRequest(c, "title 不能为空（请先填写文章标题）")
+		return
 	}
 
-	// Pick the active image provider. Same query shape as callAI's
-	// text-provider lookup but filtered on type='image'.
+	// Content excerpt — front-end already trims to 500 chars but
+	// double-cap defensively in case someone hits this endpoint
+	// directly (e.g. from a script).
+	excerpt := strings.TrimSpace(req.Content)
+	if len([]rune(excerpt)) > 500 {
+		excerpt = string([]rune(excerpt)[:500])
+	}
+
+	// Pull the admin's saved style preferences. All optional —
+	// defaults match the form's pre-filled values in AiSettings.tsx.
+	style := strings.TrimSpace(model.GetOption("ai_image_style"))
+	if style == "" {
+		style = "editorial"
+	}
+	textPolicy := strings.TrimSpace(model.GetOption("ai_image_text"))
+	if textPolicy == "" {
+		textPolicy = "no_text"
+	}
+	ratio := strings.TrimSpace(model.GetOption("ai_image_ratio"))
+	if ratio == "" {
+		ratio = "16:9"
+	}
+
+	prompt := buildCoverPrompt(title, excerpt, style, textPolicy)
+	size := pixelSizeForRatio(ratio)
+
+	payload, err := generateAIImageAndPersist(prompt, size, 1)
+	if err != nil {
+		switch err.Error() {
+		case "NO_PROVIDER":
+			util.Error(c, 400, "NO_PROVIDER", "未配置图片生成提供商。请在 AI 设置 → 提供商 中添加 type=图片 的提供商。")
+		case "UNSUPPORTED_ENDPOINT":
+			util.Error(c, 400, "UNSUPPORTED_ENDPOINT", "图片提供商端点不被识别（仅支持 OpenAI / 通义万相 / Imagen）")
+		default:
+			util.Error(c, 500, "GENERATION_FAILED", "AI 生成封面失败：" + err.Error())
+		}
+		return
+	}
+	// Echo the prompt back so the admin can see what was actually
+	// sent — useful when the result doesn't match expectations and
+	// the user wants to tweak title/content for a better generation.
+	if m, ok := payload.(gin.H); ok {
+		m["prompt"] = prompt
+	}
+	util.Success(c, payload)
+}
+
+// generateAIImageAndPersist is the shared core: provider lookup +
+// dispatch + storage upload + media row insert. Returns the same
+// success payload as GenerateAIImage so AICover can reuse it.
+//
+// Errors come back as plain error values whose Error() string is one
+// of a small set of stable codes ('NO_PROVIDER', 'UNSUPPORTED_ENDPOINT')
+// or a free-form 'generation/upload/...: <detail>' message. Callers
+// translate codes to HTTP status; free-form goes through as 500.
+func generateAIImageAndPersist(prompt, size string, n int) (interface{}, error) {
+	if size == "" {
+		size = "1024x1024"
+	}
+	if n <= 0 {
+		n = 1
+	}
+	if n > 4 {
+		n = 4
+	}
+
 	var provider model.AIProvider
-	err := config.DB.Get(&provider,
+	if err := config.DB.Get(&provider,
 		"SELECT * FROM "+config.T("ai_providers")+
 			" WHERE type='image' AND is_active=true ORDER BY is_default DESC, sort_order ASC, id ASC LIMIT 1",
-	)
-	if err != nil {
-		util.Error(c, 400, "NO_PROVIDER", "未配置图片生成提供商。请在 AI 设置 → 提供商 中添加一个 type=图片 的提供商并启用")
-		return
+	); err != nil {
+		return nil, fmt.Errorf("NO_PROVIDER")
 	}
 
 	flavor := detectImageFlavor(provider.Endpoint)
 	var imgBytes []byte
 	var mimeType string
+	var err error
 	switch flavor {
 	case "openai":
-		imgBytes, mimeType, err = generateOpenAICompatImage(provider, req.Prompt, req.Size, req.N)
+		imgBytes, mimeType, err = generateOpenAICompatImage(provider, prompt, size, n)
 	case "imagen":
-		imgBytes, mimeType, err = generateImagenImage(provider, req.Prompt, req.Size, req.N)
+		imgBytes, mimeType, err = generateImagenImage(provider, prompt, size, n)
 	default:
-		util.Error(c, 400, "UNSUPPORTED_ENDPOINT",
-			"不支持的图片提供商端点：" + provider.Endpoint +
-				"\n受支持：OpenAI / DashScope (通义万相) / Google Imagen。其他厂商请走 OpenAI-兼容代理。")
-		return
+		return nil, fmt.Errorf("UNSUPPORTED_ENDPOINT")
 	}
 	if err != nil {
-		util.Error(c, 500, "GENERATION_FAILED", "图片生成失败：" + err.Error())
-		return
+		return nil, fmt.Errorf("generation: %v", err)
 	}
 	if len(imgBytes) == 0 {
-		util.Error(c, 500, "EMPTY_RESPONSE", "提供商返回了空图片")
-		return
+		return nil, fmt.Errorf("provider returned empty image")
 	}
 
-	// Persist via the same storage layer as user uploads — keeps
-	// driver-agnostic (works for local / S3 / R2) and AI images show
-	// up in the admin Media library alongside everything else.
 	ext := extFromMimeFuzzy(mimeType)
 	filename := storage.GeneratePath(ext, "ai")
 	url, uploadErr := storage.Default.Upload(filename, bytes.NewReader(imgBytes), mimeType)
 	if uploadErr != nil {
-		util.Error(c, 500, "UPLOAD_FAILED", "图片保存失败：" + uploadErr.Error())
-		return
+		return nil, fmt.Errorf("upload: %v", uploadErr)
 	}
 
 	driverName := config.C.StorageDriver
@@ -126,31 +216,100 @@ func GenerateAIImage(c *gin.Context) {
 		driverName = "local"
 	}
 
-	// Insert media row. category='image', name reflects that it was
-	// AI-generated (so admin Media listing shows a meaningful label
-	// rather than a UUID slug).
 	t := config.T("media")
 	var mediaID int
-	insErr := config.DB.QueryRow(fmt.Sprintf(
+	if insErr := config.DB.QueryRow(fmt.Sprintf(
 		"INSERT INTO %s (name, filename, url, mime_type, size, driver, category, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id", t),
 		fmt.Sprintf("ai-generated-%d.%s", time.Now().Unix(), ext),
 		filename, url, mimeType, len(imgBytes), driverName, "image", time.Now().Unix(),
-	).Scan(&mediaID)
-	if insErr != nil {
-		// Image is uploaded but DB row failed — still return the URL
-		// so the caller has something usable. Log so the operator can
-		// chase the orphan.
+	).Scan(&mediaID); insErr != nil {
+		// File is on disk; just log the orphan media row.
 		fmt.Printf("[ai-image] media insert failed (file uploaded as %s): %v\n", url, insErr)
 	}
 
-	util.Success(c, gin.H{
+	return gin.H{
 		"url":      url,
 		"media_id": mediaID,
 		"provider": provider.Name,
 		"model":    provider.Model,
 		"size":     len(imgBytes),
 		"mime":     mimeType,
-	})
+	}, nil
+}
+
+// buildCoverPrompt translates the post metadata + admin preferences
+// into an English image-gen prompt. The image models all speak
+// English better than CJK regardless of the post language, so the
+// natural-language directives stay English; the title/excerpt stay
+// in whatever the post is actually written in (the models are happy
+// to render based on a non-English subject phrase).
+func buildCoverPrompt(title, excerpt, style, textPolicy string) string {
+	var b strings.Builder
+
+	// Style preface — gives the model a clear visual direction.
+	switch style {
+	case "realistic":
+		b.WriteString("Photorealistic professional photography, ")
+	case "cinematic":
+		b.WriteString("Cinematic film still, dramatic lighting, shallow depth of field, ")
+	case "illustration":
+		b.WriteString("Polished digital illustration, vector-art clarity, ")
+	case "minimal":
+		b.WriteString("Minimalist composition, clean negative space, muted palette, ")
+	case "watercolor":
+		b.WriteString("Soft watercolor painting, delicate brush textures, ")
+	default: // editorial
+		b.WriteString("Editorial blog cover image, magazine-quality composition, ")
+	}
+
+	// Subject — title verbatim. Keeping the original language helps
+	// the models pick up cultural context that pure-English paraphrase
+	// would lose.
+	b.WriteString("for an article titled \"")
+	b.WriteString(title)
+	b.WriteString("\". ")
+
+	if excerpt != "" {
+		b.WriteString("Article context: ")
+		b.WriteString(excerpt)
+		b.WriteString(" ")
+	}
+
+	// Text policy.
+	switch textPolicy {
+	case "title_only":
+		b.WriteString("Optionally overlay the title text in a tasteful editorial typography. ")
+	case "subtle_caption":
+		b.WriteString("Optionally include subtle decorative text elements at the edges. ")
+	default: // no_text
+		b.WriteString("Do not include any visible text, letters, or watermarks. ")
+	}
+
+	// Universal trailers.
+	b.WriteString("High quality, professional composition, suitable for a blog post header.")
+	return b.String()
+}
+
+// pixelSizeForRatio maps the admin-configured aspect ratio string
+// (16:9 / 1:1 / 4:3 / 3:2) to the closest pixel size accepted by
+// OpenAI's images API. Imagen ignores this and uses the ratio directly
+// (handled in generateImagenImage), but it doesn't hurt to be precise.
+func pixelSizeForRatio(ratio string) string {
+	switch ratio {
+	case "16:9":
+		return "1536x1024" // gpt-image-2 native, also dall-e-3's 1792x1024 alt
+	case "9:16":
+		return "1024x1536"
+	case "1:1":
+		return "1024x1024"
+	case "4:3", "3:2":
+		// gpt-image doesn't have a native 4:3 / 3:2 — 1536x1024 is
+		// closer to 3:2 (~1.5) than 4:3 (~1.33) and avoids the
+		// portrait regime, which is wrong for cover images.
+		return "1536x1024"
+	default:
+		return "1024x1024"
+	}
 }
 
 // detectImageFlavor classifies the provider endpoint into one of the

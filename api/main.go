@@ -495,6 +495,10 @@ func main() {
 		authed.DELETE("/ai/providers/:id", handler.DeleteAIProvider)
 		authed.POST("/ai/test", handler.TestAIConnection)
 		authed.POST("/ai/generate-image", handler.GenerateAIImage)
+		// /ai/cover is the post editor's '✨' button — wraps
+		// generate-image with admin-configured style + ratio + text
+		// policy and a prompt built from the post's title + excerpt.
+		authed.POST("/ai/cover", handler.AICover)
 		authed.POST("/ai/chat", handler.AIChat)
 		authed.GET("/ai/conversations", handler.ListAIConversations)
 		authed.GET("/ai/conversations/:id", handler.GetAIConversation)
