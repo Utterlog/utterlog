@@ -95,8 +95,17 @@ var AIPresets = gin.H{
 func GetAIProviders(c *gin.Context) {
 	var providers []model.AIProvider
 	config.DB.Select(&providers, "SELECT * FROM "+config.T("ai_providers")+" ORDER BY sort_order ASC, id ASC")
-	if providers == nil { providers = []model.AIProvider{} }
-	util.Success(c, gin.H{"providers": providers, "presets": AIPresets})
+	if providers == nil {
+		providers = []model.AIProvider{}
+	}
+	// purposes lets the admin frontend render the
+	// 功能模型分配 dropdowns dynamically — adding a new purpose
+	// is a server-side-only change, no admin SPA rebuild needed.
+	util.Success(c, gin.H{
+		"providers": providers,
+		"presets":   AIPresets,
+		"purposes":  AIPurposes,
+	})
 }
 
 func SaveAIProvider(c *gin.Context) {
@@ -316,10 +325,14 @@ func AIChat(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	t := config.T
 
-	// Get default provider
+	// Get provider — purpose-specific 'chat' wins if assigned, else
+	// fall back to the default text provider chain (same shape as
+	// callAIWithPurpose). NO_PROVIDER only fires when neither path
+	// finds an active row.
 	var provider model.AIProvider
-	err := config.DB.Get(&provider, "SELECT * FROM "+t("ai_providers")+" WHERE type='text' AND is_active=true ORDER BY is_default DESC, sort_order ASC LIMIT 1")
-	if err != nil {
+	if pp := pickAIProvider("chat"); pp != nil {
+		provider = *pp
+	} else if err := config.DB.Get(&provider, "SELECT * FROM "+t("ai_providers")+" WHERE type='text' AND is_active=true ORDER BY is_default DESC, sort_order ASC LIMIT 1"); err != nil {
 		util.Error(c, 400, "NO_PROVIDER", "未配置 AI 提供商"); return
 	}
 
@@ -596,7 +609,7 @@ func AISlug(c *gin.Context) {
 	var req struct { Title string `json:"title"`; Content string `json:"content"` }
 	c.ShouldBindJSON(&req)
 	if req.Title == "" { util.BadRequest(c, "标题不能为空"); return }
-	content := callAI("Generate a concise SEO-friendly URL slug for: "+req.Title+". Return ONLY the slug.", 50)
+	content := callAIWithPurpose("slug", "Generate a concise SEO-friendly URL slug for: "+req.Title+". Return ONLY the slug.", 50)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	util.Success(c, gin.H{"slug": content})
 }
@@ -606,7 +619,7 @@ func AISummary(c *gin.Context) {
 	c.ShouldBindJSON(&req)
 	if req.Content == "" { util.BadRequest(c, "内容不能为空"); return }
 	text := req.Content; if len(text) > 2000 { text = text[:2000] }
-	content := callAI("Write a compelling article summary/excerpt in the same language as the original content. The summary should be 100-200 characters (Chinese) or 50-100 words (English), capturing the key points and tone of the article. Do NOT use phrases like '本文讲述' or 'This article'. Write it as an engaging standalone paragraph that makes readers want to read the full article. Title: "+req.Title+"\n\nContent:\n"+text, 500)
+	content := callAIWithPurpose("summary", "Write a compelling article summary/excerpt in the same language as the original content. The summary should be 100-200 characters (Chinese) or 50-100 words (English), capturing the key points and tone of the article. Do NOT use phrases like '本文讲述' or 'This article'. Write it as an engaging standalone paragraph that makes readers want to read the full article. Title: "+req.Title+"\n\nContent:\n"+text, 500)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	util.Success(c, gin.H{"summary": content})
 }
@@ -616,7 +629,7 @@ func AITags(c *gin.Context) {
 	c.ShouldBindJSON(&req)
 	if req.Title == "" && req.Content == "" { util.BadRequest(c, "标题或内容不能为空"); return }
 	text := req.Content; if len(text) > 1000 { text = text[:1000] }
-	content := callAI("Extract exactly 3 keywords/tags from this article, return ONLY comma-separated tags in the same language as the content, no explanations: "+req.Title+" - "+text, 100)
+	content := callAIWithPurpose("tags", "Extract exactly 3 keywords/tags from this article, return ONLY comma-separated tags in the same language as the content, no explanations: "+req.Title+" - "+text, 100)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	// Parse comma-separated tags
 	tags := []string{}
@@ -631,7 +644,7 @@ func AIFormat(c *gin.Context) {
 	var req struct { Content string `json:"content"` }
 	c.ShouldBindJSON(&req)
 	if req.Content == "" { util.BadRequest(c, "内容不能为空"); return }
-	content := callAI("Improve formatting and readability, keep original language, use Markdown: "+req.Content, 4096)
+	content := callAIWithPurpose("polish", "Improve formatting and readability, keep original language, use Markdown: "+req.Content, 4096)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	util.Success(c, gin.H{"content": content})
 }
@@ -1007,6 +1020,77 @@ func AIBatchDelete(c *gin.Context) {
 // response" all into the same opaque "AI returned empty" message.
 var aiLastError string
 
+// AIPurposes lists every per-feature dispatch slot the admin can wire
+// to a specific provider (Settings → AI 设置 → 功能模型分配). Each
+// entry is the option key suffix; the full key stored in the options
+// table is "ai_purpose_<key>_provider" and holds an ai_providers.id.
+//
+// Adding a new purpose requires touching three places:
+//   1. This list (so the admin form renders a row for it).
+//   2. The handler call site — pass the purpose to callAIWithPurpose
+//      or pickAIProvider so the dispatcher knows to consult it.
+//   3. AiSettings.tsx (frontend) — add the matching FormRowSelectC.
+type AIPurpose struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
+	Hint  string `json:"hint"`
+}
+
+var AIPurposes = []AIPurpose{
+	{Key: "summary", Label: "AI 摘要", Hint: "文章编辑器 ✨ + 批量摘要任务"},
+	{Key: "slug", Label: "Slug 生成", Hint: "文章 URL 别名"},
+	{Key: "tags", Label: "关键词 / 标签", Hint: "从正文提取标签"},
+	{Key: "polish", Label: "排版 / 润色", Hint: "全文重格式化 + 改写"},
+	{Key: "chat", Label: "AI 助手聊天（后台）", Hint: "/admin/assistant 页面"},
+	{Key: "reader-chat", Label: "读者聊天（前台）", Hint: "前台 AI 对话框"},
+	{Key: "questions", Label: "批量问答生成", Hint: "为文章预生成相关问题"},
+	{Key: "query", Label: "SQL 自然语言查询", Hint: "AI 助手的 /query 指令"},
+}
+
+// pickAIProvider returns the provider explicitly assigned to a purpose,
+// or nil to indicate "use the default chain". A purpose is honoured
+// only if (a) the option key is set, (b) it parses to a positive id,
+// and (c) that provider is still active and type='text'. Any other
+// state silently falls back so misconfiguration doesn't block the
+// feature entirely — callers see the default behaviour, not a 500.
+func pickAIProvider(purpose string) *model.AIProvider {
+	if purpose == "" {
+		return nil
+	}
+	pid := model.GetOption("ai_purpose_" + purpose + "_provider")
+	if pid == "" || pid == "0" {
+		return nil
+	}
+	id, err := strconv.Atoi(pid)
+	if err != nil || id <= 0 {
+		return nil
+	}
+	var p model.AIProvider
+	err = config.DB.Get(&p, "SELECT * FROM "+config.T("ai_providers")+
+		" WHERE id=$1 AND is_active=true AND type='text'", id)
+	if err != nil {
+		return nil
+	}
+	return &p
+}
+
+// callAIWithPurpose tries the purpose-specific provider first; if
+// that fails (network blip / rate limit / model rejection), falls
+// through to the default chain so a single bad config can't kill
+// the feature entirely.
+func callAIWithPurpose(purpose, prompt string, maxTokens int) string {
+	if p := pickAIProvider(purpose); p != nil {
+		content, errStr := callOneProvider(*p, prompt, maxTokens)
+		if content != "" {
+			aiLastError = ""
+			return content
+		}
+		fmt.Printf("[ai] purpose=%q provider=%q model=%q failed: %s — falling back to default chain\n",
+			purpose, p.Name, p.Model, errStr)
+	}
+	return callAI(prompt, maxTokens)
+}
+
 func callAI(prompt string, maxTokens int) string {
 	// Try every active provider in default-first order. First one that
 	// returns non-empty content wins. This gives users a real fallback
@@ -1186,10 +1270,11 @@ func AIReaderChat(c *gin.Context) {
 		util.BadRequest(c, "post_id 不能为空"); return
 	}
 
-	// Get AI provider
+	// Get AI provider — 'reader-chat' purpose first, then default chain.
 	var provider model.AIProvider
-	err := config.DB.Get(&provider, "SELECT * FROM "+config.T("ai_providers")+" WHERE type='text' AND is_active=true ORDER BY is_default DESC, sort_order ASC LIMIT 1")
-	if err != nil {
+	if pp := pickAIProvider("reader-chat"); pp != nil {
+		provider = *pp
+	} else if err := config.DB.Get(&provider, "SELECT * FROM "+config.T("ai_providers")+" WHERE type='text' AND is_active=true ORDER BY is_default DESC, sort_order ASC LIMIT 1"); err != nil {
 		util.Error(c, 400, "NO_PROVIDER", "未配置 AI 提供商"); return
 	}
 
@@ -1239,7 +1324,9 @@ func AIReaderChat(c *gin.Context) {
 		if post.Excerpt != nil {
 			suggestPrompt += "\n摘要：" + *post.Excerpt
 		}
-		result := callAI(suggestPrompt, 200)
+		// 'reader-chat' purpose mirrors the conversational provider
+		// since these suggested questions ride alongside the same UX.
+		result := callAIWithPurpose("reader-chat", suggestPrompt, 200)
 		questions := []string{}
 		for _, line := range strings.Split(result, "\n") {
 			line = strings.TrimSpace(line)

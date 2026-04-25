@@ -29,6 +29,7 @@ const defaultProvider: Provider = {
 
 const settingsTabs = [
   { id: '提供商',     label: '提供商',     icon: 'fa-regular fa-server' },
+  { id: '功能分配',   label: '功能分配',   icon: 'fa-regular fa-shuffle' },
   { id: '聊天配置',   label: '聊天配置',   icon: 'fa-regular fa-message' },
   { id: '文章设置',   label: '文章设置',   icon: 'fa-regular fa-pen-to-square' },
   { id: '博主资料',   label: '博主资料',   icon: 'fa-regular fa-user-pen' },
@@ -63,6 +64,10 @@ export default function AiSettingsPage() {
   const [activeTab, setActiveTab] = useState('提供商');
   const [providers, setProviders] = useState<Provider[]>([]);
   const [presets, setPresets] = useState<Record<string, any>>({});
+  // Purpose list comes from the backend so adding a new AI feature
+  // (api/internal/handler/ai.go AIPurposes) doesn't require a SPA
+  // rebuild — the form rows are rendered by mapping over this array.
+  const [purposes, setPurposes] = useState<Array<{ key: string; label: string; hint?: string }>>([]);
   const [editing, setEditing] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -117,14 +122,26 @@ export default function AiSettingsPage() {
 
       const p = provR.data?.providers || provR.providers || [];
       const pr = provR.data?.presets || provR.presets || {};
+      const pu = provR.data?.purposes || provR.purposes || [];
       setProviders(p);
       setPresets(pr);
+      setPurposes(pu);
 
       // Load AI options
       const opts = optR.data || optR || {};
       const newConfig = { ...config };
       Object.keys(newConfig).forEach(key => {
         if (opts[key] !== undefined && opts[key] !== '') newConfig[key] = opts[key];
+      });
+      // Also pick up any ai_purpose_*_provider keys we got back from
+      // the API. These aren't in the initial useState because the
+      // purposes list is server-driven (AIPurposes in handler/ai.go),
+      // so we can't know up-front what keys to expect — copy any
+      // key that matches the prefix.
+      Object.keys(opts).forEach(key => {
+        if (key.startsWith('ai_purpose_') && key.endsWith('_provider')) {
+          newConfig[key] = opts[key];
+        }
       });
 
       // Auto-fill blogger profile from user if empty
@@ -399,6 +416,53 @@ export default function AiSettingsPage() {
               </div>
             )}
           </Modal>
+        </>
+      )}
+
+      {/* ── 功能分配 ── per-purpose model selection */}
+      {activeTab === '功能分配' && (
+        <>
+          <FormSectionC
+            title="功能模型分配"
+            icon="fa-regular fa-shuffle"
+            description="为每个 AI 功能单独指定一个 type=文本 的提供商。留空 = 使用默认提供商（即 type=文本 + is_default=true 的那条）。某个功能的指定提供商失败时会自动回退到默认链。"
+          >
+            {purposes.length === 0 ? (
+              <div className="text-dim" style={{ fontSize: '13px', padding: '12px 0' }}>
+                后端尚未启用功能分配（升级到 v1.3+）
+              </div>
+            ) : (
+              purposes.map((pu, idx) => {
+                const optKey = `ai_purpose_${pu.key}_provider`;
+                const current = String(config[optKey] ?? '');
+                const textProviders = providers.filter(
+                  (p: any) => p.type === 'text' && p.is_active,
+                );
+                return (
+                  <FormRowSelectC
+                    key={pu.key}
+                    label={pu.label}
+                    hint={pu.hint}
+                    value={current}
+                    onChange={v => updateConfig(optKey, v)}
+                    options={[
+                      { value: '', label: '使用默认（按 is_default 顺序）' },
+                      ...textProviders.map((p: any) => ({
+                        value: String(p.id),
+                        label: `${p.name} · ${p.model}`,
+                      })),
+                    ]}
+                    last={idx === purposes.length - 1}
+                  />
+                );
+              })
+            )}
+          </FormSectionC>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+            <Button onClick={saveConfig} loading={savingConfig}>
+              <i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存
+            </Button>
+          </div>
         </>
       )}
 

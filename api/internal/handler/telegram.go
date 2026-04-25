@@ -128,10 +128,13 @@ func TelegramWebhook(c *gin.Context) {
 	now := time.Now().Unix()
 
 	switch {
-	// /ai <message> — AI chat
+	// /ai <message> — Telegram bot chat. Routes through the
+	// 'chat' purpose (same admin slot as the dashboard AI 助手),
+	// so admins picking a 'chat-tier' model in 功能模型分配
+	// affect both UIs uniformly.
 	case strings.HasPrefix(text, "/ai "):
 		prompt := strings.TrimPrefix(text, "/ai ")
-		response := callAI(prompt, 2048)
+		response := callAIWithPurpose("chat", prompt, 2048)
 		if response == "" { response = "AI 服务暂时不可用" }
 		tgSend(chatID, response)
 

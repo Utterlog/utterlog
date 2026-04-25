@@ -161,7 +161,10 @@ func generateAIQuestions(postID int) {
 		prompt += "\n内容：" + text
 	}
 
-	result := callAI(prompt, 200)
+	// 'questions' purpose — same model wired to AI 设置 → 功能模型
+	// 分配 → 批量问答生成. Background prep job for the front-end
+	// 'related questions' chip row.
+	result := callAIWithPurpose("questions", prompt, 200)
 	if result == "" {
 		return
 	}
@@ -245,7 +248,10 @@ func generateAISummary(postID int) {
 	if maxTokens < 200 {
 		maxTokens = 200
 	}
-	result := callAI(prompt, maxTokens)
+	// 'summary' purpose — same wiring as the foreground AISummary
+	// handler so the admin's 功能模型分配 picks one model for both
+	// on-demand and background summarisation.
+	result := callAIWithPurpose("summary", prompt, maxTokens)
 	if result == "" {
 		return
 	}
