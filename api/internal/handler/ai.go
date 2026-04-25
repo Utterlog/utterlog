@@ -609,7 +609,7 @@ func AISlug(c *gin.Context) {
 	var req struct { Title string `json:"title"`; Content string `json:"content"` }
 	c.ShouldBindJSON(&req)
 	if req.Title == "" { util.BadRequest(c, "标题不能为空"); return }
-	content := callAIWithPurpose("slug", "Generate a concise SEO-friendly URL slug for: "+req.Title+". Return ONLY the slug.", 50)
+	content := callAIWithPurpose("content", "Generate a concise SEO-friendly URL slug for: "+req.Title+". Return ONLY the slug.", 50)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	util.Success(c, gin.H{"slug": content})
 }
@@ -619,7 +619,7 @@ func AISummary(c *gin.Context) {
 	c.ShouldBindJSON(&req)
 	if req.Content == "" { util.BadRequest(c, "内容不能为空"); return }
 	text := req.Content; if len(text) > 2000 { text = text[:2000] }
-	content := callAIWithPurpose("summary", "Write a compelling article summary/excerpt in the same language as the original content. The summary should be 100-200 characters (Chinese) or 50-100 words (English), capturing the key points and tone of the article. Do NOT use phrases like '本文讲述' or 'This article'. Write it as an engaging standalone paragraph that makes readers want to read the full article. Title: "+req.Title+"\n\nContent:\n"+text, 500)
+	content := callAIWithPurpose("content", "Write a compelling article summary/excerpt in the same language as the original content. The summary should be 100-200 characters (Chinese) or 50-100 words (English), capturing the key points and tone of the article. Do NOT use phrases like '本文讲述' or 'This article'. Write it as an engaging standalone paragraph that makes readers want to read the full article. Title: "+req.Title+"\n\nContent:\n"+text, 500)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	util.Success(c, gin.H{"summary": content})
 }
@@ -629,7 +629,7 @@ func AITags(c *gin.Context) {
 	c.ShouldBindJSON(&req)
 	if req.Title == "" && req.Content == "" { util.BadRequest(c, "标题或内容不能为空"); return }
 	text := req.Content; if len(text) > 1000 { text = text[:1000] }
-	content := callAIWithPurpose("tags", "Extract exactly 3 keywords/tags from this article, return ONLY comma-separated tags in the same language as the content, no explanations: "+req.Title+" - "+text, 100)
+	content := callAIWithPurpose("content", "Extract exactly 3 keywords/tags from this article, return ONLY comma-separated tags in the same language as the content, no explanations: "+req.Title+" - "+text, 100)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	// Parse comma-separated tags
 	tags := []string{}
@@ -644,7 +644,7 @@ func AIFormat(c *gin.Context) {
 	var req struct { Content string `json:"content"` }
 	c.ShouldBindJSON(&req)
 	if req.Content == "" { util.BadRequest(c, "内容不能为空"); return }
-	content := callAIWithPurpose("polish", "Improve formatting and readability, keep original language, use Markdown: "+req.Content, 4096)
+	content := callAIWithPurpose("content", "Improve formatting and readability, keep original language, use Markdown: "+req.Content, 4096)
 	if content == "" { util.Error(c, 500, "AI_ERROR", "AI 服务不可用"); return }
 	util.Success(c, gin.H{"content": content})
 }
@@ -1037,14 +1037,16 @@ type AIPurpose struct {
 }
 
 var AIPurposes = []AIPurpose{
-	{Key: "summary", Label: "AI 摘要", Hint: "文章编辑器 ✨ + 批量摘要任务"},
-	{Key: "slug", Label: "Slug 生成", Hint: "文章 URL 别名"},
-	{Key: "tags", Label: "关键词 / 标签", Hint: "从正文提取标签"},
-	{Key: "polish", Label: "排版 / 润色", Hint: "全文重格式化 + 改写"},
-	{Key: "chat", Label: "AI 助手聊天（后台）", Hint: "/admin/assistant 页面"},
-	{Key: "reader-chat", Label: "读者聊天（前台）", Hint: "前台 AI 对话框"},
-	{Key: "questions", Label: "批量问答生成", Hint: "为文章预生成相关问题"},
-	{Key: "query", Label: "SQL 自然语言查询", Hint: "AI 助手的 /query 指令"},
+	{
+		Key:   "content",
+		Label: "内容生成",
+		Hint:  "AI 摘要 / Slug / 关键词 / 排版润色 / 批量问答 / SQL 查询都走这一个",
+	},
+	{
+		Key:   "chat",
+		Label: "聊天",
+		Hint:  "后台 AI 助手 + 前台读者陪读 + Telegram /ai 命令统一走这一个",
+	},
 }
 
 // pickAIProvider returns the provider explicitly assigned to a purpose,
@@ -1074,13 +1076,48 @@ func pickAIProvider(purpose string) *model.AIProvider {
 	return &p
 }
 
+// chatTemperature reads ai_chat_temp from options, clamps to [0, 2],
+// returns 0.7 default. Used for chat-style purposes only — content
+// generation (summary / slug / tags / polish) keeps the original
+// 0.3 because a creative output for those would mostly add noise.
+func chatTemperature() float64 {
+	v := strings.TrimSpace(model.GetOption("ai_chat_temp"))
+	if v == "" {
+		return 0.7
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return 0.7
+	}
+	if f < 0 {
+		f = 0
+	}
+	if f > 2 {
+		f = 2
+	}
+	return f
+}
+
+// temperatureForPurpose picks the right temperature based on the
+// purpose. 'chat' purpose flows (assistant / reader / Telegram bot)
+// honour the admin-configured ai_chat_temp; everything else stays
+// at 0.3 so summaries / slugs / tags don't drift into freelance
+// territory.
+func temperatureForPurpose(purpose string) float64 {
+	if purpose == "chat" {
+		return chatTemperature()
+	}
+	return 0.3
+}
+
 // callAIWithPurpose tries the purpose-specific provider first; if
 // that fails (network blip / rate limit / model rejection), falls
 // through to the default chain so a single bad config can't kill
 // the feature entirely.
 func callAIWithPurpose(purpose, prompt string, maxTokens int) string {
+	temp := temperatureForPurpose(purpose)
 	if p := pickAIProvider(purpose); p != nil {
-		content, errStr := callOneProvider(*p, prompt, maxTokens)
+		content, errStr := callOneProviderWithTemp(*p, prompt, maxTokens, temp)
 		if content != "" {
 			aiLastError = ""
 			return content
@@ -1125,12 +1162,23 @@ func callAI(prompt string, maxTokens int) string {
 	return ""
 }
 
-// callOneProvider hits a single provider. Returns (content, errDescription)
-// — empty content always accompanied by a non-empty error string.
+// callOneProvider hits a single provider with the historical 0.3
+// temperature. Kept as a thin wrapper so older call sites that
+// don't care about temperature stay clean. New code should call
+// callOneProviderWithTemp directly so chat / reader-chat respect
+// the admin's ai_chat_temp setting.
 func callOneProvider(p model.AIProvider, prompt string, maxTokens int) (string, string) {
+	return callOneProviderWithTemp(p, prompt, maxTokens, 0.3)
+}
+
+// callOneProviderWithTemp is the actual HTTP caller. Temperature is
+// now a parameter rather than the hard-coded 0.3 — that constant
+// quietly overrode AI 设置 → 聊天配置 → 对话温度 even after admins
+// thought they'd dialled the chat hotter or colder.
+func callOneProviderWithTemp(p model.AIProvider, prompt string, maxTokens int, temperature float64) (string, string) {
 	body, _ := json.Marshal(map[string]interface{}{
 		"model": p.Model, "messages": []map[string]string{{"role": "user", "content": prompt}},
-		"max_tokens": maxTokens, "temperature": 0.3,
+		"max_tokens": maxTokens, "temperature": temperature,
 	})
 	req, _ := http.NewRequest("POST", p.Endpoint, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -1270,9 +1318,24 @@ func AIReaderChat(c *gin.Context) {
 		util.BadRequest(c, "post_id 不能为空"); return
 	}
 
-	// Get AI provider — 'reader-chat' purpose first, then default chain.
+	// Honour the admin's '允许访客（未登录）使用 AI 聊天' toggle.
+	// Default open (existing behaviour) so this is purely an
+	// opt-out. When closed, the suggestion-fetch path (empty
+	// message) still works so the chip row renders, but actually
+	// chatting requires a logged-in user. middleware.GetUserID
+	// returns 0 for unauthed reader-chat (the route is public).
+	if strings.TrimSpace(req.Message) != "" {
+		guestAllowed := strings.ToLower(strings.TrimSpace(model.GetOption("ai_chat_guest"))) == "true"
+		if !guestAllowed && middleware.GetUserID(c) == 0 {
+			util.Error(c, 401, "GUEST_BLOCKED", "请先登录后再使用 AI 聊天")
+			return
+		}
+	}
+
+	// Get AI provider — 'chat' purpose first (covers reader chat too),
+	// then default chain.
 	var provider model.AIProvider
-	if pp := pickAIProvider("reader-chat"); pp != nil {
+	if pp := pickAIProvider("chat"); pp != nil {
 		provider = *pp
 	} else if err := config.DB.Get(&provider, "SELECT * FROM "+config.T("ai_providers")+" WHERE type='text' AND is_active=true ORDER BY is_default DESC, sort_order ASC LIMIT 1"); err != nil {
 		util.Error(c, 400, "NO_PROVIDER", "未配置 AI 提供商"); return
@@ -1326,7 +1389,7 @@ func AIReaderChat(c *gin.Context) {
 		}
 		// 'reader-chat' purpose mirrors the conversational provider
 		// since these suggested questions ride alongside the same UX.
-		result := callAIWithPurpose("reader-chat", suggestPrompt, 200)
+		result := callAIWithPurpose("chat", suggestPrompt, 200)
 		questions := []string{}
 		for _, line := range strings.Split(result, "\n") {
 			line = strings.TrimSpace(line)
@@ -1381,9 +1444,12 @@ func AIReaderChat(c *gin.Context) {
 	fmt.Fprintf(c.Writer, "data: %s\n\n", metaJSON)
 	c.Writer.Flush()
 
+	// Honour AI 设置 → 聊天配置 → 对话温度. Was hard-coded 0.7 even
+	// after admins thought the slider applied here; chatTemperature()
+	// reads ai_chat_temp with safe defaults + clamping.
 	body, _ := json.Marshal(map[string]interface{}{
 		"model": provider.Model, "messages": messages, "stream": true,
-		"temperature": 0.7, "max_tokens": 1024,
+		"temperature": chatTemperature(), "max_tokens": 1024,
 	})
 	httpReq, _ := http.NewRequest("POST", provider.Endpoint, bytes.NewReader(body))
 	httpReq.Header.Set("Content-Type", "application/json")

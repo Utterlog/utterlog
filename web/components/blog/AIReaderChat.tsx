@@ -24,8 +24,10 @@ const API_BASE = typeof window !== 'undefined'
   : '';
 
 export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: AIReaderChatProps) {
-  // Priority: explicit prop (post author) > site owner (admin) > generic fallback
-  const { owner } = useThemeContext();
+  // Priority: explicit prop (post author) > site owner (admin) > generic fallback.
+  // Also pull options so we can read ai_chat_position later in the file
+  // and apply the admin's left/right preference.
+  const { owner, options } = useThemeContext();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -150,13 +152,21 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
     authorAvatar ||
     'https://gravatar.bluecdn.com/avatar/0?s=64&d=mp';
 
+  // Honour AI 设置 → 聊天配置 → 气泡位置. Was hard-coded right-side
+  // even after admins picked left in the dropdown — the option got
+  // saved to the DB but the front-end never read it.
+  const positionLeft = (options?.ai_chat_position || '').toLowerCase() === 'left';
+  const positionStyle: React.CSSProperties = positionLeft
+    ? { left: 24 }
+    : { right: 24 };
+
   // ━━ 折叠状态：卡片 ━━
   if (!open) {
     return (
       <div
         onClick={() => setOpen(true)}
         style={{
-          position: 'fixed', bottom: footerH, right: 24, zIndex: 1000,
+          position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 1000,
           width: 300, padding: '14px 16px',
           background: '#fff', border: '1px solid #e5e5e5',
           boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
@@ -197,7 +207,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   // ━━ 展开状态：聊天窗口（直角，加高） ━━
   return (
     <div style={{
-      position: 'fixed', bottom: footerH, right: 24, zIndex: 1000,
+      position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 1000,
       width: 400, height: '70vh', maxHeight: 700, minHeight: 500,
       background: '#fff', border: '1px solid #e0e0e0',
       boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
