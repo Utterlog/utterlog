@@ -57,7 +57,15 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         fontSize: '13px', color: '#999', borderBottom: '1px solid #eee',
       }}>
         <span><i className="fa-regular fa-calendar" style={{ marginRight: '4px' }} />{formatDate(post.created_at)}</span>
-        <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#0052D9' }} />{(post.view_count || 0) + 1} 阅读</span>
+        {/* view_count 直接读 DB 真实值。之前写 `(view_count || 0) + 1`
+            想做「乐观更新」当场 +1，但这个 +1 是无条件加的：
+              · 同访客同篇文章当天再看一次时，/track 会被 dedup 拦截
+                （isFirstPostViewToday）→ DB 不再 +1
+              · 但页面照样显示 +1 → 首页列表 (raw DB) 跟文章页 (cosmetic +1)
+                数字对不上：首页 149，文章页 150，刷新首页又 149，用户懵
+            老实显示 DB 值 = 跟首页一致。/track 真触发了增量后，刷新文章
+            或首页都会看到新值 +1，行为合并直观。 */}
+        <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#0052D9' }} />{post.view_count || 0} 阅读</span>
         <span><i className="fa-regular fa-comment" style={{ marginRight: '4px' }} /><CommentCount initial={post.comment_count || 0} /></span>
         {(post.word_count || 0) > 0 && (
           <span><i className="fa-regular fa-font" style={{ marginRight: '4px' }} />{post.word_count.toLocaleString()} 字</span>

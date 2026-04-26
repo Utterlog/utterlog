@@ -53,7 +53,9 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         fontSize: '13px', color: '#999', borderBottom: '1px solid #eee',
       }}>
         <span><i className="fa-regular fa-calendar" style={{ marginRight: '4px' }} />{formatDate(post.created_at)}</span>
-        <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#0052D9' }} />{(post.view_count || 0) + 1} 阅读</span>
+        {/* 见 Azure/PostPage.tsx 同位置注释 —— 老实显示 DB 真实值，
+            不再无条件 +1 误导首页 / 文章页数字不一致。 */}
+        <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#0052D9' }} />{post.view_count || 0} 阅读</span>
         <span><i className="fa-regular fa-comment" style={{ marginRight: '4px' }} /><CommentCount initial={post.comment_count || 0} /></span>
         {(post.word_count || 0) > 0 && (
           <span><i className="fa-regular fa-font" style={{ marginRight: '4px' }} />{post.word_count.toLocaleString()} 字</span>

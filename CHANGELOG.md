@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-04-26
+
+### Fixed
+
+- **首页和文章页 view_count 数字不一致**：用户反馈「首页 149，点开文章显示 150，回到首页刷新还是 149，再开第二天还是这个跳变」。根因是 Azure / Chred / Flux 三个主题的 `PostPage.tsx` 写死了 `{(post.view_count || 0) + 1}` 做「乐观 +1」，但这个 +1 是无条件加的：
+  - 同访客同篇文章当天再访问会被 `/track` 的 `isFirstPostViewToday` dedup 拦截 → DB 不再 +1
+  - 但页面照样无脑显示 +1 → 首页（raw DB）跟文章页（cosmetic +1）数字永远差 1，看着像统计 bug
+  - 修复：3 个主题 PostPage 直接渲染 `post.view_count || 0`（DB 真实值），跟首页列表一致。/track 真触发了增量后，刷新文章或首页都会同步看到新值。Utterlog 主题原本就是这样，没受影响
+
 ## [1.5.0] - 2026-04-26
 
 ### Added
