@@ -134,7 +134,14 @@ export async function getThemeContextData(): Promise<ThemeContextData> {
       description: opts.site_description || '',
       url: opts.site_url || '',
       logo: opts.site_logo || '',
-      darkLogo: opts.site_dark_logo || '',
+      // Key is site_logo_dark — matches the admin Settings form
+      // (Settings.tsx:83/213/411) and the Go handler that saves it
+      // (handler/content.go:1017). The previous site_dark_logo lookup
+      // here meant the dark-mode logo URL never reached the front-end
+      // even after admin upload. No theme currently consumes
+      // site.darkLogo, so the bug had no visible symptom — fixing it
+      // ahead of dark-mode landing in the Utterlog theme.
+      darkLogo: opts.site_logo_dark || '',
       favicon: opts.site_favicon || '',
     },
     owner: {

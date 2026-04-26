@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 深色 Logo（`site_logo_dark`）上传后前端读不到：`web/lib/theme-data.ts` 错读成 `site_dark_logo`，与后台 Settings.tsx / 后端 content.go 保存的 key 不一致。修正为 `site_logo_dark`。当前 Utterlog 主题暂未启用深色模式，此修复为后续接入预留正确的数据通道
+- Utterlog 主题 Header 不渲染上传的 Logo：`web/themes/Utterlog/Header.tsx` 原本只显示文字标题，无视后台 `site_logo`。改为有上传时优先渲染 `<img>`（28px 高 / 180px 宽上限），无上传时退回原文字 lockup
+- Flux 主题 Header 不渲染上传的 Logo：原本硬编码绿色圆形 SVG。改为有上传时图片替代圆形 mark，无上传时仍显示原绿色圆形（保留 Flux 默认品牌识别）
+
+### Notes
+
+- favicon / logo 持久化链路确认完整：上传写入 `public/uploads/branding/<purpose>.<ext>`（docker-compose 命名卷 `uploads:/app/public/uploads`，dev 是 `./api/public/uploads` bind mount），api 容器路由 `/logo.:ext` `/dark-logo.:ext` `/favicon.:ext` 优先读持久化路径，回退老路径；`docker compose pull && up -d` 不会丢文件。本次未改动该链路
+- 其余主题 Azure / Chred 早已正确读取 `site.logo`，未修改
+
 ## [1.3.2] - 2026-04-26
 
 ### Fixed

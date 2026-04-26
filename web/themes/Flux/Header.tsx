@@ -29,22 +29,34 @@ export default function Header() {
           height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}
       >
-        {/* Brand lockup */}
+        {/* Brand lockup — uploaded site.logo replaces the hard-coded
+            green chevron mark when present, so admins who set a
+            custom Logo in 常规设置 see it on every theme regardless
+            of switching. The text title stays alongside either way:
+            Flux's identity is the lockup, not the mark alone. */}
         <Link href="/" className="flux-brand" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          <div
-            className="flux-logo"
-            aria-hidden
-            style={{
-              width: 26, height: 26, borderRadius: 9999,
-              background: '#00C767',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#034F28',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 6l6 6-6 6" stroke="#034F28" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          {ctx.site.logo ? (
+            <img
+              src={ctx.site.logo}
+              alt={siteTitle}
+              style={{ height: 26, maxWidth: 140, objectFit: 'contain', display: 'block' }}
+            />
+          ) : (
+            <div
+              className="flux-logo"
+              aria-hidden
+              style={{
+                width: 26, height: 26, borderRadius: 9999,
+                background: '#00C767',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#034F28',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 6l6 6-6 6" stroke="#034F28" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          )}
           <span
             className="flux-brand-text site-title"
             style={{ fontSize: 18, fontWeight: 500, color: '#011E0F', letterSpacing: 0 }}

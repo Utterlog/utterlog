@@ -31,12 +31,27 @@ export default function Header() {
         maxWidth: '1280px', margin: '0 auto', padding: '0 40px',
         height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        {/* Logo */}
+        {/* Logo — uploaded image takes precedence over text title.
+            Empty site.logo (= admin hasn't uploaded one) falls back to
+            the original text-only lockup so the minimal Utterlog look
+            is preserved out of the box. Image height is capped to
+            roughly the header's vertical padding so different
+            aspect-ratio uploads (square favicon-style or wide
+            wordmark) both fit without manual tuning. */}
         <Link href="/" className="site-title" style={{
           textDecoration: 'none', fontSize: '22px', fontWeight: 700,
           color: '#202020', letterSpacing: '-0.02em',
+          display: 'flex', alignItems: 'center', gap: '10px',
         }}>
-          {siteName}
+          {site.logo ? (
+            <img
+              src={site.logo}
+              alt={siteName}
+              style={{ height: '28px', maxWidth: '180px', objectFit: 'contain', display: 'block' }}
+            />
+          ) : (
+            siteName
+          )}
         </Link>
 
         {/* Desktop nav */}
