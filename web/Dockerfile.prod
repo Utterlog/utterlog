@@ -26,6 +26,19 @@ ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Defensive: dereference any symlinks in public/ before next build.
+# History: a previous iteration used symlinks for themes/<T>/styles.css
+# (dev convenience) which broke production because the runner stage only
+# COPYs /app/public, leaving symlinks to /app/themes/ dangling. Source
+# now ships real files + npm prebuild hook keeps public/ in sync, but
+# this find … cp -L … mv guards against re-introduction.
+RUN find public -type l | while read link; do \
+      target="$(readlink -f "$link" 2>/dev/null || true)"; \
+      if [ -n "$target" ] && [ -f "$target" ]; then \
+        cp "$target" "$link.deref" && mv -f "$link.deref" "$link"; \
+      fi; \
+    done
+
 RUN npm run build
 
 # --- Stage 3: runtime ---

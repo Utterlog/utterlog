@@ -272,6 +272,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
             marginLeft: '16px', marginRight: '16px', marginTop: '8px',
             background: 'rgba(0, 82, 217, 0.03)',
             border: '1px solid rgba(0, 82, 217, 0.08)',
+            borderRadius: '4px',
           } : {}),
         }}
       >
@@ -281,7 +282,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
             <img
               src={comment.avatar_url || 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=80'}
               alt=""
-              style={{ width: '40px', height: '40px', objectFit: 'cover', background: '#f0f0f0', borderRadius: 0, transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)', transform: hovered ? 'scale(1.15)' : 'scale(1)' }}
+              style={{ width: '40px', height: '40px', objectFit: 'cover', background: '#f0f0f0', borderRadius: '4px', transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)', transform: hovered ? 'scale(1.15)' : 'scale(1)' }}
               onError={e => { (e.target as HTMLImageElement).src = 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=80'; }}
             />
           </div>
@@ -294,7 +295,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
               <img
                 src={comment.avatar_url || 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=80'}
                 alt=""
-                style={{ width: '24px', height: '24px', objectFit: 'cover', background: '#f0f0f0', borderRadius: 0 }}
+                style={{ width: '24px', height: '24px', objectFit: 'cover', background: '#f0f0f0', borderRadius: '4px' }}
                 onError={e => { (e.target as HTMLImageElement).src = 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=80'; }}
               />
             )}
@@ -443,7 +444,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
                 style={{
                   width: '100%', padding: '8px 10px', fontSize: '13px', lineHeight: 1.6,
                   border: '1px solid var(--color-primary, #0052D9)', background: 'var(--color-bg-card, #fff)',
-                  outline: 'none', resize: 'vertical', color: 'var(--color-text-main)', fontFamily: 'inherit', borderRadius: 0,
+                  outline: 'none', resize: 'vertical', color: 'var(--color-text-main)', fontFamily: 'inherit', borderRadius: '4px',
                 }}
                 autoFocus
               />
@@ -453,6 +454,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
                   disabled={editSubmitting}
                   style={{
                     padding: '4px 12px', fontSize: '12px', fontWeight: 600, border: 'none',
+                    borderRadius: '4px',
                     background: 'var(--color-primary)', color: '#fff', cursor: editSubmitting ? 'wait' : 'pointer',
                     opacity: editSubmitting ? 0.6 : 1,
                   }}
@@ -463,6 +465,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
                   onClick={() => { setIsEditing(false); setEditContent(comment.content); }}
                   style={{
                     padding: '4px 12px', fontSize: '12px', border: '1px solid var(--color-border)',
+                    borderRadius: '4px',
                     background: 'transparent', color: 'var(--color-text-sub)', cursor: 'pointer',
                   }}
                 >
@@ -488,12 +491,12 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
                     position: 'absolute', bottom: '100%', left: 0, marginBottom: '6px', zIndex: 50,
                     width: '280px', padding: '10px 12px',
                     background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
-                    border: '1px solid var(--color-border, #e5e5e5)', boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                    border: '1px solid var(--color-border, #e5e5e5)', borderRadius: '4px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
                     display: 'none', fontSize: '12px', lineHeight: 1.6, color: 'var(--color-text-sub, #666)',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                       <img src={parentComment.avatar_url || 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=40'} alt=""
-                        style={{ width: '20px', height: '20px', borderRadius: 0, background: '#f0f0f0' }} />
+                        style={{ width: '20px', height: '20px', borderRadius: '4px', background: '#f0f0f0' }} />
                       <span style={{ fontWeight: 600, color: 'var(--color-text-main, #333)' }}>{parentComment.author}</span>
                     </div>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const }}>
@@ -594,7 +597,7 @@ function CommentCard({ comment, postId, floor, onReplySuccess, editableIds }: {
   editableIds: Set<number>;
 }) {
   return (
-    <div style={{ marginTop: '16px', border: '1px solid var(--color-border, #eee)' }}>
+    <div style={{ marginTop: '16px', border: '1px solid var(--color-border, #eee)', borderRadius: '4px', overflow: 'hidden' }}>
       <CommentRow comment={comment} postId={postId} depth={0} floor={floor} onReplySuccess={onReplySuccess} editableIds={editableIds} />
     </div>
   );
@@ -705,7 +708,7 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
         </div>
         {total > 0 && (
           <button onClick={handleOrderToggle} style={{
-            background: 'none', border: '1px solid var(--color-border, #eee)', padding: '4px 10px',
+            background: 'none', border: '1px solid var(--color-border, #eee)', borderRadius: '4px', padding: '4px 10px',
             fontSize: '12px', color: 'var(--color-text-sub, #666)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
           }}>
             <i className={`fa-regular ${order === 'newest' ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-wide-short'}`} style={{ fontSize: '11px' }} />

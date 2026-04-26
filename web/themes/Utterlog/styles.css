@@ -97,7 +97,7 @@
   width: 300px;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 4px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.06);
   pointer-events: none;
   animation: preview-in 0.15s ease-out;
@@ -107,7 +107,7 @@
   width: 100%;
   height: auto;
   margin: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: 4px 4px 0 0;
   min-height: 180px;
   background: #1a1a2e;
 }
@@ -279,7 +279,7 @@
 [data-theme="Utterlog"] .post-related-tab-count {
   font-size: 11px;
   padding: 0 5px;
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--color-bg-soft);
   color: var(--color-text-dim);
   font-weight: 500;
@@ -321,7 +321,7 @@
 [data-theme="Utterlog"] .post-related-card {
   text-decoration: none;
   display: block;
-  border-radius: 10px;
+  border-radius: 4px;
   overflow: hidden;
 }
 [data-theme="Utterlog"] .post-related-card-cover {

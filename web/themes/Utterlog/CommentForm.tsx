@@ -160,7 +160,7 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
       : name;
 
     const linkBtn: React.CSSProperties = { background: 'none', border: 'none', color: 'var(--color-text-dim)', cursor: 'pointer', fontSize: '11px', padding: 0 };
-    const inputStyle: React.CSSProperties = { flex: 1, minWidth: 0, padding: '7px 10px', fontSize: '12px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', outline: 'none', borderRadius: 0, color: 'var(--color-text-main)', fontFamily: 'inherit' };
+    const inputStyle: React.CSSProperties = { flex: 1, minWidth: 0, padding: '7px 10px', fontSize: '12px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', outline: 'none', borderRadius: '4px', color: 'var(--color-text-main)', fontFamily: 'inherit' };
 
     return (
       <div style={{ background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)' }}>
@@ -227,7 +227,7 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
 
           <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)}
             placeholder="写下你的回复..." rows={3}
-            style={{ width: '100%', padding: '10px', fontSize: '13px', lineHeight: 1.6, border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', outline: 'none', resize: 'vertical', color: 'var(--color-text-main)', fontFamily: 'inherit', borderRadius: 0 }} />
+            style={{ width: '100%', padding: '10px', fontSize: '13px', lineHeight: 1.6, border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', outline: 'none', resize: 'vertical', color: 'var(--color-text-main)', fontFamily: 'inherit', borderRadius: '4px' }} />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
             {onCancel && <button onClick={onCancel} style={{ padding: '6px 14px', fontSize: '12px', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-sub)', cursor: 'pointer' }}>取消</button>}

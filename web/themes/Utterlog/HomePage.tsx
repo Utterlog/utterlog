@@ -6,7 +6,7 @@ export default function HomePage({ posts, page, totalPages }: { posts: any[]; pa
     <div>
       {/* Profile card — Utterlog style */}
       <div style={{
-        background: '#fff', borderRadius: '12px', padding: '24px',
+        background: '#fff', borderRadius: '4px', padding: '24px',
         marginBottom: '24px', border: '1px solid #e9e9e9',
         display: 'flex', alignItems: 'center', gap: '16px',
       }}>
@@ -31,7 +31,7 @@ export default function HomePage({ posts, page, totalPages }: { posts: any[]; pa
         </div>
       ) : (
         <div style={{
-          background: '#fff', borderRadius: '12px', padding: '60px',
+          background: '#fff', borderRadius: '4px', padding: '60px',
           textAlign: 'center', color: '#9ca3af', border: '1px solid #e9e9e9',
         }}>
           <p style={{ fontSize: '16px' }}>暂无文章</p>

@@ -21,7 +21,7 @@ export default function PostPage({ post }: { post: any }) {
     // 的 left:calc(100% + 32px) 相对这个外层 relative 计算，TOC 自然
     // 浮在 800px 文章卡右侧的空白区。
     <div style={{ position: 'relative' }}>
-      <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e9e9e9', overflow: 'hidden' }}>
+      <div style={{ background: '#fff', borderRadius: '4px', border: '1px solid #e9e9e9', overflow: 'hidden' }}>
         {/* Article card */}
         <div style={{ padding: '32px' }}>
           {/* Meta —— 左侧时间/阅读量/字数/阅读时长/评论数，最右侧分类。
@@ -79,7 +79,7 @@ export default function PostPage({ post }: { post: any }) {
               {post.tags.map((tag: any) => (
                 <Link key={tag.id} href={`/tags/${tag.slug}`} style={{
                   padding: '4px 10px', fontSize: '12px', color: '#3368d9',
-                  background: 'rgba(51,104,217,0.06)', borderRadius: '6px', textDecoration: 'none',
+                  background: 'rgba(51,104,217,0.06)', borderRadius: '4px', textDecoration: 'none',
                 }}>
                   #{tag.name}
                 </Link>
@@ -88,9 +88,9 @@ export default function PostPage({ post }: { post: any }) {
           )}
 
           {/* Post Navigation: prev/next + related tabs。
-              Utterlog 主题用 3 列 × 2 行 = 6 篇/页布局，区别于
+              Utterlog 主题用 3 列 × 1 行 = 3 篇/页布局（极简风），区别于
               Azure / Chred / Flux 默认的 5 列单行。 */}
-          <PostNavigation postId={post.id} pageSize={6} />
+          <PostNavigation postId={post.id} pageSize={3} />
         </div>
 
         {/* Comments */}

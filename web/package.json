@@ -3,6 +3,9 @@
   "version": "1.1.5",
   "private": true,
   "scripts": {
+    "sync:themes": "node ./scripts/sync-theme-styles.mjs",
+    "predev": "node ./scripts/sync-theme-styles.mjs",
+    "prebuild": "node ./scripts/sync-theme-styles.mjs",
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",

@@ -25,7 +25,7 @@ export default function PostCard({ post, priority }: { post: any; priority?: boo
   return (
     <PostLink post={post} style={{ textDecoration: 'none', display: 'block' }}>
       <article style={{
-        background: '#fff', borderRadius: '12px',
+        background: '#fff', borderRadius: '4px',
         marginBottom: '12px', border: '1px solid #e9e9e9',
         transition: 'box-shadow 0.2s, border-color 0.2s',
         overflow: 'hidden',

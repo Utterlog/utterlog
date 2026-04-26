@@ -73,7 +73,7 @@ export default function Header() {
         <nav style={{ display: 'flex', gap: '4px', alignItems: 'center' }} className="hidden md:flex">
           {navItems.map(item => (
             <Link key={item.href} href={item.href} style={{
-              padding: '6px 14px', fontSize: '14px', borderRadius: '8px',
+              padding: '6px 14px', fontSize: '14px', borderRadius: '4px',
               color: isActive(item.href) ? '#3368d9' : '#6b7280',
               background: isActive(item.href) ? 'rgba(51,104,217,0.08)' : 'transparent',
               textDecoration: 'none', fontWeight: isActive(item.href) ? 600 : 400,

@@ -8,7 +8,31 @@
 
 ## [Unreleased]
 
-## [1.4.0] - 2026-04-26
+## [1.4.1] - 2026-04-26
+
+### Fixed
+
+- **生产环境样式全丢 + 大图片覆盖文章页（hotfix）**：v1.4.0 把 `web/public/themes/<T>/styles.css` 改成 symlink 指向 source 后，dev 模式（bind mount）正常但**生产 Docker 镜像 runner stage 只 COPY `/app/public`**，symlink 目标 `/app/themes/...` 不在镜像里 → 浏览器请求 `/themes/Azure/styles.css` 等返回 404 → CSS 全失效 → 图片没 `max-width` 限制把整页覆盖。修复：
+  - 把 4 主题的 `public/themes/<T>/styles.css` 恢复为真实文件（cp -L 解引用，git 追踪真实内容）
+  - 新增 `web/scripts/sync-theme-styles.mjs` 自动同步 source → public，挂在 `predev` / `prebuild` npm 钩子下，开发者改完 source 启动 dev / build 时自动同步，不会忘
+  - 新增 `web/scripts/sync-theme-styles.mjs` 通过 npm `predev` / `prebuild` 钩子触发
+  - `Dockerfile.prod` 加防御性 `find public -type l` 步骤，万一未来再加 symlink 也会在 build 时解引用
+  - 撤销之前 `(blog)/layout.tsx` 给 styles.css link 加的 dev cache-buster（symlink 没了，cache 不再是问题）
+  - 注：用户在生产环境 admin 上传的 `logo.jpg` / `favicon.jpg` 仍 404 是另一个问题 —— 是生产 uploads volume 里没有对应文件（跨环境 volume 不共享），需要在生产 admin 重新上传
+
+### Changed
+
+- 后台 `.btn` 按钮的 icon-文字间距全局加大（影响 72+ 处带 icon 的 `<Button>` 实例）：
+  - `.btn` (md): `0.5rem` → `0.625rem`（8px → 10px）
+  - `.btn-sm`: `0.375rem` → `0.5rem`（6px → 8px）
+  - `.btn-lg`: `0.625rem` → `0.75rem`（10px → 12px）
+  - 修复用户反馈的「+ 添加菜单项 / 📄 从已有页面添加」icon 跟文字贴太近的问题，对 fa-light/fa-regular 细线图标视觉更舒服
+- Utterlog 主题文章页相关文章 6 篇/页 → 3 篇/页（一行 3 列布局，更极简，去掉之前的 3×2 网格）
+- Utterlog 主题全局视觉圆角统一为 4px（极简风）：
+  - 7 处 inline `borderRadius: 0` 直角（CommentList / CommentForm 头像、输入框、textarea）→ `4px`
+  - 大圆角元素也降到 4px（PostPage / PostCard / HomePage 卡片 12px → 4px、Header nav active 8px → 4px、tag 6px → 4px、相关文章卡 10px → 4px、链接预览框 8px → 4px、tab-count 徽章 8px → 4px）
+  - 评论卡片新增 4px 圆角（reply 子评论 / 总评论框 / 编辑表单 / 操作按钮 / mention card）
+  - blockquote 的 `0 4px 4px 0` 保留（左侧粗 border 故意直角）；`borderRadius: '50%'` 头像圆形 / `1px` 列表小圆点 都保留语义
 
 ### Added
 
@@ -117,7 +141,8 @@
 - 6 项 AI 提示词全部可在后台编辑：摘要 / Slug / 关键词 / 排版 / 推荐问题 / 封面图；每项中文默认值，textarea 留空 + 保存自动恢复默认
 - AI 模型分发改为按用途路由：把原先 8 个 `ai_purpose_*_provider` 收成 2 个槽位（content + chat）；DB 自动清理 7 条遗留 option
 
-[Unreleased]: https://github.com/utterlog/utterlog/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/utterlog/utterlog/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/utterlog/utterlog/releases/tag/v1.4.1
 [1.4.0]: https://github.com/utterlog/utterlog/releases/tag/v1.4.0
 [1.3.2]: https://github.com/utterlog/utterlog/releases/tag/v1.3.2
 [1.3.1]: https://github.com/utterlog/utterlog/releases/tag/v1.3.1
