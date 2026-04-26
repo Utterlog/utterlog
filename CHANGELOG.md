@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-04-26
+
+### Changed
+
+- **文章浏览量改为「每次访问 / 刷新都 +1」**：v1.5.1 是把文章页 cosmetic +1 拿掉、跟首页 raw DB 对齐。但用户反馈这种「同访客今天再看不增加」的语义不对劲（明明又看了一次为什么不计），明确要求「访客点击就 +1，刷新一次再 +1」不要任何限制：
+  - **后端**：`/track` handler 移除 `isFirstPostViewToday(visitor+ip 当日去重)` 守门，每次命中文章 path 都直接 `IncrPostViews(postID)`。原来的 `isFirstPostViewToday` 函数删除（不再有调用方）。爬虫保护仍由 `IsBot` 早退路径承担，bot 流量不会进入增量逻辑
+  - **前端**：4 个主题 PostPage 都恢复 `(view_count || 0) + 1` cosmetic 显示。dedup 移除后这个 +1 跟 DB 增量永远对齐 —— SSR 拿到 DB=149 → 页面渲染 150 → /track async 跑完 DB=150 → 用户回到首页刷新看到 150（一致）→ 再点进文章页面渲染 151 → 首页刷新 151 → 永远跟得上。Utterlog 主题原本不带 cosmetic +1，现在统一改为 +1 跟其他 3 主题对齐
+  - 取舍：不再有「同访客唯一阅读」的概念，view_count 现在表达「文章被打开过的次数」。如果未来需要恢复 unique reader 语义，从 git 历史拿回 `isFirstPostViewToday` 函数 + handler 守门即可
+
 ## [1.5.1] - 2026-04-26
 
 ### Fixed

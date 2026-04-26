@@ -417,13 +417,22 @@ func TrackPageView(c *gin.Context) {
 		IncrTotalViews()
 		MarkOnline(req.VisitorID, realIP, req.Path)
 
-		// Per-post view counter — only bump on the first view per
-		// visitor per post. Keeps refreshes / tab-refocus from inflating
-		// per-post numbers beyond what the aggregate dashboard shows.
+		// Per-post view counter — 每次 /track 命中文章 path 就 +1。
 		//
-		// Path 反向解析按 admin 配置的 permalink_structure 模板走，
-		// 而不是硬编码 /posts/<slug>。否则 admin 用 /archives/%post_id%
-		// 之类的 permalink 后 view_count 就一直 +0 了。
+		// 历史上这里有 isFirstPostViewToday(visitor+ip 当日去重) 守门，
+		// 想做「unique reader 计数」。但实际效果违反用户直觉：
+		//   - 文章页前端写死 view_count + 1 做「乐观显示」
+		//   - 同访客今天再访问一次 → /track 被 dedup 拦截 → DB 不变
+		//   - 但前端照样 +1 → 首页（raw DB）跟文章页（cosmetic +1）数字
+		//     永远差 1，看着像统计 bug
+		// 用户明确要求「访客点击访问页面就 +1，刷新一次再 +1」—— 不要
+		// 任何限制。所以这里直接 always +1，跟 IsBot 早退路径配合
+		// （爬虫不进这里），自然规避 bot 干扰。前端可以放心还原 +1
+		// cosmetic，因为 /track 必然增量，cosmetic 永远跟 DB 对齐。
+		//
+		// Path 反向解析按 admin 配的 permalink_structure 模板走，而不是
+		// 硬编码 /posts/<slug>。否则 admin 用 /archives/%post_id% 等
+		// 模板后 view_count 一直 +0。
 		if id, slug := parsePostFromPath(req.Path); id > 0 || slug != "" {
 			var postID int
 			if id > 0 {
@@ -433,7 +442,7 @@ func TrackPageView(c *gin.Context) {
 					"SELECT id FROM %s WHERE slug = $1 AND status = 'publish'",
 					config.T("posts")), slug)
 			}
-			if postID > 0 && isFirstPostViewToday(req.Path, req.VisitorID, realIP) {
+			if postID > 0 {
 				IncrPostViews(postID)
 			}
 		}
@@ -442,7 +451,6 @@ func TrackPageView(c *gin.Context) {
 	util.Success(c, gin.H{"ok": true})
 }
 
-// isFirstPostViewToday returns true when neither this visitor_id nor IP
 // permalinkRegexCache caches one compiled regex per template so we
 // don't pay the parsePermalink template-compile cost on every /track
 // request. Entries are invalidated by template string identity —
@@ -553,22 +561,11 @@ func getOrCompilePermalinkMatcher(template string) *permalinkMatcher {
 	return matcher
 }
 
-// has viewed the given path since midnight. Daily dedup keeps the
-// per-post counter close to unique-reader intent without needing a
-// separate seen-set table. The 30s dedup in logAccess already stopped
-// the just-inserted row from double-counting, so n > 1 means a real
-// earlier view today.
-func isFirstPostViewToday(path, visitorID, ip string) bool {
-	key := visitorID
-	if key == "" { key = ip }
-	if key == "" { return false }
-	todayStart := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Now().Location()).Unix()
-	var n int
-	config.DB.Get(&n, fmt.Sprintf(
-		"SELECT COUNT(*) FROM %s WHERE path = $1 AND COALESCE(NULLIF(visitor_id,''), ip) = $2 AND created_at >= $3",
-		config.T("access_logs")), path, key, todayStart)
-	return n <= 1
-}
+// 历史上这里有 isFirstPostViewToday() 做「同访客同篇文章当日去重」，
+// 但用户明确要求「访客点击就 +1，刷新一次再 +1」不要任何限制，所以
+// 已删除。爬虫 IsBot 早退路径仍然在 /track 入口生效，bot 流量不会进
+// 这个增量逻辑。如果未来需要重启「按访客唯一计」策略，可以从 git
+// 历史里恢复这个函数，并在 /track handler 里重新加守门条件。
 
 // Recent access logs
 // OnlineUsers returns currently active visitors with comment author matching

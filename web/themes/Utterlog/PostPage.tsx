@@ -28,10 +28,13 @@ export default function PostPage({ post }: { post: any }) {
               阅读时长按 300 字/分钟估算，最少 1 分钟。字段任一为 0 不渲染。 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', fontSize: '13px', color: '#9ca3af' }}>
             <span>{formatDate(post.created_at)}</span>
-            {post.view_count > 0 && (
+            {/* view_count = DB + 1 (cosmetic)，跟 Azure/Chred/Flux 主题
+                的 PostPage 行为对齐。后端 /track 每次访问都 +1，刷新就再
+                +1，cosmetic 跟 DB 永远对齐。 */}
+            {((post.view_count || 0) + 1) > 0 && (
               <span title="阅读次数">
                 <i className="fa-regular fa-eye" style={{ marginRight: 4 }} />
-                {post.view_count}
+                {(post.view_count || 0) + 1}
               </span>
             )}
             {post.word_count > 0 && (
