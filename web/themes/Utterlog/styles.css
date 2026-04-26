@@ -286,39 +286,143 @@
   line-height: 1.5;
 }
 
-/* Related post list */
-[data-theme="Utterlog"] .post-related-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+/* Related posts — 卡片网格。
+   PostNavigation.tsx 的渲染从老的"标题 + 阅读量"列表升级到了带封面
+   的卡片网格（与 Azure / Chred 主题已保持一致的 className 命名），
+   Utterlog 主题之前还停留在老 .post-related-item* schema，结果就是
+   样式完全不接 + 封面图不带 object-fit:cover 把高度撑爆 —— 这就是
+   "样式没有，图片非常大" 的根因。本节套用新 schema，视觉风格沿用
+   Utterlog 极简圆角白底基调，区别于 Azure 的 hover-overlay 黑卡。 */
+[data-theme="Utterlog"] .post-related-refresh {
+  margin-left: auto;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--color-text-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
 }
-[data-theme="Utterlog"] .post-related-item {
+[data-theme="Utterlog"] .post-related-refresh:hover { color: var(--color-primary); }
+
+[data-theme="Utterlog"] .post-related-grid {
+  display: grid;
+  /* 3 列 × 2 行 = 6 篇/页（PostPage 传 pageSize=6 配套）。
+     800px 极简阅读宽度下 5 列太挤，3 列每张约 240px。窄屏退回 2 列。 */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px 0 4px;
+}
+@media (max-width: 720px) {
+  [data-theme="Utterlog"] .post-related-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+[data-theme="Utterlog"] .post-related-card {
+  text-decoration: none;
+  display: block;
+  border-radius: 10px;
+  overflow: hidden;
+}
+[data-theme="Utterlog"] .post-related-card-cover {
+  position: relative;
+  /* 关键：固定宽高比 + object-fit cover。少这两条原图任意尺寸
+     都会撑爆，这就是用户报"图片非常大"的具体机制。 */
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--color-bg-soft);
+}
+[data-theme="Utterlog"] .post-related-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+[data-theme="Utterlog"] .post-related-card:hover .post-related-card-cover img {
+  transform: scale(1.04);
+}
+[data-theme="Utterlog"] .post-related-card-date {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  font-size: 10px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
+}
+[data-theme="Utterlog"] .post-related-card-cat {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  text-decoration: none;
-  border-bottom: 1px solid var(--color-divider);
-  transition: color 0.15s;
+  gap: 3px;
 }
-[data-theme="Utterlog"] .post-related-item:hover .post-related-item-title { color: var(--color-primary); }
-[data-theme="Utterlog"] .post-related-item-title {
-  font-size: 14px;
-  color: var(--color-text-main);
+/* Hover overlay —— 跟 Azure 主题一致：平时只显示封面 + 角标；
+   hover 时全卡黑色渐变浮起 + 标题滑入；继续 hover 浏览/评论数淡入。 */
+[data-theme="Utterlog"] .post-related-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 40%, rgba(0, 0, 0, 0.78));
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  transition: opacity 0.25s;
+  z-index: 1;
+}
+[data-theme="Utterlog"] .post-related-card:hover .post-related-card-overlay,
+[data-theme="Utterlog"] .post-related-card-cover:hover .post-related-card-overlay,
+[data-theme="Utterlog"] .post-related-card:focus-within .post-related-card-overlay {
+  opacity: 1;
+}
+[data-theme="Utterlog"] .post-related-card-bottom {
+  padding: 10px 12px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transform: translateY(16px);
+  transition: transform 0.25s;
+}
+[data-theme="Utterlog"] .post-related-card:hover .post-related-card-bottom,
+[data-theme="Utterlog"] .post-related-card-cover:hover .post-related-card-bottom,
+[data-theme="Utterlog"] .post-related-card:focus-within .post-related-card-bottom {
+  transform: translateY(0);
+}
+[data-theme="Utterlog"] .post-related-card-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #fff;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-  flex: 1;
-  transition: color 0.15s;
 }
-[data-theme="Utterlog"] .post-related-item-views {
-  font-size: 12px;
-  color: var(--color-text-dim);
-  flex-shrink: 0;
+[data-theme="Utterlog"] .post-related-card-stats {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.78);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.25s 0.05s;
+}
+[data-theme="Utterlog"] .post-related-card:hover .post-related-card-stats,
+[data-theme="Utterlog"] .post-related-card-cover:hover .post-related-card-stats,
+[data-theme="Utterlog"] .post-related-card:focus-within .post-related-card-stats {
+  opacity: 1;
 }
 [data-theme="Utterlog"] .post-related-empty {
+  grid-column: 1 / -1;
   padding: 24px 0;
   text-align: center;
   font-size: 13px;

@@ -49,7 +49,9 @@ export default function Header() {
             ctx.site.logo ? (
               <img
                 src={ctx.site.logo}
-                alt={siteTitle}
+                // text_logo 模式下文字已显示品牌名，alt='' 避免破图 fallback
+                // 时多渲染一份名字。logo only 时保留 alt={siteTitle}。
+                alt={showText ? '' : siteTitle}
                 style={{ height: 26, maxWidth: 140, objectFit: 'contain', display: 'block' }}
               />
             ) : (

@@ -10,7 +10,7 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [navigating, setNavigating] = useState(false);
-  const { menus, site } = useThemeContext();
+  const { menus, site, options } = useThemeContext();
 
   useEffect(() => { setNavigating(false); }, [pathname]);
   useEffect(() => {
@@ -29,7 +29,17 @@ export default function Header() {
   // (logo + search), and the '重置默认' button in the Menus admin
   // tab seeds the standard items (首页/关于/归档/说说/友链/订阅).
   const navItems = menus.header ?? [];
-  const siteName = site.title || '西风';
+  // fallback 用中性 'Utterlog'，不写死任何用户站名
+  const siteName = site.title || 'Utterlog';
+
+  // 标题显示方式：跟 Azure / Utterlog / Flux 共用 site_brand_mode
+  const rawMode = options?.site_brand_mode;
+  const mode: 'text' | 'text_logo' | 'logo' =
+    rawMode === 'text' || rawMode === 'text_logo' || rawMode === 'logo'
+      ? rawMode
+      : (site.logo ? 'logo' : 'text');
+  const showMark = mode === 'logo' || mode === 'text_logo';
+  const showText = mode === 'text' || mode === 'text_logo';
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -47,17 +57,25 @@ export default function Header() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 24px',
       }}>
-        {/* Logo */}
+        {/* Logo / Brand lockup — site_brand_mode 控制 */}
         <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {site.logo ? (
-            <img src={site.logo} alt={siteName} style={{ height: '28px', objectFit: 'contain' }} />
-          ) : (
-            <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 0c9.601 0 12 2.399 12 12 0 9.601-2.399 12-12 12-9.601 0-12-2.399-12-12C0 2.399 2.399 0 12 0z" fill="#F53102" />
-              <path d="M17.008 17.29H11.44a5.57 5.57 0 0 1-5.562-5.567A5.57 5.57 0 0 1 11.44 6.16a5.57 5.57 0 0 1 5.567 5.563Z" fill="white" />
-            </svg>
+          {showMark && (
+            site.logo ? (
+              <img
+                src={site.logo}
+                alt={showText ? '' : siteName}
+                style={{ height: '28px', objectFit: 'contain' }}
+              />
+            ) : (
+              <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 0c9.601 0 12 2.399 12 12 0 9.601-2.399 12-12 12-9.601 0-12-2.399-12-12C0 2.399 2.399 0 12 0z" fill="#F53102" />
+                <path d="M17.008 17.29H11.44a5.57 5.57 0 0 1-5.562-5.567A5.57 5.57 0 0 1 11.44 6.16a5.57 5.57 0 0 1 5.567 5.563Z" fill="white" />
+              </svg>
+            )
           )}
-          <span className="site-title" style={{ fontSize: '20px', fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.02em' }}>{siteName}</span>
+          {showText && (
+            <span className="site-title" style={{ fontSize: '20px', fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.02em' }}>{siteName}</span>
+          )}
         </Link>
 
         {/* Center Nav */}

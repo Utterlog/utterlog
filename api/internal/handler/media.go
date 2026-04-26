@@ -675,12 +675,24 @@ func UploadBranding(c *gin.Context) {
 		return
 	}
 
-	// Returned URL stays at the short root path (/logo.png etc.) —
-	// that's what site_favicon / site_logo store, and the gin route
-	// /<purpose>.:ext maps it to the actual disk file (which is now
-	// in the persistent branding dir). Browsers also auto-fetch
-	// /favicon.ico, so keeping the root route is required regardless.
-	url := strings.TrimRight(config.PublicBaseURL(), "/") + "/" + filename
+	// Return a ROOT-RELATIVE path like '/logo.png', NOT the full
+	// '<site_url>/logo.png'. Why:
+	//
+	//   * site_url 改了不影响。Admin 改了「常规设置 → 站点网址」
+	//     之后 logo 路径不会指向旧域名。
+	//
+	//   * 跨环境通用。本地 docker（site_url 可能是空 / localhost:9260）
+	//     和正式环境（site_url 是 https://xxx.com）共用同一份 DB
+	//     option，浏览器都能正确加载。
+	//
+	//   * 真正"写死的固定地址"。/logo.<ext> 由 main.go 的
+	//     servePersistent 路由解析到 public/uploads/branding/，
+	//     无论 host 是什么都走同一条路由。
+	//
+	// 浏览器渲染 <img src="/logo.png"> 时自动以当前页面 origin 拼接，
+	// 不需要 admin 关心 site_url。手动粘贴外部 CDN 绝对 URL 的情况
+	// 不走这个 handler（直接打到 input 框上），不受影响。
+	url := "/" + filename
 
 	util.Success(c, gin.H{
 		"url":      url,

@@ -106,6 +106,8 @@ export default function AiSettingsPage() {
     ai_polish_prompt: '',
     ai_questions_prompt: '',
     ai_image_prompt: '',
+    ai_comment_audit_prompt: '',
+    ai_comment_reply_prompt: '',
     ai_image_auto: 'false',
     ai_slug_auto: 'false',
     ai_keywords_auto: 'false',
@@ -159,12 +161,14 @@ export default function AiSettingsPage() {
       // saving an empty box — both restore default behaviour on the
       // server. Mapping: prompt_defaults key → option key.
       const promptKeyMap: Record<string, string> = {
-        summary:   'ai_summary_prompt',
-        slug:      'ai_slug_prompt',
-        keywords:  'ai_keywords_prompt',
-        polish:    'ai_polish_prompt',
-        questions: 'ai_questions_prompt',
-        cover:     'ai_image_prompt',
+        summary:         'ai_summary_prompt',
+        slug:            'ai_slug_prompt',
+        keywords:        'ai_keywords_prompt',
+        polish:          'ai_polish_prompt',
+        questions:       'ai_questions_prompt',
+        cover:           'ai_image_prompt',
+        'comment-audit': 'ai_comment_audit_prompt',
+        'comment-reply': 'ai_comment_reply_prompt',
       };
       Object.entries(promptKeyMap).forEach(([defaultKey, optKey]) => {
         const saved = opts[optKey];
@@ -267,12 +271,14 @@ export default function AiSettingsPage() {
       // textareas where the user explicitly typed a different version
       // persist as a stored value.
       const promptOptToDefaultKey: Record<string, string> = {
-        ai_summary_prompt:   'summary',
-        ai_slug_prompt:      'slug',
-        ai_keywords_prompt:  'keywords',
-        ai_polish_prompt:    'polish',
-        ai_questions_prompt: 'questions',
-        ai_image_prompt:     'cover',
+        ai_summary_prompt:       'summary',
+        ai_slug_prompt:          'slug',
+        ai_keywords_prompt:      'keywords',
+        ai_polish_prompt:        'polish',
+        ai_questions_prompt:     'questions',
+        ai_image_prompt:         'cover',
+        ai_comment_audit_prompt: 'comment-audit',
+        ai_comment_reply_prompt: 'comment-reply',
       };
       Object.entries(config).forEach(([k, v]) => {
         if (!k.startsWith('ai_')) return;
@@ -707,7 +713,11 @@ export default function AiSettingsPage() {
               // 封面 prompt 占位符不一样：{title} {excerpt} {excerpt_block}
               // {style} {text_policy}. 改 admin 选项 → 风格 / 文字策略
               // dropdown 决定 {style} / {text_policy} 实际填什么。
-              { key: 'cover',     label: '封面图提示词', rows: 6, optKey: 'ai_image_prompt'     },
+              { key: 'cover',           label: '封面图提示词',     rows: 6, optKey: 'ai_image_prompt'         },
+              // 评论 AI 占位符：{content} 是评论原文，{context_block}（仅 reply）
+              // 是已格式化的「文章标题/摘要/父评论」段落，开关在评论设置里。
+              { key: 'comment-audit',   label: '评论审核提示词',   rows: 8, optKey: 'ai_comment_audit_prompt' },
+              { key: 'comment-reply',   label: '评论智能回复提示词', rows: 8, optKey: 'ai_comment_reply_prompt' },
             ] as const).map((row, idx, arr) => {
               const optKey = row.optKey;
               const def = promptDefaults[row.key] ?? '';

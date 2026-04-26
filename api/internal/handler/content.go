@@ -215,6 +215,18 @@ func CreateComment(c *gin.Context) {
 		status = "spam"
 	}
 
+	// AI 审核（admin 可在评论设置启用）。仅对未被信任路径直放的评论
+	// 走审核 —— 已 approved 的（admin 自评 / passport 信任 / 历史
+	// 信任）跳过，避免无意义 AI 调用。失败策略由 audit_fail_action
+	// 决定：reject(默认) → spam / pending → 待人工 / ignore → 不变。
+	// 审核结果在异步 reply 阶段写入队列条目，方便管理员复盘。
+	var auditResult *auditCommentResult
+	if status == "pending" && status != "spam" && shouldAuditComments() {
+		var newStatus string
+		newStatus, auditResult = processCommentAudit(req.Content, status)
+		status = newStatus
+	}
+
 	// Auto-approve if commenter has prior approved comment (email or visitor_id match).
 	// Gated by `comment_trust_returning` option — default ON (option absent means ""),
 	// admins can disable via Settings → 评论设置. Toggle stores "true"/"false" via
@@ -266,6 +278,13 @@ func CreateComment(c *gin.Context) {
 
 	// Send email notifications
 	go sendCommentNotifications(req.PostID, req.ParentID, req.Author, req.Content, id)
+
+	// AI 智能回复（仅 approved 的评论触发；shouldReplyComments() 内部
+	// 自有开关检查，但提前判断省一次 goroutine 创建开销）。adminID
+	// 取 1（默认博主），将来评论 AI 回复设置里加管理员选择再覆盖。
+	if status == "approved" && shouldReplyComments() {
+		go processCommentReply(id, auditResult, 1)
+	}
 
 	util.Success(c, gin.H{"id": id, "status": status})
 }
@@ -539,6 +558,15 @@ func ApproveComment(c *gin.Context) {
 			config.DB.Exec(fmt.Sprintf("UPDATE %s SET comment_count = comment_count + 1 WHERE id = $1", config.T("posts")), postID)
 		}
 	}
+
+	// AI 智能回复 —— admin 手动审核通过时也触发。AI 审核已经在
+	// CreateComment 跑过（如果开启），这里跳过 audit 直接 reply。
+	// processCommentReply 内部有"已存在队列条目就跳过"的幂等检查，
+	// 防止 admin 反复点 approve 引发重复 AI 调用。
+	if (oldStatus == "pending" || oldStatus == "spam") && shouldReplyComments() {
+		go processCommentReply(id, nil, middleware.GetUserID(c))
+	}
+
 	util.Success(c, gin.H{"id": id})
 }
 

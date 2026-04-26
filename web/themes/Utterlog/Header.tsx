@@ -5,19 +5,18 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useThemeContext } from '@/lib/theme-context';
 
-const defaultNavItems = [
-  { href: '/', label: '首页' },
-  { href: '/archives', label: '归档' },
-  { href: '/moments', label: '说说' },
-  { href: '/feeds', label: '订阅' },
-  { href: '/about', label: '关于' },
-];
-
 export default function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const { menus, site, options } = useThemeContext();
-  const navItems = menus.header?.length ? menus.header : defaultNavItems;
+  // Header 导航 admin-driven —— 跟 Azure / Chred 主题一致，没有
+  // 硬编码 fallback。admin 没在「主题 → 菜单 → 顶部导航」配置时
+  // header 不显示导航项（只剩 logo / 文字 brand），点 admin 的
+  // 「重置默认」按钮会种入标准菜单（首页/关于/归档/说说/友链/订阅）
+  // 到 DB。之前主题代码层有一份 5 项 fallback（首页/归档/说说/订
+  // 阅/关于）跟 admin "重置默认"的 6 项不一致，admin 留空 vs 重置
+  // 看到不同导航，让用户困惑 —— 这次去掉主题层 fallback 解决。
+  const navItems = menus.header ?? [];
   const siteName = site.title || 'Utterlog';
 
   // 标题显示方式 — 由后台「常规设置 → 站点基础信息 → 标题显示方式」
@@ -58,7 +57,11 @@ export default function Header() {
           {showLogo && (
             <img
               src={site.logo}
-              alt={siteName}
+              // text_logo 模式下文字已经表达品牌名，img 是装饰性元素，
+              // alt='' 让破图回退时不重复显示"西风  西风"。
+              // logo 模式（无 showText）保留 alt={siteName} 服务无障碍 +
+              // 破图 fallback。
+              alt={showText ? '' : siteName}
               style={{ height: '28px', maxWidth: '180px', objectFit: 'contain', display: 'block' }}
             />
           )}

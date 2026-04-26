@@ -120,11 +120,26 @@ export default function SettingsPage() {
         comment_trust_returning: s.comment_trust_returning ?? true,
         comment_require_email: s.comment_require_email ?? true,
         comment_notify_admin: s.comment_notify_admin ?? true,
-        comment_pagination: s.comment_pagination ?? false,
-        comment_per_page: s.comment_per_page || 10,
+        // comment_pagination / comment_per_page 移除 —— 评论一直是
+        // 一次性渲染（CommentList.tsx 没分页代码），是历史 placebo
         comment_order: s.comment_order || 'newest',
         comment_captcha_mode: s.comment_captcha_mode || 'pow',
         comment_captcha_difficulty: s.comment_captcha_difficulty || 4,
+        // AI 评论审核 + 智能回复（v1.4.0 新功能，参考 Typecho CommentAI 插件思路）
+        ai_comment_audit_enabled: s.ai_comment_audit_enabled === 'true',
+        ai_comment_audit_threshold: s.ai_comment_audit_threshold || '0.8',
+        ai_comment_audit_fail_action: s.ai_comment_audit_fail_action || 'reject',
+        ai_comment_reply_enabled: s.ai_comment_reply_enabled === 'true',
+        ai_comment_reply_mode: s.ai_comment_reply_mode || 'audit',
+        ai_comment_reply_badge_text: s.ai_comment_reply_badge_text ?? '🤖 AI 辅助回复',
+        ai_comment_reply_rate_limit: s.ai_comment_reply_rate_limit || '20',
+        ai_comment_reply_delay: s.ai_comment_reply_delay || '0',
+        ai_comment_reply_context_title: s.ai_comment_reply_context_title !== 'false',
+        ai_comment_reply_context_excerpt: s.ai_comment_reply_context_excerpt !== 'false',
+        ai_comment_reply_context_parent: s.ai_comment_reply_context_parent !== 'false',
+        ai_comment_reply_only_first: s.ai_comment_reply_only_first === 'true',
+        ai_comment_audit_prompt: s.ai_comment_audit_prompt || '',
+        ai_comment_reply_prompt: s.ai_comment_reply_prompt || '',
         // Telegram
         telegram_bot_token: s.telegram_bot_token || '',
         telegram_chat_id: s.telegram_chat_id || '',
@@ -225,7 +240,18 @@ export default function SettingsPage() {
     ],
     email: ['email_provider', 'email_from', 'email_from_name', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_encryption', 'resend_api_key', 'sendflare_api_key'],
     telegram: ['telegram_bot_token', 'telegram_chat_id', 'telegram_webhook_secret', 'tg_notify_comment', 'tg_notify_follow', 'tg_notify_publish', 'tg_daily_report', 'tg_comment_approve', 'tg_comment_reply', 'tg_publish_moment', 'tg_upload_media'],
-    comment: ['allow_comments', 'comment_moderation', 'comment_trust_returning', 'comment_require_email', 'comment_notify_admin', 'comment_pagination', 'comment_per_page', 'comment_order', 'comment_captcha_mode', 'comment_captcha_difficulty'],
+    comment: [
+      'allow_comments', 'comment_moderation', 'comment_trust_returning',
+      'comment_require_email', 'comment_notify_admin', 'comment_order',
+      'comment_captcha_mode', 'comment_captcha_difficulty',
+      // AI 评论审核 + 智能回复
+      'ai_comment_audit_enabled', 'ai_comment_audit_threshold', 'ai_comment_audit_fail_action',
+      'ai_comment_reply_enabled', 'ai_comment_reply_mode', 'ai_comment_reply_badge_text',
+      'ai_comment_reply_rate_limit', 'ai_comment_reply_delay',
+      'ai_comment_reply_context_title', 'ai_comment_reply_context_excerpt',
+      'ai_comment_reply_context_parent', 'ai_comment_reply_only_first',
+      'ai_comment_audit_prompt', 'ai_comment_reply_prompt',
+    ],
     media: ['media_driver', 's3_endpoint', 's3_region', 's3_bucket', 's3_access_key', 's3_secret_key', 's3_custom_domain', 'storage_limit_gb', 'max_upload_size', 'allowed_extensions', 'folder_driver_covers', 'folder_driver_books', 'folder_driver_movies', 'folder_driver_music', 'folder_driver_links', 'folder_driver_moments', 'folder_driver_albums', 'folder_driver_avatars'],
     image: [
       'image_convert_format', 'image_quality', 'image_max_width', 'image_strip_exif',
@@ -889,29 +915,48 @@ export default function SettingsPage() {
                 <FormRowToggleC label="新评论邮件通知管理员" register={register('comment_notify_admin')} last />
               </FormSectionC>
 
-              <FormSectionC title="分页与排序" icon="fa-regular fa-list-ol">
-                <FormRowToggleC
-                  label="开启评论分页"
-                  hint="关闭后所有评论一次性展开（移动端友好，适合评论较少的博客）"
-                  register={register('comment_pagination')}
-                />
-                {watch('comment_pagination') && (
-                  <FormRowInputC
-                    label="每页评论数"
-                    hint="仅分页开启时生效"
-                    type="number"
-                    register={register('comment_per_page')}
-                  />
-                )}
-                <FormRowSelectC
-                  label="默认排序"
-                  register={register('comment_order')}
-                  options={[
-                    { value: 'newest', label: '最新评论在前' },
-                    { value: 'oldest', label: '最早评论在前' },
-                  ]}
-                  last
-                />
+              <FormSectionC title="排序" icon="fa-regular fa-arrow-down-wide-short" footerHint="访客在评论区可以自行切换并存到本地，这里设的是没切换过时的初始顺序。">
+                {/* 默认排序 —— inline 单选行，跟「标题显示方式」一致，
+                    用原生 <input type="radio"> 显示真实圆孔。 */}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '32% 1fr',
+                  minHeight: 56,
+                }}>
+                  <div style={{
+                    padding: '10px 14px',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>
+                      默认排序
+                    </div>
+                    <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.5 }}>
+                      访客首次进入评论区的初始顺序
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: '10px 14px',
+                    display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap',
+                  }}>
+                    {([
+                      { value: 'newest', label: '最新在前' },
+                      { value: 'oldest', label: '最早在前' },
+                    ] as const).map(opt => (
+                      <label key={opt.value} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        cursor: 'pointer', fontSize: 13, color: 'var(--color-text-main)',
+                        userSelect: 'none',
+                      }}>
+                        <input
+                          type="radio"
+                          value={opt.value}
+                          {...register('comment_order')}
+                          style={{ accentColor: 'var(--color-primary)', cursor: 'pointer', margin: 0 }}
+                        />
+                        <span>{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </FormSectionC>
 
               {/* 人机验证：保留自定义 3 列图标 radio 卡片（非表单式 UI），
@@ -948,6 +993,81 @@ export default function SettingsPage() {
                     last
                   />
                 )}
+              </FormSectionC>
+
+              {/* AI 评论审核 —— 复用全局 ai_providers，admin 可在「常规设置 →
+                  AI → 用途路由」给 'comment-audit' purpose 单独绑 provider，
+                  也可不绑自动 fallback 默认链。 */}
+              <FormSectionC title="AI 评论审核" icon="fa-regular fa-shield-check" footerHint="启用后访客评论先经 AI 判断是否合规，再走原有人机验证 / 信任路径。AI 审核失败按下方策略处理，提示词在最下方「自定义提示词」可改。">
+                <FormRowToggleC label="启用 AI 审核" register={register('ai_comment_audit_enabled')} />
+                <FormRowInputC
+                  label="审核阈值"
+                  hint="0-1 之间。AI 返回的 confidence ≥ 阈值才算通过，越高越严格"
+                  type="number"
+                  register={register('ai_comment_audit_threshold')}
+                />
+                <FormRowSelectC
+                  label="审核失败处理"
+                  register={register('ai_comment_audit_fail_action')}
+                  options={[
+                    { value: 'reject', label: '直接拦截（标记为垃圾）' },
+                    { value: 'pending', label: '转人工审核（待审核队列）' },
+                    { value: 'ignore', label: '忽略（继续按原状态处理）' },
+                  ]}
+                  last
+                />
+              </FormSectionC>
+
+              {/* AI 智能回复 —— 用 ai_purpose_comment-reply_provider 路由。
+                  审核通过的评论异步生成回复入队列，按 mode 决定后续流程。 */}
+              <FormSectionC title="AI 智能回复" icon="fa-regular fa-robot" footerHint="审核通过的评论自动调 AI 生成回复。auto 模式直接发布，audit 模式入队列等管理员审核（推荐），suggest 仅显示建议不发布。提示词在最下方「自定义提示词」可改。">
+                <FormRowToggleC label="启用 AI 智能回复" register={register('ai_comment_reply_enabled')} />
+                <FormRowSelectC
+                  label="回复模式"
+                  register={register('ai_comment_reply_mode')}
+                  options={[
+                    { value: 'audit', label: '人工审核模式（推荐）—— 入队列等审核' },
+                    { value: 'auto', label: '全自动模式 —— 生成后直接发布' },
+                    { value: 'suggest', label: '仅建议模式 —— 入队列但不发布' },
+                  ]}
+                />
+                <FormRowInputC
+                  label="AI 标识文本"
+                  hint="附加在 AI 回复末尾的标识，留空则不显示。透明性原则建议保留"
+                  register={register('ai_comment_reply_badge_text')}
+                />
+                <FormRowInputC
+                  label="每小时调用上限"
+                  hint="防止 API 费用失控，0 为不限制"
+                  type="number"
+                  register={register('ai_comment_reply_rate_limit')}
+                />
+                <FormRowInputC
+                  label="回复延迟（秒）"
+                  hint="审核通过后延迟多少秒再调 AI，0 为立即。建议 30-120 秒让回复更自然"
+                  type="number"
+                  register={register('ai_comment_reply_delay')}
+                />
+                <FormRowToggleC
+                  label="上下文：包含文章标题"
+                  hint="把当前文章标题传给 AI，回复更贴题"
+                  register={register('ai_comment_reply_context_title')}
+                />
+                <FormRowToggleC
+                  label="上下文：包含文章摘要（前 300 字）"
+                  register={register('ai_comment_reply_context_excerpt')}
+                />
+                <FormRowToggleC
+                  label="上下文：包含父级评论"
+                  hint="访客回复其他人评论时，把对方的评论传给 AI"
+                  register={register('ai_comment_reply_context_parent')}
+                />
+                <FormRowToggleC
+                  label="仅对文章首条评论回复"
+                  hint="开启后同一文章 AI 只回复一次"
+                  register={register('ai_comment_reply_only_first')}
+                  last
+                />
               </FormSectionC>
             </>
           )}

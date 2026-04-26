@@ -108,13 +108,21 @@ interface NavigationData {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
-export default function PostNavigation({ postId, coverUrl }: { postId: number; coverUrl?: string }) {
+export default function PostNavigation({ postId, coverUrl, pageSize }: { postId: number; coverUrl?: string; pageSize?: number }) {
   const { options } = useThemeContext();
   const [data, setData] = useState<NavigationData | null>(null);
   const [activeTab, setActiveTab] = useState('related');
   const [refreshing, setRefreshing] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
-  const PAGE_SIZE = 5;
+  // 默认 5（Azure / Chred / Flux 旧行为不变），主题可通过 prop 覆盖。
+  // Utterlog 主题用 6 配合 3×2 网格布局。
+  const PAGE_SIZE = pageSize ?? 5;
+  // 边界态（已是最早 / 已是最新）封面 fallback：
+  // 1. 调用方传了 coverUrl —— 用真实封面（最理想）
+  // 2. 没传 —— 用 randomCoverUrl(postId) 拿基于 postId 的稳定随机封面
+  // 之前没 (2) 这一层，Utterlog 主题调 PostNavigation 没传 coverUrl，
+  // 边界态就只显示 .post-prev-next-cover 的灰色背景，没图。
+  const fallbackCover = coverUrl || randomCoverUrl(postId, options);
 
   const fetchData = () => {
     fetch(`${API_BASE}/posts/${postId}/navigation`)
@@ -189,7 +197,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
           ) : (
             <div className="post-prev-next-link prev" style={{ cursor: 'default' }}>
               <div className="post-prev-next-cover">
-                {coverUrl && <FadeCover src={coverUrl} />}
+                <FadeCover src={fallbackCover} />
               </div>
               <div className="post-prev-next-text">
                 <span className="post-prev-next-label"><i className="fa-light fa-sparkles" style={{ fontSize: '12px' }} /> 已是最早一篇</span>
@@ -209,7 +217,7 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
           ) : (
             <div className="post-prev-next-link next" style={{ cursor: 'default' }}>
               <div className="post-prev-next-cover">
-                {coverUrl && <FadeCover src={coverUrl} />}
+                <FadeCover src={fallbackCover} />
               </div>
               <div className="post-prev-next-text">
                 <span className="post-prev-next-label">这是最新文章 <i className="fa-light fa-sparkles" style={{ fontSize: '12px' }} /></span>

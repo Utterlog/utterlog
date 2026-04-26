@@ -38,6 +38,9 @@ type Comment struct {
 	// silently into []Comment{} if these columns aren't modeled.
 	SourceType     string `db:"source_type" json:"source_type,omitempty"`
 	SourceSiteUUID string `db:"source_site_uuid" json:"source_site_uuid,omitempty"`
+	// AI 智能回复标记。前端检测到 true 时按 ai_comment_reply_badge_text
+	// 展示「🤖 AI 辅助回复」徽标。由 publishAIReply 在写入新评论时置位。
+	IsAIReply bool `db:"is_ai_reply" json:"is_ai_reply"`
 }
 
 type GeoInfo struct {

@@ -2,7 +2,7 @@
 
 import PostCard from './PostCard';
 import Sidebar from './Sidebar';
-import Pagination from '@/components/blog/Pagination';
+import Pagination from './Pagination';
 import FadeCover from '@/components/blog/FadeCover';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';

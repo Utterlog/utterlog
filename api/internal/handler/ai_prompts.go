@@ -95,6 +95,54 @@ const (
 极简风格的现代博客封面插画，抽象柔和的视觉意象，低饱和度配色，柔和渐变背景，轻微颗粒纹理，留白构图，专业柔光，空间层次感，中间或左侧大面积留白便于后期叠加标题文字，高质量数字插画，16:9 横版，避免人物面部特写。
 
 再次强调：画面中不得出现任何文字、字母、数字或符号。`
+
+	// DefaultCommentAuditPrompt — used by auditComment to ask the
+	// AI whether a visitor's comment should be auto-approved or
+	// flagged. JSON-only response is enforced via the system prompt
+	// so we can parse {passed, confidence, reason} reliably without
+	// regex acrobatics. Audit calls run with low temperature (0.1)
+	// for deterministic verdicts; reply calls keep the chat default.
+	//
+	// Placeholders: {content} — the raw comment text (UTF-8).
+	DefaultCommentAuditPrompt = `你是博客评论审核员，需要判断访客评论是否符合社区规范。
+
+审核维度：
+1. 不含政治敏感、辱华、煽动内容
+2. 不含色情、暴力、恐怖描述
+3. 不含赌博、毒品、违法引导
+4. 不含人身攻击、恶意辱骂
+5. 不含垃圾广告、推广链接、诱导诈骗
+6. 不含纯刷屏、无意义重复字符
+
+只返回严格 JSON，不要任何额外文字 / Markdown 标记 / 代码块包裹：
+{"passed": true|false, "confidence": 0.0-1.0, "reason": "简要原因"}
+
+待审核评论：
+{content}`
+
+	// DefaultCommentReplyPrompt — used by generateAICommentReply to
+	// produce the reply text that lands in ul_ai_comment_queue.
+	// {context_block} expands to optional 文章标题/摘要/父评论 lines
+	// (controlled by admin's ai_comment_reply_context_* toggles).
+	// Empty context_block collapses cleanly when no context is on.
+	//
+	// Placeholders: {content}, {context_block}.
+	DefaultCommentReplyPrompt = `你是这个博客的博主，需要用自然亲切、有人情味的语气回复读者评论。
+
+回复要求：
+1. 针对评论内容给出有价值、有针对性的回应
+2. 提问类评论给出明确的答案
+3. 赞美类评论表示感谢并鼓励交流
+4. 批评类评论理性回应，不卑不亢
+5. 长度控制在 50-150 字
+6. 使用与读者评论相同的语言（中文为主）
+7. 不要使用过于正式或机械化的开头（如"感谢您的评论"）
+8. 不要复述评论内容，直接回应观点
+
+{context_block}读者评论：
+{content}
+
+请直接给出回复内容，不要任何前缀、署名或解释：`
 )
 
 // renderPrompt performs literal {placeholder} substitution. A missing
@@ -165,10 +213,12 @@ func resolvePrompt(saved, defaultPrompt string) string {
 // in lockstep — admins see exactly what runs when they leave a
 // field empty.
 var AIPromptDefaults = map[string]string{
-	"summary":   DefaultSummaryPrompt,
-	"slug":      DefaultSlugPrompt,
-	"keywords":  DefaultKeywordsPrompt,
-	"polish":    DefaultPolishPrompt,
-	"questions": DefaultQuestionsPrompt,
-	"cover":     DefaultCoverPrompt,
+	"summary":       DefaultSummaryPrompt,
+	"slug":          DefaultSlugPrompt,
+	"keywords":      DefaultKeywordsPrompt,
+	"polish":        DefaultPolishPrompt,
+	"questions":     DefaultQuestionsPrompt,
+	"cover":         DefaultCoverPrompt,
+	"comment-audit": DefaultCommentAuditPrompt,
+	"comment-reply": DefaultCommentReplyPrompt,
 }

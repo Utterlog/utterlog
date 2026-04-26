@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import CommentList from '@/components/blog/CommentList';
-import AIReaderChat from '@/components/blog/AIReaderChat';
+import CommentList from './CommentList';
+import AIReaderChat from './AIReaderChat';
 
 export function CommentCount({ initial }: { initial: number }) {
   // 通过 window event 监听评论数变化

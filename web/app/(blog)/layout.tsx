@@ -53,7 +53,18 @@ export default async function BlogLayout({
           previous dangerouslySetInnerHTML approach tripped Next.js
           16's "Encountered a script tag while rendering React
           component" warning during hydration. */}
-      <link rel="stylesheet" href={`/themes/${ctx.theme.name}/styles.css`} />
+      {/* dev 模式给 styles.css 追加 ?v=<timestamp> 强制 cache bust。
+          themes/<T>/styles.css 是 public 静态资源，浏览器会激进
+          缓存；symlink 替换或源文件改动后，没 query 的话用户即使
+          硬刷新也可能命中旧缓存。生产模式不加 query，让 CDN /
+          浏览器正常缓存（生产是 docker build 出新镜像，URL 路径
+          也跟版本号挂钩）。 */}
+      <link
+        rel="stylesheet"
+        href={`/themes/${ctx.theme.name}/styles.css${
+          process.env.NODE_ENV === 'development' ? `?v=${Date.now()}` : ''
+        }`}
+      />
       <SlotHead options={ctx.options} />
       <Script src="https://id.utterlog.com/static/passport.js" strategy="lazyOnload" />
       <ThemeProvider value={ctx}>

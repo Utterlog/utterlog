@@ -322,6 +322,13 @@ func main() {
 		authed.GET("/comments/pending-count", handler.PendingCommentCount)
 		authed.DELETE("/comments/:id", handler.DeleteCommentHandler)
 
+		// AI 评论队列（智能回复 + 审核结果）admin 后台管理
+		authed.GET("/admin/ai-comments", handler.AICommentQueueList)
+		authed.POST("/admin/ai-comments/:id/approve", handler.AICommentApprove)
+		authed.POST("/admin/ai-comments/:id/reject", handler.AICommentReject)
+		authed.POST("/admin/ai-comments/:id/regenerate", handler.AICommentRegenerate)
+		authed.DELETE("/admin/ai-comments/:id", handler.AICommentDelete)
+
 		// Annotations (段落点评) management
 		authed.GET("/admin/annotations", handler.AdminListAnnotations)
 		authed.DELETE("/admin/annotations/:id", handler.AdminDeleteAnnotation)

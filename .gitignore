@@ -110,3 +110,6 @@ pnpm-lock.yaml
 # must be committed, otherwise CI Docker builds 404 on the font URL.
 /PaperMono-Regular.woff2
 backup/
+
+# Reference materials (Typecho CommentAI plugin source for reference)
+/Comment/

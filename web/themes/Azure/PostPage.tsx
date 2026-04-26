@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import PostContent from '@/components/blog/PostContent';
-import TableOfContents from '@/components/blog/TableOfContents';
-import AISummary from '@/components/blog/AISummary';
-import PostNavigation from '@/components/blog/PostNavigation';
+import PostContent from './PostContent';
+import TableOfContents from './TableOfContents';
+import AISummary from './AISummary';
+import PostNavigation from './PostNavigation';
 import FadeCover from '@/components/blog/FadeCover';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { getCategoryIcon } from './constants';

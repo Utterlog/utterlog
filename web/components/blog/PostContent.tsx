@@ -365,8 +365,11 @@ function processShortcodes(text: string): string {
     return `<details style="margin:16px 0;border:1px solid #e5e5e5"><summary style="padding:12px 16px;cursor:pointer;font-weight:500">${title}</summary><div style="padding:12px 16px;border-top:1px dashed #e5e5e5">${body}</div></details>`;
   });
   // [download title="xxx" desc="xxx" url="xxx"]
+  // 视觉走全局 .md-download-card 样式（globals.css），主题可通过
+  // CSS 变量 (--md-download-bg / --md-download-accent / --md-download-text)
+  // override 配色。改样式只需改一处 globals.css，不再 inline 散落。
   text = text.replace(/\[download\s+title="([^"]*)"\s+desc="([^"]*)"\s+url="([^"]*)"\]/g, (_, title, desc, url) => {
-    return `<div style="margin:16px 0;padding:16px 20px;background:#1a1a1a;color:#fff;display:flex;align-items:center;gap:16px"><div style="width:44px;height:44px;background:#f5a623;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa-solid fa-download" style="font-size:18px;color:#1a1a1a"></i></div><div style="flex:1"><div style="font-size:15px;font-weight:600">${title}</div><div style="font-size:12px;opacity:0.7;margin-top:2px">${desc}</div></div><a href="${url}" target="_blank" rel="noopener noreferrer" style="padding:8px 20px;background:#f5a623;color:#1a1a1a;font-weight:600;font-size:13px;text-decoration:none;flex-shrink:0">立即下载</a></div>`;
+    return `<div class="md-download-card"><div class="md-download-icon"><i class="fa-solid fa-download"></i></div><div class="md-download-info"><div class="md-download-title">${title}</div><div class="md-download-desc">${desc}</div></div><a class="md-download-btn" href="${url}" target="_blank" rel="noopener noreferrer">立即下载</a></div>`;
   });
   // [color=#hex]text[/color]
   text = text.replace(/\[color=([^\]]+)\]([\s\S]*?)\[\/color\]/g, (_, color, t) => {

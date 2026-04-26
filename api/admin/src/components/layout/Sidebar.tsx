@@ -35,7 +35,13 @@ const menuItems: MenuItem[] = [
     ],
   },
   { to: '/follows', icon: 'fa-solid fa-user-group', label: '关注', sub: 'Follows' },
-  { to: '/comments', icon: 'fa-regular fa-comments', label: '评论', sub: 'Comments' },
+  {
+    to: '/comments', icon: 'fa-regular fa-comments', label: '评论', sub: 'Comments',
+    children: [
+      { to: '/comments', label: '全部评论', icon: 'fa-regular fa-comments' },
+      { to: '/comments/ai', label: 'AI 队列', icon: 'fa-regular fa-robot' },
+    ],
+  },
   { to: '/links', icon: 'fa-solid fa-link', label: '友链', sub: 'Links' },
   {
     to: '/media', icon: 'fa-regular fa-images', label: '媒体', sub: 'Media',

@@ -35,7 +35,7 @@ type Position = { key: string; label: string; hint: string };
 // in this map (custom / uploaded themes).
 const THEME_POSITIONS: Record<string, Position[]> = {
   Utterlog: [
-    { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
+    { key: 'header', label: '顶部导航', hint: 'Header 主菜单；留空则用主题默认菜单（首页/关于/归档/说说/友链/订阅）' },
   ],
   Azure: [
     { key: 'header', label: '顶部导航', hint: 'Header 主菜单；留空则用主题默认菜单（首页/关于/归档/说说/友链/订阅）' },

@@ -1167,6 +1167,98 @@ img[data-blog-image][data-loaded="0"] {
 }
 
 /* ────────────────────────────────────────────────────────────────
+   Markdown 下载卡片 — [download title="" desc="" url=""] shortcode
+   渲染入口在 web/components/blog/PostContent.tsx，走 className 而非
+   inline style（统一外观、可由主题覆盖）。配色用 CSS 变量，主题可在
+   themes/<T>/styles.css 里 override `--md-download-bg`、`--md-download-accent`、
+   `--md-download-text` 调成跟主题协调的视觉。
+   ──────────────────────────────────────────────────────────────── */
+.md-download-card {
+  /* 默认视觉：深色 panel + 橙色 accent，跟原 inline 视觉一致 */
+  --md-download-bg: #1a1a1a;
+  --md-download-accent: #f5a623;
+  --md-download-text: #fff;
+  margin: 16px 0;
+  padding: 16px 20px;
+  background: var(--md-download-bg);
+  color: var(--md-download-text);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.md-download-icon {
+  width: 44px;
+  height: 44px;
+  background: var(--md-download-accent);
+  color: var(--md-download-bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.md-download-info {
+  flex: 1;
+  min-width: 0;
+}
+.md-download-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  /* 标题过长时单行省略，避免破坏 layout */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.md-download-desc {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 2px;
+  line-height: 1.5;
+  /* 简介双行省略 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.md-download-btn {
+  padding: 8px 20px;
+  background: var(--md-download-accent);
+  color: var(--md-download-bg);
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+  border-radius: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.md-download-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+.md-download-btn:active {
+  transform: translateY(0);
+}
+/* 移动端窄屏：按钮换行避免挤压标题 */
+@media (max-width: 480px) {
+  .md-download-card {
+    flex-wrap: wrap;
+    padding: 14px;
+    gap: 12px;
+  }
+  .md-download-info {
+    flex-basis: calc(100% - 56px);
+  }
+  .md-download-btn {
+    flex-basis: 100%;
+    text-align: center;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
    .cover-zoom — single, theme-agnostic hover-scale wrapper.
    Apply to any <a> / <div> wrapping a <img data-blog-image> (PostCard,
    HomePage hero, prev/next nav, related cards). Replaces the previous

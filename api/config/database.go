@@ -236,6 +236,35 @@ func InitDB() error {
 	)`, T("sync_media_queue")))
 	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_sync_media_job ON %s (job_id, status)", T("sync_media_queue")))
 
+	// AI 评论审核 + 智能回复队列。访客评论提交时，可选先经
+	// AI 审核（不通过按 fail_action 处理），通过后异步生成 AI
+	// 回复入队列等待管理员 review，或在 auto 模式下直接发布。
+	// reviewer_id=0 表示未审核；processed_at=0 表示未处理。
+	// status: pending | approved | rejected | error
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id SERIAL PRIMARY KEY,
+		comment_id INTEGER NOT NULL REFERENCES %s(id) ON DELETE CASCADE,
+		post_id INTEGER NOT NULL,
+		comment_text TEXT NOT NULL,
+		ai_reply TEXT NOT NULL DEFAULT '',
+		status VARCHAR(20) NOT NULL DEFAULT 'pending',
+		created_at BIGINT NOT NULL,
+		processed_at BIGINT NOT NULL DEFAULT 0,
+		error_msg VARCHAR(500) DEFAULT NULL,
+		reviewer_id INTEGER NOT NULL DEFAULT 0,
+		ai_audit_passed BOOLEAN,
+		ai_audit_confidence REAL,
+		ai_audit_reason TEXT
+	)`, T("ai_comment_queue"), T("comments")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_ai_comment_queue_status ON %s (status, created_at DESC)", T("ai_comment_queue")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_ai_comment_queue_comment ON %s (comment_id)", T("ai_comment_queue")))
+
+	// Mark AI-generated replies on the comment side so the front-end
+	// can render '🤖 AI 辅助回复' badge (when admin's
+	// ai_comment_reply_badge_text is non-empty). Also lets the admin
+	// query "AI 生成的所有评论" without joining the queue.
+	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS is_ai_reply BOOLEAN NOT NULL DEFAULT FALSE", T("comments")))
+
 	// Provenance columns on content tables — lets us delete-by-site
 	// for rollback and dedupe on re-sync via the UNIQUE index below.
 	// ul_media already has source_type + source_id; we add site_uuid.
@@ -365,6 +394,37 @@ func InitDB() error {
 	))
 	DB.Exec(fmt.Sprintf(
 		"UPDATE %s SET value = '' WHERE name = 'ai_polish_prompt' AND value = 'Polish and improve the writing quality: fix grammar, improve flow, make it more engaging. Keep the same language and meaning. Output in Markdown.'",
+		T("options"),
+	))
+
+	// 2026-04: normalise absolute logo/favicon URLs to root-relative.
+	// Old UploadBranding returned <site_url>/<purpose>.<ext> as the
+	// stored value, which broke as soon as admin changed site_url or
+	// moved environments — the URL pointed at the OLD origin. Now
+	// returns '/<purpose>.<ext>' so the browser uses the current
+	// page's origin. This migration rewrites already-saved absolute
+	// URLs to the same shape.
+	//
+	// Pattern is strict: ONLY rewrites when the URL's path component
+	// is exactly /logo.<ext>, /dark-logo.<ext> or /favicon.<ext>.
+	// Admins who deliberately host their logo on a CDN
+	// (e.g. https://cdn.example.com/static/branding/foo.png) keep
+	// their value untouched. Idempotent — already-relative '/logo.png'
+	// values don't match the pattern and stay as-is.
+	DB.Exec(fmt.Sprintf(
+		`UPDATE %s SET value = regexp_replace(value, '^https?://[^/]+(/(?:logo|dark-logo|favicon)\.\w+)$', '\1')
+		 WHERE name IN ('site_logo', 'site_logo_dark', 'site_favicon')
+		   AND value ~ '^https?://[^/]+/(?:logo|dark-logo|favicon)\.\w+$'`,
+		T("options"),
+	))
+
+	// 2026-04: drop comment_pagination + comment_per_page placebo.
+	// CommentList.tsx never had pagination code — all comments
+	// always rendered in one shot. The toggle + 每页评论数 input
+	// were UI illusions only. Form removed, DB rows dropped here
+	// so they don't haunt future debugging. Idempotent.
+	DB.Exec(fmt.Sprintf(
+		"DELETE FROM %s WHERE name IN ('comment_pagination', 'comment_per_page')",
 		T("options"),
 	))
 

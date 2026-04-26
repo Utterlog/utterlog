@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import CommentForm from './CommentForm';
 import { BrowserIcon, OSIcon } from '@/lib/tech-icons';
 import { getVisitorId } from '@/lib/fingerprint';
+import { useThemeContext } from '@/lib/theme-context';
 import toast from 'react-hot-toast';
 
 // 表情 slug → 文件名映射
@@ -589,15 +590,23 @@ function CommentCard({ comment, postId, floor, onReplySuccess, editableIds }: {
 }
 
 export default function CommentList({ postId, title, onCommentCountChange }: { postId: number; title?: string; onCommentCountChange?: (count: number) => void }) {
+  const { options } = useThemeContext();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [total, setTotal] = useState(0);
+  // 初始排序解析：访客本地切换过 → localStorage；
+  // 没切换过 → 后台「常规设置 → 评论设置 → 排序 → 默认排序」option；
+  // 后台也没设过 → 兜底 'oldest'。
+  // 之前 localStorage 没命中时直接落 'oldest'，等于后台 option 形同
+  // 虚设 —— admin 无论选 newest/oldest 都看不到效果。
   const [order, setOrder] = useState<'newest' | 'oldest'>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('comment_order');
       if (saved === 'newest' || saved === 'oldest') return saved;
     }
+    const fromAdmin = options?.comment_order;
+    if (fromAdmin === 'newest' || fromAdmin === 'oldest') return fromAdmin;
     return 'oldest';
   });
   const listRef = useRef<HTMLDivElement>(null);

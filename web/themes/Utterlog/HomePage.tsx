@@ -1,5 +1,5 @@
 import PostCard from './PostCard';
-import Pagination from '@/components/blog/Pagination';
+import Pagination from './Pagination';
 
 export default function HomePage({ posts, page, totalPages }: { posts: any[]; page: number; totalPages: number }) {
   return (

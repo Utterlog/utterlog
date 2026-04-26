@@ -18,6 +18,7 @@ const pageTitleMap: Record<string, PageMeta> = {
   '/pages/create':   { label: '新建页面',      en: 'New Page',        icon: 'fa-regular fa-file-plus' },
   '/moments':        { label: '说说管理',      en: 'Moments',         icon: 'fa-solid fa-comment-dots' },
   '/comments':       { label: '评论管理',      en: 'Comments',        icon: 'fa-regular fa-comments' },
+  '/comments/ai':    { label: 'AI 评论队列',    en: 'AI Comment Queue', icon: 'fa-regular fa-robot' },
   '/follows':        { label: '关注管理',      en: 'Follows',         icon: 'fa-solid fa-user-group' },
   '/links':          { label: '友链管理',      en: 'Links',           icon: 'fa-solid fa-link' },
   '/media':          { label: '媒体库',        en: 'Media',           icon: 'fa-regular fa-images' },

@@ -57,7 +57,16 @@ export default function PostCard({ post, priority }: { post: any; priority?: boo
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#9ca3af' }}>
             <span>{formatDate(post.created_at)}</span>
-            {post.categories?.[0] && <span style={{ color: '#3368d9' }}>{post.categories[0].name}</span>}
+            {post.categories?.[0] && (
+              <span style={{ color: '#3368d9', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                {/* admin 在「主题 → 分类」给分类设的 icon (FontAwesome class)；
+                    没设就只显示文字，符合 Utterlog 极简风。其他主题在
+                    constants.ts 里有 fallback 文件夹图标，Utterlog 故意不加
+                    fallback —— 极简风下没必要每个分类都强行带个通用图标。 */}
+                {post.categories[0].icon && <i className={post.categories[0].icon} />}
+                {post.categories[0].name}
+              </span>
+            )}
             {post.view_count > 0 && <span>{post.view_count} 阅读</span>}
           </div>
         </div>
