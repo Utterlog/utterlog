@@ -71,6 +71,10 @@ export default function SettingsPage() {
       reset({
         // 常规
         site_title: s.site_title || '',
+        // Header 标题显示方式：text / text_logo / logo
+        // 留空时按"有 Logo 走 logo，没 Logo 走 text"做隐式默认，
+        // 这样从 v1.3.x 升上来的旧站点视觉上不会突变。
+        site_brand_mode: s.site_brand_mode || (s.site_logo ? 'logo' : 'text'),
         site_subtitle: s.site_subtitle || '',
         admin_email: s.admin_email || '',
         // site_description / site_keywords moved to SEO tab as
@@ -208,7 +212,7 @@ export default function SettingsPage() {
     // vanishes (the save POST just doesn't include that key, so the DB
     // row stays unchanged and on reload the field reverts).
     general: [
-      'site_title', 'site_subtitle', 'site_url',
+      'site_title', 'site_brand_mode', 'site_subtitle', 'site_url',
       'admin_email', 'site_since',
       'site_logo', 'site_logo_dark', 'site_favicon',
       'beian_gongan', 'beian_icp',
@@ -398,6 +402,52 @@ export default function SettingsPage() {
             <>
               <FormSectionC title="站点基础信息" icon="fa-regular fa-circle-info">
                 <FormRowInputC label="站点名称" register={register('site_title')} placeholder="我的博客" />
+                {/* Header 站点标题显示方式：3 选 1 单选。inline 实现，
+                    沿用 FormRow* 的 32% / 1fr 网格 + 行底 divider，
+                    保持 iOS Settings 风格视觉一致。仅 Utterlog 和 Flux
+                    主题响应该选项；Azure / Chred 仍按"有 Logo 显示 Logo
+                    否则显示文字"的旧规则。 */}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '32% 1fr',
+                  borderBottom: '1px solid var(--color-divider)',
+                  minHeight: 56,
+                }}>
+                  <div style={{
+                    padding: '10px 14px',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>
+                      标题显示方式
+                    </div>
+                    <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.5 }}>
+                      Header 处显示文字、Logo 或两者
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: '10px 14px',
+                    display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap',
+                  }}>
+                    {([
+                      { value: 'text', label: '文字' },
+                      { value: 'text_logo', label: '文字 + Logo' },
+                      { value: 'logo', label: 'Logo' },
+                    ] as const).map(opt => (
+                      <label key={opt.value} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        cursor: 'pointer', fontSize: 13, color: 'var(--color-text-main)',
+                        userSelect: 'none',
+                      }}>
+                        <input
+                          type="radio"
+                          value={opt.value}
+                          {...register('site_brand_mode')}
+                          style={{ accentColor: 'var(--color-primary)', cursor: 'pointer', margin: 0 }}
+                        />
+                        <span>{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <FormRowInputC label="副标题" register={register('site_subtitle')} placeholder="一句话 Slogan" />
                 <FormRowInputC label="站点网址" register={register('site_url')} placeholder="https://yourdomain.com" />
                 <FormRowInputC label="管理员邮箱" type="email" register={register('admin_email')} placeholder="admin@yourdomain.com" hint="接收系统升级、安全通知等消息" />

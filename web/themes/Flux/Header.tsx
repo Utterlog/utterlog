@@ -21,6 +21,18 @@ export default function Header() {
         { href: '/links', label: '友链' },
       ];
 
+  // Brand 显示方式 — 与 Utterlog 主题用同一个 site_brand_mode option，
+  // 后台「常规设置 → 标题显示方式」一处控制全主题。
+  // 'logo' 模式下没上传 Logo 时 Flux 会把硬编码绿色 chevron mark 顶上来
+  // 当 fallback —— 既保留品牌识别，又避免渲染空白。
+  const rawMode = ctx.options?.site_brand_mode;
+  const mode: 'text' | 'text_logo' | 'logo' =
+    rawMode === 'text' || rawMode === 'text_logo' || rawMode === 'logo'
+      ? rawMode
+      : (ctx.site.logo ? 'logo' : 'text');
+  const showMark = mode === 'logo' || mode === 'text_logo';
+  const showText = mode === 'text' || mode === 'text_logo';
+
   return (
     <header className="flux-container">
       <div
@@ -29,40 +41,42 @@ export default function Header() {
           height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}
       >
-        {/* Brand lockup — uploaded site.logo replaces the hard-coded
-            green chevron mark when present, so admins who set a
-            custom Logo in 常规设置 see it on every theme regardless
-            of switching. The text title stays alongside either way:
-            Flux's identity is the lockup, not the mark alone. */}
+        {/* Brand lockup — mark + text，由 site_brand_mode 决定哪些显示。
+            'logo' / 'text_logo' 模式下：有上传 Logo 时图片当 mark，
+            否则退回 Flux 硬编码的绿色圆形 chevron 保留品牌识别。 */}
         <Link href="/" className="flux-brand" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          {ctx.site.logo ? (
-            <img
-              src={ctx.site.logo}
-              alt={siteTitle}
-              style={{ height: 26, maxWidth: 140, objectFit: 'contain', display: 'block' }}
-            />
-          ) : (
-            <div
-              className="flux-logo"
-              aria-hidden
-              style={{
-                width: 26, height: 26, borderRadius: 9999,
-                background: '#00C767',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#034F28',
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 6l6 6-6 6" stroke="#034F28" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+          {showMark && (
+            ctx.site.logo ? (
+              <img
+                src={ctx.site.logo}
+                alt={siteTitle}
+                style={{ height: 26, maxWidth: 140, objectFit: 'contain', display: 'block' }}
+              />
+            ) : (
+              <div
+                className="flux-logo"
+                aria-hidden
+                style={{
+                  width: 26, height: 26, borderRadius: 9999,
+                  background: '#00C767',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#034F28',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 6l6 6-6 6" stroke="#034F28" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            )
           )}
-          <span
-            className="flux-brand-text site-title"
-            style={{ fontSize: 18, fontWeight: 500, color: '#011E0F', letterSpacing: 0 }}
-          >
-            {siteTitle}
-          </span>
+          {showText && (
+            <span
+              className="flux-brand-text site-title"
+              style={{ fontSize: 18, fontWeight: 500, color: '#011E0F', letterSpacing: 0 }}
+            >
+              {siteTitle}
+            </span>
+          )}
         </Link>
 
         {/* Nav + CTA */}

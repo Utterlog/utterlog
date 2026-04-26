@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- 后台「常规设置 → 站点基础信息」站点名称下方新增 **标题显示方式** 单选（文字 / 文字 + Logo / Logo），存为 `site_brand_mode` option。Utterlog 主题 + Flux 主题 Header 实时响应该选项；未设置时按"有 Logo 走 logo，没 Logo 走 text"做隐式默认，旧站升级视觉无突变。Azure / Chred 主题暂未接入此选项，沿用旧的"有 Logo 显示 Logo 否则文字"规则
+
 ### Fixed
 
 - 深色 Logo（`site_logo_dark`）上传后前端读不到：`web/lib/theme-data.ts` 错读成 `site_dark_logo`，与后台 Settings.tsx / 后端 content.go 保存的 key 不一致。修正为 `site_logo_dark`。当前 Utterlog 主题暂未启用深色模式，此修复为后续接入预留正确的数据通道

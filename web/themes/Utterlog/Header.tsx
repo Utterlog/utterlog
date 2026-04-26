@@ -16,9 +16,24 @@ const defaultNavItems = [
 export default function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { menus, site } = useThemeContext();
+  const { menus, site, options } = useThemeContext();
   const navItems = menus.header?.length ? menus.header : defaultNavItems;
   const siteName = site.title || 'Utterlog';
+
+  // 标题显示方式 — 由后台「常规设置 → 站点基础信息 → 标题显示方式」
+  // 写入 site_brand_mode option：
+  //   'text'        只显示文字（即使上传了 Logo 也忽略）
+  //   'text_logo'   Logo 在前 + 文字在后
+  //   'logo'        只显示 Logo（未上传时优雅退化为文字，避免空白）
+  // 未设置时按"有 Logo 走 logo，没 Logo 走 text"做隐式默认，匹配
+  // 后台表单的同名 fallback，避免设置页和实际渲染口径不一致。
+  const rawMode = options?.site_brand_mode;
+  const mode: 'text' | 'text_logo' | 'logo' =
+    rawMode === 'text' || rawMode === 'text_logo' || rawMode === 'logo'
+      ? rawMode
+      : (site.logo ? 'logo' : 'text');
+  const showLogo = (mode === 'logo' || mode === 'text_logo') && !!site.logo;
+  const showText = mode === 'text' || mode === 'text_logo' || (mode === 'logo' && !site.logo);
 
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href);
 
@@ -31,27 +46,24 @@ export default function Header() {
         maxWidth: '1280px', margin: '0 auto', padding: '0 40px',
         height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        {/* Logo — uploaded image takes precedence over text title.
-            Empty site.logo (= admin hasn't uploaded one) falls back to
-            the original text-only lockup so the minimal Utterlog look
-            is preserved out of the box. Image height is capped to
-            roughly the header's vertical padding so different
-            aspect-ratio uploads (square favicon-style or wide
-            wordmark) both fit without manual tuning. */}
+        {/* Brand lockup — Logo / 文字 / 二者结合，由 mode 决定。
+            showLogo 和 showText 均为 false 的极端情况理论不会出现
+            （mode 解析层已经保底 'text'），但 fallback 渲染 siteName
+            纯文字以防万一。 */}
         <Link href="/" className="site-title" style={{
           textDecoration: 'none', fontSize: '22px', fontWeight: 700,
           color: '#202020', letterSpacing: '-0.02em',
           display: 'flex', alignItems: 'center', gap: '10px',
         }}>
-          {site.logo ? (
+          {showLogo && (
             <img
               src={site.logo}
               alt={siteName}
               style={{ height: '28px', maxWidth: '180px', objectFit: 'contain', display: 'block' }}
             />
-          ) : (
-            siteName
           )}
+          {showText && <span>{siteName}</span>}
+          {!showLogo && !showText && <span>{siteName}</span>}
         </Link>
 
         {/* Desktop nav */}
