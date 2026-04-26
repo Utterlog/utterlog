@@ -8,8 +8,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"utterlog-go/config"
+	"utterlog-go/internal/model"
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -410,18 +412,21 @@ func TrackPageView(c *gin.Context) {
 		// Per-post view counter — only bump on the first view per
 		// visitor per post. Keeps refreshes / tab-refocus from inflating
 		// per-post numbers beyond what the aggregate dashboard shows.
-		if strings.HasPrefix(req.Path, "/posts/") {
-			slug := strings.TrimPrefix(req.Path, "/posts/")
-			slug = strings.Split(slug, "?")[0]
-			slug = strings.Split(slug, "#")[0]
-			if slug != "" {
-				var postID int
+		//
+		// Path 反向解析按 admin 配置的 permalink_structure 模板走，
+		// 而不是硬编码 /posts/<slug>。否则 admin 用 /archives/%post_id%
+		// 之类的 permalink 后 view_count 就一直 +0 了。
+		if id, slug := parsePostFromPath(req.Path); id > 0 || slug != "" {
+			var postID int
+			if id > 0 {
+				postID = id
+			} else if slug != "" {
 				config.DB.Get(&postID, fmt.Sprintf(
 					"SELECT id FROM %s WHERE slug = $1 AND status = 'publish'",
 					config.T("posts")), slug)
-				if postID > 0 && isFirstPostViewToday(req.Path, req.VisitorID, realIP) {
-					IncrPostViews(postID)
-				}
+			}
+			if postID > 0 && isFirstPostViewToday(req.Path, req.VisitorID, realIP) {
+				IncrPostViews(postID)
 			}
 		}
 	}()
@@ -430,6 +435,116 @@ func TrackPageView(c *gin.Context) {
 }
 
 // isFirstPostViewToday returns true when neither this visitor_id nor IP
+// permalinkRegexCache caches one compiled regex per template so we
+// don't pay the parsePermalink template-compile cost on every /track
+// request. Entries are invalidated by template string identity —
+// admin changing permalink_structure produces a different cache key.
+var permalinkRegexCache sync.Map // template (string) → *permalinkMatcher
+
+type permalinkMatcher struct {
+	re     *regexp.Regexp
+	tokens []string // token names in capture-group order: postname / post_id / year / month / day / category
+}
+
+// parsePostFromPath: 把请求 URL path 按 admin 配置的 permalink_structure
+// 模板反向解析出 (post_id, slug)，两者只有一个非零（id 优先）。
+// 镜像 web/lib/permalink.ts 的 parsePermalink 实现，但只关心 id/slug。
+//
+// 模板支持的占位符（来自 frontend lib）:
+//   %postname%   — post slug
+//   %post_id%    — post numeric id
+//   %year%       — 4-digit year
+//   %month%      — 2-digit month
+//   %day%        — 2-digit day
+//   %category%   — first-category slug
+//
+// 默认模板 /posts/%postname%（向后兼容，admin 没设过 option 时也能 work）。
+func parsePostFromPath(path string) (postID int, slug string) {
+	template := strings.TrimSpace(model.GetOption("permalink_structure"))
+	if template == "" {
+		template = "/posts/%postname%"
+	}
+
+	matcher := getOrCompilePermalinkMatcher(template)
+	if matcher == nil {
+		return 0, ""
+	}
+
+	cleanPath := strings.TrimRight(path, "/")
+	if cleanPath == "" {
+		cleanPath = "/"
+	}
+	// drop query / hash fragments before matching
+	if i := strings.IndexAny(cleanPath, "?#"); i >= 0 {
+		cleanPath = cleanPath[:i]
+	}
+
+	m := matcher.re.FindStringSubmatch(cleanPath)
+	if m == nil {
+		return 0, ""
+	}
+	for i, tok := range matcher.tokens {
+		val := m[i+1]
+		switch tok {
+		case "post_id":
+			if id, err := strconv.Atoi(val); err == nil && id > 0 {
+				return id, ""
+			}
+		case "postname":
+			if val != "" {
+				slug = val
+			}
+		}
+	}
+	return 0, slug
+}
+
+// getOrCompilePermalinkMatcher builds (and caches) a regex matcher for
+// the given template. Returns nil if the template is malformed.
+func getOrCompilePermalinkMatcher(template string) *permalinkMatcher {
+	if cached, ok := permalinkRegexCache.Load(template); ok {
+		return cached.(*permalinkMatcher)
+	}
+
+	tpl := strings.TrimRight(template, "/")
+	tokenRe := regexp.MustCompile(`%(postname|post_id|year|month|day|category)%`)
+
+	var tokens []string
+	var sb strings.Builder
+	sb.WriteString("^")
+	last := 0
+	for _, idx := range tokenRe.FindAllStringSubmatchIndex(tpl, -1) {
+		// idx = [matchStart, matchEnd, groupStart, groupEnd]
+		sb.WriteString(regexp.QuoteMeta(tpl[last:idx[0]]))
+		tok := tpl[idx[2]:idx[3]]
+		tokens = append(tokens, tok)
+		switch tok {
+		case "postname":
+			sb.WriteString(`([^/]+)`)
+		case "post_id":
+			sb.WriteString(`(\d+)`)
+		case "year":
+			sb.WriteString(`(\d{4})`)
+		case "month", "day":
+			sb.WriteString(`(\d{2})`)
+		case "category":
+			sb.WriteString(`([^/]+)`)
+		}
+		last = idx[1]
+	}
+	sb.WriteString(regexp.QuoteMeta(tpl[last:]))
+	sb.WriteString("$")
+
+	re, err := regexp.Compile(sb.String())
+	if err != nil {
+		fmt.Printf("[analytics] permalink template invalid: %q (%s)\n", template, err)
+		return nil
+	}
+	matcher := &permalinkMatcher{re: re, tokens: tokens}
+	permalinkRegexCache.Store(template, matcher)
+	return matcher
+}
+
 // has viewed the given path since midnight. Daily dedup keeps the
 // per-post counter close to unique-reader intent without needing a
 // separate seen-set table. The 30s dedup in logAccess already stopped

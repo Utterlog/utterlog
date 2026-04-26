@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-04-26
+
+### Fixed
+
+- **文章浏览量（`view_count`）一直不增加**：`analytics.go` 的 `/track` handler 硬编码只识别 `/posts/<slug>` 前缀来匹配文章页，但 admin 在「常规设置 → Permalink」配的模板可以是 `/archives/%post_id%`、`/%year%/%month%/%postname%` 等多种形式 —— 一旦不是 `/posts/` 前缀，view_count 就永远不会 +1。改为按 `permalink_structure` option 编译模板正则反向解析 path，提取 `post_id` 或 `slug` 后查 DB；regex 缓存到 `sync.Map` 避免每次请求重编译。模板支持 `%postname% / %post_id% / %year% / %month% / %day% / %category%`，跟前端 `web/lib/permalink.ts` 1:1 对齐
+- 后台「常规设置 → Logo & Favicon」上传后预览框空白：之前 `<img onError={display:none}>` 加载失败时直接 hide，但 ternary 是 `val ? img : icon` —— val 非空 img 加载失败被 hide 后 fa-image 占位也不显示，容器一片空白让用户以为没存上。抽出 `BrandingPreview` 子组件用 `useState(error)` 跟踪加载状态，失败降级到 `fa-image-slash` + 「加载失败」文字，父组件 `key={val}` 让路径变化时重新挂载（修正 url 后自动重试）
+
 ## [1.4.1] - 2026-04-26
 
 ### Fixed
@@ -141,7 +148,8 @@
 - 6 项 AI 提示词全部可在后台编辑：摘要 / Slug / 关键词 / 排版 / 推荐问题 / 封面图；每项中文默认值，textarea 留空 + 保存自动恢复默认
 - AI 模型分发改为按用途路由：把原先 8 个 `ai_purpose_*_provider` 收成 2 个槽位（content + chat）；DB 自动清理 7 条遗留 option
 
-[Unreleased]: https://github.com/utterlog/utterlog/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/utterlog/utterlog/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/utterlog/utterlog/releases/tag/v1.4.2
 [1.4.1]: https://github.com/utterlog/utterlog/releases/tag/v1.4.1
 [1.4.0]: https://github.com/utterlog/utterlog/releases/tag/v1.4.0
 [1.3.2]: https://github.com/utterlog/utterlog/releases/tag/v1.3.2

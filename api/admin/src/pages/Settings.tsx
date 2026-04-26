@@ -24,6 +24,42 @@ function initialTabFromHash(): string {
   return VALID_TABS.has(h) ? h : 'general';
 }
 
+/**
+ * Logo / Favicon 预览。
+ * 之前是裸 <img onError={display:none}>，加载失败容器一片空白
+ * （ternary 是 val? img : icon，img 加载失败被 hide 掉但 icon
+ * 已经因为 val 非空被跳过）。这里抽出来用 useState 跟踪错误，
+ * 失败时降级到 fa-image 占位 + 提示文字，让用户看到「图片加
+ * 载失败」而不是空白以为没存上。
+ *
+ * 父组件用 key={val} 在路径变化时重新挂载本组件，error state
+ * 自动重置 —— 用户改完路径或重新上传就会立即重新尝试加载。
+ */
+function BrandingPreview({ src, alt }: { src: string; alt: string }) {
+  const [error, setError] = useState(false);
+  if (!src || error) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+        color: 'var(--color-text-dim)',
+      }}>
+        <i className={`fa-regular ${error ? 'fa-image-slash' : 'fa-image'}`} style={{ fontSize: '24px', opacity: 0.4 }} />
+        {error && (
+          <span style={{ fontSize: '10px', opacity: 0.7 }}>加载失败</span>
+        )}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      style={{ maxHeight: '48px', maxWidth: '80%', objectFit: 'contain' }}
+      onError={() => setError(true)}
+    />
+  );
+}
+
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -496,11 +532,11 @@ export default function SettingsPage() {
                           background: item.purpose === 'dark-logo' ? '#1a1a1a' : 'var(--color-bg-soft)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                         }}>
-                          {val ? (
-                            <img src={val} alt={item.label} style={{ maxHeight: '48px', maxWidth: '80%', objectFit: 'contain' }} onError={(e) => (e.currentTarget.style.display = 'none')} />
-                          ) : (
-                            <i className="fa-regular fa-image text-dim" style={{ fontSize: '24px', opacity: 0.3 }} />
-                          )}
+                          {/* key={val} 让路径变化时强制重渲染子组件，
+                              清掉上一次的 error state；这样上传失败 →
+                              修正路径 → 重新加载会自动恢复，不会卡在
+                              老的"加载失败"占位上。 */}
+                          <BrandingPreview key={val} src={val} alt={item.label} />
                         </div>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <input className="input text-sm" style={{ flex: 1, fontSize: '12px' }} placeholder={item.placeholder} {...register(item.field)} />
