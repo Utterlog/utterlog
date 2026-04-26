@@ -113,7 +113,7 @@ export default function EditPostPage() {
         <div style={{ width: '280px', flexShrink: 0, overflowY: 'auto', overflowX: 'hidden', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)' }}>
           <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', gap: '6px' }}>
-              <Button onClick={handleSave} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '13px' }} /> 保存</Button>
+              <Button onClick={handleSave} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>保存</Button>
               <Button variant="secondary" onClick={() => navigate('/pages')} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>返回</Button>
             </div>
           </div>

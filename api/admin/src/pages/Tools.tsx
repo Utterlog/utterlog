@@ -265,7 +265,7 @@ export default function ToolsPage() {
                 {backupSchedule !== 'off' ? `自动备份已开启 (${backupSchedule === 'daily' ? '每天' : backupSchedule === 'weekly' ? '每周' : '每月'})，备份到${backupDest === 'local' ? '本地' : backupDest === 'r2' ? 'R2' : 'S3'}` : '自动备份未开启，仅支持手动创建'}
               </p>
               <Button onClick={saveBackupSettings} loading={savingSettings} variant="secondary" style={{ fontSize: '12px', padding: '4px 14px', height: '30px' }}>
-                <i className="fa-regular fa-floppy-disk" style={{ fontSize: '12px' }} /> 保存
+                保存
               </Button>
             </div>
           </div>

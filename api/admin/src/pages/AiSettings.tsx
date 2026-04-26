@@ -91,6 +91,7 @@ export default function AiSettingsPage() {
   const [config, setConfig] = useState<Record<string, string>>({
     ai_system_prompt: 'You are a helpful AI assistant for a blog system called Utterlog. Respond in the same language the user uses. Be concise and helpful.',
     ai_chat_temp: '0.7',
+    ai_chat_enabled: 'false',
     ai_chat_guest: 'false',
     ai_chat_position: 'right',
     ai_summary_auto: 'false',
@@ -544,7 +545,7 @@ export default function AiSettingsPage() {
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
             <Button onClick={saveConfig} loading={savingConfig}>
-              <i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存
+              保存
             </Button>
           </div>
         </>
@@ -553,9 +554,16 @@ export default function AiSettingsPage() {
       {/* ── 聊天配置 ── */}
       {activeTab === '聊天配置' && (
         <>
-          <FormSectionC title="前端聊天气泡" icon="fa-regular fa-comment-dots">
+          <FormSectionC title="前端聊天气泡" icon="fa-regular fa-comment-dots" footerHint="聊天气泡 = 全站浮动 AI 助手（首页 / 列表 / 归档等非文章页右下角圆形按钮）。文章详情页不显示气泡，让位给文章自带的「AI 陪读」（陪读有自己的对话上下文，是独立功能，不受这个开关控制）。">
+            <FormRowToggleC
+              label="启用聊天气泡"
+              hint="关闭后所有非文章页右下角的圆形 AI 助手按钮完全隐藏；不影响文章详情页的「AI 陪读」"
+              checked={config.ai_chat_enabled === 'true'}
+              onChange={v => updateConfig('ai_chat_enabled', String(v))}
+            />
             <FormRowToggleC
               label="允许访客（未登录）使用 AI 聊天"
+              hint="启用气泡后：关 → 仅登录用户能发送，访客看到气泡但点击会被拒；开 → 任何人可使用"
               checked={config.ai_chat_guest === 'true'}
               onChange={v => updateConfig('ai_chat_guest', String(v))}
             />
@@ -578,7 +586,7 @@ export default function AiSettingsPage() {
             />
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
           </div>
         </>
       )}
@@ -724,9 +732,16 @@ export default function AiSettingsPage() {
               const current = String(config[optKey] ?? '');
               const isDefault = current.trim() === def.trim();
               return (
-                <div key={row.key} style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--color-border)', paddingBottom: idx === arr.length - 1 ? 0 : '14px', marginBottom: idx === arr.length - 1 ? 0 : '14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label className="text-sub" style={{ fontSize: '13px', fontWeight: 500 }}>{row.label}</label>
+                <FormRowTextareaC
+                  key={row.key}
+                  label={row.label}
+                  rows={row.rows}
+                  value={current}
+                  onChange={(v) => updateConfig(optKey, v)}
+                  placeholder="清空保存即恢复默认"
+                  mono
+                  last={idx === arr.length - 1}
+                  labelExtra={
                     <button
                       type="button"
                       onClick={() => resetPrompt(optKey, row.key)}
@@ -741,22 +756,14 @@ export default function AiSettingsPage() {
                       <i className="fa-regular fa-rotate-left" style={{ fontSize: '11px', marginRight: '3px' }} />
                       恢复默认
                     </button>
-                  </div>
-                  <textarea
-                    className="input focus-ring"
-                    rows={row.rows}
-                    value={current}
-                    onChange={e => updateConfig(optKey, e.target.value)}
-                    placeholder="清空保存即恢复默认"
-                    style={{ fontSize: '12px', fontFamily: 'var(--font-mono, monospace)', resize: 'vertical' }}
-                  />
-                </div>
+                  }
+                />
               );
             })}
           </FormSectionC>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
           </div>
         </>
       )}
@@ -809,7 +816,7 @@ export default function AiSettingsPage() {
             />
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
           </div>
         </>
       )}
@@ -828,7 +835,7 @@ export default function AiSettingsPage() {
             />
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
           </div>
         </>
       )}
@@ -866,7 +873,7 @@ export default function AiSettingsPage() {
             })()}
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
           </div>
         </>
       )}

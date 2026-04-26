@@ -254,3 +254,31 @@ export const useMusicStore = create<MusicPlayerState>((set) => ({
   show: () => set({ visible: true }),
   hide: () => set({ visible: false, playing: false }),
 }));
+
+// AI 陪读卡片可见性（边读边聊）。
+//   active    —— 文章页有挂载 AIReaderChat 时为 true。Footer 据此决定
+//                要不要渲染那个「重新打开陪读」的小按钮（非文章页不显示）。
+//   dismissed —— 用户点了卡片右上角的 X 关闭按钮，卡片消失，footer 上
+//                出现重新打开按钮。点 footer 按钮 → dismissed=false →
+//                卡片回来。
+// 跨组件解耦：AIReaderChat 在 PostPage 里挂载/卸载，Footer 在 Layout
+// 里始终在。两个组件不直接通信，全靠这个 store 当桥梁。
+interface ReaderChatState {
+  active: boolean;
+  dismissed: boolean;
+  mount: () => void;
+  unmount: () => void;
+  dismiss: () => void;
+  show: () => void;
+}
+
+export const useReaderChatStore = create<ReaderChatState>((set) => ({
+  active: false,
+  dismissed: false,
+  // 进入新文章页时一律重置 dismissed —— 用户在文章 A 关掉陪读，
+  // 不应该影响到文章 B 第一次访问的默认行为（卡片可见）。
+  mount: () => set({ active: true, dismissed: false }),
+  unmount: () => set({ active: false, dismissed: false }),
+  dismiss: () => set({ dismissed: true }),
+  show: () => set({ dismissed: false }),
+}));

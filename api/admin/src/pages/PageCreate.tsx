@@ -80,7 +80,7 @@ export default function CreatePostPage() {
           <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', gap: '6px' }}>
               <Button onClick={() => handleSave('publish')} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>发布</Button>
-              <Button variant="secondary" onClick={() => handleSave('draft')} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '13px' }} /> 保存</Button>
+              <Button variant="secondary" onClick={() => handleSave('draft')} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>保存</Button>
               <Button variant="secondary" onClick={() => navigate(-1)} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>返回</Button>
             </div>
           </div>

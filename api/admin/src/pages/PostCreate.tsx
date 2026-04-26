@@ -205,7 +205,7 @@ export default function CreatePostPage() {
                 发布
               </Button>
               <Button variant="secondary" onClick={() => handleSave('draft')} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
-                <i className="fa-regular fa-floppy-disk" style={{ fontSize: '13px' }} /> 保存
+                保存
               </Button>
               <Button variant="secondary" onClick={() => navigate(-1)} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
                 返回

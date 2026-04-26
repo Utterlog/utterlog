@@ -43,9 +43,9 @@ func PurgeAnalytics(c *gin.Context) {
 	}
 
 	if c.DefaultQuery("duplicates", "1") == "1" {
-		// For each (path, visitor-or-ip, 30s bucket) keep only the
-		// earliest row. A 30-second bucket matches the dedup window
-		// the writer now enforces going forward.
+		// Pass 1: 同 path + 同 visitor/ip key + 30s bucket 内只保留最早一条。
+		// 用 COALESCE(visitor_id, ip) 做 partition key — 真重复（前端
+		// React StrictMode 双调 / F5 抖动）会被这条折叠。
 		q := fmt.Sprintf(`
 			DELETE FROM %s
 			WHERE id IN (
@@ -66,6 +66,42 @@ func PurgeAnalytics(c *gin.Context) {
 		if err == nil && r != nil {
 			n, _ := r.RowsAffected()
 			res["duplicates_deleted"] = n
+		}
+
+		// Pass 2: SSR 双计清理。
+		// 旧版 AccessLogger middleware 在 SSR 命中时同步写一条 access_log
+		// （visitor_id="" + fingerprint=""），紧跟着 PageViewTracker 在
+		// 浏览器渲染后 POST /track 又写一条（visitor_id 是浏览器签发的
+		// 真值）。两条 dedup key 不一样（IP vs visitor_id）—— Pass 1
+		// 折叠不掉。结果同一访客被 dashboard 的 COUNT(DISTINCT) 算成
+		// 两个不同访客，admin 误以为统计被爬虫污染。
+		//
+		// 这里精准删除：visitor_id 空 + fingerprint 空 + UA 是真浏览器
+		// + 30s 内同 IP 同 path 有 visitor_id 非空的姐妹行。这种行确定
+		// 是 middleware 写入的双计，不是 JS-disabled 真访客。
+		q2 := fmt.Sprintf(`
+			DELETE FROM %s a
+			WHERE COALESCE(a.visitor_id,'') = ''
+			  AND COALESCE(a.fingerprint,'') = ''
+			  AND a.user_agent IS NOT NULL
+			  AND LENGTH(a.user_agent) >= 15
+			  AND NOT (%s)
+			  AND EXISTS (
+				SELECT 1 FROM %s b
+				WHERE b.path = a.path
+				  AND b.ip = a.ip
+				  AND b.visitor_id IS NOT NULL
+				  AND b.visitor_id != ''
+				  AND b.created_at BETWEEN a.created_at - 30 AND a.created_at + 30
+			  )
+		`, t, BotSQLPattern(), t)
+		if r, err := config.DB.Exec(q2); err == nil && r != nil {
+			n, _ := r.RowsAffected()
+			if existing, ok := res["duplicates_deleted"].(int64); ok {
+				res["duplicates_deleted"] = existing + n
+			} else {
+				res["duplicates_deleted"] = n
+			}
 		}
 	}
 

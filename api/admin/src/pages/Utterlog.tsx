@@ -175,7 +175,7 @@ export default function UtterlogCenterPage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <Button onClick={saveShareSettings} loading={savingShare}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存</Button>
+            <Button onClick={saveShareSettings} loading={savingShare}>保存</Button>
           </div>
         </div>
 

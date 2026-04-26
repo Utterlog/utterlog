@@ -121,47 +121,9 @@ export default function Sidebar() {
           {author?.nickname || siteOptions.site_title || '博主'}
         </div>
         {(author?.bio || siteOptions.site_description) && (
-          <p style={{ fontSize: '12px', color: '#888', margin: '4px 0 10px' }}>{author?.bio || siteOptions.site_description}</p>
+          <p style={{ fontSize: '12px', color: '#888', margin: '4px 0 0' }}>{author?.bio || siteOptions.site_description}</p>
         )}
-        {/* Social links */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', fontSize: '16px' }}>
-          {siteOptions.social_github && (
-            <a href={siteOptions.social_github} target="_blank" rel="noopener noreferrer" style={{ color: '#666', transition: 'color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#333')} onMouseLeave={e => (e.currentTarget.style.color = '#666')}>
-              <i className="fa-brands fa-github" />
-            </a>
-          )}
-          {siteOptions.social_twitter && (
-            <a href={siteOptions.social_twitter} target="_blank" rel="noopener noreferrer" style={{ color: '#666', transition: 'color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#1da1f2')} onMouseLeave={e => (e.currentTarget.style.color = '#666')}>
-              <i className="fa-brands fa-x-twitter" />
-            </a>
-          )}
-          {siteOptions.social_weibo && (
-            <a href={siteOptions.social_weibo} target="_blank" rel="noopener noreferrer" style={{ color: '#666', transition: 'color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#e6162d')} onMouseLeave={e => (e.currentTarget.style.color = '#666')}>
-              <i className="fa-brands fa-weibo" />
-            </a>
-          )}
-          {siteOptions.social_telegram && (
-            <a href={siteOptions.social_telegram} target="_blank" rel="noopener noreferrer" style={{ color: '#666', transition: 'color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#0088cc')} onMouseLeave={e => (e.currentTarget.style.color = '#666')}>
-              <i className="fa-brands fa-telegram" />
-            </a>
-          )}
-          {siteOptions.social_email && (
-            <a href={`mailto:${siteOptions.social_email}`} style={{ color: '#666', transition: 'color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#333')} onMouseLeave={e => (e.currentTarget.style.color = '#666')}>
-              <i className="fa-regular fa-envelope" />
-            </a>
-          )}
-          {siteOptions.site_url && (
-            <a href={siteOptions.site_url} target="_blank" rel="noopener noreferrer" style={{ color: '#666', transition: 'color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#0052D9')} onMouseLeave={e => (e.currentTarget.style.color = '#666')}>
-              <i className="fa-solid fa-globe" />
-            </a>
-          )}
-        </div>
+        {/* 社交链接已迁移到 hero 下方那行（HomePage.tsx 280px 左格），头像下面不再重复展示。 */}
       </div>
 
       {/* Post tabs */}

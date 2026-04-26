@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/lib/theme-context';
 import { SlotHead, SlotFooter } from '@/lib/slots';
 import PageViewTracker from '@/components/blog/PageViewTracker';
 import ImageEffects from '@/components/blog/ImageEffects';
+import AIChatBubble from '@/components/blog/AIChatBubble';
 
 // Force runtime rendering for all blog routes. Utterlog is a CMS — content is
 // created in the admin AFTER deploy, so there's nothing to pre-render at build
@@ -67,6 +68,10 @@ export default async function BlogLayout({
           />
           {children}
         </ThemeLayout>
+        {/* 全站浮动聊天气泡 —— 仅 admin 启用了 ai_chat_enabled 且当前
+            页面不是文章详情页时显示（文章页让位给 AIReaderChat 陪读）。
+            组件内部用 usePathname + permalink_structure 自检判断。 */}
+        <AIChatBubble />
         <SlotFooter options={ctx.options} />
       </ThemeProvider>
     </>

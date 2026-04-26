@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { Button, Input, Toggle } from '@/components/ui';
 import api from '@/lib/api';
 import { useForm } from 'react-hook-form';
-import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC } from '@/components/form/FormC';
+import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC, FormRowRadioC } from '@/components/form/FormC';
 import SystemUpdatePanel from '@/components/SystemUpdatePanel';
 
 // Shared style constants
@@ -464,52 +464,16 @@ export default function SettingsPage() {
             <>
               <FormSectionC title="站点基础信息" icon="fa-regular fa-circle-info">
                 <FormRowInputC label="站点名称" register={register('site_title')} placeholder="我的博客" />
-                {/* Header 站点标题显示方式：3 选 1 单选。inline 实现，
-                    沿用 FormRow* 的 32% / 1fr 网格 + 行底 divider，
-                    保持 iOS Settings 风格视觉一致。仅 Utterlog 和 Flux
-                    主题响应该选项；Azure / Chred 仍按"有 Logo 显示 Logo
-                    否则显示文字"的旧规则。 */}
-                <div style={{
-                  display: 'grid', gridTemplateColumns: '32% 1fr',
-                  borderBottom: '1px solid var(--color-divider)',
-                  minHeight: 56,
-                }}>
-                  <div style={{
-                    padding: '10px 14px',
-                    display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                  }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>
-                      标题显示方式
-                    </div>
-                    <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.5 }}>
-                      Header 处显示文字、Logo 或两者
-                    </div>
-                  </div>
-                  <div style={{
-                    padding: '10px 14px',
-                    display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap',
-                  }}>
-                    {([
-                      { value: 'text', label: '文字' },
-                      { value: 'text_logo', label: '文字 + Logo' },
-                      { value: 'logo', label: 'Logo' },
-                    ] as const).map(opt => (
-                      <label key={opt.value} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        cursor: 'pointer', fontSize: 13, color: 'var(--color-text-main)',
-                        userSelect: 'none',
-                      }}>
-                        <input
-                          type="radio"
-                          value={opt.value}
-                          {...register('site_brand_mode')}
-                          style={{ accentColor: 'var(--color-primary)', cursor: 'pointer', margin: 0 }}
-                        />
-                        <span>{opt.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <FormRowRadioC
+                  label="标题显示方式"
+                  hint="Header 处显示文字、Logo 或两者；仅 Utterlog 和 Flux 主题响应"
+                  register={register('site_brand_mode')}
+                  options={[
+                    { value: 'text', label: '文字' },
+                    { value: 'text_logo', label: '文字 + Logo' },
+                    { value: 'logo', label: 'Logo' },
+                  ]}
+                />
                 <FormRowInputC label="副标题" register={register('site_subtitle')} placeholder="一句话 Slogan" />
                 <FormRowInputC label="站点网址" register={register('site_url')} placeholder="https://yourdomain.com" />
                 <FormRowInputC label="管理员邮箱" type="email" register={register('admin_email')} placeholder="admin@yourdomain.com" hint="接收系统升级、安全通知等消息" />
@@ -952,47 +916,16 @@ export default function SettingsPage() {
               </FormSectionC>
 
               <FormSectionC title="排序" icon="fa-regular fa-arrow-down-wide-short" footerHint="访客在评论区可以自行切换并存到本地，这里设的是没切换过时的初始顺序。">
-                {/* 默认排序 —— inline 单选行，跟「标题显示方式」一致，
-                    用原生 <input type="radio"> 显示真实圆孔。 */}
-                <div style={{
-                  display: 'grid', gridTemplateColumns: '32% 1fr',
-                  minHeight: 56,
-                }}>
-                  <div style={{
-                    padding: '10px 14px',
-                    display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                  }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>
-                      默认排序
-                    </div>
-                    <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.5 }}>
-                      访客首次进入评论区的初始顺序
-                    </div>
-                  </div>
-                  <div style={{
-                    padding: '10px 14px',
-                    display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap',
-                  }}>
-                    {([
-                      { value: 'newest', label: '最新在前' },
-                      { value: 'oldest', label: '最早在前' },
-                    ] as const).map(opt => (
-                      <label key={opt.value} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        cursor: 'pointer', fontSize: 13, color: 'var(--color-text-main)',
-                        userSelect: 'none',
-                      }}>
-                        <input
-                          type="radio"
-                          value={opt.value}
-                          {...register('comment_order')}
-                          style={{ accentColor: 'var(--color-primary)', cursor: 'pointer', margin: 0 }}
-                        />
-                        <span>{opt.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <FormRowRadioC
+                  label="默认排序"
+                  hint="访客首次进入评论区的初始顺序"
+                  register={register('comment_order')}
+                  options={[
+                    { value: 'newest', label: '最新在前' },
+                    { value: 'oldest', label: '最早在前' },
+                  ]}
+                  last
+                />
               </FormSectionC>
 
               {/* 人机验证：保留自定义 3 列图标 radio 卡片（非表单式 UI），
@@ -1442,7 +1375,6 @@ export default function SettingsPage() {
           {activeTab !== 'update' && (
             <div style={{ paddingTop: '24px', borderTop: '1px solid var(--color-border)', marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
               <Button onClick={handleSubmit(onSubmit)} loading={saving}>
-                <i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} />
                 保存设置
               </Button>
             </div>

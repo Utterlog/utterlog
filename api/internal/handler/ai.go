@@ -1357,12 +1357,14 @@ func init() {
 // POST /api/v1/ai/reader-chat
 func AIReaderChat(c *gin.Context) {
 	var req struct {
-		PostID    int    `json:"post_id" binding:"required"`
+		// PostID 0 = 站点通用聊天气泡（AIChatBubble），跳过文章上下文
+		// 走「博主助手」system prompt；> 0 = 文章陪读（AIReaderChat）。
+		PostID    int    `json:"post_id"`
 		Message   string `json:"message"`
 		SessionID string `json:"session_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "post_id 不能为空"); return
+		util.BadRequest(c, "请求参数错误"); return
 	}
 
 	// Honour the admin's '允许访客（未登录）使用 AI 聊天' toggle.
@@ -1388,36 +1390,69 @@ func AIReaderChat(c *gin.Context) {
 		util.Error(c, 400, "NO_PROVIDER", "未配置 AI 提供商"); return
 	}
 
-	// Get post content
-	post, err := model.PostByID(req.PostID)
-	if err != nil {
-		util.NotFound(c, "文章"); return
-	}
-
-	// Build article context for system prompt
-	articleContent := post.Title
-	if post.Content != nil {
-		text := *post.Content
-		runes := []rune(text)
-		if len(runes) > 4000 {
-			text = string(runes[:4000])
+	// 构造 system prompt：post_id > 0 → 文章陪读；post_id == 0 → 站点通用助手
+	// post 变量保留到外层 scope 让后续 first-message question 路径能复用。
+	var systemPrompt string
+	var post *model.Post
+	if req.PostID > 0 {
+		// ── 文章陪读模式 ──
+		p, err := model.PostByID(req.PostID)
+		if err != nil {
+			util.NotFound(c, "文章"); return
 		}
-		articleContent += "\n\n" + text
+		post = p
+
+		articleContent := post.Title
+		if post.Content != nil {
+			text := *post.Content
+			runes := []rune(text)
+			if len(runes) > 4000 {
+				text = string(runes[:4000])
+			}
+			articleContent += "\n\n" + text
+		}
+
+		readerBase := model.GetOption("ai_system_prompt")
+		if readerBase == "" {
+			readerBase = "你是一个友好的 AI 阅读助手，专注于帮助读者理解和探讨博客文章。"
+		}
+		if memory := model.GetOption("ai_blogger_memory"); memory != "" {
+			readerBase += "\n\n## 背景记忆\n" + memory
+		}
+		systemPrompt = fmt.Sprintf("%s\n\n你正在陪读的文章：\n\n标题：%s\n\n内容：%s\n\n请围绕这篇文章回答用户的问题，可以总结、解释、延伸讨论，但不要透露站点内部数据。使用与用户相同的语言回复。回答简洁精炼。使用 Markdown 格式排版。严禁使用任何 emoji 表情符号。", readerBase, post.Title, articleContent)
+	} else {
+		// ── 站点通用聊天气泡模式（前端 AIChatBubble）──
+		// 没有文章上下文，扮演博主的 AI 助手回答关于站点 / 博主 / 历
+		// 史文章导航等问题。注入博主资料（昵称 / 简介 / 风格 / 记忆）
+		// 让 AI 像博主在跟访客交流。
+		base := model.GetOption("ai_system_prompt")
+		if base == "" {
+			base = "你是这个博客的 AI 助手，代表博主跟访客交流。可以介绍博客主题、推荐文章、回答关于博主的问题，但不要透露站点后台敏感信息。"
+		}
+		if name := strings.TrimSpace(model.GetOption("ai_blogger_name")); name != "" {
+			base += "\n\n博主昵称：" + name
+		}
+		if bio := strings.TrimSpace(model.GetOption("ai_blogger_bio")); bio != "" {
+			base += "\n博客简介：" + bio
+		}
+		if style := strings.TrimSpace(model.GetOption("ai_blogger_style")); style != "" {
+			base += "\n博主写作风格：" + style
+		}
+		if memory := strings.TrimSpace(model.GetOption("ai_blogger_memory")); memory != "" {
+			base += "\n\n## 背景记忆\n" + memory
+		}
+		base += "\n\n请用与访客相同的语言回复。回答简洁精炼，使用 Markdown 格式排版。严禁使用任何 emoji 表情符号。"
+		systemPrompt = base
 	}
 
-	// Base: custom system prompt or default reader prompt
-	readerBase := model.GetOption("ai_system_prompt")
-	if readerBase == "" {
-		readerBase = "你是一个友好的 AI 阅读助手，专注于帮助读者理解和探讨博客文章。"
-	}
-	// Append blogger memory if available (gives AI personality context)
-	if memory := model.GetOption("ai_blogger_memory"); memory != "" {
-		readerBase += "\n\n## 背景记忆\n" + memory
-	}
-	systemPrompt := fmt.Sprintf("%s\n\n你正在陪读的文章：\n\n标题：%s\n\n内容：%s\n\n请围绕这篇文章回答用户的问题，可以总结、解释、延伸讨论，但不要透露站点内部数据。使用与用户相同的语言回复。回答简洁精炼。使用 Markdown 格式排版。严禁使用任何 emoji 表情符号。", readerBase, post.Title, articleContent)
-
-	// First message: return pre-generated questions (or generate on the fly)
+	// First message: return pre-generated questions (or generate on the fly).
+	// 站点通用模式 (post == nil) 没有文章作为问题来源，直接返回空 questions。
 	if req.Message == "" {
+		if post == nil {
+			util.Success(c, gin.H{"questions": []string{}})
+			return
+		}
+
 		// Try pre-generated questions from DB
 		var aiQuestions string
 		config.DB.Get(&aiQuestions, fmt.Sprintf("SELECT COALESCE(ai_questions, '') FROM %s WHERE id = $1", config.T("posts")), req.PostID)

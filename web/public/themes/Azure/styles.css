@@ -344,12 +344,14 @@
   padding: 0;
   margin: 0;
 }
-/* Related posts — 5 column card grid */
+/* Related posts — 5 column card grid.
+   gap: 0 是有意为之 —— 卡片紧贴排列，不要 12px 间隙。
+   padding 也清掉，让整组卡片直接接到 tabs 下边沿。 */
 [data-theme="Azure"] .post-related-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  padding: 12px 0;
+  gap: 0;
+  padding: 0;
 }
 [data-theme="Azure"] .post-related-card {
   text-decoration: none;

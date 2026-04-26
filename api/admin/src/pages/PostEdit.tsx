@@ -212,7 +212,7 @@ export default function EditPostPage() {
           <div style={sectionStyle}>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
               <Button onClick={() => handleSave()} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
-                <i className="fa-regular fa-floppy-disk" style={{ fontSize: '13px' }} /> 保存
+                保存
               </Button>
               <Button variant="secondary" onClick={() => navigate('/posts')} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
                 返回

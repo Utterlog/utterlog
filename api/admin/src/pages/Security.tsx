@@ -316,7 +316,6 @@ export default function SecurityPage() {
 
           <div style={{ paddingTop: '24px', borderTop: '1px solid var(--color-border)', marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={saveSettings} loading={saving}>
-              <i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} />
               保存 CC / GeoIP 设置
             </Button>
           </div>

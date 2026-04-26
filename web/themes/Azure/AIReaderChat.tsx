@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useThemeContext } from '@/lib/theme-context';
+import { useReaderChatStore } from '@/lib/store';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -27,7 +28,17 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   // Priority: explicit prop (post author) > site owner (admin) > generic fallback.
   // Also pull options so we can read ai_chat_position later in the file
   // and apply the admin's left/right preference.
+  
   const { owner, options } = useThemeContext();
+  // 陪读卡片可见性 store —— 用户点 X 关闭后由 footer 上的小按钮重新开启。
+  // 选 dismissed 单字段而不是整对象，避免每次 store 任意字段变都触发重渲。
+  const dismissed = useReaderChatStore(s => s.dismissed);
+  const mount = useReaderChatStore(s => s.mount);
+  const unmount = useReaderChatStore(s => s.unmount);
+  const dismiss = useReaderChatStore(s => s.dismiss);
+  // 挂载时通知 footer「现在文章页有陪读」，卸载时清掉，避免离开文章后
+  // footer 还误以为陪读还在、显示重开按钮。
+  useEffect(() => { mount(); return () => { unmount(); }; }, [mount, unmount]);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -134,15 +145,44 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   };
 
   // 计算 footer 高度
-  const [footerH, setFooterH] = useState(56);
+  // ── 动态 bottom 避让 footer ──
+  // 滚动监听：footer 没进入 viewport 时气泡贴底 (24px)，
+  // footer 进入 viewport 时跟着上移避免重叠。
+  // 跟 AIChatBubble 同款逻辑，确保陪读 + 气泡视觉一致。
+  const [footerH, setFooterH] = useState(24);
   useEffect(() => {
-    const check = () => {
+    const compute = () => {
       const footer = document.querySelector('footer');
-      if (footer) setFooterH(footer.offsetHeight + 8);
+      if (!footer) { setFooterH(24); return; }
+      const rect = footer.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      if (rect.top >= viewportH) {
+        setFooterH(24);
+      } else {
+        setFooterH(Math.max(24, viewportH - rect.top + 8));
+      }
     };
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    compute();
+    const onScroll = () => requestAnimationFrame(compute);
+    // Azure / Chred / Utterlog 主题的 Layout 把 .blog-main 设成
+    // overflowY:auto，页面滚动发生在内层容器，window scroll 不会触发。
+    // 同时监听 window 和 .blog-main，覆盖两种滚动模型。
+    const main = document.querySelector('.blog-main');
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', compute);
+    if (main) main.addEventListener('scroll', onScroll, { passive: true });
+    let ro: ResizeObserver | null = null;
+    const footerEl = document.querySelector('footer');
+    if (footerEl && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => requestAnimationFrame(compute));
+      ro.observe(footerEl);
+    }
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', compute);
+      if (main) main.removeEventListener('scroll', onScroll);
+      if (ro) ro.disconnect();
+    };
   }, []);
 
   // AI reader = site owner (admin) — use their avatar first.
@@ -160,17 +200,20 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
     ? { left: 24 }
     : { right: 24 };
 
+  // 用户点过 X 后整个组件让位 —— 由 footer 上「重新打开陪读」的小按钮接管。
+  if (dismissed) return null;
+
   // ━━ 折叠状态：卡片 ━━
   if (!open) {
     return (
       <div
         onClick={() => setOpen(true)}
         style={{
-          position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 1000,
+          position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 9999,
           width: 300, padding: '14px 16px',
           background: '#fff', border: '1px solid #e5e5e5',
           boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          cursor: 'pointer', transition: 'box-shadow 0.2s, bottom 0.2s',
+          cursor: 'pointer', transition: 'bottom 0.25s ease, box-shadow 0.2s',
           display: 'flex', gap: 12, alignItems: 'flex-start',
         }}
         onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.12)'; }}
@@ -198,8 +241,27 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
             {excerpt || '点击开始和 AI 聊聊这篇文章'}
           </div>
         </div>
-        {/* 图标 */}
-        <i className="fa-sharp fa-solid fa-message-bot" style={{ color: '#0052D9', fontSize: 16, flexShrink: 0, marginTop: 2, opacity: 0.6 }} />
+        {/* 之前末尾有一个 fa-message-bot 装饰图标，跟右上角的 X 关闭按钮
+            位置重叠了。头像左上角已经有 AI 角标作为身份标识，机器人图标
+            纯装饰冗余 —— 拿掉避免遮挡 X。 */}
+        {/* 右上角关闭按钮 —— 跟音乐卡片的 X 关闭对应。stopPropagation 防止
+            点击 X 时冒泡到外层 div 触发 setOpen(true) 把卡片展开。 */}
+        <button
+          onClick={(e) => { e.stopPropagation(); dismiss(); }}
+          aria-label="关闭陪读"
+          title="关闭陪读"
+          style={{
+            position: 'absolute', top: 6, right: 6,
+            width: 22, height: 22, padding: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: '#bbb', borderRadius: 4, transition: 'background 0.15s, color 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#f0f0f0'; e.currentTarget.style.color = '#666'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#bbb'; }}
+        >
+          <i className="fa-regular fa-xmark" style={{ fontSize: 12 }} />
+        </button>
       </div>
     );
   }
@@ -207,12 +269,12 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   // ━━ 展开状态：聊天窗口（直角，加高） ━━
   return (
     <div style={{
-      position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 1000,
+      position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 9999,
       width: 400, height: '70vh', maxHeight: 700, minHeight: 500,
       background: '#fff', border: '1px solid #e0e0e0',
       boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
       display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      transition: 'bottom 0.2s',
+      transition: 'bottom 0.25s ease',
     }}>
       {/* Header */}
       <div style={{

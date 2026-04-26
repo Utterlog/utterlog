@@ -252,7 +252,7 @@ export default function MenusPage() {
             <i className="fa-regular fa-rotate-left" style={{ fontSize: '13px' }} /> 重置默认
           </Button>
           <Button onClick={onSave} loading={saving}>
-            <i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> 保存
+            保存
           </Button>
         </div>
       </div>

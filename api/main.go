@@ -329,6 +329,12 @@ func main() {
 		authed.POST("/admin/ai-comments/:id/regenerate", handler.AICommentRegenerate)
 		authed.DELETE("/admin/ai-comments/:id", handler.AICommentDelete)
 
+		// 数据统计 access_log 清理：把已记录的爬虫 UA + 旧版 SSR
+		// middleware 双计的 visitor_id 空记录从 ul_access_logs 删除。
+		// preview 是只读 dry-run，cleanup 真删（不可逆）。
+		authed.GET("/admin/analytics/cleanup-bots/preview", handler.CleanupBotLogsPreview)
+		authed.POST("/admin/analytics/cleanup-bots", handler.CleanupBotLogs)
+
 		// Annotations (段落点评) management
 		authed.GET("/admin/annotations", handler.AdminListAnnotations)
 		authed.DELETE("/admin/annotations/:id", handler.AdminDeleteAnnotation)

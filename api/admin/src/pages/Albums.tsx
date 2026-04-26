@@ -201,7 +201,7 @@ export default function AlbumsPage() {
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
             <Button variant="secondary" onClick={() => { setShowCreate(false); setEditAlbum(null); }}>取消</Button>
             <Button onClick={editAlbum ? handleUpdate : handleCreate} loading={saving}>
-              <i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} /> {editAlbum ? '更新' : '创建'}
+              {editAlbum ? '更新' : '创建'}
             </Button>
           </div>
         </div>

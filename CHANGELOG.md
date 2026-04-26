@@ -8,6 +8,58 @@
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-04-26
+
+### Added
+
+- **AI 陪读卡片新增「关闭 / 重新打开」**：之前文章页陪读卡片一旦显示就没法关掉，遮挡阅读。现在跟左侧音乐卡片同款交互：
+  - 折叠卡片右上角加 X 关闭按钮（22×22，灰色 hover 变深，stopPropagation 防止冒泡触发卡片展开）
+  - 关掉之后 footer「回到顶部」左边（`right:64`）出现「重新打开陪读」按钮（Azure / Chred 主题），点一下卡片回来
+  - Utterlog / Flux footer 没有「回到顶部」锚点，重开按钮用 fixed 定位浮在视口右下角
+  - 跨组件状态由新 `useReaderChatStore` 维护：AIReaderChat 挂载 `mount()` / 卸载 `unmount()`，进入新文章时一律重置 `dismissed` —— 用户在文章 A 关掉陪读，不影响文章 B 第一次访问的默认行为
+- **首页 hero 切换分类增加 loading 过场**：之前点分类 tab，hero 大图直接硬切，看着像「啪一下」。现在加一层「先预加载 + 半透蒙层 + 旋转 spinner」的过场，新图加载完成且最少展示 700ms 才切，配合 `<FadeCover key={displaySrc}>` 触发 `[data-blog-image][data-loaded]` 现有的淡入动画。视觉总长 700ms（最短）+ 0.4s 蒙层淡出与新图淡入并行
+- **新增「全站浮动聊天气泡」AIChatBubble 组件**：之前 admin「前端聊天气泡」section 没有对应的前端组件 —— 实际渲染只有 `AIReaderChat`（文章页陪读，针对当前文章）。现在拆成 2 个独立功能：
+  - **聊天气泡 (`AIChatBubble`)**：全站浮动 AI 助手，挂载到 (blog) layout，仅**非文章页**显示（usePathname + permalink_structure 自检），对话上下文是「博主助手」（注入 `ai_blogger_name / ai_blogger_bio / ai_blogger_style / ai_blogger_memory`）。由 `ai_chat_enabled` option 控制
+  - **AI 陪读 (`AIReaderChat`)**：仅**文章详情页**底部显示，对话上下文是当前文章。无条件显示（恢复之前误加的 ai_chat_enabled 守卫，陪读应该是文章独立功能）
+  - 同一页面不会同时出现两者：文章页只渲染陪读，非文章页只渲染气泡
+- **后端 `/ai/reader-chat` 支持 `post_id=0` 通用模式**：之前 PostID 是 required 字段，post_id=0 会被拒绝 + 强制查文章 → 不能给「站点通用聊天」用。改造 handler：post_id>0 走原文章陪读逻辑；post_id==0 走新「博主助手」system prompt（注入博主资料 + 跳过文章 context 查询）
+- **聊天气泡 + 陪读动态 footer 避让**：之前 `AIReaderChat` 用 `bottom: footer.offsetHeight + 8` **静态偏移**（不管用户在页面哪都抬到 footer 高度），导致用户在顶部时气泡也被抬高浪费空间。改为**滚动监听**：footer 没进入 viewport 时贴底 24px，footer 进入 viewport 时跟着 footer 顶部一起上移避免重叠。AIChatBubble 用同款逻辑，4 主题 AIReaderChat 都同步升级
+- **AIReaderChat z-index 1000 → 9999**，避免被 cookie banner / TOC 等 overlay 盖住
+
+### Changed
+
+- **Azure 主题 hero 下方那行播放控制按钮 → 博主社交链接图标**：原本是 5 个 hero 轮播按钮（快退 / 上一篇 / 暂停 / 下一篇 / 快进），实际使用率很低。改为渲染社交链接图标横排（GitHub / Twitter / Weibo / Telegram / YouTube / Instagram / Bilibili / 邮箱 / 网站），数据源走 `useThemeContext().options`（自带 `social_links` JSON → 平铺 `social_*` 键展开）。`paused` / hero 自动轮播的「悬停暂停」逻辑保留在 hero 自身的 `onMouseEnter/Leave` 里
+- **Azure 主题侧栏头像下面的社交链接图标删除**：避免和上面 hero 那行重复展示，简介下方现在只留博主名 + 简介
+- **AI 聊天气泡 / 陪读 footer 避让动画跟左侧音乐卡片对齐**：之前 React state 改 `bottom` 是跳变的，看上去像「瞬移」或「没动」。加上 `transition: 'bottom 0.25s ease'`（跟 `GlobalMiniPlayer` 完全一致），footer 进入视口时浮窗平滑上推
+- **AI 聊天气泡 / 陪读 scroll 监听同时挂 window 和 `.blog-main`**：之前只监听 `window.scroll`，但 Azure / Chred / Utterlog 三个主题的 Layout 把 `<main className="blog-main">` 设成 `overflowY: auto`，页面滚动发生在内层容器，window scroll 永远不触发。现在两个事件源都挂上，覆盖两种滚动模型；额外用 `ResizeObserver` 监听 footer 自身尺寸抖动（在线人数、备案号等异步数据加载完会改 footer 高度），避免初始 compute 拿到的旧值失真
+- **AI 聊天气泡展开面板也跟随 footer 上推**：原本 `bottom: 24` 写死，即使 scroll 检测修好，展开后还是会被 footer 盖住。改为 `bottom: bottomOffset` 跟折叠态一致
+- **首页相关文章卡片网格无间隙紧贴**（Azure）：`.post-related-grid` 的 `gap: 12px` → `gap: 0`，`padding: 12px 0` → `padding: 0`，5 列卡片直接接到 tabs 下边沿
+- **8 个 AI 默认提示词全面重写**，针对每个 prompt 模型最常见的失败模式做防御性优化：
+  - **摘要**：加角色设定（专业编辑），明确禁用 8 种套话开头（"本文介绍了"、"通过…作者表达了"等），强调"提炼而非复述第一段"
+  - **Slug**：从"整句翻译压缩"改为"提取 2-5 个关键概念词"，给好坏对照例子（Debian/phpMyAdmin/我的中秋节），明确跳过冠词介词
+  - **关键词**：明确排除泛词列表（博客 / 技术 / 文章 / 内容 / 教程 / 分享 / 笔记...），优先级"具体技术名 > 主题领域 > 抽象概念"，每标签 2-6 字限制
+  - **润色**：重写整段 prompt（用户痛点最多）—— 新结构「只能改 5 项 + 绝对不能改 5 项 + 输出要求 4 项」，强调代码块 / 技术术语 / 人称 / 内容本身一字不改
+  - **推荐问题**：禁用模板烂问题（"主要观点"、"详细介绍"），要求基于文中具体名词、3 个角度分散（细节 / 应用 / 对比 / 注意 / 下一步），给好问题示例
+  - **封面图**：重组结构 —— 「画面要求」+「氛围参考」+「视觉风格 4 项」+「绝对禁止 5 项」。明确 {title} 是"氛围参考"不要画到画面里，留白比例 30-40% 便于叠加标题
+  - **评论审核**：扩充「判定不通过」+「保护正常交流」双向规则（短表态 / 负面观点 / Emoji / 闲聊 都过），confidence 评分锚点细化（1.0 / 0.8 / 0.5），reason 限 30 字
+  - **评论回复**：用户体验最敏感的提示词 —— 强烈禁用 6 种机械化开头（"感谢您的评论"等），明确博主第一人称（不用"小编 / 笔者"），给烂回复对照 + 好回复示例（phpMyAdmin / 排版 / 写得不错），不加签名结尾
+- **封面图默认提示词改为纯中文**：之前首行「禁止文字」指令是中英双语（"Absolutely no text, no letters... 纯视觉画面，禁止出现任何文字字符。"），原本是利用图像生成模型对英文 negative prompt 更敏感的特性。按用户要求改成纯中文：「纯视觉画面，绝对禁止出现任何文字、字母、数字、符号、Logo、水印或 UI 元素。」。⚠️ 提示：部分模型对中文负面指令的遵守率可能略低，如果生成的封面图又出现英文乱码，可手动在「自定义提示词」里加回原英文 prompt
+- **AI 设置「自定义提示词」改为博主资料同款 FormRow 风格**：之前是自己 inline 渲染（`<div borderBottom='1px solid var(--color-border)' marginBottom='14px'>` 风格），跟博主资料 / 评论设置等用 FormRow 标准（32% 标签列 + ROW_BORDER 行底分割线）的 section 不一致。现在 8 个提示词 row 都走 `<FormRowTextareaC>`，跟博主资料的「博客简介 / 写作风格 / AI 记忆」textarea row 完全同款。`FormRowTextareaC` 新增 `labelExtra?: ReactNode` slot 让「恢复默认」按钮可以在 label 旁边右对齐，新增 `mono?: boolean` 切换等宽字体（提示词模板用 mono 看起来更像代码）
+- **表单视觉系统统一**：之前 admin 有 51 处 form row 用标准 `FormRow*` 组件（FormC.tsx），但还有 2 处 inline 复刻（gridTemplateColumns 32%/1fr + minHeight 56 + borderBottom 自己写）—— design token 改了容易漂移。
+  - 新增 `FormRowRadioC` 组件，行内 N 个原生 `<input type="radio">` 圆孔，复用 FormC 的 `LABEL_WIDTH` / `ROW_BORDER` / `FORM_ROW_MIN_HEIGHT` / `FORM_LABEL_PADDING` / `FORM_VALUE_PADDING` token
+  - 把 Settings.tsx 「标题显示方式」+「评论默认排序」2 处 inline 写法替换为 `<FormRowRadioC>`
+  - FormC.tsx 把 design token 改成 `export const`（`FORM_LABEL_WIDTH` / `FORM_ROW_BORDER` / `FORM_ROW_MIN_HEIGHT` / `FORM_LABEL_PADDING` / `FORM_VALUE_PADDING`），未来想 inline 写也能用同一份。改这几个常量 = 全表单视觉一致变化
+- **`FormSectionC` section 标题和长描述布局重构**：原本 title + description 在同一 flex 行显示，遇到长 description（如 AI 设置「自定义提示词」section 那段几百字说明）会把标题挤变形 / 截断。改成 title 单独一行，description 在标题下方独立段落（`paddingLeft: 21px` 跟标题文字左对齐），短描述也能自然显示。视觉一致 + 长文不再挤压
+- **后台所有「保存」按钮去掉 fa-floppy-disk 软盘图标**：保留纯文字「保存」更简洁，避免凌乱视觉。覆盖 12 个文件 18 处实例（AiSettings 6 处、Settings / Tools / PostCreate / PostEdit / PageCreate / PageEdit / Profile / Utterlog / Menus / Security / Albums 各 1-2 处）。**保留 icon 的按钮**：上传类（`fa-cloud-arrow-up`）、AI 类（`fa-wand-magic-sparkles` / `fa-robot` / `fa-brain` 等）
+
+### Fixed
+
+- **dashboard 访问统计被双计 + 看起来像爬虫泛滥**：
+  - 根因：`AccessLogger` middleware 在 SSR 命中 HTML 页时同步写一条 `ul_access_logs`（`visitor_id=""` 退化成 IP 做 dedup key），`PageViewTracker` 在浏览器渲染后又 POST `/api/v1/track` 写一条（visitor_id 是浏览器签发的真值）—— 两条 dedup key 不同（IP vs visitor_id）互不拦截，**同一访客被记两次**。dashboard 的「unique 访客」用 `COUNT(DISTINCT COALESCE(visitor_id, ip))` 把这两条算成两个不同访客，admin 误以为统计里混入了爬虫
+  - 修复：让 `AccessLogger` middleware **不再写** access_log，让 `/track` 成为唯一访客记录入口。爬虫绝大多数不执行 JS 自然不会触发 PageViewTracker → 不写 access_log → 统计自动接近真实访客数。代价：JS-disabled 访客不被记录，但比例 < 0.1%
+  - 历史数据清理：`PurgeAnalytics`（admin 后台「数据统计 → 数据清理」按钮）的 `duplicates` pass 增加 SSR 双计精准清理 —— 删除 `visitor_id 空 + fingerprint 空 + UA 是真浏览器 + 30s 内同 IP 同 path 有真 visitor_id 姐妹行` 的记录。一次点击清理两类重复
+  - 也新增 `/admin/analytics/cleanup-bots/preview` 和 `/admin/analytics/cleanup-bots` 独立 endpoint（命令行场景方便）
+
 ## [1.4.2] - 2026-04-26
 
 ### Fixed

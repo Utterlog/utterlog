@@ -70,18 +70,26 @@ func AccessLogger() gin.HandlerFunc {
 
 		c.Next()
 
-		// Only log when the response was a real page (2xx/3xx). 404
-		// sweeps from scanners hit here by the thousand; no point
-		// recording them as "visitors".
-		if c.Writer.Status() >= 400 {
-			return
-		}
-
-		// Get real IP: CF-Connecting-IP > X-Real-IP > X-Forwarded-For > ClientIP
-		realIP := c.Request.Header.Get("CF-Connecting-IP")
-		if realIP == "" { realIP = c.Request.Header.Get("X-Real-IP") }
-		if realIP == "" { realIP = c.ClientIP() }
-		go logAccess(realIP, path, c.Request.Method, c.Request.Referer(), c.Request.UserAgent(), c.Request.Header.Get("X-Forwarded-For"), "", "")
+		// 不再在 SSR 路径记录 access_log。
+		//
+		// 历史：之前 middleware 在 SSR 命中 HTML 页时同步写一条
+		// access_log（visitor_id=""，退化成 IP 做 dedup key），
+		// PageViewTracker 在浏览器渲染后又 POST /api/v1/track 写
+		// 一条（visitor_id 为浏览器签发的真值）—— 两条 dedup key
+		// 不同（IP vs visitor_id）互不拦截，同一访客被算两次，
+		// dashboard 的「unique 访客」用 COUNT(DISTINCT COALESCE
+		// (visitor_id, ip)) 把这两条当成两个不同访客。结果就是
+		// 真实访客被双计 +「visitor_id=空」的那条看起来像爬虫
+		// 数据，admin 误以为爬虫泛滥。
+		//
+		// 现状：让 /track 成为唯一访客记录入口。爬虫绝大多数不
+		// 执行 JS，自然不会触发 PageViewTracker → 不写 access_log
+		// → 统计数据自动接近真实访客数。代价：JS-disabled 访客
+		// 不被记录，但比例极低（< 0.1%），可以接受。
+		//
+		// middleware 函数本身保留（path filter 还在用，未来想加
+		// 错误日志 / 安全审计 hook 也方便），只是不再调 logAccess。
+		_ = path
 	}
 }
 
@@ -971,4 +979,76 @@ func VisitorMapData(c *gin.Context) {
 	}
 
 	util.Success(c, gin.H{"points": points})
+}
+
+// CleanupBotLogsPreview returns counts of how many access_log rows
+// would be removed by CleanupBotLogs, broken down by category. Lets
+// admin see the impact before committing the delete. Read-only.
+//
+// GET /api/v1/admin/analytics/cleanup-bots/preview
+func CleanupBotLogsPreview(c *gin.Context) {
+	t := config.T("access_logs")
+	var totalRows, botRows, ssrDoublecount int
+
+	config.DB.Get(&totalRows, fmt.Sprintf("SELECT COUNT(*) FROM %s", t))
+	config.DB.Get(&botRows, fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s", t, BotSQLPattern()))
+	// SSR double-count: rows written by the old AccessLogger middleware
+	// (visitor_id is empty AND fingerprint is empty AND user_agent looks
+	// like a real browser — short-UA bots already covered by botRows).
+	// These were written alongside the legitimate /track row from the
+	// browser, inflating "unique visitors" via DISTINCT ip fallback.
+	config.DB.Get(&ssrDoublecount, fmt.Sprintf(
+		`SELECT COUNT(*) FROM %s
+		 WHERE COALESCE(visitor_id,'') = ''
+		   AND COALESCE(fingerprint,'') = ''
+		   AND user_agent IS NOT NULL
+		   AND LENGTH(user_agent) >= 15
+		   AND NOT (%s)`, t, BotSQLPattern()))
+
+	util.Success(c, gin.H{
+		"total_rows":      totalRows,
+		"bot_rows":        botRows,
+		"ssr_doublecount": ssrDoublecount,
+		"will_remove":     botRows + ssrDoublecount,
+		"will_keep":       totalRows - botRows - ssrDoublecount,
+	})
+}
+
+// CleanupBotLogs removes the rows identified by CleanupBotLogsPreview:
+//
+//  1. Bot-UA hits (BotSQLPattern — Mozilla/5.0 too short, "bot/crawler/spider"
+//     anywhere in UA, social fetcher, AI scraper, headless framework, etc.)
+//  2. SSR double-count (visitor_id='' AND fingerprint='' on real-browser UA —
+//     the old middleware writes pre-fix where the same visit was counted twice
+//     because the /track POST also wrote a row with the real visitor_id).
+//
+// POST /api/v1/admin/analytics/cleanup-bots
+func CleanupBotLogs(c *gin.Context) {
+	t := config.T("access_logs")
+
+	res, err := config.DB.Exec(fmt.Sprintf("DELETE FROM %s WHERE %s", t, BotSQLPattern()))
+	if err != nil {
+		util.Error(c, 500, "DB_ERROR", err.Error())
+		return
+	}
+	botDel, _ := res.RowsAffected()
+
+	res, err = config.DB.Exec(fmt.Sprintf(
+		`DELETE FROM %s
+		 WHERE COALESCE(visitor_id,'') = ''
+		   AND COALESCE(fingerprint,'') = ''
+		   AND user_agent IS NOT NULL
+		   AND LENGTH(user_agent) >= 15
+		   AND NOT (%s)`, t, BotSQLPattern()))
+	if err != nil {
+		util.Error(c, 500, "DB_ERROR", err.Error())
+		return
+	}
+	ssrDel, _ := res.RowsAffected()
+
+	util.Success(c, gin.H{
+		"deleted_bot":             botDel,
+		"deleted_ssr_doublecount": ssrDel,
+		"deleted_total":           botDel + ssrDel,
+	})
 }

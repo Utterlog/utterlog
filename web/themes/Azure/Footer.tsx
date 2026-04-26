@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuthStore, useMusicStore } from '@/lib/store';
+import { useAuthStore, useMusicStore, useReaderChatStore } from '@/lib/store';
 import { authApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -18,6 +18,12 @@ export default function Footer() {
   // server's current response. No-op when not logged in.
   useEffect(() => { checkAuth().catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const musicStore = useMusicStore();
+  // 陪读卡片 store —— 文章页用户点 X 关掉陪读后，footer 上要冒出一个
+  // 「重新打开陪读」的小按钮（位置在「回到顶部」左侧）。非文章页 active=false，
+  // 按钮不显示。点按钮 → show() → 卡片回来。
+  const readerActive = useReaderChatStore(s => s.active);
+  const readerDismissed = useReaderChatStore(s => s.dismissed);
+  const showReader = useReaderChatStore(s => s.show);
   const [stats, setStats] = useState<any>({});
   const [siteOptions, setSiteOptions] = useState<any>({});
   const [visitor, setVisitor] = useState<{ city?: string; code?: string }>({});
@@ -650,6 +656,31 @@ export default function Footer() {
           </div>
 
         </div>
+
+        {/* 重新打开陪读 —— 仅当当前页有 AIReaderChat 挂载（active）且
+            用户点过 X 关掉了卡片（dismissed）时才显示。位置在「回到顶部」
+            左侧 32px（right:64），跟音乐卡片关闭后 footer 左侧的音乐按钮
+            是镜像关系。 */}
+        {readerActive && readerDismissed && (
+          <button
+            onClick={showReader}
+            title="重新打开陪读"
+            style={{
+              position: 'absolute', right: '64px', top: '50%', transform: 'translateY(-50%)',
+              width: '32px', height: '32px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'none', border: 'none', padding: 0,
+              cursor: 'pointer', opacity: 0.18, transition: 'opacity 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.35'; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '0.18'; }}
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 0c9.601 0 12 2.399 12 12 0 9.601-2.399 12-12 12-9.601 0-12-2.399-12-12C0 2.399 2.399 0 12 0z" fill="#333" />
+              <path d="M7 8h10v6H10l-2.5 2.5V14H7V8zm2 1.5v3h7v-3H9z" fill="white" />
+            </svg>
+          </button>
+        )}
 
         {/* Scroll to top — footer 内，垂直居中，靠页面最右边 */}
         <button

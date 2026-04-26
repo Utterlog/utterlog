@@ -359,7 +359,7 @@ export default function ProfilePage() {
               修改登录账号或邮箱需要验证当前密码和邮箱验证码
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button type="submit" loading={saving}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '16px' }} />保存</Button>
+              <Button type="submit" loading={saving}>保存</Button>
             </div>
           </form>
         </div>
@@ -458,7 +458,7 @@ export default function ProfilePage() {
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <Button onClick={saveSocialLinks} loading={socialSaving}><i className="fa-regular fa-floppy-disk" style={{ fontSize: '14px' }} />保存</Button>
+            <Button onClick={saveSocialLinks} loading={socialSaving}>保存</Button>
           </div>
         </div>
 
