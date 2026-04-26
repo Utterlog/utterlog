@@ -132,6 +132,20 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
 
   useEffect(() => { fetchData(); }, [postId]);
 
+  // Snap pageIndex back to 0 when the active tab's item count shrinks
+  // below the current window (e.g. user paginated to page 2 of related,
+  // then switched to a tab with only 3 items). Doing this in an effect
+  // instead of inline during render avoids the "Cannot update during
+  // render" warning and the extra synchronous re-render.
+  useEffect(() => {
+    const items = activeTab === 'feeds'
+      ? (data?.feeds || [])
+      : (data?.[activeTab as keyof NavigationData] as NavPost[] | undefined) || [];
+    if (pageIndex > 0 && pageIndex * PAGE_SIZE >= items.length) {
+      setPageIndex(0);
+    }
+  }, [activeTab, data, pageIndex]);
+
   const handleRefresh = () => {
     setRefreshing(true);
     const allItems = activeTab === 'feeds' ? feeds : (tabs.find(t => t.key === activeTab)?.items || []);
@@ -156,10 +170,6 @@ export default function PostNavigation({ postId, coverUrl }: { postId: number; c
 
   const allActiveItems = tabs.find(t => t.key === activeTab)?.items || [];
   const activeItems = allActiveItems.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE);
-  // 如果超出范围回到第一页
-  if (activeItems.length === 0 && allActiveItems.length > 0) {
-    setPageIndex(0);
-  }
 
   return (
     <div className="post-nav-section">

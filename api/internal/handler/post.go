@@ -610,9 +610,14 @@ func PostNavigation(c *gin.Context) {
 			catIDStr += strconv.Itoa(cid)
 		}
 		var catRelated []navPost
+		// LIMIT 20-len(related) keeps the fill consistent with the
+		// outer `len(related) < 20` cap. The previous 5-len(related)
+		// went negative once tag-based hits returned 6+ rows, which
+		// Postgres rejects ('LIMIT must not be negative') — sqlx
+		// swallowed the error and the fallback silently disappeared.
 		config.DB.Select(&catRelated, fmt.Sprintf(
 			"SELECT %s FROM %s p JOIN %s r ON p.id = r.post_id WHERE r.meta_id IN (%s) AND p.id NOT IN (%s) AND p.status = 'publish' AND p.type = 'post' GROUP BY p.id, p.title, p.slug, p.cover_url, p.created_at, p.view_count, p.comment_count ORDER BY p.created_at DESC LIMIT %d",
-			pCols, t("posts"), t("relationships"), catIDStr, excludeIDs, 5-len(related)), )
+			pCols, t("posts"), t("relationships"), catIDStr, excludeIDs, 20-len(related)), )
 		related = append(related, catRelated...)
 	}
 
@@ -626,9 +631,12 @@ func PostNavigation(c *gin.Context) {
 				excludeIDs += "," + strconv.Itoa(r.ID)
 			}
 			var ftsRelated []navPost
+			// Same 20-len(related) fix as the category fallback —
+			// negative LIMITs were dropping FTS suggestions whenever
+			// tags+category had already filled 5+ rows.
 			config.DB.Select(&ftsRelated, fmt.Sprintf(
 				"SELECT %s FROM %s WHERE status = 'publish' AND type = 'post' AND id NOT IN (%s) AND to_tsvector('simple', title || ' ' || COALESCE(content, '')) @@ plainto_tsquery('simple', $1) ORDER BY view_count DESC LIMIT %d",
-				cols, t("posts"), excludeIDs, 5-len(related)), title)
+				cols, t("posts"), excludeIDs, 20-len(related)), title)
 			related = append(related, ftsRelated...)
 		}
 	}
@@ -688,8 +696,11 @@ func PostNavigation(c *gin.Context) {
 		PubDate  int64  `db:"pub_date" json:"pub_date"`
 	}
 	var feedItems []feedItem
+	// fi.pub_date must be in the SELECT list — without it sqlx leaves
+	// PubDate=0 and the front-end's `new Date(pub_date * 1000)` paints
+	// every related-tab feed entry as 1970-01-01.
 	config.DB.Select(&feedItems, fmt.Sprintf(
-		"SELECT fi.title, fi.link, rs.site_name, rs.site_url FROM %s fi JOIN %s rs ON fi.subscription_id = rs.id ORDER BY fi.pub_date DESC LIMIT 20",
+		"SELECT fi.title, fi.link, rs.site_name, rs.site_url, fi.pub_date FROM %s fi JOIN %s rs ON fi.subscription_id = rs.id ORDER BY fi.pub_date DESC LIMIT 20",
 		t("feed_items"), t("rss_subscriptions")))
 	if feedItems == nil { feedItems = []feedItem{} }
 
