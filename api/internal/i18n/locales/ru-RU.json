@@ -1,0 +1,31 @@
+{
+  "locale": "ru-RU",
+  "name": "Russian",
+  "native_name": "Русский",
+  "direction": "ltr",
+  "version": "1",
+  "messages": {
+    "common.home": "Главная",
+    "common.archives": "Архив",
+    "common.categories": "Категории",
+    "common.tags": "Теги",
+    "common.comments": "Комментарии",
+    "common.search": "Поиск",
+    "common.loading": "Загрузка...",
+    "common.empty": "Пока нет материалов",
+    "post.words": "{count} знаков",
+    "post.readingTime": "{minutes} мин чтения",
+    "post.views": "{count} просмотров",
+    "post.commentCount": "{count} комментариев",
+    "stats.posts": "Статьи",
+    "stats.comments": "Комментарии",
+    "stats.days": "Дней онлайн",
+    "stats.totalWords": "Всего знаков",
+    "archive.title": "Архив",
+    "comment.title": "Комментарии",
+    "comment.submit": "Отправить комментарий",
+    "language.zh-CN": "简体中文",
+    "language.en-US": "English",
+    "language.ru-RU": "Русский"
+  }
+}

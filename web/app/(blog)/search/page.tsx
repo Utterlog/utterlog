@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { searchPosts } from '@/lib/blog-api';
 import PostLink from '@/components/blog/PostLink';
+import PageTitle from '@/components/blog/PageTitle';
 
 export const metadata: Metadata = { title: '搜索' };
 
@@ -29,14 +30,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   }
 
   return (
-    <div style={{ padding: '32px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-        <i className="fa-sharp fa-light fa-magnifying-glass" style={{ fontSize: '24px', color: 'var(--color-primary)' }} />
-        <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-text-main)' }}>搜索</h1>
-      </div>
+    <div style={{ minHeight: 'calc(100vh - 200px)' }}>
+      <PageTitle title="搜索" icon="fa-sharp fa-light fa-magnifying-glass" />
 
-      {/* Search form */}
+      <div style={{ padding: '0 32px 32px' }}>
       <form action="/search" method="GET" style={{ marginBottom: '24px' }}>
         <div style={{ display: 'flex', gap: '8px' }}>
           <input
@@ -144,6 +141,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           <p style={{ color: 'var(--color-text-dim)' }}>输入关键词搜索文章</p>
         </div>
       )}
+      </div>
     </div>
   );
 }

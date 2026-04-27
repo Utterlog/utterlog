@@ -28,9 +28,8 @@ type Storage interface {
 var Default Storage
 
 // NewLocalStorage returns a LocalStorage instance for the default public/uploads path.
-// baseURL is left empty so URL() reads PublicBaseURL() dynamically — that way
-// admins changing the site_url option in settings see existing upload URLs
-// reflect the new origin immediately, without needing an API restart.
+// Local uploads are exposed as root-relative URLs so article bodies and media
+// records do not bake in the current site_url.
 func NewLocalStorage() *LocalStorage {
 	return &LocalStorage{baseDir: "public/uploads"}
 }
@@ -147,7 +146,7 @@ func (l *LocalStorage) Delete(path string) error {
 func (l *LocalStorage) URL(path string) string {
 	base := l.baseURL
 	if base == "" {
-		base = strings.TrimRight(config.PublicBaseURL(), "/") + "/uploads"
+		base = "/uploads"
 	}
 	return base + "/" + path
 }

@@ -68,13 +68,23 @@ var uploadSem = make(chan struct{}, 5) // max 5 concurrent uploads
 var uploadMu sync.Mutex
 
 func detectCategory(mimeType, ext string) string {
-	if strings.HasPrefix(mimeType, "image/") { return "image" }
-	if strings.HasPrefix(mimeType, "video/") { return "video" }
-	if strings.HasPrefix(mimeType, "audio/") { return "audio" }
+	if strings.HasPrefix(mimeType, "image/") {
+		return "image"
+	}
+	if strings.HasPrefix(mimeType, "video/") {
+		return "video"
+	}
+	if strings.HasPrefix(mimeType, "audio/") {
+		return "audio"
+	}
 	docExts := map[string]bool{"pdf": true, "doc": true, "docx": true, "xls": true, "xlsx": true, "ppt": true, "pptx": true, "txt": true, "md": true, "csv": true}
-	if docExts[ext] { return "document" }
+	if docExts[ext] {
+		return "document"
+	}
 	archiveExts := map[string]bool{"zip": true, "rar": true, "7z": true, "tar": true, "gz": true}
-	if archiveExts[ext] { return "archive" }
+	if archiveExts[ext] {
+		return "archive"
+	}
 	return "other"
 }
 
@@ -180,7 +190,8 @@ func UploadMedia(c *gin.Context) {
 
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		util.BadRequest(c, "未收到文件"); return
+		util.BadRequest(c, "未收到文件")
+		return
 	}
 	defer file.Close()
 
@@ -190,29 +201,39 @@ func UploadMedia(c *gin.Context) {
 	}
 
 	ext := strings.ToLower(filepath.Ext(header.Filename))
-	if ext != "" { ext = ext[1:] }
+	if ext != "" {
+		ext = ext[1:]
+	}
 	if !allowedExts[ext] {
-		util.Error(c, http.StatusBadRequest, "VALIDATION_ERROR", "不支持的文件类型: "+ext); return
+		util.Error(c, http.StatusBadRequest, "VALIDATION_ERROR", "不支持的文件类型: "+ext)
+		return
 	}
 
 	// Configurable max size (default 50MB)
 	maxSizeMB := 50
 	if v := model.GetOption("max_upload_size"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 { maxSizeMB = n }
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			maxSizeMB = n
+		}
 	}
 	if header.Size > int64(maxSizeMB)*1024*1024 {
-		util.BadRequest(c, fmt.Sprintf("文件大小超过 %dMB 限制", maxSizeMB)); return
+		util.BadRequest(c, fmt.Sprintf("文件大小超过 %dMB 限制", maxSizeMB))
+		return
 	}
 
 	// Check if we need to convert image format
 	convertFormat := model.GetOption("image_convert_format") // "", "webp", "jpg"
 	quality := 82
 	if v := model.GetOption("image_quality"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 { quality = n }
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
+			quality = n
+		}
 	}
 	maxWidth := 0
 	if v := model.GetOption("image_max_width"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 { maxWidth = n }
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			maxWidth = n
+		}
 	}
 	stripExif := model.GetOption("image_strip_exif") == "true" || model.GetOption("image_strip_exif") == "1"
 
@@ -294,11 +315,14 @@ func UploadMedia(c *gin.Context) {
 
 		mimeMap := map[string]string{"jpg": "image/jpeg", "png": "image/png", "webp": "image/webp", "avif": "image/avif"}
 		mimeType := mimeMap[finalExt]
-		if mimeType == "" { mimeType = "image/" + finalExt }
+		if mimeType == "" {
+			mimeType = "image/" + finalExt
+		}
 
 		fileURL, uploadErr := stg.Upload(filename, &buf, mimeType)
 		if uploadErr != nil {
-			util.Error(c, 500, "SAVE_ERROR", "文件保存失败: "+uploadErr.Error()); return
+			util.Error(c, 500, "SAVE_ERROR", "文件保存失败: "+uploadErr.Error())
+			return
 		}
 		finalSize := int64(buf.Len())
 
@@ -331,7 +355,8 @@ func UploadMedia(c *gin.Context) {
 
 	fileURL, uploadErr := stg.Upload(filename, file, mimeType)
 	if uploadErr != nil {
-		util.Error(c, 500, "SAVE_ERROR", "文件保存失败: "+uploadErr.Error()); return
+		util.Error(c, 500, "SAVE_ERROR", "文件保存失败: "+uploadErr.Error())
+		return
 	}
 
 	t := config.T("media")
@@ -356,7 +381,8 @@ func DownloadFromURL(c *gin.Context) {
 		Name   string `json:"name" form:"name"`
 	}
 	if err := c.ShouldBind(&req); err != nil || req.URL == "" {
-		util.BadRequest(c, "url 不能为空"); return
+		util.BadRequest(c, "url 不能为空")
+		return
 	}
 
 	folder := resolveFolder(req.Folder)
@@ -364,19 +390,22 @@ func DownloadFromURL(c *gin.Context) {
 	// Validate URL
 	parsed, err := url.ParseRequestURI(req.URL)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		util.BadRequest(c, "无效的 URL"); return
+		util.BadRequest(c, "无效的 URL")
+		return
 	}
 
 	// Download
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Get(req.URL)
 	if err != nil {
-		util.Error(c, 500, "DOWNLOAD_FAILED", "下载失败: "+err.Error()); return
+		util.Error(c, 500, "DOWNLOAD_FAILED", "下载失败: "+err.Error())
+		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		util.Error(c, 500, "DOWNLOAD_FAILED", fmt.Sprintf("远程服务器返回 %d", resp.StatusCode)); return
+		util.Error(c, 500, "DOWNLOAD_FAILED", fmt.Sprintf("远程服务器返回 %d", resp.StatusCode))
+		return
 	}
 
 	// Determine extension from Content-Type or URL
@@ -387,7 +416,9 @@ func DownloadFromURL(c *gin.Context) {
 		if len(exts) > 0 {
 			ext = strings.TrimPrefix(exts[0], ".")
 			// Normalize
-			if ext == "jfif" || ext == "jpe" { ext = "jpg" }
+			if ext == "jfif" || ext == "jpe" {
+				ext = "jpg"
+			}
 		}
 	}
 	if ext == "" {
@@ -397,19 +428,24 @@ func DownloadFromURL(c *gin.Context) {
 			ext = strings.ToLower(strings.TrimPrefix(e, "."))
 		}
 	}
-	if ext == "" { ext = "bin" }
+	if ext == "" {
+		ext = "bin"
+	}
 
 	// Max 100MB for downloads
 	maxSizeMB := 100
 	if v := model.GetOption("max_upload_size"); v != "" {
-		if n, err2 := strconv.Atoi(v); err2 == nil && n > 0 { maxSizeMB = n * 2 }
+		if n, err2 := strconv.Atoi(v); err2 == nil && n > 0 {
+			maxSizeMB = n * 2
+		}
 	}
 	limited := io.LimitReader(resp.Body, int64(maxSizeMB)*1024*1024)
 
 	var buf bytes.Buffer
 	written, copyErr := io.Copy(&buf, limited)
 	if copyErr != nil {
-		util.Error(c, 500, "SAVE_ERROR", "读取失败: "+copyErr.Error()); return
+		util.Error(c, 500, "SAVE_ERROR", "读取失败: "+copyErr.Error())
+		return
 	}
 
 	stg := resolveStorageForFolder(folder)
@@ -423,13 +459,16 @@ func DownloadFromURL(c *gin.Context) {
 	filename := storage.GeneratePath(ext, folder)
 	fileURL, uploadErr := stg.Upload(filename, &buf, ct)
 	if uploadErr != nil {
-		util.Error(c, 500, "SAVE_ERROR", "保存失败: "+uploadErr.Error()); return
+		util.Error(c, 500, "SAVE_ERROR", "保存失败: "+uploadErr.Error())
+		return
 	}
 
 	name := req.Name
 	if name == "" {
 		name = filepath.Base(parsed.Path)
-		if name == "" || name == "/" { name = "download." + ext }
+		if name == "" || name == "/" {
+			name = "download." + ext
+		}
 	}
 
 	category := detectCategory(ct, ext)
@@ -468,7 +507,9 @@ func generateThumbnailsToStorage(src image.Image, baseName string, stg storage.S
 	result := gin.H{}
 	quality := 80
 	if v := model.GetOption("image_quality"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 { quality = n }
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
+			quality = n
+		}
 	}
 
 	for _, size := range thumbSizes {
@@ -489,7 +530,9 @@ func generateThumbnailsToStorage(src image.Image, baseName string, stg storage.S
 
 func saveRawFile(src io.ReadSeeker, path string) {
 	dst, err := os.Create(path)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	defer dst.Close()
 	io.Copy(dst, src)
 }
@@ -534,7 +577,9 @@ func ListMedia(c *gin.Context) {
 			files = append(files, row)
 		}
 	}
-	if files == nil { files = []map[string]interface{}{} }
+	if files == nil {
+		files = []map[string]interface{}{}
+	}
 
 	util.Success(c, gin.H{
 		"files": files, "total": total, "page": page, "limit": perPage,
@@ -583,13 +628,23 @@ func GetMediaExif(c *gin.Context) {
 		if u == "" {
 			continue
 		}
-		var exifData string
-		err := config.DB.Get(&exifData,
-			fmt.Sprintf("SELECT COALESCE(exif_data, '') FROM %s WHERE url = $1", t), u)
-		if err == nil && exifData != "" {
-			var parsed map[string]string
-			if json.Unmarshal([]byte(exifData), &parsed) == nil && len(parsed) > 0 {
-				result[u] = parsed
+		candidates := []string{u}
+		if parsed, err := url.Parse(u); err == nil && parsed.Path != "" {
+			if strings.HasPrefix(parsed.Path, "/uploads/") {
+				candidates = append(candidates, parsed.Path)
+				candidates = append(candidates, strings.TrimRight(config.PublicBaseURL(), "/")+parsed.Path)
+			}
+		}
+		for _, candidate := range candidates {
+			var exifData string
+			err := config.DB.Get(&exifData,
+				fmt.Sprintf("SELECT COALESCE(exif_data, '') FROM %s WHERE url = $1", t), candidate)
+			if err == nil && exifData != "" {
+				var parsed map[string]string
+				if json.Unmarshal([]byte(exifData), &parsed) == nil && len(parsed) > 0 {
+					result[u] = parsed
+					break
+				}
 			}
 		}
 	}
@@ -643,7 +698,7 @@ func UploadBranding(c *gin.Context) {
 	// baked-in defaults.
 	brandingDir := filepath.Join("public", "uploads", "branding")
 	if err := os.MkdirAll(brandingDir, 0755); err != nil {
-		util.Error(c, 500, "SAVE_FAILED", "创建 branding 目录失败：" + err.Error())
+		util.Error(c, 500, "SAVE_FAILED", "创建 branding 目录失败："+err.Error())
 		return
 	}
 
@@ -665,7 +720,7 @@ func UploadBranding(c *gin.Context) {
 	fullPath := filepath.Join(brandingDir, filename)
 	out, err := os.Create(fullPath)
 	if err != nil {
-		util.Error(c, 500, "SAVE_FAILED", "保存文件失败：" + err.Error())
+		util.Error(c, 500, "SAVE_FAILED", "保存文件失败："+err.Error())
 		return
 	}
 	defer out.Close()

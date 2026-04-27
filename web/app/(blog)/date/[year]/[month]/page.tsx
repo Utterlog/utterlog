@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getPosts } from '@/lib/blog-api';
 import PostLink from '@/components/blog/PostLink';
+import PageTitle from '@/components/blog/PageTitle';
 
 interface Props { params: Promise<{ year: string; month: string }> }
 
@@ -27,16 +28,19 @@ export default async function MonthArchive({ params }: Props) {
   });
 
   return (
-    <div style={{ padding: '32px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-        <i className="fa-regular fa-calendar" style={{ fontSize: '20px', color: 'var(--color-primary)' }} />
-        <h1 style={{ fontSize: '22px', fontWeight: 700 }}>{year} 年 {parseInt(month)} 月归档</h1>
-        <span style={{ fontSize: '13px', color: 'var(--color-text-dim)' }}>共 {posts.length} 篇</span>
-        <Link href={`/date/${year}`} style={{ marginLeft: 'auto', fontSize: '13px', color: 'var(--color-primary)', textDecoration: 'none' }}>
+    <div>
+      <PageTitle
+        title={`${year} 年 ${parseInt(month)} 月归档`}
+        icon="fa-regular fa-calendar"
+        meta={<><strong>{posts.length}</strong> 篇文章</>}
+        actions={
+          <Link href={`/date/${year}`} style={{ fontSize: '13px', color: 'var(--color-primary)', textDecoration: 'none' }}>
           <i className="fa-solid fa-arrow-left fa-fw" /> 返回 {year} 年
-        </Link>
-      </div>
+          </Link>
+        }
+      />
 
+      <div style={{ padding: '0 32px 32px' }}>
       <div style={{ border: '1px solid var(--color-border)' }}>
         {posts.map((post: any, idx: number) => {
           const d = typeof post.created_at === 'number' ? new Date(post.created_at * 1000) : new Date(post.created_at);
@@ -63,6 +67,7 @@ export default async function MonthArchive({ params }: Props) {
         {posts.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-dim)' }}>该月暂无文章</div>
         )}
+      </div>
       </div>
     </div>
   );

@@ -30,7 +30,13 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   // the auto-generated category filter tabs. Empty ⇒ fall back to
   // the category auto-list behavior.
   const { menus: ctxMenus, options } = useThemeContext();
-  const sidebarMenu = Array.isArray(ctxMenus?.sidebar) ? ctxMenus.sidebar : [];
+  const isAllSidebarItem = (item: any) => {
+    const label = String(item?.label || '').trim();
+    const href = String(item?.href || '').trim();
+    return item?.type === 'all' || href === '__all__' || (label === '全部' && (!href || href === '/' || href === '#'));
+  };
+  const rawSidebarMenu = Array.isArray(ctxMenus?.sidebar) ? ctxMenus.sidebar : [];
+  const sidebarMenu = rawSidebarMenu.filter((item: any) => !isAllSidebarItem(item));
   const useCustomSidebar = sidebarMenu.length > 0;
   const [modeIdx, setModeIdx] = useState(0);
   const [heroPost, setHeroPost] = useState<any>(posts[0] || null);
@@ -167,7 +173,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   const heroSrc = heroPost?.cover_url || (heroPost ? randomCoverUrl(heroPost.id, options) : '');
   const categoryFromMenuItem = (item: any) => {
     if (!item) return null;
-    const rawSlug = item.slug || String(item.href || '').match(/^\/category\/([^/?#]+)/)?.[1] || '';
+    const rawSlug = item.slug || String(item.href || '').match(/^\/categor(?:y|ies)\/([^/?#]+)/)?.[1] || '';
     const slug = rawSlug ? decodeURIComponent(rawSlug) : '';
     const id = Number(item.category_id || 0);
     const found = categories.find((cat: any) => (id > 0 && Number(cat.id) === id) || (slug && cat.slug === slug));
@@ -219,8 +225,8 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   }, [heroSrc, displaySrc]);
 
   // Hero height — tab row count depends on which sidebar mode we're in.
-  // Custom menu uses its own length; default uses 1 全部 + N categories.
-  const tabCount = useCustomSidebar ? sidebarMenu.length : 1 + categories.length;
+  // Custom menu still keeps the fixed "全部" tab at the top.
+  const tabCount = useCustomSidebar ? 1 + sidebarMenu.length : 1 + categories.length;
   const heroHeight = Math.max(280, tabCount * 56); // min 280px
   // Title bar height = exactly one sidebar tab's height. When the
   // hero is taller than tabCount * 56 (the min-280 floor kicks in
@@ -234,6 +240,14 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   const heroModeStyle = {
     '--azure-hero-mode-color': MODES[modeIdx].color,
   } as CSSProperties;
+  const renderAllHeroTab = () => (
+    <button key="__all" type="button" onClick={() => handleTabClick(0)} className={`azure-hero-tab${activeCatIdx === 0 ? ' active' : ''}`}>
+      <span className="azure-hero-tab-label">
+        全部 <span className="azure-hero-tab-count">({totalPostCount})</span>
+      </span>
+      <i className="fa-sharp fa-light fa-grid-2 azure-hero-tab-icon" aria-hidden="true" />
+    </button>
+  );
 
   return (
     <div className="azure-home">
@@ -245,42 +259,40 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
           <aside className="azure-hero-tabs">
             <div className="azure-hero-tabs-inner">
               {useCustomSidebar ? (
-                sidebarMenu.map((item: any, i: number) => {
-                  const cat = categoryFromMenuItem(item);
-                  if (cat) {
-                    const catIdx = categories.findIndex((c: any) => c.slug === cat.slug || Number(c.id) === Number(cat.id));
-                    const tabIdx = catIdx >= 0 ? catIdx + 1 : -1;
-                    const active = activeCatIdx === tabIdx;
+                <>
+                  {renderAllHeroTab()}
+                  {sidebarMenu.map((item: any, i: number) => {
+                    const cat = categoryFromMenuItem(item);
+                    if (cat) {
+                      const catIdx = categories.findIndex((c: any) => c.slug === cat.slug || Number(c.id) === Number(cat.id));
+                      const tabIdx = catIdx >= 0 ? catIdx + 1 : -1;
+                      const active = activeCatIdx === tabIdx;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => { if (tabIdx >= 0) handleTabClick(tabIdx); }}
+                          className={`azure-hero-tab${active ? ' active' : ''}`}
+                          disabled={tabIdx < 0}
+                        >
+                          <span className="azure-hero-tab-label">
+                            {cat.name} <span className="azure-hero-tab-count">({cat.count || 0})</span>
+                          </span>
+                          <i className={`${getCategoryIcon(cat)} azure-hero-tab-icon`} aria-hidden="true" />
+                        </button>
+                      );
+                    }
                     return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => { if (tabIdx >= 0) handleTabClick(tabIdx); }}
-                        className={`azure-hero-tab${active ? ' active' : ''}`}
-                        disabled={tabIdx < 0}
-                      >
-                        <span className="azure-hero-tab-label">
-                          {cat.name} <span className="azure-hero-tab-count">({cat.count || 0})</span>
-                        </span>
-                        <i className={`${getCategoryIcon(cat)} azure-hero-tab-icon`} aria-hidden="true" />
-                      </button>
+                      <Link key={i} href={item.href || '#'} className="azure-hero-tab link">
+                        <span className="azure-hero-tab-label">{item.label}</span>
+                        <i className={`${item.icon || 'fa-sharp fa-light fa-circle-arrow-right'} azure-hero-tab-icon`} aria-hidden="true" />
+                      </Link>
                     );
-                  }
-                  return (
-                    <Link key={i} href={item.href || '#'} className="azure-hero-tab link">
-                      <span className="azure-hero-tab-label">{item.label}</span>
-                      <i className={`${item.icon || 'fa-sharp fa-light fa-circle-arrow-right'} azure-hero-tab-icon`} aria-hidden="true" />
-                    </Link>
-                  );
-                })
+                  })}
+                </>
               ) : (
                 <>
-                  <button type="button" onClick={() => handleTabClick(0)} className={`azure-hero-tab${activeCatIdx === 0 ? ' active' : ''}`}>
-                    <span className="azure-hero-tab-label">
-                      全部 <span className="azure-hero-tab-count">({totalPostCount})</span>
-                    </span>
-                    <i className="fa-sharp fa-light fa-grid-2 azure-hero-tab-icon" aria-hidden="true" />
-                  </button>
+                  {renderAllHeroTab()}
                   {categories.map((cat, i) => (
                     <button key={cat.id} type="button" onClick={() => handleTabClick(i + 1)} className={`azure-hero-tab${activeCatIdx === i + 1 ? ' active' : ''}`}>
                       <span className="azure-hero-tab-label">

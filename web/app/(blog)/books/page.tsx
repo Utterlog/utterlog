@@ -1,4 +1,5 @@
 import { getBooks } from '@/lib/blog-api';
+import PageTitle from '@/components/blog/PageTitle';
 
 const progressLabel: Record<string, string> = { want: '想读', reading: '在读', finished: '读完', abandoned: '弃读' };
 
@@ -8,17 +9,12 @@ export default async function BooksPage() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 200px)' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 32px', borderBottom: '1px solid var(--color-border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="fa-sharp fa-light fa-book" style={{ fontSize: '24px', color: 'var(--color-primary)' }} />
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-text-main)' }}>图书</h1>
-          <span className="text-dim" style={{ fontSize: '13px', marginLeft: '4px' }}>· 我读过的</span>
-        </div>
-        <div style={{ padding: '6px 14px', border: '1px solid var(--color-border)', fontSize: '13px', color: 'var(--color-text-sub)' }}>
-          <strong className="text-main" style={{ fontWeight: 600 }}>{items.length}</strong> 本图书
-        </div>
-      </div>
+      <PageTitle
+        title="图书"
+        icon="fa-sharp fa-light fa-book"
+        subtitle="我读过的"
+        meta={<><strong>{items.length}</strong> 本图书</>}
+      />
 
       <div style={{ padding: '32px' }}>
         {items.length === 0 ? (

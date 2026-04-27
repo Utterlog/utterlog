@@ -207,6 +207,8 @@ func main() {
 
 	// Options
 	api.GET("/options", handler.ListOptions)
+	api.GET("/i18n/locales", handler.ListLocales)
+	api.GET("/i18n/:locale", handler.GetLocale)
 
 	// Content types (public read)
 	api.GET("/moments", handler.GenericList("moments"))

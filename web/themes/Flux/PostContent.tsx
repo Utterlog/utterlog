@@ -456,7 +456,12 @@ export default function PostContent({ content, postId }: PostContentProps) {
       const el = containerRef.current;
       if (!el) return;
       const imgs = el.querySelectorAll('.blog-image img');
-      const urls = Array.from(imgs).map(img => (img as HTMLImageElement).src).filter(Boolean);
+      const urls = Array.from(imgs).flatMap(img => {
+        const el = img as HTMLImageElement;
+        const raw = el.getAttribute('src') || '';
+        const absolute = el.currentSrc || el.src || '';
+        return raw && absolute && raw !== absolute ? [raw, absolute] : [raw || absolute];
+      }).filter(Boolean);
       if (urls.length === 0) return;
       const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
       fetch(`${apiBase}/media/exif?urls=${urls.map(encodeURIComponent).join(',')}`)

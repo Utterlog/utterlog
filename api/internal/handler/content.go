@@ -395,6 +395,9 @@ func ReplyComment(c *gin.Context) {
 	// Update post comment count
 	config.DB.Exec(fmt.Sprintf("UPDATE %s SET comment_count = comment_count + 1 WHERE id = $1", config.T("posts")), postID)
 
+	parentID := commentID
+	go sendCommentNotifications(postID, &parentID, user.NicknameStr(), req.Content, id)
+
 	util.Success(c, gin.H{"id": id})
 }
 
@@ -406,9 +409,12 @@ func PendingCommentCount(c *gin.Context) {
 	util.Success(c, gin.H{"pending": pending, "spam": spam})
 }
 
-// sendCommentNotifications sends email to site admin for new comments,
-// and to the parent comment author for replies. Honors
-// `comment_notify_admin` (default on) for the admin path. The reply
+// sendCommentNotifications sends email to site admin for visitor comments,
+// and to the parent comment author for replies. Admin-authored comments skip
+// the admin notification path, so a manual admin reply only emails the
+// original commenter.
+//
+// Honors `comment_notify_admin` (default on) for the admin path. The reply
 // path is user-to-user and fires regardless of that toggle.
 //
 // Supports all three providers (smtp / resend / sendflare) — earlier
@@ -474,6 +480,21 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 	// 后这些链接全都点进去 404。
 	postURL := strings.TrimRight(siteURL, "/") + BuildPostPermalink(post, model.GetOption("permalink_structure"))
 
+	var sender struct {
+		UserID int    `db:"user_id"`
+		Email  string `db:"author_email"`
+		Role   string `db:"role"`
+	}
+	_ = config.DB.Get(&sender, fmt.Sprintf(
+		`SELECT COALESCE(c.user_id,0) AS user_id,
+		        COALESCE(c.author_email,'') AS author_email,
+		        COALESCE(u.role,'') AS role
+		   FROM %s c
+		   LEFT JOIN %s u ON u.id = c.user_id
+		  WHERE c.id = $1`,
+		config.T("comments"), config.T("users")), commentID)
+	senderIsAdmin := sender.Role == "admin"
+
 	// Truncate content for email
 	preview := content
 	if len([]rune(preview)) > 200 {
@@ -485,7 +506,7 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 	admin, _ := model.UserByID(1)
 	site := email.LoadSiteData()
 	notifyAdmin := model.GetOption("comment_notify_admin") != "false"
-	if notifyAdmin && admin != nil && admin.Email != "" {
+	if notifyAdmin && !senderIsAdmin && admin != nil && admin.Email != "" {
 		body, err := email.Render("new_comment", email.NewCommentData{
 			Site:             site,
 			Author:           commenterName,
@@ -509,15 +530,24 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 	// 2. Notify parent comment author (reply notification)
 	if parentID != nil && *parentID > 0 {
 		var parent struct {
-			AuthorName  string  `db:"author_name"`
-			AuthorEmail *string `db:"author_email"`
-			Content     string  `db:"content"`
+			AuthorName  string `db:"author_name"`
+			AuthorEmail string `db:"author_email"`
+			Content     string `db:"content"`
+			Role        string `db:"role"`
 		}
-		err := config.DB.Get(&parent, "SELECT author_name, author_email, content FROM "+config.T("comments")+" WHERE id = $1", *parentID)
-		if err != nil || parent.AuthorEmail == nil || *parent.AuthorEmail == "" {
+		err := config.DB.Get(&parent, fmt.Sprintf(
+			`SELECT c.author_name,
+			        COALESCE(c.author_email,'') AS author_email,
+			        c.content,
+			        COALESCE(u.role,'') AS role
+			   FROM %s c
+			   LEFT JOIN %s u ON u.id = c.user_id
+			  WHERE c.id = $1`,
+			config.T("comments"), config.T("users")), *parentID)
+		if err != nil || parent.AuthorEmail == "" {
 			return
 		}
-		if admin != nil && *parent.AuthorEmail == admin.Email {
+		if parent.Role == "admin" || strings.EqualFold(parent.AuthorEmail, sender.Email) {
 			return
 		}
 
@@ -539,8 +569,8 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 		})
 		if err == nil {
 			subject := fmt.Sprintf("💬 你的评论收到了回复 — %s", siteName)
-			if err := util.SendEmail(cfg, *parent.AuthorEmail, subject, body); err != nil {
-				log.Printf("[comment-notify] reply email failed (provider=%s to=%s): %v", provider, *parent.AuthorEmail, err)
+			if err := util.SendEmail(cfg, parent.AuthorEmail, subject, body); err != nil {
+				log.Printf("[comment-notify] reply email failed (provider=%s to=%s): %v", provider, parent.AuthorEmail, err)
 			}
 		} else {
 			log.Printf("[comment-notify] render comment_reply template failed: %v", err)

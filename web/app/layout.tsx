@@ -3,28 +3,35 @@ import { Providers } from './providers';
 
 const API_BASE = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || '';
 
-// Pull just the active blog theme name. Done in root layout so we
-// can stamp <html data-theme="…"> as a server-rendered attribute,
-// which means themes/{name}/styles.css [data-theme="…"] selectors
-// match on first paint with no client script needed (Next.js 16's
-// React rejects inline <script> tags inside React-rendered output
-// with a console warning, so we can't use the obvious dangerously-
-// SetInnerHTML trick). Falls back silently to 'Utterlog' when the
-// API isn't reachable (build-time, dev cold-start, etc.) so we
-// never block render on options-fetching.
-async function getActiveBlogTheme(): Promise<string> {
-  if (!API_BASE) return 'Utterlog';
+function normalizeLocale(locale?: string): string {
+  const raw = (locale || '').trim();
+  const s = raw.toLowerCase();
+  if (s === 'en' || s === 'en-us') return 'en-US';
+  if (s === 'ru' || s === 'ru-ru') return 'ru-RU';
+  if (s === 'zh' || s === 'zh-cn' || s === 'zh-hans') return 'zh-CN';
+  return raw || 'zh-CN';
+}
+
+// Pull root-level display options. Done in root layout so we can stamp
+// <html data-theme="…"> and <html lang="…"> as server-rendered attributes.
+// Falls back silently when the API isn't reachable (build-time, dev
+// cold-start, etc.) so we never block render on options-fetching.
+async function getRootDisplayOptions(): Promise<{ activeTheme: string; locale: string }> {
+  if (!API_BASE) return { activeTheme: 'Utterlog', locale: 'zh-CN' };
   try {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 2000);
     const res = await fetch(`${API_BASE}/options`, { next: { revalidate: 60 }, signal: ac.signal });
     clearTimeout(timer);
-    if (!res.ok) return 'Utterlog';
+    if (!res.ok) return { activeTheme: 'Utterlog', locale: 'zh-CN' };
     const json = await res.json();
     const opts = json.data || json || {};
-    return (opts.active_theme || 'Utterlog').toString().trim() || 'Utterlog';
+    return {
+      activeTheme: (opts.active_theme || 'Utterlog').toString().trim() || 'Utterlog',
+      locale: normalizeLocale(opts.site_locale),
+    };
   } catch {
-    return 'Utterlog';
+    return { activeTheme: 'Utterlog', locale: 'zh-CN' };
   }
 }
 
@@ -105,9 +112,9 @@ export default async function RootLayout({
   // Server-render the blog theme name onto <html data-theme="…">.
   // Two-attribute split avoids fighting with the admin color theme
   // (which writes data-color via providers.tsx + lib/store.ts).
-  const activeTheme = await getActiveBlogTheme();
+  const { activeTheme, locale } = await getRootDisplayOptions();
   return (
-    <html lang="zh-CN" data-theme={activeTheme} suppressHydrationWarning>
+    <html lang={locale} data-theme={activeTheme} suppressHydrationWarning>
       <head>
         {/* System-immutable assets (FA Pro 7.2.0, all webfonts including
             CJK) served from R2 + Cloudflare with Cache-Control immutable

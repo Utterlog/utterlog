@@ -275,7 +275,7 @@ export default function SecurityPage() {
             <h3 style={sectionTitleStyle}>CC 防御（频率限制）</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={settings.cc_enabled ?? true} onChange={(e) => setSettings({ ...settings, cc_enabled: e.target.checked })} />
+                <input type="checkbox" checked={settings.cc_enabled ?? false} onChange={(e) => setSettings({ ...settings, cc_enabled: e.target.checked })} />
                 启用 CC 防御
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>

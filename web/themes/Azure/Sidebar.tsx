@@ -318,7 +318,7 @@ export default function Sidebar() {
             { label: '文章', value: stats.post_count || 0 },
             { label: '评论', value: stats.comment_count || 0 },
             { label: '建站天数', value: stats.days || 0 },
-            { label: '全部字数', value: stats.word_count ? (stats.word_count / 1000).toFixed(1) + 'k' : '0' },
+            { label: '全部字数', value: stats.word_count || 0 },
           ].map((s, i) => (
             <div key={s.label} style={{
               padding: '12px 16px', height: '60px',

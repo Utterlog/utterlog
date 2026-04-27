@@ -4,12 +4,65 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"utterlog-go/internal/textutil"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
 var DB *sqlx.DB
+
+func normalizePostWordCounts() {
+	type row struct {
+		ID        int    `db:"id"`
+		Content   string `db:"content"`
+		WordCount int    `db:"word_count"`
+	}
+	var posts []row
+	if err := DB.Select(&posts, fmt.Sprintf(
+		"SELECT id, COALESCE(content,'') AS content, COALESCE(word_count,0) AS word_count FROM %s WHERE type = 'post'",
+		T("posts"))); err != nil {
+		log.Printf("word_count normalize: select failed: %v", err)
+		return
+	}
+	if len(posts) == 0 {
+		return
+	}
+
+	tx, err := DB.Beginx()
+	if err != nil {
+		log.Printf("word_count normalize: begin failed: %v", err)
+		return
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Preparex(fmt.Sprintf("UPDATE %s SET word_count = $1 WHERE id = $2", T("posts")))
+	if err != nil {
+		log.Printf("word_count normalize: prepare failed: %v", err)
+		return
+	}
+	defer stmt.Close()
+
+	updated := 0
+	for _, post := range posts {
+		count := textutil.ContentWordCount(post.Content)
+		if count == post.WordCount {
+			continue
+		}
+		if _, err := stmt.Exec(count, post.ID); err != nil {
+			log.Printf("word_count normalize: update post %d failed: %v", post.ID, err)
+			return
+		}
+		updated++
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("word_count normalize: commit failed: %v", err)
+		return
+	}
+	if updated > 0 {
+		log.Printf("word_count normalize: updated %d posts", updated)
+	}
+}
 
 // InitDB connects to Postgres and runs migrations. Returns error instead of
 // exiting so the caller can fall back to "setup-only mode" (serving the
@@ -56,10 +109,9 @@ func InitDB() error {
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS ai_questions TEXT", T("posts")))
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS ai_summary TEXT", T("posts")))
 
-	// Backfill word_count for existing posts (one-time, uses char_length as approximation)
-	DB.Exec(fmt.Sprintf(
-		"UPDATE %s SET word_count = CHAR_LENGTH(content) WHERE word_count = 0 AND content IS NOT NULL AND content != ''",
-		T("posts")))
+	// Normalize legacy/imported word counts to the shared Markdown-aware
+	// article counter. Keeps old installs aligned with newly saved posts.
+	normalizePostWordCounts()
 
 	// display_id 索引 + 回填 ——「按发布顺序的连续序号」字段。配合
 	// permalink 模板 /archives/%display_id% 给读者看连续递增的 URL，

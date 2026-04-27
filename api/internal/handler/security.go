@@ -18,16 +18,16 @@ import (
 // ===================== CC Rate Limiter =====================
 
 type rateBucket struct {
-	count    int
-	resetAt  time.Time
+	count   int
+	resetAt time.Time
 }
 
 var (
-	rateLimits   = make(map[string]*rateBucket)
-	rateMu       sync.RWMutex
-	ccEnabled    = true
-	ccLimit5s    = 30  // max requests per 5 seconds
-	ccLimit60s   = 120 // max requests per 60 seconds
+	rateLimits = make(map[string]*rateBucket)
+	rateMu     sync.RWMutex
+	ccEnabled  = false
+	ccLimit5s  = 30  // max requests per 5 seconds
+	ccLimit60s = 120 // max requests per 60 seconds
 )
 
 var rateLimits60 = make(map[string]*rateBucket)
@@ -40,17 +40,24 @@ func CCProtection() gin.HandlerFunc {
 			rateMu.Lock()
 			now := time.Now()
 			for k, v := range rateLimits {
-				if now.After(v.resetAt) { delete(rateLimits, k) }
+				if now.After(v.resetAt) {
+					delete(rateLimits, k)
+				}
 			}
 			for k, v := range rateLimits60 {
-				if now.After(v.resetAt) { delete(rateLimits60, k) }
+				if now.After(v.resetAt) {
+					delete(rateLimits60, k)
+				}
 			}
 			rateMu.Unlock()
 		}
 	}()
 
 	return func(c *gin.Context) {
-		if !ccEnabled { c.Next(); return }
+		if !ccEnabled {
+			c.Next()
+			return
+		}
 
 		// Authenticated admin surface is gated by JWT + role already —
 		// CC protection here only creates false-positive lockouts when
@@ -106,23 +113,32 @@ func CCProtection() gin.HandlerFunc {
 // ===================== GeoIP Blocking =====================
 
 var (
-	geoEnabled     = false
-	geoMode        = "whitelist" // "whitelist" or "blacklist"
-	geoCountries   = []string{"CN", "HK", "TW", "MO"} // default whitelist
+	geoEnabled   = false
+	geoMode      = "whitelist"                      // "whitelist" or "blacklist"
+	geoCountries = []string{"CN", "HK", "TW", "MO"} // default whitelist
 )
 
 func GeoIPBlocking() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !geoEnabled { c.Next(); return }
+		if !geoEnabled {
+			c.Next()
+			return
+		}
 
 		ip := getRealIP(c)
 		country := getIPCountry(ip)
-		if country == "" { c.Next(); return }
+		if country == "" {
+			c.Next()
+			return
+		}
 
 		allowed := false
 		countryUpper := strings.ToUpper(country)
 		for _, c2 := range geoCountries {
-			if strings.ToUpper(c2) == countryUpper { allowed = true; break }
+			if strings.ToUpper(c2) == countryUpper {
+				allowed = true
+				break
+			}
 		}
 
 		if geoMode == "whitelist" && !allowed {
@@ -144,13 +160,19 @@ func getIPCountry(ip string) string {
 	// Check cache in reputation table first
 	var country string
 	config.DB.Get(&country, "SELECT country FROM "+config.T("ip_reputation")+" WHERE ip = $1", ip)
-	if country != "" { return country }
+	if country != "" {
+		return country
+	}
 
 	// Fetch from API
 	resp, err := http.Get("https://api.ipx.ee/ip/" + ip)
-	if err != nil { return "" }
+	if err != nil {
+		return ""
+	}
 	defer resp.Body.Close()
-	var geo struct { CountryCode string `json:"country_code"` }
+	var geo struct {
+		CountryCode string `json:"country_code"`
+	}
 	json.NewDecoder(resp.Body).Decode(&geo)
 	return geo.CountryCode
 }
@@ -172,12 +194,15 @@ func BanIP(c *gin.Context) {
 		Duration int    `json:"duration"` // minutes, 0 = permanent
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "IP 不能为空"); return
+		util.BadRequest(c, "IP 不能为空")
+		return
 	}
 
 	now := time.Now().Unix()
 	expiresAt := int64(0)
-	if req.Duration > 0 { expiresAt = now + int64(req.Duration*60) }
+	if req.Duration > 0 {
+		expiresAt = now + int64(req.Duration*60)
+	}
 
 	config.DB.Exec(fmt.Sprintf(
 		"INSERT INTO %s (ip, reason, ban_type, duration, expires_at, created_at) VALUES ($1,$2,'manual',$3,$4,$5) ON CONFLICT (ip) DO UPDATE SET reason=$2, duration=$3, expires_at=$4",
@@ -188,7 +213,9 @@ func BanIP(c *gin.Context) {
 }
 
 func UnbanIP(c *gin.Context) {
-	var req struct { IP string `json:"ip" binding:"required"` }
+	var req struct {
+		IP string `json:"ip" binding:"required"`
+	}
 	c.ShouldBindJSON(&req)
 	config.DB.Exec("DELETE FROM "+config.T("ip_bans")+" WHERE ip = $1", req.IP)
 	go logSecurityEvent(req.IP, "manual_unban", "", 0)
@@ -207,7 +234,9 @@ func ListBans(c *gin.Context) {
 			bans = append(bans, row)
 		}
 	}
-	if bans == nil { bans = []map[string]interface{}{} }
+	if bans == nil {
+		bans = []map[string]interface{}{}
+	}
 
 	// Clean expired bans
 	config.DB.Exec(fmt.Sprintf("DELETE FROM %s WHERE expires_at > 0 AND expires_at < $1", t), time.Now().Unix())
@@ -229,7 +258,11 @@ func updateReputation(ip string, scoreDelta int) {
 		var score int
 		config.DB.Get(&score, "SELECT score FROM "+t+" WHERE ip = $1", ip)
 		risk := "safe"
-		if score >= 35 { risk = "danger" } else if score >= 14 { risk = "warning" }
+		if score >= 35 {
+			risk = "danger"
+		} else if score >= 14 {
+			risk = "warning"
+		}
 		config.DB.Exec("UPDATE "+t+" SET risk_level = $1 WHERE ip = $2", risk, ip)
 
 		// Auto-ban at high score
@@ -268,12 +301,16 @@ func ListReputation(c *gin.Context) {
 			reps = append(reps, row)
 		}
 	}
-	if reps == nil { reps = []map[string]interface{}{} }
+	if reps == nil {
+		reps = []map[string]interface{}{}
+	}
 	util.Paginate(c, reps, total, page, perPage)
 }
 
 func ResetReputation(c *gin.Context) {
-	var req struct { IP string `json:"ip" binding:"required"` }
+	var req struct {
+		IP string `json:"ip" binding:"required"`
+	}
 	c.ShouldBindJSON(&req)
 	config.DB.Exec("UPDATE "+config.T("ip_reputation")+" SET score = 0, risk_level = 'safe' WHERE ip = $1", req.IP)
 	util.Success(c, gin.H{"reset": true})
@@ -292,7 +329,8 @@ func SecurityTimeline(c *gin.Context) {
 	idx := 1
 	if ip != "" {
 		where = fmt.Sprintf("WHERE ip = $%d", idx)
-		args = append(args, ip); idx++
+		args = append(args, ip)
+		idx++
 	}
 
 	var total int
@@ -309,7 +347,9 @@ func SecurityTimeline(c *gin.Context) {
 			events = append(events, row)
 		}
 	}
-	if events == nil { events = []map[string]interface{}{} }
+	if events == nil {
+		events = []map[string]interface{}{}
+	}
 	util.Paginate(c, events, total, page, perPage)
 }
 
@@ -328,21 +368,33 @@ func GetSecuritySettings(c *gin.Context) {
 
 func UpdateSecuritySettings(c *gin.Context) {
 	var req struct {
-		CCEnabled   *bool    `json:"cc_enabled"`
-		CCLimit5s   *int     `json:"cc_limit_5s"`
-		CCLimit60s  *int     `json:"cc_limit_60s"`
-		GeoEnabled  *bool    `json:"geo_enabled"`
-		GeoMode     *string  `json:"geo_mode"`
+		CCEnabled    *bool    `json:"cc_enabled"`
+		CCLimit5s    *int     `json:"cc_limit_5s"`
+		CCLimit60s   *int     `json:"cc_limit_60s"`
+		GeoEnabled   *bool    `json:"geo_enabled"`
+		GeoMode      *string  `json:"geo_mode"`
 		GeoCountries []string `json:"geo_countries"`
 	}
 	c.ShouldBindJSON(&req)
 
-	if req.CCEnabled != nil { ccEnabled = *req.CCEnabled }
-	if req.CCLimit5s != nil { ccLimit5s = *req.CCLimit5s }
-	if req.CCLimit60s != nil { ccLimit60s = *req.CCLimit60s }
-	if req.GeoEnabled != nil { geoEnabled = *req.GeoEnabled }
-	if req.GeoMode != nil { geoMode = *req.GeoMode }
-	if req.GeoCountries != nil { geoCountries = req.GeoCountries }
+	if req.CCEnabled != nil {
+		ccEnabled = *req.CCEnabled
+	}
+	if req.CCLimit5s != nil {
+		ccLimit5s = *req.CCLimit5s
+	}
+	if req.CCLimit60s != nil {
+		ccLimit60s = *req.CCLimit60s
+	}
+	if req.GeoEnabled != nil {
+		geoEnabled = *req.GeoEnabled
+	}
+	if req.GeoMode != nil {
+		geoMode = *req.GeoMode
+	}
+	if req.GeoCountries != nil {
+		geoCountries = req.GeoCountries
+	}
 
 	// Persist to options
 	save := func(k, v string) {
@@ -389,8 +441,12 @@ func SecurityOverview(c *gin.Context) {
 // ===================== Helpers =====================
 
 func getRealIP(c *gin.Context) string {
-	if ip := c.Request.Header.Get("CF-Connecting-IP"); ip != "" { return ip }
-	if ip := c.Request.Header.Get("X-Real-IP"); ip != "" { return ip }
+	if ip := c.Request.Header.Get("CF-Connecting-IP"); ip != "" {
+		return ip
+	}
+	if ip := c.Request.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
 	return c.ClientIP()
 }
 
@@ -398,11 +454,23 @@ func init() {
 	// Load security settings from DB on startup
 	go func() {
 		time.Sleep(2 * time.Second) // wait for DB init
-		if v := model.GetOption("cc_enabled"); v == "false" { ccEnabled = false }
-		if v := model.GetOption("cc_limit_5s"); v != "" { ccLimit5s, _ = strconv.Atoi(v) }
-		if v := model.GetOption("cc_limit_60s"); v != "" { ccLimit60s, _ = strconv.Atoi(v) }
-		if v := model.GetOption("geo_enabled"); v == "true" { geoEnabled = true }
-		if v := model.GetOption("geo_mode"); v != "" { geoMode = v }
-		if v := model.GetOption("geo_countries"); v != "" { geoCountries = strings.Split(v, ",") }
+		if v := model.GetOption("cc_enabled"); v != "" {
+			ccEnabled = v == "true"
+		}
+		if v := model.GetOption("cc_limit_5s"); v != "" {
+			ccLimit5s, _ = strconv.Atoi(v)
+		}
+		if v := model.GetOption("cc_limit_60s"); v != "" {
+			ccLimit60s, _ = strconv.Atoi(v)
+		}
+		if v := model.GetOption("geo_enabled"); v == "true" {
+			geoEnabled = true
+		}
+		if v := model.GetOption("geo_mode"); v != "" {
+			geoMode = v
+		}
+		if v := model.GetOption("geo_countries"); v != "" {
+			geoCountries = strings.Split(v, ",")
+		}
 	}()
 }

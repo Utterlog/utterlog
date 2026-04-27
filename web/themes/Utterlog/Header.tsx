@@ -58,7 +58,7 @@ export default function Header() {
             <img
               src={site.logo}
               // text_logo 模式下文字已经表达品牌名，img 是装饰性元素，
-              // alt='' 让破图回退时不重复显示"西风  西风"。
+              // alt='' prevents duplicate brand text when the image falls back.
               // logo 模式（无 showText）保留 alt={siteName} 服务无障碍 +
               // 破图 fallback。
               alt={showText ? '' : siteName}

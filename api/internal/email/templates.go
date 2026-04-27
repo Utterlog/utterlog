@@ -45,7 +45,7 @@ func init() {
 type SiteData struct {
 	Title      string // site_title
 	URL        string // site_url (no trailing slash)
-	Domain     string // hostname only, e.g. "pancn.com"
+	Domain     string // hostname only, e.g. "example.com"
 	Logo       string // full URL to logo.* or empty
 	FirstChar  string // first rune of title for logo fallback
 	AdminURL   string // site_url + "/admin" (admin dashboard)

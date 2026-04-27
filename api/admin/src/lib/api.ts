@@ -124,7 +124,7 @@ export const categoriesApi = {
 
 export const tagsApi = {
   list: (params?: { page?: number; limit?: number; search?: string }) =>
-    api.get('/tags', { params: { per_page: 500, ...(params || {}) } }),
+    api.get('/tags', { params: { per_page: 500, include_empty: true, ...(params || {}) } }),
   create: (data: any) => api.post('/tags', data),
   update: (id: number, data: any) => api.put(`/tags/${id}`, data),
   delete: (id: number) => api.delete(`/tags/${id}`),

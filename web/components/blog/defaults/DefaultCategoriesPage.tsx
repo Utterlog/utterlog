@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import PageTitle from '@/components/blog/PageTitle';
 
 function getCatIcon(name: string, icon?: string) {
   if (icon && (icon.startsWith('fa-') || icon.startsWith('fa '))) return icon;
@@ -12,11 +13,13 @@ interface DefaultCategoriesPageProps {
 export default function DefaultCategoriesPage({ categories }: DefaultCategoriesPageProps) {
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2rem' }}>
-        <i className="fa-solid fa-folder-tree" style={{ fontSize: '22px', color: 'var(--color-primary)' }} />
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-text-main)' }}>分类</h1>
-      </div>
+      <PageTitle
+        title="分类"
+        icon="fa-solid fa-folder-tree"
+        meta={<><strong>{categories.length}</strong> 个分类</>}
+      />
 
+      <div style={{ padding: '0 32px 32px' }}>
       {categories.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {categories.map((cat) => (
@@ -40,6 +43,7 @@ export default function DefaultCategoriesPage({ categories }: DefaultCategoriesP
       ) : (
         <p className="text-center py-16 text-dim">暂无分类</p>
       )}
+      </div>
     </div>
   );
 }

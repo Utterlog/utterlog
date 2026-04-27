@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import PostLink from '../PostLink';
 import Heatmap from '@/app/(blog)/archives/Heatmap';
+import PageTitle from '@/components/blog/PageTitle';
 
 function timeAgo(ts: number | string): string {
   const now = Date.now();
@@ -90,30 +91,27 @@ export default function DefaultArchivePage({ posts, categories, tags, stats }: D
   const latestPosts = getLatestPostPerCategory(posts, categories);
 
   return (
-    <div style={{ padding: '32px' }}>
-      {/* Header + Stats */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="fa-sharp fa-light fa-books" style={{ fontSize: '24px', color: 'var(--color-primary)' }} />
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-text-main)' }}>归档</h1>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {[
-            { value: stats.post_count || posts.length, label: '篇文章' },
-            { value: stats.days || 0, label: '天' },
-            { value: stats.word_count ? Math.round(stats.word_count / 1000) * 1000 : 0, label: '字' },
-            { value: stats.comment_count || 0, label: '条评论' },
-          ].map((s, i) => (
-            <div key={i} style={{
-              padding: '6px 14px', border: '1px solid var(--color-border)',
-              fontSize: '13px', color: 'var(--color-text-sub)',
-            }}>
-              <strong style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>{s.value.toLocaleString()}</strong> {s.label}
-            </div>
-          ))}
-        </div>
-      </div>
+    <div>
+      <PageTitle
+        title="归档"
+        icon="fa-sharp fa-light fa-books"
+        meta={
+          <>
+            {[
+              { value: stats.post_count || posts.length, label: '篇文章' },
+              { value: stats.days || 0, label: '天' },
+              { value: stats.word_count || 0, label: '字' },
+              { value: stats.comment_count || 0, label: '条评论' },
+            ].map((s) => (
+              <span key={s.label} className="blog-page-title-stat">
+                <strong>{s.value.toLocaleString()}</strong> {s.label}
+              </span>
+            ))}
+          </>
+        }
+      />
 
+      <div style={{ padding: '0 32px 32px' }}>
       {/* Heatmap */}
       <div style={{ border: '1px solid var(--color-border)', padding: '20px 24px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -260,6 +258,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats }: D
           ))}
         </div>
       ))}
+      </div>
     </div>
   );
 }

@@ -64,6 +64,11 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(initialTabFromHash);
+  const [locales, setLocales] = useState<{ locale: string; name: string; native_name: string; source?: string }[]>([
+    { locale: 'zh-CN', name: 'Chinese (Simplified)', native_name: '简体中文' },
+    { locale: 'en-US', name: 'English', native_name: 'English' },
+    { locale: 'ru-RU', name: 'Russian', native_name: 'Русский' },
+  ]);
 
   // Respond to hash changes (e.g. VersionBadge link from sidebar) and
   // update the URL when the user clicks a tab so refresh/bookmark work.
@@ -97,7 +102,17 @@ export default function SettingsPage() {
   const [tgChats, setTgChats] = useState<{ id: string; type: string; name: string }[]>([]);
   const [fetchingChatId, setFetchingChatId] = useState(false);
 
-  useEffect(() => { fetchSettings(); }, []);
+  useEffect(() => { fetchSettings(); fetchLocales(); }, []);
+
+  const fetchLocales = async () => {
+    try {
+      const response: any = await api.get('/i18n/locales');
+      const items = response.data || [];
+      if (Array.isArray(items) && items.length > 0) {
+        setLocales(items);
+      }
+    } catch {}
+  };
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -112,6 +127,7 @@ export default function SettingsPage() {
         // 这样从 v1.3.x 升上来的旧站点视觉上不会突变。
         site_brand_mode: s.site_brand_mode || (s.site_logo ? 'logo' : 'text'),
         site_subtitle: s.site_subtitle || '',
+        site_locale: s.site_locale || 'zh-CN',
         admin_email: s.admin_email || '',
         // site_description / site_keywords moved to SEO tab as
         // seo_default_description / seo_default_keywords. The DB
@@ -263,7 +279,7 @@ export default function SettingsPage() {
     // vanishes (the save POST just doesn't include that key, so the DB
     // row stays unchanged and on reload the field reverts).
     general: [
-      'site_title', 'site_brand_mode', 'site_subtitle', 'site_url',
+      'site_title', 'site_brand_mode', 'site_subtitle', 'site_locale', 'site_url',
       'admin_email', 'site_since',
       'site_logo', 'site_logo_dark', 'site_favicon',
       'beian_gongan', 'beian_icp',
@@ -475,6 +491,15 @@ export default function SettingsPage() {
                   ]}
                 />
                 <FormRowInputC label="副标题" register={register('site_subtitle')} placeholder="一句话 Slogan" />
+                <FormRowSelectC
+                  label="站点语言"
+                  hint="读取内置语言包和安装目录 locales/*.json；影响前台 lang、RSS 和后续界面翻译"
+                  register={register('site_locale')}
+                  options={locales.map((loc) => ({
+                    value: loc.locale,
+                    label: `${loc.native_name || loc.name || loc.locale} (${loc.locale})${loc.source === 'external' ? ' · 自定义' : ''}`,
+                  }))}
+                />
                 <FormRowInputC label="站点网址" register={register('site_url')} placeholder="https://yourdomain.com" />
                 <FormRowInputC label="管理员邮箱" type="email" register={register('admin_email')} placeholder="admin@yourdomain.com" hint="接收系统升级、安全通知等消息" />
                 <FormRowInputC label="建站时间" type="date" register={register('site_since')} hint="留空则从第一篇文章算起。站点描述和关键词请到 SEO 与 AI tab 设置。" last />

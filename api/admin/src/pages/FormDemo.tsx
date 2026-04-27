@@ -9,7 +9,7 @@ import { FormSectionC, FormRowC, FormRowInputC } from '@/components/form/FormC';
 export default function FormDemo() {
   const [active, setActive] = useState<'A' | 'C'>('A');
 
-  const [siteTitle, setSiteTitle] = useState('西风');
+  const [siteTitle, setSiteTitle] = useState('Utterlog');
   const [siteUrl, setSiteUrl] = useState('https://yoursite.com');
   const [siteDesc, setSiteDesc] = useState('一个关于设计、技术和生活的博客');
   const [email, setEmail] = useState('hi@example.com');

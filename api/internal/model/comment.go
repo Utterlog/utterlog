@@ -179,23 +179,48 @@ func FormatComments(comments []Comment) []CommentWithPost {
 	result := make([]CommentWithPost, len(comments))
 	postCache := map[int]*Post{}
 
-	// Get admin email for is_admin detection
-	adminEmail := ""
+	// Admin identity can come from logged-in comments (user_id) or legacy
+	// comments that only stored the author's email.
+	type adminIdentity struct {
+		ID    int    `db:"id"`
+		Email string `db:"email"`
+	}
 	adminID := 0
-	if admin, err := UserByID(1); err == nil {
-		adminEmail = strings.ToLower(admin.Email)
-		adminID = admin.ID
+	adminIDs := map[int]bool{}
+	adminEmails := map[string]bool{}
+	adminEmailByID := map[int]string{}
+	var admins []adminIdentity
+	config.DB.Select(&admins, "SELECT id, email FROM "+config.T("users")+" WHERE role = 'admin'")
+	for _, admin := range admins {
+		adminIDs[admin.ID] = true
+		if admin.ID == 1 || adminID == 0 {
+			adminID = admin.ID
+		}
+		email := strings.TrimSpace(strings.ToLower(admin.Email))
+		if email != "" {
+			adminEmails[email] = true
+			adminEmailByID[admin.ID] = email
+		}
 	}
 
-	// Batch query: comment count per email (for levels)
+	// Batch query: comment count per identity (for levels)
 	emailCountMap := map[string]int{}
+	userIDCountMap := map[int]int{}
 	emails := []string{}
+	userIDs := []int{}
 	for _, c := range comments {
 		if c.AuthorEmail != nil && *c.AuthorEmail != "" {
 			e := strings.TrimSpace(strings.ToLower(*c.AuthorEmail))
 			if _, ok := emailCountMap[e]; !ok {
 				emailCountMap[e] = 0
 				emails = append(emails, e)
+			}
+		}
+		if c.UserID != nil && *c.UserID > 0 {
+			uid := *c.UserID
+			if _, ok := userIDCountMap[uid]; !ok {
+				userIDCountMap[uid] = 0
+				userIDs = append(userIDs, uid)
 			}
 		}
 	}
@@ -218,6 +243,50 @@ func FormatComments(comments []Comment) []CommentWithPost {
 		config.DB.Select(&counts, q, args...)
 		for _, ec := range counts {
 			emailCountMap[ec.Email] = ec.Count
+		}
+	}
+	if len(userIDs) > 0 {
+		type userCount struct {
+			UserID int `db:"user_id"`
+			Count  int `db:"cnt"`
+		}
+		placeholders := make([]string, len(userIDs))
+		args := make([]interface{}, len(userIDs))
+		for i, uid := range userIDs {
+			placeholders[i] = fmt.Sprintf("$%d", i+1)
+			args[i] = uid
+		}
+		q := fmt.Sprintf(
+			"SELECT user_id, COUNT(*) as cnt FROM %s WHERE status='approved' AND user_id IN (%s) GROUP BY user_id",
+			config.T("comments"), strings.Join(placeholders, ","),
+		)
+		var counts []userCount
+		config.DB.Select(&counts, q, args...)
+		for _, uc := range counts {
+			userIDCountMap[uc.UserID] = uc.Count
+		}
+	}
+	// Admin totals include both current logged-in comments and older comments
+	// that only stored the admin email.
+	for _, admin := range admins {
+		if admin.ID <= 0 {
+			continue
+		}
+		email := adminEmailByID[admin.ID]
+		var cnt int
+		if email != "" {
+			config.DB.Get(&cnt,
+				"SELECT COUNT(*) FROM "+config.T("comments")+" WHERE status='approved' AND (COALESCE(user_id, 0) = $1 OR LOWER(TRIM(author_email)) = $2)",
+				admin.ID, email,
+			)
+		} else {
+			config.DB.Get(&cnt,
+				"SELECT COUNT(*) FROM "+config.T("comments")+" WHERE status='approved' AND COALESCE(user_id, 0) = $1",
+				admin.ID,
+			)
+		}
+		if cnt > 0 {
+			userIDCountMap[admin.ID] = cnt
 		}
 	}
 
@@ -271,18 +340,33 @@ func FormatComments(comments []Comment) []CommentWithPost {
 		if c.AuthorEmail != nil {
 			email = strings.TrimSpace(strings.ToLower(*c.AuthorEmail))
 		}
+		userID := 0
+		if c.UserID != nil {
+			userID = *c.UserID
+		}
+		avatarEmail := email
+		if adminEmail, ok := adminEmailByID[userID]; ok {
+			avatarEmail = adminEmail
+		}
 		hash := fmt.Sprintf("%x", md5.Sum([]byte(email)))
-		result[i].IsAdmin = adminEmail != "" && email == adminEmail
+		result[i].IsAdmin = (userID > 0 && adminIDs[userID]) || (email != "" && adminEmails[email])
 		// Admin comments follow site-wide avatar_source (Gravatar / Utterlog Network).
 		// Visitors always use Gravatar since they may not have Utterlog accounts.
 		if result[i].IsAdmin {
-			result[i].AvatarURL = ResolveAvatarByEmail(email)
+			result[i].AvatarURL = ResolveAvatarByEmail(avatarEmail)
 		} else {
 			result[i].AvatarURL = fmt.Sprintf("https://gravatar.bluecdn.com/avatar/%s?s=64&d=mp", hash)
 		}
 
 		// Comment level
-		if cnt, ok := emailCountMap[email]; ok && cnt > 0 {
+		cnt := 0
+		if userID > 0 {
+			cnt = userIDCountMap[userID]
+		}
+		if cnt == 0 && email != "" {
+			cnt = emailCountMap[email]
+		}
+		if cnt > 0 {
 			result[i].CommentCount = cnt
 			result[i].Level = commentLevel(cnt)
 		} else {

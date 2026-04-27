@@ -12,13 +12,12 @@ interface TagPageProps {
 // Chinese tags often arrive as percent-encoded (browsers encode the path
 // on navigation; copy-pasting from an external link keeps the %XX form).
 // Next.js decodes dynamic segments for us, but we still normalize +
-// match by both slug and name so a raw Chinese name with no custom slug
-// like /tags/编程 works whether it was clicked from within the site or
-// pasted in from an external referrer.
+// match by both slug and name. ASCII slugs are compared case-insensitively
+// so older imported tags like "ai" still resolve after later posts reuse "Ai".
 function normalize(s: string): string {
   let t = s;
   try { t = decodeURIComponent(t); } catch {}
-  return t.normalize('NFC').trim();
+  return t.normalize('NFC').trim().toLowerCase();
 }
 function matchTag(tags: any[], slug: string) {
   const needle = normalize(slug);

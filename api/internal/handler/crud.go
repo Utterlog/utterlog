@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 	"utterlog-go/config"
+	"utterlog-go/internal/i18n"
 	"utterlog-go/internal/middleware"
 	"utterlog-go/internal/model"
 	"utterlog-go/internal/util"
@@ -112,7 +113,7 @@ func UpdateOptions(c *gin.Context) {
 
 	// Capture pre-save site_url so we can migrate references in DB
 	// (cover URLs, media URLs) when the admin changes the site origin —
-	// e.g. https://www.xifeng.net → https://xifeng.net. Prevents the
+	// e.g. https://www.example.com → https://example.com. Prevents the
 	// "I edited site_url but my old www links still show" footgun.
 	oldSiteURL := model.GetOption("site_url")
 
@@ -131,14 +132,11 @@ func UpdateOptions(c *gin.Context) {
 }
 
 // migrateSiteOrigin rewrites absolute URLs in user-data tables when the
-// admin changes the site_url's origin (scheme + host + port). Only runs
-// REPLACE on prefix matches (`LIKE 'oldOrigin/%'`) so a URL that
-// happens to contain the old host inside its path or query — e.g. a
-// post body that quotes a third-party article that happens to mention
-// the old domain — stays untouched. Scope is limited to the columns
-// that store our own asset URLs (cover_url, media.url); post bodies
-// and comments are left for a future opt-in admin tool because they
-// can mix our links with quoted external content.
+// admin changes the site_url's origin (scheme + host + port). Local uploads
+// are normalized to /uploads/... so future domain changes do not touch them.
+// Other cover/media URLs under the old origin still move to the new origin.
+// Post bodies are only touched for the strict oldOrigin/uploads/ prefix,
+// leaving quoted third-party links and plain old-domain links intact.
 func migrateSiteOrigin(oldVal, newVal string) {
 	oldOrigin := normaliseOrigin(oldVal)
 	newOrigin := normaliseOrigin(newVal)
@@ -154,9 +152,37 @@ func migrateSiteOrigin(oldVal, newVal string) {
 	// only, then REPLACE drops the slash too — substituting the
 	// origin alone keeps every path/query character intact.
 	likePat := oldOrigin + "/%"
+	oldUploads := oldOrigin + "/uploads/"
+	uploadsLike := oldUploads + "%"
 	posts := config.T("posts")
 	media := config.T("media")
+
 	res, err := config.DB.Exec(
+		fmt.Sprintf("UPDATE %s SET content = REPLACE(content, $1, $2) WHERE content LIKE $3", posts),
+		oldUploads, "/uploads/", "%"+oldUploads+"%",
+	)
+	if err == nil {
+		n, _ := res.RowsAffected()
+		log.Printf("[site_url-migrate] %s.content uploads: %d rows %s → /uploads/", posts, n, oldUploads)
+	}
+	res, err = config.DB.Exec(
+		fmt.Sprintf("UPDATE %s SET cover_url = REPLACE(cover_url, $1, $2) WHERE cover_url LIKE $3", posts),
+		oldUploads, "/uploads/", uploadsLike,
+	)
+	if err == nil {
+		n, _ := res.RowsAffected()
+		log.Printf("[site_url-migrate] %s.cover_url uploads: %d rows %s → /uploads/", posts, n, oldUploads)
+	}
+	res, err = config.DB.Exec(
+		fmt.Sprintf("UPDATE %s SET url = REPLACE(url, $1, $2) WHERE url LIKE $3", media),
+		oldUploads, "/uploads/", uploadsLike,
+	)
+	if err == nil {
+		n, _ := res.RowsAffected()
+		log.Printf("[site_url-migrate] %s.url uploads: %d rows %s → /uploads/", media, n, oldUploads)
+	}
+
+	res, err = config.DB.Exec(
 		fmt.Sprintf("UPDATE %s SET cover_url = REPLACE(cover_url, $1, $2) WHERE cover_url LIKE $3", posts),
 		oldOrigin, newOrigin, likePat,
 	)
@@ -801,6 +827,7 @@ func PostsFeed(c *gin.Context) {
 	}
 	siteDesc := model.GetOption("site_description")
 	siteURL := strings.TrimRight(config.PublicBaseURL(), "/")
+	siteLocale := i18n.NormalizeLocale(model.GetOption("site_locale"))
 
 	// 用户可能改了固定链接结构（比如 /archives/%display_id%），RSS 输出
 	// 必须跟着 admin 配置走，不然订阅源里的 link 还是老的 /posts/<slug>
@@ -815,8 +842,8 @@ func PostsFeed(c *gin.Context) {
 	c.Header("Cache-Control", "public, max-age=3600")
 	xml := `<?xml version="1.0" encoding="UTF-8"?>` + "\n"
 	xml += `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>` + "\n"
-	xml += fmt.Sprintf("<title>%s</title><link>%s</link><description>%s</description><language>zh-CN</language>\n",
-		xmlEscape(siteTitle), xmlEscape(siteURL), xmlEscape(siteDesc))
+	xml += fmt.Sprintf("<title>%s</title><link>%s</link><description>%s</description><language>%s</language>\n",
+		xmlEscape(siteTitle), xmlEscape(siteURL), xmlEscape(siteDesc), xmlEscape(siteLocale))
 	xml += fmt.Sprintf(`<atom:link href="%s/api/v1/feed" rel="self" type="application/rss+xml"/>`+"\n", xmlEscape(siteURL))
 	for _, p := range posts {
 		content := ""

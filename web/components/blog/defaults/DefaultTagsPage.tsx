@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import PageTitle from '@/components/blog/PageTitle';
 
 interface DefaultTagsPageProps {
   tags: any[];
@@ -11,12 +12,13 @@ export default function DefaultTagsPage({ tags }: DefaultTagsPageProps) {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2rem' }}>
-        <i className="fa-solid fa-tags" style={{ fontSize: '22px', color: 'var(--color-primary)' }} />
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-text-main)' }}>标签</h1>
-        <span style={{ fontSize: '14px', color: 'var(--color-text-dim)', marginLeft: '8px' }}>共 {sorted.length} 个标签</span>
-      </div>
+      <PageTitle
+        title="标签"
+        icon="fa-solid fa-tags"
+        meta={<><strong>{sorted.length}</strong> 个标签</>}
+      />
 
+      <div style={{ padding: '0 32px 32px' }}>
       {sorted.length > 0 ? (
         <div className="flex flex-wrap gap-3 items-baseline">
           {sorted.map((tag) => (
@@ -34,6 +36,7 @@ export default function DefaultTagsPage({ tags }: DefaultTagsPageProps) {
       ) : (
         <p className="text-center py-16 text-dim">暂无标签</p>
       )}
+      </div>
     </div>
   );
 }

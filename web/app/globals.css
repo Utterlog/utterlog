@@ -462,6 +462,96 @@ body {
 /* Logo font */
 .font-logo { font-family: "Ubuntu", "Fugaz One", sans-serif; }
 
+/* Shared blog page title. Themes can override this shell without each
+   route re-implementing the same icon/title/count layout. */
+.blog-page-title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 24px;
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--color-border, #e5e5e5);
+}
+.blog-page-title-rail {
+  display: none;
+}
+.blog-page-title-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.blog-page-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--color-primary, #0052D9);
+  font-size: 24px;
+}
+.blog-page-title-copy {
+  min-width: 0;
+}
+.blog-page-title-text {
+  margin: 0;
+  color: var(--color-text-main, #1a1a1a);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.blog-page-title-subtitle {
+  margin-top: 4px;
+  color: var(--color-text-dim, #999);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.blog-page-title-side {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.blog-page-title-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border, #d9d9d9);
+  color: var(--color-text-sub, #666);
+  font-size: 13px;
+  line-height: 1.3;
+}
+.blog-page-title-meta strong {
+  color: var(--color-text-main, #1a1a1a);
+  font-weight: 600;
+}
+.blog-page-title-stat {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .blog-page-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 16px;
+  }
+  .blog-page-title-side {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .blog-page-title-meta {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+}
+
 /* Site title — display font for the header brand. Loads the variable
    Alimama FangYuanTi from static.utterlog.com (linked in layout.tsx);
    falls back to Noto Sans SC + system if the woff2 slice for a given

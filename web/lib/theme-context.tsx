@@ -60,6 +60,7 @@ export interface ThemeContextData {
   categories: Category[];
   tags: Tag[];
   archiveStats: ArchiveStats;
+  locale: string;
   theme: {
     name: string;
     manifest?: import('./theme').ThemeManifest;
@@ -84,6 +85,7 @@ export function useThemeContext(): ThemeContextData {
       categories: [],
       tags: [],
       archiveStats: { post_count: 0, comment_count: 0, word_count: 0, days: 0, total_views: 0, heatmap: [] },
+      locale: 'zh-CN',
       theme: { name: 'Azure' },
       options: {},
     };

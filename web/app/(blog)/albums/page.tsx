@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import PageTitle from '@/components/blog/PageTitle';
 
 interface Album {
   id: number;
@@ -71,19 +72,23 @@ export default function AlbumsPage() {
   // Album detail view
   if (selectedAlbum) {
     return (
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
-        <button onClick={() => { setSelectedAlbum(null); setPhotos([]); }} style={{
-          background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary, #0052D9)',
-          fontSize: '14px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '6px',
-        }}>
-          <i className="fa-solid fa-arrow-left" /> All Albums
-        </button>
+      <div>
+        <PageTitle
+          title={selectedAlbum.title}
+          icon="fa-light fa-images"
+          subtitle={selectedAlbum.description}
+          meta={<><strong>{photos.length}</strong> 张照片</>}
+          actions={
+            <button onClick={() => { setSelectedAlbum(null); setPhotos([]); }} style={{
+              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary, #0052D9)',
+              fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px',
+            }}>
+              <i className="fa-solid fa-arrow-left" /> 返回相册
+            </button>
+          }
+        />
 
-        <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>{selectedAlbum.title}</h1>
-        {selectedAlbum.description && (
-          <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>{selectedAlbum.description}</p>
-        )}
-
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 32px' }}>
         {photos.length === 0 ? (
           <p style={{ color: '#9ca3af', textAlign: 'center', padding: '40px 0' }}>This album is empty</p>
         ) : (
@@ -116,6 +121,7 @@ export default function AlbumsPage() {
             ))}
           </div>
         )}
+        </div>
 
         {/* Lightbox */}
         {lightbox !== null && photos[lightbox] && (
@@ -165,9 +171,14 @@ export default function AlbumsPage() {
 
   // Albums grid
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '24px' }}>Albums</h1>
+    <div>
+      <PageTitle
+        title="相册"
+        icon="fa-light fa-images"
+        meta={<><strong>{albums.length}</strong> 个相册</>}
+      />
 
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 32px' }}>
       {albums.length === 0 ? (
         <p style={{ color: '#9ca3af', textAlign: 'center', padding: '60px 0' }}>No albums yet</p>
       ) : (
@@ -204,6 +215,7 @@ export default function AlbumsPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

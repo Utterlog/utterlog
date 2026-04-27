@@ -1,4 +1,5 @@
 import { getGames } from '@/lib/blog-api';
+import PageTitle from '@/components/blog/PageTitle';
 
 const statusLabel: Record<string, string> = { want: '想玩', playing: '在玩', finished: '通关', abandoned: '弃坑' };
 
@@ -8,17 +9,12 @@ export default async function GamesPage() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 200px)' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 32px', borderBottom: '1px solid var(--color-border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="fa-sharp fa-light fa-gamepad" style={{ fontSize: '24px', color: 'var(--color-primary)' }} />
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-text-main)' }}>游戏</h1>
-          <span className="text-dim" style={{ fontSize: '13px', marginLeft: '4px' }}>· 我玩过的</span>
-        </div>
-        <div style={{ padding: '6px 14px', border: '1px solid var(--color-border)', fontSize: '13px', color: 'var(--color-text-sub)' }}>
-          <strong className="text-main" style={{ fontWeight: 600 }}>{items.length}</strong> 款游戏
-        </div>
-      </div>
+      <PageTitle
+        title="游戏"
+        icon="fa-sharp fa-light fa-gamepad"
+        subtitle="我玩过的"
+        meta={<><strong>{items.length}</strong> 款游戏</>}
+      />
 
       <div style={{ padding: '32px' }}>
         {items.length === 0 ? (

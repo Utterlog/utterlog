@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import PostLink from '../PostLink';
+import PageTitle from '@/components/blog/PageTitle';
 
 function toDate(ts: string | number) {
   return typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
@@ -35,15 +36,14 @@ export default function DefaultTagPage({ tag, posts }: DefaultTagPageProps) {
   const yearGroups = groupByYear(posts);
 
   return (
-    <div style={{ padding: '32px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--color-border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="fa-solid fa-tag" style={{ fontSize: '22px', color: 'var(--color-primary)' }} />
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-text-main)' }}>{tag.name}</h1>
-        </div>
-        <span style={{ fontSize: '14px', color: 'var(--color-text-dim)' }}>{posts.length} 篇文章</span>
-      </div>
+    <div>
+      <PageTitle
+        title={tag.name}
+        icon="fa-solid fa-tag"
+        meta={<><strong>{posts.length}</strong> 篇文章</>}
+      />
 
+      <div style={{ padding: '0 32px 32px' }}>
       {yearGroups.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {yearGroups.map(([year, yearPosts]) => (
@@ -71,6 +71,7 @@ export default function DefaultTagPage({ tag, posts }: DefaultTagPageProps) {
       ) : (
         <p style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-text-dim)' }}>该标签下暂无文章</p>
       )}
+      </div>
     </div>
   );
 }

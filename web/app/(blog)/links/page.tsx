@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import PageTitle from '@/components/blog/PageTitle';
 
 interface Link {
   id: number;
@@ -90,13 +91,10 @@ export default function LinksPage() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 200px)' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 32px', borderBottom: '1px solid #e5e5e5' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="fa-sharp fa-light fa-link" style={{ fontSize: '24px', color: 'var(--color-primary, #0052D9)' }} />
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1a1a1a' }}>友情链接</h1>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <PageTitle
+        title="友情链接"
+        icon="fa-sharp fa-light fa-link"
+        actions={
           <button
             onClick={() => setShowApply(true)}
             style={{
@@ -112,11 +110,9 @@ export default function LinksPage() {
             <i className="fa-regular fa-handshake" style={{ fontSize: '12px' }} />
             我要申请
           </button>
-          <div style={{ padding: '6px 14px', border: '1px solid #d9d9d9', fontSize: '13px', color: '#666' }}>
-            <strong style={{ color: '#1a1a1a', fontWeight: 600 }}>{links.length}</strong> 个友链
-          </div>
-        </div>
-      </div>
+        }
+        meta={<><strong>{links.length}</strong> 个友链</>}
+      />
 
       <div style={{ padding: '32px' }}>
         {/* Group tabs */}

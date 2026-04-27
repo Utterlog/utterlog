@@ -178,9 +178,44 @@ const toolbar: TBBtn[] = [
 ];
 
 /* ── text stats ── */
+function stripFencedCodeBlocks(text: string) {
+  const out: string[] = [];
+  let inFence = false;
+  let fence = '';
+  for (const line of text.split('\n')) {
+    const trimmed = line.replace(/^[ \t]+/, '');
+    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+      const marker = trimmed.slice(0, 3);
+      if (!inFence) {
+        inFence = true;
+        fence = marker;
+      } else if (marker === fence) {
+        inFence = false;
+        fence = '';
+      }
+      continue;
+    }
+    if (!inFence) out.push(line);
+  }
+  return out.join('\n');
+}
+
+function countReadableChars(text: string) {
+  return Array.from(
+    stripFencedCodeBlocks(text)
+      .replace(/<script[^>]*>[\s\S]*?<\/script>|<style[^>]*>[\s\S]*?<\/style>|<pre[^>]*>[\s\S]*?<\/pre>|<code[^>]*>[\s\S]*?<\/code>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/`[^`\n]+`/g, '')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/\*\*|~~|__|[*_#>`|]/g, ''),
+  ).filter(ch => !/\s/u.test(ch)).length;
+}
+
 function calcStats(text: string) {
   const chars = text.length;
-  const words = text.replace(/[\s\n]+/g, '').length; // CJK: chars ≈ words
+  const words = countReadableChars(text);
   const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim()).length || 0;
   const readingTime = Math.max(1, Math.ceil(words / 400)); // ~400 CJK chars/min
   return { chars, words, paragraphs, readingTime };

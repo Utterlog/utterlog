@@ -1,0 +1,31 @@
+{
+  "locale": "en-US",
+  "name": "English",
+  "native_name": "English",
+  "direction": "ltr",
+  "version": "1",
+  "messages": {
+    "common.home": "Home",
+    "common.archives": "Archives",
+    "common.categories": "Categories",
+    "common.tags": "Tags",
+    "common.comments": "Comments",
+    "common.search": "Search",
+    "common.loading": "Loading...",
+    "common.empty": "No content yet",
+    "post.words": "{count} words",
+    "post.readingTime": "{minutes} min read",
+    "post.views": "{count} views",
+    "post.commentCount": "{count} comments",
+    "stats.posts": "Posts",
+    "stats.comments": "Comments",
+    "stats.days": "Days online",
+    "stats.totalWords": "Total words",
+    "archive.title": "Archives",
+    "comment.title": "Comments",
+    "comment.submit": "Submit comment",
+    "language.zh-CN": "简体中文",
+    "language.en-US": "English",
+    "language.ru-RU": "Русский"
+  }
+}

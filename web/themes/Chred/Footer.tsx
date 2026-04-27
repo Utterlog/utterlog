@@ -243,7 +243,7 @@ export default function Footer() {
     storeLogout();
   };
 
-  const siteName = siteOptions.site_title || '西风';
+  const siteName = siteOptions.site_title || 'Utterlog';
   const tv = stats.total_views || 0;
   const totalViews = tv >= 10000 ? (tv / 10000).toFixed(1) + '万' : tv.toLocaleString();
 

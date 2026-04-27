@@ -1,0 +1,31 @@
+{
+  "locale": "zh-CN",
+  "name": "Chinese (Simplified)",
+  "native_name": "简体中文",
+  "direction": "ltr",
+  "version": "1",
+  "messages": {
+    "common.home": "首页",
+    "common.archives": "归档",
+    "common.categories": "分类",
+    "common.tags": "标签",
+    "common.comments": "评论",
+    "common.search": "搜索",
+    "common.loading": "加载中...",
+    "common.empty": "暂无内容",
+    "post.words": "{count} 字",
+    "post.readingTime": "{minutes} 分钟",
+    "post.views": "{count} 阅读",
+    "post.commentCount": "{count} 评论",
+    "stats.posts": "文章",
+    "stats.comments": "评论",
+    "stats.days": "建站天数",
+    "stats.totalWords": "全部字数",
+    "archive.title": "归档",
+    "comment.title": "评论",
+    "comment.submit": "提交评论",
+    "language.zh-CN": "简体中文",
+    "language.en-US": "English",
+    "language.ru-RU": "Русский"
+  }
+}

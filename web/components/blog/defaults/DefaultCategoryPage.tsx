@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import PostLink from '../PostLink';
+import PageTitle from '@/components/blog/PageTitle';
 
 function getCatIcon(name: string, icon?: string) {
   if (icon && icon.startsWith('fa')) return icon;
@@ -41,15 +42,14 @@ export default function DefaultCategoryPage({ category, posts }: DefaultCategory
   const icon = getCatIcon(category.name, category.icon);
 
   return (
-    <div style={{ padding: '32px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--color-border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className={icon} style={{ fontSize: '24px', color: 'var(--color-primary)' }} />
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-text-main)' }}>{category.name}</h1>
-        </div>
-        <span style={{ fontSize: '14px', color: 'var(--color-text-dim)' }}>{posts.length} 篇文章</span>
-      </div>
+    <div>
+      <PageTitle
+        title={category.name}
+        icon={icon}
+        meta={<><strong>{posts.length}</strong> 篇文章</>}
+      />
 
+      <div style={{ padding: '0 32px 32px' }}>
       {yearGroups.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {yearGroups.map(([year, yearPosts]) => (
@@ -77,6 +77,7 @@ export default function DefaultCategoryPage({ category, posts }: DefaultCategory
       ) : (
         <p style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-text-dim)' }}>该分类下暂无文章</p>
       )}
+      </div>
     </div>
   );
 }

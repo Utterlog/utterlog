@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import api from '@/lib/api';
+import PageTitle from '@/components/blog/PageTitle';
 
 interface FeedItem {
   title: string;
@@ -168,16 +169,11 @@ export default function FeedsPage() {
         position: 'relative',
       }}
     >
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 32px', borderBottom: '1px solid #e5e5e5' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="fa-sharp fa-light fa-rss" style={{ fontSize: '24px', color: 'var(--color-primary, #0052D9)' }} />
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1a1a1a' }}>订阅</h1>
-        </div>
-        <div style={{ padding: '6px 14px', border: '1px solid #d9d9d9', fontSize: '13px', color: '#666' }}>
-          <strong style={{ color: '#1a1a1a', fontWeight: 600 }}>{items.length}</strong> 篇文章
-        </div>
-      </div>
+      <PageTitle
+        title="友链动态"
+        icon="fa-sharp fa-light fa-rss"
+        meta={<><strong>{items.length}</strong> 篇文章</>}
+      />
 
       <div style={{ padding: isMobile ? '24px 16px 80px' : '32px 32px 80px' }}>
       {loading ? (

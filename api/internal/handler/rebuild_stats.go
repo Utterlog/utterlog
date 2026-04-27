@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"utterlog-go/config"
+	"utterlog-go/internal/textutil"
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -19,12 +20,12 @@ func SystemClearCache(c *gin.Context) {
 	}
 	cleared := 0
 	patterns := []string{
-		"captcha:*",   // PoW + image captchas (ephemeral, user refetches on demand)
+		"captcha:*", // PoW + image captchas (ephemeral, user refetches on demand)
 		"captcha:img:*",
-		"online:*",    // online visitor tracker — repopulates from heartbeats
-		"stats:*",     // any stats caches we might add later
-		"views:*",     // per-post view counter cache
-		"geo:*",       // ip→country cache, rebuilds on next comment
+		"online:*", // online visitor tracker — repopulates from heartbeats
+		"stats:*",  // any stats caches we might add later
+		"views:*",  // per-post view counter cache
+		"geo:*",    // ip→country cache, rebuilds on next comment
 	}
 	for _, pat := range patterns {
 		iter := config.RDB.Scan(config.Ctx, 0, pat, 500).Iterator()
@@ -62,8 +63,7 @@ func SystemClearRSSCache(c *gin.Context) {
 // Scope:
 //   - ul_metas.count       ← COUNT(*) FROM ul_relationships per meta
 //   - ul_posts.comment_count ← COUNT(*) FROM ul_comments (approved) per post
-//   - ul_posts.word_count  ← LENGTH(content) strip HTML, count chars
-//     (Chinese-heavy; chars ≈ words)
+//   - ul_posts.word_count  ← shared Markdown-aware article counter
 //
 // View counts live in Redis, not touched here.
 func SystemRebuildStats(c *gin.Context) {
@@ -111,21 +111,42 @@ func SystemRebuildStats(c *gin.Context) {
 	`, config.T("posts"), config.T("comments")))
 	result["comment_count_updated"] = ccUpdated
 
-	// Word count — strip HTML, count non-whitespace characters. Mostly a
-	// post-migration concern; native editor updates word_count on save.
+	// Word count — same code path as native post create/update. Rebuild every
+	// post row so drafts also have a current count before they are published.
 	var wcUpdated int64
-	r3, err3 := config.DB.Exec(fmt.Sprintf(`
-		UPDATE %s SET word_count = LENGTH(
-		  REGEXP_REPLACE(
-		    REGEXP_REPLACE(COALESCE(content, ''), '<[^>]+>', '', 'g'),
-		    '\s+', '', 'g'
-		  )
-		)
-		WHERE type = 'post' AND status = 'publish'
-		  AND (word_count = 0 OR word_count IS NULL)
-	`, config.T("posts")))
-	if err3 == nil {
-		wcUpdated, _ = r3.RowsAffected()
+	type postWordRow struct {
+		ID        int    `db:"id"`
+		Content   string `db:"content"`
+		WordCount int    `db:"word_count"`
+	}
+	var rows []postWordRow
+	if err := config.DB.Select(&rows, fmt.Sprintf(
+		"SELECT id, COALESCE(content,'') AS content, COALESCE(word_count,0) AS word_count FROM %s WHERE type = 'post'",
+		config.T("posts"))); err == nil {
+		tx, err := config.DB.Beginx()
+		if err == nil {
+			var opErr error
+			stmt, err := tx.Preparex(fmt.Sprintf("UPDATE %s SET word_count = $1 WHERE id = $2", config.T("posts")))
+			if err == nil {
+				for _, row := range rows {
+					count := textutil.ContentWordCount(row.Content)
+					if count == row.WordCount {
+						continue
+					}
+					if _, opErr = stmt.Exec(count, row.ID); opErr != nil {
+						break
+					}
+					wcUpdated++
+				}
+				stmt.Close()
+			}
+			if err == nil && opErr == nil {
+				_ = tx.Commit()
+			} else {
+				_ = tx.Rollback()
+				wcUpdated = 0
+			}
+		}
 	}
 	result["word_count_updated"] = wcUpdated
 

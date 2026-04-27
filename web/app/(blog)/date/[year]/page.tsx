@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getPosts } from '@/lib/blog-api';
 import PostLink from '@/components/blog/PostLink';
+import PageTitle from '@/components/blog/PageTitle';
 
 interface Props { params: Promise<{ year: string }> }
 
@@ -46,13 +47,14 @@ export default async function YearArchive({ params }: Props) {
   const months = Array.from(monthMap.entries()).sort((a, b) => b[0] - a[0]);
 
   return (
-    <div style={{ padding: '32px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-        <i className="fa-regular fa-calendar" style={{ fontSize: '20px', color: 'var(--color-primary)' }} />
-        <h1 style={{ fontSize: '22px', fontWeight: 700 }}>{year} 年度归档</h1>
-        <span style={{ fontSize: '13px', color: 'var(--color-text-dim)' }}>共 {allPosts.length} 篇</span>
-      </div>
+    <div>
+      <PageTitle
+        title={`${year} 年度归档`}
+        icon="fa-regular fa-calendar"
+        meta={<><strong>{allPosts.length}</strong> 篇文章</>}
+      />
 
+      <div style={{ padding: '0 32px 32px' }}>
       {months.map(([month, posts]) => (
         <div key={month} style={{ border: '1px solid var(--color-border)', marginBottom: '16px' }}>
           <Link href={`/date/${year}/${String(month).padStart(2, '0')}`} style={{
@@ -80,6 +82,7 @@ export default async function YearArchive({ params }: Props) {
       {allPosts.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-dim)' }}>{year} 年暂无文章</div>
       )}
+      </div>
     </div>
   );
 }

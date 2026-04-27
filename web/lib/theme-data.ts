@@ -155,6 +155,7 @@ export async function getThemeContextData(): Promise<ThemeContextData> {
     menus,
     categories,
     tags,
+    locale: opts.site_locale || 'zh-CN',
     archiveStats: {
       post_count: stats.post_count || 0,
       comment_count: stats.comment_count || 0,

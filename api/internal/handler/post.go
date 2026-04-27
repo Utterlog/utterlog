@@ -11,6 +11,7 @@ import (
 	"utterlog-go/config"
 	"utterlog-go/internal/middleware"
 	"utterlog-go/internal/model"
+	"utterlog-go/internal/textutil"
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -203,7 +204,7 @@ func UpdatePost(c *gin.Context) {
 	var req struct {
 		Title        string   `json:"title"`
 		Slug         string   `json:"slug"`
-		Content      string   `json:"content"`
+		Content      *string  `json:"content"`
 		Excerpt      string   `json:"excerpt"`
 		Status       string   `json:"status"`
 		CoverURL     string   `json:"cover_url"`
@@ -227,9 +228,9 @@ func UpdatePost(c *gin.Context) {
 	if req.Slug != "" {
 		existing.Slug = req.Slug
 	}
-	if req.Content != "" {
-		existing.Content = &req.Content
-		existing.WordCount = countWords(req.Content)
+	if req.Content != nil {
+		existing.Content = req.Content
+		existing.WordCount = countWords(*req.Content)
 	}
 	if req.Status != "" {
 		existing.Status = req.Status
@@ -282,8 +283,8 @@ func UpdatePost(c *gin.Context) {
 		// previously-generated text — exactly the "saved but not
 		// synced" symptom.
 		existing.AISummary = &req.Excerpt
-	} else if req.Content != "" && (existing.Excerpt == nil || *existing.Excerpt == "") {
-		exc := extractExcerpt(req.Content, 200)
+	} else if req.Content != nil && (existing.Excerpt == nil || *existing.Excerpt == "") {
+		exc := extractExcerpt(*req.Content, 200)
 		if exc != "" {
 			existing.Excerpt = &exc
 		}
@@ -395,7 +396,7 @@ func syncRelationships(postID int, categoryIDs []int, tagNames []string, now int
 		}
 		slug := name
 		var tagID int
-		err := config.DB.Get(&tagID, "SELECT id FROM "+t("metas")+" WHERE slug = $1 AND type = 'tag'", slug)
+		err := config.DB.Get(&tagID, "SELECT id FROM "+t("metas")+" WHERE LOWER(slug) = LOWER($1) AND type = 'tag' ORDER BY count DESC, id ASC LIMIT 1", slug)
 		if err != nil {
 			config.DB.QueryRow(fmt.Sprintf(
 				"INSERT INTO %s (name, slug, type, count, created_at, updated_at) VALUES ($1, $2, 'tag', 0, $3, $4) RETURNING id",
@@ -459,59 +460,10 @@ func extractExcerpt(content string, maxLen int) string {
 	return text
 }
 
-// countWords counts characters in content, excluding code blocks and markdown syntax
+// countWords keeps the old handler-local name while delegating to the shared
+// article counter used by rebuild/admin stats.
 func countWords(content string) int {
-	text := content
-	// Remove fenced code blocks
-	for {
-		start := strings.Index(text, "```")
-		if start == -1 {
-			break
-		}
-		end := strings.Index(text[start+3:], "```")
-		if end == -1 {
-			text = text[:start]
-			break
-		}
-		text = text[:start] + text[start+3+end+3:]
-	}
-	// Remove markdown formatting
-	text = strings.NewReplacer("**", "", "*", "", "~~", "", "`", "").Replace(text)
-	// Remove images
-	for strings.Contains(text, "![") {
-		s := strings.Index(text, "![")
-		e := strings.Index(text[s:], ")")
-		if e == -1 {
-			break
-		}
-		text = text[:s] + text[s+e+1:]
-	}
-	// Remove links: [text](url) → text
-	for strings.Contains(text, "](") {
-		s := strings.LastIndex(text[:strings.Index(text, "](")], "[")
-		if s == -1 {
-			break
-		}
-		e := strings.Index(text[s:], ")")
-		if e == -1 {
-			break
-		}
-		linkText := text[s+1 : strings.Index(text[s:], "](")+s]
-		text = text[:s] + linkText + text[s+e+1:]
-	}
-	// Remove headers, blockquotes
-	lines := strings.Split(text, "\n")
-	var clean []string
-	for _, l := range lines {
-		l = strings.TrimSpace(l)
-		if l == "" || strings.HasPrefix(l, "---") {
-			continue
-		}
-		l = strings.TrimLeft(l, "#> ")
-		clean = append(clean, l)
-	}
-	text = strings.Join(clean, " ")
-	return len([]rune(strings.TrimSpace(text)))
+	return textutil.ContentWordCount(content)
 }
 
 // Notify all sites that follow us when we publish new content

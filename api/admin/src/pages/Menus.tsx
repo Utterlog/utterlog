@@ -6,7 +6,7 @@ import { Button } from '@/components/ui';
 interface MenuItem {
   href: string;
   label: string;
-  type?: 'custom' | 'page' | 'category';
+  type?: 'custom' | 'page' | 'category' | 'all';
   category_id?: number;
   slug?: string;
   icon?: string;
@@ -56,6 +56,12 @@ function parseMenu(raw: string | undefined): MenuItem[] {
   } catch {
     return [];
   }
+}
+
+function isFixedAllSidebarItem(item?: MenuItem) {
+  const label = (item?.label || '').trim();
+  const href = (item?.href || '').trim();
+  return item?.type === 'all' || href === '__all__' || (label === '全部' && (!href || href === '/' || href === '#'));
 }
 
 export default function MenusPage() {
@@ -118,7 +124,10 @@ export default function MenusPage() {
 
       const next: Record<string, MenuItem[]> = {};
       pos.forEach(p => {
-        next[p.key] = parseMenu(opts[`menu_${p.key}`]);
+        const parsed = parseMenu(opts[`menu_${p.key}`]);
+        next[p.key] = theme === 'Azure' && p.key === 'sidebar'
+          ? parsed.filter(item => !isFixedAllSidebarItem(item))
+          : parsed;
       });
       setMenus(next);
     } catch {
@@ -128,8 +137,15 @@ export default function MenusPage() {
     }
   };
 
+  const normalizeItems = (pos: string, items: MenuItem[]) => {
+    if (activeTheme === 'Azure' && pos === 'sidebar') {
+      return items.filter(item => !isFixedAllSidebarItem(item));
+    }
+    return items;
+  };
+
   const updateItems = (items: MenuItem[]) => {
-    setMenus(prev => ({ ...prev, [activePos]: items }));
+    setMenus(prev => ({ ...prev, [activePos]: normalizeItems(activePos, items) }));
   };
 
   const addItem = () => {
@@ -213,7 +229,7 @@ export default function MenusPage() {
     try {
       const payload: Record<string, string> = {};
       positions.forEach(p => {
-        payload[`menu_${p.key}`] = JSON.stringify(menus[p.key] || []);
+        payload[`menu_${p.key}`] = JSON.stringify(normalizeItems(p.key, menus[p.key] || []));
       });
       await optionsApi.updateMany(payload);
       toast.success('菜单已保存');
@@ -230,6 +246,7 @@ export default function MenusPage() {
 
   const items = menus[activePos] || [];
   const posDef = positions.find(p => p.key === activePos);
+  const isAzureSidebar = activeTheme === 'Azure' && activePos === 'sidebar';
 
   return (
     <div>
@@ -269,9 +286,35 @@ export default function MenusPage() {
       <p className="text-dim" style={{ fontSize: '12px', marginBottom: '16px' }}>{posDef?.hint}</p>
 
       <div className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {isAzureSidebar && (
+          <div style={{ border: '1px solid var(--color-border)', padding: '12px', background: 'var(--color-bg-soft)' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', opacity: 0.35 }}>
+                <button disabled style={{ padding: '2px 6px', fontSize: '10px', background: 'none', border: '1px solid var(--color-border)', cursor: 'not-allowed' }}>
+                  <i className="fa-solid fa-chevron-up" />
+                </button>
+                <button disabled style={{ padding: '2px 6px', fontSize: '10px', background: 'none', border: '1px solid var(--color-border)', cursor: 'not-allowed' }}>
+                  <i className="fa-solid fa-chevron-down" />
+                </button>
+              </div>
+              <div style={{ flex: '0 0 200px', display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 36, padding: '0 12px', color: 'var(--color-text-main)', fontSize: 13, border: '1px solid var(--color-border)', background: 'var(--color-bg-card)' }}>
+                <i className="fa-sharp fa-light fa-grid-2" style={{ color: 'var(--color-primary)' }} />
+                全部
+              </div>
+              <div className="text-dim" style={{ flex: 1, fontSize: '12px' }}>
+                Azure Hero 固定分类 tab，前台始终显示，不写入菜单配置。
+              </div>
+              <button disabled title="固定项不可删除"
+                style={{ padding: '6px 10px', fontSize: '12px', background: 'none', border: '1px solid var(--color-border)', cursor: 'not-allowed', color: 'var(--color-text-dim)', opacity: 0.55 }}>
+                <i className="fa-regular fa-lock" style={{ fontSize: '12px' }} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {items.length === 0 ? (
           <div className="text-dim" style={{ padding: '32px', textAlign: 'center', fontSize: '13px' }}>
-            暂无菜单项，点击下方"添加菜单项"开始
+            {isAzureSidebar ? '暂无自定义侧栏项；未添加时前台使用默认分类列表。' : '暂无菜单项，点击下方"添加菜单项"开始'}
           </div>
         ) : items.map((item, idx) => (
           <div key={idx} style={{ border: '1px solid var(--color-border)', padding: '12px' }}>
@@ -300,21 +343,25 @@ export default function MenusPage() {
                 onChange={e => updateItem(idx, 'href', e.target.value)}
                 placeholder="/path 或 https://..."
               />
-              <button onClick={() => setPickerOpen({ target: idx })} title="从已有页面添加子菜单"
-                style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', cursor: 'pointer' }}>
-                <i className="fa-regular fa-list-tree" style={{ fontSize: '12px' }} />
-              </button>
-              <button onClick={() => addChild(idx)} title="添加空白子菜单"
-                style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', cursor: 'pointer' }}>
-                <i className="fa-regular fa-diagram-subtask" style={{ fontSize: '12px' }} />
-              </button>
+              {!isAzureSidebar && (
+                <>
+                  <button onClick={() => setPickerOpen({ target: idx })} title="从已有页面添加子菜单"
+                    style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', cursor: 'pointer' }}>
+                    <i className="fa-regular fa-list-tree" style={{ fontSize: '12px' }} />
+                  </button>
+                  <button onClick={() => addChild(idx)} title="添加空白子菜单"
+                    style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', cursor: 'pointer' }}>
+                    <i className="fa-regular fa-diagram-subtask" style={{ fontSize: '12px' }} />
+                  </button>
+                </>
+              )}
               <button onClick={() => removeItem(idx)} title="删除"
                 style={{ padding: '6px 10px', fontSize: '12px', background: 'none', border: '1px solid var(--color-border)', cursor: 'pointer', color: '#dc2626' }}>
                 <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} />
               </button>
             </div>
 
-            {!!item.children?.length && (
+            {!isAzureSidebar && !!item.children?.length && (
               <div style={{ marginTop: '10px', marginLeft: '40px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {item.children.map((child, cIdx) => (
                   <div key={cIdx} style={{ display: 'flex', gap: '8px' }}>
@@ -405,7 +452,7 @@ export default function MenusPage() {
                   {categories.map(c => (
                     <button
                       key={c.id}
-                      onClick={() => addPick({ label: c.name, href: `/category/${c.slug}`, type: 'category', category_id: c.id, slug: c.slug, icon: c.icon, count: c.count })}
+                      onClick={() => addPick({ label: c.name, href: `/categories/${c.slug}`, type: 'category', category_id: c.id, slug: c.slug, icon: c.icon, count: c.count })}
                       style={{ display: 'flex', width: '100%', padding: '8px 12px', fontSize: '13px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'space-between' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-soft)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -415,7 +462,7 @@ export default function MenusPage() {
                         {c.name}
                         <span className="text-dim" style={{ fontSize: 11 }}>({c.count || 0})</span>
                       </span>
-                      <code style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>/category/{c.slug}</code>
+                      <code style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>/categories/{c.slug}</code>
                     </button>
                   ))}
                 </>
