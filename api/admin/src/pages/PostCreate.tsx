@@ -5,10 +5,12 @@ import { postsApi, categoriesApi, tagsApi, mediaApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui';
 import api from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
 
 export default function CreatePostPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const mdFileRef = useRef<HTMLInputElement>(null);
@@ -80,7 +82,7 @@ export default function CreatePostPage() {
   }, [title, content, slug, coverUrl, categoryId, tagInput, excerpt]);
 
   const handleSave = async (saveStatus?: string) => {
-    if (!title.trim()) { toast.error('标题不能为空'); return; }
+    if (!title.trim()) { toast.error(t('admin.postEditor.toast.titleRequired', '标题不能为空')); return; }
     setSubmitting(true);
     try {
       const tagNames = tagInput.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
@@ -97,10 +99,10 @@ export default function CreatePostPage() {
         pinned,
       });
       localStorage.removeItem('draft_post');
-      toast.success('文章创建成功');
+      toast.success(t('admin.postEditor.toast.created', '文章创建成功'));
       navigate('/posts');
     } catch {
-      toast.error('创建失败');
+      toast.error(t('admin.common.createFailed', '创建失败'));
     } finally {
       setSubmitting(false);
     }
@@ -119,7 +121,7 @@ export default function CreatePostPage() {
       if (titleMatch && !title) setTitle(titleMatch[1].trim());
       else if (!title) setTitle(file.name.replace(/\.md$/i, ''));
       setContent(text.replace(/^#\s+.+\n?/, '').trim()); // Remove first H1 if used as title
-      toast.success('Markdown 文件已导入');
+      toast.success(t('admin.postEditor.toast.markdownImported', 'Markdown 文件已导入'));
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -133,8 +135,8 @@ export default function CreatePostPage() {
     try {
       const r: any = await mediaApi.upload(file, 'covers');
       const url = r.url || r.data?.url;
-      if (url) { setCoverUrl(url); toast.success('封面已上传'); }
-    } catch { toast.error('上传失败'); }
+      if (url) { setCoverUrl(url); toast.success(t('admin.postEditor.toast.coverUploaded', '封面已上传')); }
+    } catch { toast.error(t('admin.common.uploadFailed', '上传失败')); }
     finally { setCoverUploading(false); e.target.value = ''; }
   };
 
@@ -151,7 +153,7 @@ export default function CreatePostPage() {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="在此输入标题..."
+            placeholder={t('admin.postEditor.titlePlaceholder', '在此输入标题...')}
             style={{
               padding: '14px 20px', fontSize: '18px', fontWeight: 600,
               border: 'none', borderBottom: '1px solid var(--color-border)',
@@ -202,13 +204,13 @@ export default function CreatePostPage() {
           <div style={sectionStyle}>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
               <Button onClick={() => handleSave('publish')} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
-                发布
+                {t('admin.postEditor.publish', '发布')}
               </Button>
               <Button variant="secondary" onClick={() => handleSave('draft')} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
-                保存
+                {t('admin.common.save', '保存')}
               </Button>
               <Button variant="secondary" onClick={() => navigate(-1)} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
-                返回
+                {t('admin.common.back', '返回')}
               </Button>
             </div>
             {aiFlags.polish && <button onClick={() => setShowAiModal(true)} style={{
@@ -220,17 +222,17 @@ export default function CreatePostPage() {
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary)'; e.currentTarget.style.color = '#fff'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--color-primary)'; }}
             >
-              <i className="fa-regular fa-sparkles" style={{ fontSize: '13px' }} /> AI 处理文章
+              <i className="fa-regular fa-sparkles" style={{ fontSize: '13px' }} /> {t('admin.postEditor.aiProcessArticle', 'AI 处理文章')}
             </button>}
           </div>
 
           {/* Settings */}
           <div style={sectionStyle}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px', color: 'var(--color-text-main)' }}>设置</h3>
+            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px', color: 'var(--color-text-main)' }}>{t('admin.postEditor.settings', '设置')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* Cover */}
               <div>
-                <label style={labelStyle}>自定义封面图 URL</label>
+                <label style={labelStyle}>{t('admin.postEditor.coverUrl', '自定义封面图 URL')}</label>
                 {coverUrl && (
                   <div style={{ marginBottom: '6px', position: 'relative' }}>
                     <img src={coverUrl} alt="" style={{ width: '100%', height: '80px', objectFit: 'cover', border: '1px solid var(--color-border)' }} />
@@ -242,28 +244,28 @@ export default function CreatePostPage() {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'stretch' }}>
-                  <input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="留空自动回退为正文首图" className="input" style={{ flex: 1, fontSize: '12px' }} />
+                  <input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder={t('admin.postEditor.coverPlaceholder', '留空自动回退为正文首图')} className="input" style={{ flex: 1, fontSize: '12px' }} />
                   {aiFlags.image && (
                     <button
                       className="btn btn-secondary btn-toolbar-square"
-                      title="AI 生成封面"
+                      title={t('admin.postEditor.aiGenerateCover', 'AI 生成封面')}
                       disabled={coverAiLoading}
                       style={{ opacity: coverAiLoading ? 0.5 : 1 }}
                       onClick={async () => {
-                        if (!title) { toast.error('请先填写标题'); return; }
+                        if (!title) { toast.error(t('admin.postEditor.toast.fillTitleFirst', '请先填写标题')); return; }
                         setCoverAiLoading(true);
                         // Surface real backend error — same change as PostEdit.tsx.
                         try {
                           const r: any = await api.post('/ai/cover', { title, content: content.slice(0, 500) });
                           const url = r.data?.url || r.url;
-                          if (url) { setCoverUrl(url); toast.success('封面已生成'); }
-                          else toast.error('生成失败：响应中没有 url');
+                          if (url) { setCoverUrl(url); toast.success(t('admin.postEditor.toast.coverGenerated', '封面已生成')); }
+                          else toast.error(t('admin.postEditor.toast.noCoverUrl', '生成失败：响应中没有 url'));
                         } catch (err: any) {
                           const detail = err?.response?.data?.error?.message
                                       || err?.response?.data?.message
                                       || err?.message
-                                      || '请检查 AI 设置 → 提供商';
-                          toast.error('AI 生成封面失败：' + detail);
+                                      || t('admin.postEditor.toast.checkAiProvider', '请检查 AI 设置 → 提供商');
+                          toast.error(t('admin.postEditor.toast.aiCoverFailed', 'AI 生成封面失败：{reason}', { reason: detail }));
                         }
                         setCoverAiLoading(false);
                       }}
@@ -276,7 +278,7 @@ export default function CreatePostPage() {
                   <button
                     onClick={() => coverFileRef.current?.click()}
                     className="btn btn-secondary btn-toolbar-square"
-                    title={coverUploading ? '上传中...' : '上传封面'}
+                    title={coverUploading ? t('admin.media.uploading', '上传中...') : t('admin.postEditor.uploadCover', '上传封面')}
                   >
                     {coverUploading
                       ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: 14 }} />
@@ -285,15 +287,15 @@ export default function CreatePostPage() {
                   <input ref={coverFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCoverUpload} />
                 </div>
                 <p style={{ fontSize: '10px', color: 'var(--color-text-dim)', marginTop: '4px', lineHeight: 1.5 }}>
-                  如果这里有值，封面优先使用它；为空时自动回退到正文首图。
+                  {t('admin.postEditor.coverHint', '如果这里有值，封面优先使用它；为空时自动回退到正文首图。')}
                 </p>
               </div>
 
               {/* Slug */}
               <div>
-                <label style={labelStyle}>别名 (Slug)</label>
+                <label style={labelStyle}>{t('admin.postEditor.slug', '别名 (Slug)')}</label>
                 <div style={{ display: 'flex', gap: '6px' }}>
-                  <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="留空自动分配唯一数字" className="input" style={{ flex: 1, fontSize: '12px', padding: '6px 10px' }} />
+                  <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder={t('admin.postEditor.slugPlaceholder', '留空自动分配唯一数字')} className="input" style={{ flex: 1, fontSize: '12px', padding: '6px 10px' }} />
                   {aiFlags.slug && (
                   <button
                     className="btn btn-secondary"
@@ -304,8 +306,8 @@ export default function CreatePostPage() {
                       setSlugLoading(true);
                       try {
                         const r: any = await api.post('/ai/slug', { title, content });
-                        if (r.success && r.data?.slug) { setSlug(r.data.slug); toast.success('Slug 已生成'); }
-                      } catch { toast.error('AI 服务不可用'); }
+                        if (r.success && r.data?.slug) { setSlug(r.data.slug); toast.success(t('admin.postEditor.toast.slugGenerated', 'Slug 已生成')); }
+                      } catch { toast.error(t('admin.postEditor.toast.aiUnavailable', 'AI 服务不可用')); }
                       setSlugLoading(false);
                     }}
                   >
@@ -317,9 +319,9 @@ export default function CreatePostPage() {
 
               {/* Category */}
               <div>
-                <label style={labelStyle}>分类</label>
+                <label style={labelStyle}>{t('admin.postEditor.category', '分类')}</label>
                 <select value={categoryId} onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')} className="input" style={{ fontSize: '12px', padding: '6px 10px' }}>
-                  <option value="">未分类</option>
+                  <option value="">{t('admin.postEditor.uncategorized', '未分类')}</option>
                   {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
                 </select>
               </div>
@@ -327,35 +329,35 @@ export default function CreatePostPage() {
               {/* Tags */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '12px', color: 'var(--color-text-sub)', fontWeight: 500 }}>标签 (逗号分隔)</label>
+                  <label style={{ fontSize: '12px', color: 'var(--color-text-sub)', fontWeight: 500 }}>{t('admin.postEditor.tagsComma', '标签 (逗号分隔)')}</label>
                   {aiFlags.keywords && (
                   <button
                     disabled={tagsLoading}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '11px', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '3px', opacity: tagsLoading ? 0.5 : 1 }}
                     onClick={async () => {
-                      if (!title && !content) { toast.error('请先填写标题或内容'); return; }
+                      if (!title && !content) { toast.error(t('admin.postEditor.toast.fillTitleOrContentFirst', '请先填写标题或内容')); return; }
                       setTagsLoading(true);
                       try {
                         const r: any = await api.post('/ai/tags', { title, content: content.slice(0, 1000) });
                         if (r.data?.tags) {
                           const tags = Array.isArray(r.data.tags) ? r.data.tags.join(', ') : r.data.tags;
                           setTagInput(tags);
-                          toast.success('标签已生成');
+                          toast.success(t('admin.postEditor.toast.tagsGenerated', '标签已生成'));
                         }
-                      } catch { toast.error('AI 服务不可用'); }
+                      } catch { toast.error(t('admin.postEditor.toast.aiUnavailable', 'AI 服务不可用')); }
                       setTagsLoading(false);
                     }}
                   >
-                    {tagsLoading ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: '10px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '10px' }} />} AI 提取
+                    {tagsLoading ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: '10px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '10px' }} />} {t('admin.postEditor.aiExtract', 'AI 提取')}
                   </button>
                   )}
                 </div>
-                <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="Tag1, Tag2（默认提取 3 个关键词）" className="input" style={{ fontSize: '12px', padding: '6px 10px' }} />
+                <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder={t('admin.postEditor.tagsPlaceholder', 'Tag1, Tag2（默认提取 3 个关键词）')} className="input" style={{ fontSize: '12px', padding: '6px 10px' }} />
               </div>
 
               {/* Publish time */}
               <div>
-                <label style={labelStyle}>发布时间</label>
+                <label style={labelStyle}>{t('admin.postEditor.publishTime', '发布时间')}</label>
                 <input type="datetime-local" value={publishAt} onChange={(e) => setPublishAt(e.target.value)} className="input" style={{ fontSize: '12px', padding: '6px 10px' }} />
               </div>
             </div>
@@ -363,49 +365,49 @@ export default function CreatePostPage() {
 
           {/* Advanced */}
           <div style={sectionStyle}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px', color: 'var(--color-text-main)' }}>高级</h3>
+            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px', color: 'var(--color-text-main)' }}>{t('admin.postEditor.advanced', '高级')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* Excerpt */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '12px', color: 'var(--color-text-sub)', fontWeight: 500 }}>摘要</label>
+                  <label style={{ fontSize: '12px', color: 'var(--color-text-sub)', fontWeight: 500 }}>{t('admin.postEditor.excerpt', '摘要')}</label>
                   {aiFlags.summary && (
                   <button
                     disabled={excerptLoading}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '11px', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '3px', opacity: excerptLoading ? 0.5 : 1 }}
                     onClick={async () => {
-                      if (!content) { toast.error('请先填写内容'); return; }
+                      if (!content) { toast.error(t('admin.postEditor.toast.fillContentFirst', '请先填写内容')); return; }
                       setExcerptLoading(true);
                       try {
                         const r: any = await api.post('/ai/summary', { title, content });
-                        if (r.success && r.data?.summary) { setExcerpt(r.data.summary); toast.success('摘要已生成'); }
-                      } catch { toast.error('AI 服务不可用'); }
+                        if (r.success && r.data?.summary) { setExcerpt(r.data.summary); toast.success(t('admin.postEditor.toast.excerptGenerated', '摘要已生成')); }
+                      } catch { toast.error(t('admin.postEditor.toast.aiUnavailable', 'AI 服务不可用')); }
                       setExcerptLoading(false);
                     }}
                   >
-                    {excerptLoading ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: '10px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '10px' }} />} AI 生成
+                    {excerptLoading ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: '10px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '10px' }} />} {t('admin.postEditor.aiGenerate', 'AI 生成')}
                   </button>
                   )}
                 </div>
-                <textarea value={excerpt} onChange={(e) => setExcerpt(e.target.value)} placeholder="留空自动截取" rows={3} className="input" style={{ fontSize: '12px', padding: '6px 10px', resize: 'vertical' }} />
+                <textarea value={excerpt} onChange={(e) => setExcerpt(e.target.value)} placeholder={t('admin.postEditor.excerptPlaceholder', '留空自动截取')} rows={3} className="input" style={{ fontSize: '12px', padding: '6px 10px', resize: 'vertical' }} />
               </div>
 
               {/* Checkboxes */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer', color: 'var(--color-text-main)' }}>
-                  <input type="checkbox" checked={allowComment} onChange={(e) => setAllowComment(e.target.checked)} /> 允许评论
+                  <input type="checkbox" checked={allowComment} onChange={(e) => setAllowComment(e.target.checked)} /> {t('admin.postEditor.allowComments', '允许评论')}
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer', color: 'var(--color-text-main)' }}>
-                  <input type="checkbox" checked={allowRss} onChange={(e) => setAllowRss(e.target.checked)} /> 允许本文出现在 RSS 聚合
+                  <input type="checkbox" checked={allowRss} onChange={(e) => setAllowRss(e.target.checked)} /> {t('admin.postEditor.allowRss', '允许本文出现在 RSS 聚合')}
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer', color: 'var(--color-text-main)' }}>
-                  <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} /> 置顶文章
+                  <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} /> {t('admin.postEditor.pinned', '置顶文章')}
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer', color: 'var(--color-text-main)' }}>
-                  <input type="checkbox" checked={status === 'private'} onChange={(e) => setStatus(e.target.checked ? 'private' : 'publish')} /> 私密文章
+                  <input type="checkbox" checked={status === 'private'} onChange={(e) => setStatus(e.target.checked ? 'private' : 'publish')} /> {t('admin.postEditor.privatePost', '私密文章')}
                 </label>
                 {status === 'private' && (
-                  <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="输入访问密码" className="input" style={{ fontSize: '12px', padding: '6px 10px', marginLeft: '24px', width: 'calc(100% - 24px)', boxSizing: 'border-box' }} />
+                  <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('admin.postEditor.passwordPlaceholder', '输入访问密码')} className="input" style={{ fontSize: '12px', padding: '6px 10px', marginLeft: '24px', width: 'calc(100% - 24px)', boxSizing: 'border-box' }} />
                 )}
               </div>
             </div>
@@ -425,15 +427,15 @@ export default function CreatePostPage() {
           }}>
             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 600 }}>
-                插入{insertType}
+                {t('admin.postEditor.insertType', '插入{type}', { type: insertType })}
               </h3>
               <button onClick={() => setInsertType(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-dim)' }}>×</button>
             </div>
             <div style={{ flex: 1, overflow: 'auto', padding: '12px 20px' }}>
-              {insertLoading && <p style={{ textAlign: 'center', color: 'var(--color-text-dim)', padding: '20px 0', fontSize: '13px' }}>加载中...</p>}
+              {insertLoading && <p style={{ textAlign: 'center', color: 'var(--color-text-dim)', padding: '20px 0', fontSize: '13px' }}>{t('admin.common.loading', '加载中...')}</p>}
               {!insertLoading && insertItems.length === 0 && (
                 <p style={{ textAlign: 'center', color: 'var(--color-text-dim)', padding: '20px 0', fontSize: '13px' }}>
-                  暂无{insertType}数据，请先在对应页面添加
+                  {t('admin.postEditor.noInsertData', '暂无{type}数据，请先在对应页面添加', { type: insertType })}
                 </p>
               )}
               {insertItems.map((item: any) => (
@@ -454,7 +456,7 @@ export default function CreatePostPage() {
                       setContent(content + md);
                     }
                     setInsertType(null);
-                    toast.success('已插入' + insertType);
+                    toast.success(t('admin.postEditor.toast.insertedType', '已插入{type}', { type: insertType }));
                   }}
                   style={{
                     padding: '10px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px',
@@ -472,10 +474,10 @@ export default function CreatePostPage() {
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--color-text-dim)', marginTop: '2px' }}>
                       {item.artist || item.author || item.platform || ''}
-                      {item.rating ? ` · ${item.rating}分` : ''}
+                      {item.rating ? ` · ${t('admin.postEditor.ratingValue', '{rating}分', { rating: item.rating })}` : ''}
                     </div>
                   </div>
-                  <span style={{ fontSize: '11px', color: 'var(--color-primary)', flexShrink: 0 }}>插入</span>
+                  <span style={{ fontSize: '11px', color: 'var(--color-primary)', flexShrink: 0 }}>{t('admin.postEditor.insert', '插入')}</span>
                 </div>
               ))}
             </div>
@@ -495,21 +497,21 @@ export default function CreatePostPage() {
           }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h3 style={{ fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <i className="fa-regular fa-sparkles" style={{ fontSize: '16px' }} /> AI 处理文章
+                <i className="fa-regular fa-sparkles" style={{ fontSize: '16px' }} /> {t('admin.postEditor.aiProcessArticle', 'AI 处理文章')}
               </h3>
               <button onClick={() => setShowAiModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-dim)' }}>×</button>
             </div>
 
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
-              <p style={{ fontSize: '12px', color: 'var(--color-text-dim)', marginBottom: '12px' }}>选择 AI 处理方式，处理完成后可预览并插入到编辑器</p>
+              <p style={{ fontSize: '12px', color: 'var(--color-text-dim)', marginBottom: '12px' }}>{t('admin.postEditor.aiProcessHint', '选择 AI 处理方式，处理完成后可预览并插入到编辑器')}</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                 {[
-                  { key: 'polish', label: '润色优化', icon: 'fa-light fa-wand-magic-sparkles', prompt: 'Polish and improve the writing quality, fix grammar, make it more engaging. Keep the same language. Output in Markdown:' },
-                  { key: 'formal', label: '正式风格', icon: 'fa-light fa-user-tie', prompt: 'Rewrite in a formal, professional tone. Keep the same language. Output in Markdown:' },
-                  { key: 'casual', label: '轻松风格', icon: 'fa-light fa-face-smile', prompt: 'Rewrite in a casual, friendly, conversational tone. Keep the same language. Output in Markdown:' },
-                  { key: 'concise', label: '精简压缩', icon: 'fa-light fa-compress', prompt: 'Condense and shorten the text while keeping key information. Keep the same language. Output in Markdown:' },
-                  { key: 'expand', label: '扩展丰富', icon: 'fa-light fa-expand', prompt: 'Expand and elaborate on the content with more details and examples. Keep the same language. Output in Markdown:' },
-                  { key: 'format', label: '智能排版', icon: 'fa-light fa-align-left', prompt: `Intelligently reformat this article for optimal readability in Markdown. Rules:
+                  { key: 'polish', label: t('admin.postEditor.aiAction.polish', '润色优化'), icon: 'fa-light fa-wand-magic-sparkles', prompt: 'Polish and improve the writing quality, fix grammar, make it more engaging. Keep the same language. Output in Markdown:' },
+                  { key: 'formal', label: t('admin.postEditor.aiAction.formal', '正式风格'), icon: 'fa-light fa-user-tie', prompt: 'Rewrite in a formal, professional tone. Keep the same language. Output in Markdown:' },
+                  { key: 'casual', label: t('admin.postEditor.aiAction.casual', '轻松风格'), icon: 'fa-light fa-face-smile', prompt: 'Rewrite in a casual, friendly, conversational tone. Keep the same language. Output in Markdown:' },
+                  { key: 'concise', label: t('admin.postEditor.aiAction.concise', '精简压缩'), icon: 'fa-light fa-compress', prompt: 'Condense and shorten the text while keeping key information. Keep the same language. Output in Markdown:' },
+                  { key: 'expand', label: t('admin.postEditor.aiAction.expand', '扩展丰富'), icon: 'fa-light fa-expand', prompt: 'Expand and elaborate on the content with more details and examples. Keep the same language. Output in Markdown:' },
+                  { key: 'format', label: t('admin.postEditor.aiAction.format', '智能排版'), icon: 'fa-light fa-align-left', prompt: `Intelligently reformat this article for optimal readability in Markdown. Rules:
 1. Add proper H2/H3 headings to organize sections
 2. Convert parallel content into bullet/numbered lists
 3. For images: if 1 image use full-width, if 2 side-by-side, if 3+ use grid layout with captions
@@ -520,15 +522,15 @@ export default function CreatePostPage() {
 8. Ensure proper paragraph spacing (not too long, not too short)
 9. Add horizontal rules between major topic shifts
 10. Keep the same language, preserve all original content. Output in Markdown:` },
-                  { key: 'seo', label: 'SEO 优化', icon: 'fa-light fa-magnifying-glass', prompt: 'Optimize for SEO: improve headings hierarchy (H1>H2>H3), add keywords naturally in first paragraph and headings, improve meta structure, ensure proper image alt text, add internal linking suggestions as comments. Keep the same language. Output in Markdown:' },
+                  { key: 'seo', label: t('admin.postEditor.aiAction.seo', 'SEO 优化'), icon: 'fa-light fa-magnifying-glass', prompt: 'Optimize for SEO: improve headings hierarchy (H1>H2>H3), add keywords naturally in first paragraph and headings, improve meta structure, ensure proper image alt text, add internal linking suggestions as comments. Keep the same language. Output in Markdown:' },
                   { key: 'html2md', label: 'HTML→MD', icon: 'fa-light fa-code', prompt: 'Convert this HTML content to clean Markdown format. Preserve all content, structure, images, and links:' },
-                  { key: 'toc', label: '生成目录', icon: 'fa-light fa-list-tree', prompt: 'Analyze this article and generate a table of contents (TOC) in Markdown format based on the headings. Then reorganize the article with proper heading hierarchy if needed. Output the TOC at the top followed by the full article in Markdown:' },
+                  { key: 'toc', label: t('admin.postEditor.aiAction.toc', '生成目录'), icon: 'fa-light fa-list-tree', prompt: 'Analyze this article and generate a table of contents (TOC) in Markdown format based on the headings. Then reorganize the article with proper heading hierarchy if needed. Output the TOC at the top followed by the full article in Markdown:' },
                 ].map(item => (
                   <button
                     key={item.key}
                     disabled={aiProcessing}
                     onClick={async () => {
-                      if (!content.trim()) { toast.error('请先填写内容'); return; }
+                      if (!content.trim()) { toast.error(t('admin.postEditor.toast.fillContentFirst', '请先填写内容')); return; }
                       setAiProcessing(true);
                       setAiResult('');
                       try {
@@ -537,9 +539,9 @@ export default function CreatePostPage() {
                         if (r.data?.content || r.content) {
                           setAiResult(r.data?.content || r.content);
                         } else {
-                          toast.error('处理失败');
+                          toast.error(t('admin.postEditor.toast.processFailed', '处理失败'));
                         }
-                      } catch { toast.error('AI 服务不可用'); }
+                      } catch { toast.error(t('admin.postEditor.toast.aiUnavailable', 'AI 服务不可用')); }
                       setAiProcessing(false);
                     }}
                     style={{
@@ -563,7 +565,7 @@ export default function CreatePostPage() {
             <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px', minHeight: '150px' }}>
               {aiProcessing && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '40px 0', color: 'var(--color-text-dim)', fontSize: '13px' }}>
-                  <i className="fa-light fa-spinner-third fa-spin" /> AI 处理中...
+                  <i className="fa-light fa-spinner-third fa-spin" /> {t('admin.postEditor.aiProcessing', 'AI 处理中...')}
                 </div>
               )}
               {aiResult && !aiProcessing && (
@@ -579,7 +581,7 @@ export default function CreatePostPage() {
               )}
               {!aiResult && !aiProcessing && (
                 <p style={{ textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px', padding: '40px 0' }}>
-                  选择上方处理方式，AI 将处理你的文章内容
+                  {t('admin.postEditor.aiEmptyHint', '选择上方处理方式，AI 将处理你的文章内容')}
                 </p>
               )}
             </div>
@@ -589,25 +591,25 @@ export default function CreatePostPage() {
               <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                 <Button variant="secondary" onClick={() => {
                   navigator.clipboard.writeText(aiResult);
-                  toast.success('已复制到剪贴板');
+                  toast.success(t('admin.postEditor.toast.copied', '已复制到剪贴板'));
                 }}>
-                  复制
+                  {t('admin.common.copy', '复制')}
                 </Button>
                 <Button variant="secondary" onClick={() => {
                   setContent(content + '\n\n' + aiResult);
                   setShowAiModal(false);
                   setAiResult('');
-                  toast.success('已追加到内容末尾');
+                  toast.success(t('admin.postEditor.toast.appended', '已追加到内容末尾'));
                 }}>
-                  追加
+                  {t('admin.postEditor.append', '追加')}
                 </Button>
                 <Button onClick={() => {
                   setContent(aiResult);
                   setShowAiModal(false);
                   setAiResult('');
-                  toast.success('已替换内容');
+                  toast.success(t('admin.postEditor.toast.replaced', '已替换内容'));
                 }}>
-                  替换内容
+                  {t('admin.postEditor.replaceContent', '替换内容')}
                 </Button>
               </div>
             )}

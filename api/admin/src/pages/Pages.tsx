@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button, ConfirmDialog } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 
 // A built-in page with `contentKey` gets an inline HTML/markdown editor
 // stored in that option. Pages without contentKey are pure list views
@@ -24,6 +25,7 @@ const builtinPages = [
 ] satisfies { key: string; label: string; slug: string; icon: string; contentKey?: string }[];
 
 export default function PagesPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [pages, setPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export default function PagesPage() {
       setEditingContent(opts[contentKey] || '');
       setEditingKey(contentKey);
     } catch {
-      toast.error('读取内容失败');
+      toast.error(t('admin.pages.toast.contentFetchFailed', '读取内容失败'));
     }
   };
 
@@ -51,10 +53,10 @@ export default function PagesPage() {
     setSavingContent(true);
     try {
       await optionsApi.updateMany({ [editingKey]: editingContent });
-      toast.success('已保存');
+      toast.success(t('admin.common.saved', '已保存'));
       setEditingKey(null);
     } catch {
-      toast.error('保存失败');
+      toast.error(t('admin.settings.toast.saveFailed', '保存失败'));
     } finally {
       setSavingContent(false);
     }
@@ -77,8 +79,8 @@ export default function PagesPage() {
     setBuiltinStatus(prev => ({ ...prev, [key]: next }));
     try {
       await optionsApi.updateMany({ [key]: String(next) });
-      toast.success(next ? '已启用' : '已关闭');
-    } catch { toast.error('操作失败'); }
+      toast.success(next ? t('admin.pages.toast.enabled', '已启用') : t('admin.pages.toast.disabled', '已关闭'));
+    } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
   };
 
   const fetchPages = async () => {
@@ -86,7 +88,7 @@ export default function PagesPage() {
     try {
       const r: any = await postsApi.list({ limit: 100, type: 'page' } as any);
       setPages(r.data?.posts || r.data || []);
-    } catch { toast.error('获取页面失败'); }
+    } catch { toast.error(t('admin.pages.toast.fetchFailed', '获取页面失败')); }
     finally { setLoading(false); }
   };
 
@@ -94,15 +96,15 @@ export default function PagesPage() {
     const newStatus = page.status === 'publish' ? 'draft' : 'publish';
     try {
       await postsApi.update(page.id, { ...page, status: newStatus });
-      toast.success(newStatus === 'publish' ? '已开启显示' : '已关闭显示');
+      toast.success(newStatus === 'publish' ? t('admin.pages.toast.displayEnabled', '已开启显示') : t('admin.pages.toast.displayDisabled', '已关闭显示'));
       fetchPages();
-    } catch { toast.error('操作失败'); }
+    } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    try { await postsApi.delete(deleteId); toast.success('删除成功'); fetchPages(); }
-    catch { toast.error('删除失败'); }
+    try { await postsApi.delete(deleteId); toast.success(t('admin.posts.toast.deleteSuccess', '删除成功')); fetchPages(); }
+    catch { toast.error(t('admin.posts.toast.deleteFailed', '删除失败')); }
     finally { setDeleteId(null); }
   };
 
@@ -111,10 +113,10 @@ export default function PagesPage() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-        <span className="text-dim" style={{ fontSize: '13px' }}>{builtinPages.length + pages.length} 个页面</span>
+        <span className="text-dim" style={{ fontSize: '13px' }}>{t('admin.pages.totalPages', '{count} 个页面', { count: builtinPages.length + pages.length })}</span>
         <div style={{ marginLeft: 'auto' }}>
           <Button onClick={() => navigate('/pages/create')}>
-            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />新建页面
+            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />{t('admin.pages.newPage', '新建页面')}
           </Button>
         </div>
       </div>
@@ -124,11 +126,11 @@ export default function PagesPage() {
         <table className="table" style={{ width: '100%', fontSize: '13px' }}>
           <thead>
             <tr>
-              <th style={{ padding: '10px 12px' }}>页面</th>
-              <th style={{ width: '120px' }}>路径</th>
-              <th style={{ width: '60px' }}>类型</th>
-              <th style={{ width: '60px' }}>启用</th>
-              <th style={{ width: '80px' }}><span style={{ display: 'block', textAlign: 'right' }}>操作</span></th>
+              <th style={{ padding: '10px 12px' }}>{t('admin.pages.columns.page', '页面')}</th>
+              <th style={{ width: '120px' }}>{t('admin.pages.columns.path', '路径')}</th>
+              <th style={{ width: '60px' }}>{t('admin.pages.columns.type', '类型')}</th>
+              <th style={{ width: '60px' }}>{t('admin.pages.columns.enabled', '启用')}</th>
+              <th style={{ width: '80px' }}><span style={{ display: 'block', textAlign: 'right' }}>{t('admin.posts.columns.actions', '操作')}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -140,11 +142,11 @@ export default function PagesPage() {
                   <td style={{ padding: '10px 12px', fontWeight: 500 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <i className={p.icon} style={{ fontSize: '14px', color: 'var(--color-primary)', width: '16px', textAlign: 'center' }} />
-                      {p.label}
+                      {t(`admin.pages.builtin.${p.key}`, p.label)}
                     </div>
                   </td>
                   <td className="text-dim" style={{ fontSize: '12px' }}>{p.slug}</td>
-                  <td><span style={{ fontSize: '10px', padding: '2px 6px', background: 'var(--color-bg-soft)', color: 'var(--color-text-dim)', border: '1px solid var(--color-border)' }}>系统</span></td>
+                  <td><span style={{ fontSize: '10px', padding: '2px 6px', background: 'var(--color-bg-soft)', color: 'var(--color-text-dim)', border: '1px solid var(--color-border)' }}>{t('admin.pages.type.system', '系统')}</span></td>
                   <td>
                     <button
                       onClick={() => toggleBuiltin(p.key)}
@@ -167,7 +169,7 @@ export default function PagesPage() {
                     {p.contentKey ? (
                       <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                         <button onClick={() => openContentEditor(p.contentKey!)} className="text-primary-themed"
-                          title="编辑内容"
+                          title={t('admin.pages.editContent', '编辑内容')}
                           style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
                           <i className="fa-regular fa-pen" style={{ fontSize: '14px' }} />
                         </button>
@@ -179,7 +181,7 @@ export default function PagesPage() {
             })}
             {/* Custom pages */}
             {loading ? (
-              <tr><td colSpan={5} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>加载中...</td></tr>
+              <tr><td colSpan={5} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>{t('common.loading', '加载中...')}</td></tr>
             ) : pages.map(page => (
               <tr key={page.id}>
                 <td style={{ padding: '10px 12px', fontWeight: 500 }}>
@@ -189,7 +191,7 @@ export default function PagesPage() {
                   </div>
                 </td>
                 <td className="text-dim" style={{ fontSize: '12px' }}>/{page.slug}</td>
-                <td><span style={{ fontSize: '10px', padding: '2px 6px', background: 'var(--color-bg-soft)', color: 'var(--color-text-dim)', border: '1px solid var(--color-border)' }}>自定义</span></td>
+                <td><span style={{ fontSize: '10px', padding: '2px 6px', background: 'var(--color-bg-soft)', color: 'var(--color-text-dim)', border: '1px solid var(--color-border)' }}>{t('admin.pages.type.custom', '自定义')}</span></td>
                 <td>
                   <button
                     onClick={() => toggleStatus(page)}
@@ -224,7 +226,7 @@ export default function PagesPage() {
         </table>
       </div>
 
-      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="确认删除" message="删除后无法恢复" />
+      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('admin.posts.confirmDeleteTitle', '确认删除')} message={t('admin.common.deleteIrreversible', '删除后无法恢复')} />
 
       {editingKey && (
         <div
@@ -243,26 +245,26 @@ export default function PagesPage() {
             }}
           >
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 className="text-main" style={{ fontSize: '15px', fontWeight: 600 }}>编辑内容 — {editingKey}</h3>
+              <h3 className="text-main" style={{ fontSize: '15px', fontWeight: 600 }}>{t('admin.pages.editingContentTitle', '编辑内容 — {key}', { key: editingKey })}</h3>
               <button onClick={() => setEditingKey(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>
                 <i className="fa-regular fa-xmark" />
               </button>
             </div>
             <div style={{ padding: '20px', flex: 1, overflow: 'auto' }}>
               <p className="text-dim" style={{ fontSize: '12px', marginBottom: '8px' }}>
-                支持 HTML 片段。留空则恢复默认示例内容。
+                {t('admin.pages.contentHint', '支持 HTML 片段。留空则恢复默认示例内容。')}
               </p>
               <textarea
                 className="input"
                 style={{ width: '100%', minHeight: '360px', fontFamily: 'monospace', fontSize: '13px' }}
                 value={editingContent}
                 onChange={e => setEditingContent(e.target.value)}
-                placeholder="<p>欢迎来到我的博客...</p>"
+                placeholder={t('admin.pages.contentPlaceholder', '<p>欢迎来到我的博客...</p>')}
               />
             </div>
             <div style={{ padding: '16px 20px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <Button variant="secondary" onClick={() => setEditingKey(null)} disabled={savingContent}>取消</Button>
-              <Button onClick={saveBuiltinContent} loading={savingContent}>保存</Button>
+              <Button variant="secondary" onClick={() => setEditingKey(null)} disabled={savingContent}>{t('admin.common.cancel', '取消')}</Button>
+              <Button onClick={saveBuiltinContent} loading={savingContent}>{t('admin.common.save', '保存')}</Button>
             </div>
           </div>
         </div>

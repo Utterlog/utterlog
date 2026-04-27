@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { usePostsToolbar } from '@/layouts/PostsLayout';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useI18n } from '@/lib/i18n';
 
 const tagSchema = z.object({
   name: z.string().min(1, '名称不能为空'),
@@ -17,6 +18,7 @@ const tagSchema = z.object({
 type TagForm = z.infer<typeof tagSchema>;
 
 export default function TagsPage() {
+  const { t } = useI18n();
   const [tags, setTags] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -38,19 +40,19 @@ export default function TagsPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
         {/* 左: 新建 */}
         <Button className="btn-toolbar" onClick={openCreate}>
-          <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />新建标签
+          <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />{t('admin.tags.newTag', '新建标签')}
         </Button>
         {/* 右: 搜索 */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <Input placeholder="搜索标签..." value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchTags())} style={{ width: '220px' }} />
-          <Button className="btn-square" variant="secondary" title="搜索" onClick={() => { setPage(1); fetchTags(); }}>
+          <Input placeholder={t('admin.tags.searchPlaceholder', '搜索标签...')} value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchTags())} style={{ width: '220px' }} />
+          <Button className="btn-square" variant="secondary" title={t('common.search', '搜索')} onClick={() => { setPage(1); fetchTags(); }}>
             <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
           </Button>
         </div>
       </div>
     );
     return () => setToolbar(null);
-  }, [search]);
+  }, [search, t]);
 
   useEffect(() => { fetchTags(); }, [page]);
 
@@ -60,7 +62,7 @@ export default function TagsPage() {
       const response: any = await tagsApi.list({ page, limit: 20, search });
       setTags(response.data || []);
       setTotalPages(response.data?.totalPages || 1);
-    } catch { toast.error('获取标签失败'); }
+    } catch { toast.error(t('admin.tags.toast.fetchFailed', '获取标签失败')); }
     finally { setLoading(false); }
   };
 
@@ -70,17 +72,17 @@ export default function TagsPage() {
   const onSubmit = async (data: TagForm) => {
     setSubmitting(true);
     try {
-      if (editingId) { await tagsApi.update(editingId, data); toast.success('更新成功'); }
-      else { await tagsApi.create(data); toast.success('创建成功'); }
+      if (editingId) { await tagsApi.update(editingId, data); toast.success(t('admin.common.updateSuccess', '更新成功')); }
+      else { await tagsApi.create(data); toast.success(t('admin.common.createSuccess', '创建成功')); }
       setIsModalOpen(false); fetchTags();
-    } catch { toast.error(editingId ? '更新失败' : '创建失败'); }
+    } catch { toast.error(editingId ? t('admin.common.updateFailed', '更新失败') : t('admin.common.createFailed', '创建失败')); }
     finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    try { await tagsApi.delete(deleteId); toast.success('删除成功'); fetchTags(); }
-    catch { toast.error('删除失败'); }
+    try { await tagsApi.delete(deleteId); toast.success(t('admin.posts.toast.deleteSuccess', '删除成功')); fetchTags(); }
+    catch { toast.error(t('admin.posts.toast.deleteFailed', '删除失败')); }
     finally { setDeleteId(null); }
   };
 
@@ -88,9 +90,9 @@ export default function TagsPage() {
     <div>
       {/* Cards */}
       {loading ? (
-        <div className="text-dim" style={{ textAlign: 'center', padding: '60px 0', fontSize: '14px' }}>加载中...</div>
+        <div className="text-dim" style={{ textAlign: 'center', padding: '60px 0', fontSize: '14px' }}>{t('common.loading', '加载中...')}</div>
       ) : tags.length === 0 ? (
-        <div className="text-dim" style={{ textAlign: 'center', padding: '60px 0', fontSize: '14px' }}>暂无标签</div>
+        <div className="text-dim" style={{ textAlign: 'center', padding: '60px 0', fontSize: '14px' }}>{t('admin.tags.empty', '暂无标签')}</div>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           {tags.map((tag: any) => (
@@ -130,18 +132,18 @@ export default function TagsPage() {
       )}
 
       {/* Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? '编辑标签' : '新建标签'}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? t('admin.tags.editTag', '编辑标签') : t('admin.tags.newTag', '新建标签')}>
         <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Input label="名称" {...register('name')} error={errors.name?.message} />
+          <Input label={t('admin.common.name', '名称')} {...register('name')} error={errors.name?.message} />
           <Input label="Slug" {...register('slug')} error={errors.slug?.message} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px' }}>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>取消</Button>
-            <Button type="submit" loading={submitting}>{editingId ? '保存' : '创建'}</Button>
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>{t('admin.common.cancel', '取消')}</Button>
+            <Button type="submit" loading={submitting}>{editingId ? t('admin.common.save', '保存') : t('admin.common.create', '创建')}</Button>
           </div>
         </form>
       </Modal>
 
-      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="确认删除" message="删除后无法恢复，是否确认删除此标签？" />
+      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('admin.posts.confirmDeleteTitle', '确认删除')} message={t('admin.tags.confirmDeleteMessage', '删除后无法恢复，是否确认删除此标签？')} />
     </div>
   );
 }

@@ -4,6 +4,8 @@ import Sidebar from '@/components/layout/Sidebar';
 import NotificationBell from '@/components/layout/NotificationBell';
 import { useAuthStore } from '@/lib/store';
 import { optionsApi } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
+import { setAdminTimeZone } from '@/lib/timezone';
 
 // Route-to-title map — displayed in header + document.title.
 // Icons reuse the sidebar FontAwesome classes for visual consistency.
@@ -47,6 +49,11 @@ const pageTitleMap: Record<string, PageMeta> = {
 
 const EMPTY: PageMeta = { label: '', en: '', icon: '' };
 
+function pageKey(meta: PageMeta): string {
+  if (!meta.en) return '';
+  return `admin.page.${meta.en.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '')}`;
+}
+
 function resolveTitle(pathname: string): PageMeta {
   // Exact match first
   if (pageTitleMap[pathname]) return pageTitleMap[pathname];
@@ -75,6 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user, logout } = useAuthStore();
+  const { locale, t } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
   const [siteUrl, setSiteUrl] = useState('/');
   const [siteTitle, setSiteTitle] = useState('Utterlog');
@@ -82,8 +90,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const menuRef = useRef<HTMLDivElement>(null);
 
   const pageMeta = resolveTitle(pathname);
-  const pageTitle = pageMeta.label;
-  const pageEn = pageMeta.en;
+  const pageTitle = t(pageKey(pageMeta), pageMeta.label);
+  const pageEn = locale === 'zh-CN' ? pageMeta.en : '';
   const pageIcon = pageMeta.icon;
 
   useEffect(() => {
@@ -91,6 +99,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const opts = r.data || r || {};
       if (opts.site_url) setSiteUrl(opts.site_url);
       if (opts.site_title) setSiteTitle(opts.site_title);
+      setAdminTimeZone(opts.site_timezone, opts.site_timezone_effective);
     }).catch(() => {});
   }, []);
 
@@ -180,7 +189,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               color: 'var(--color-text-main)',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {pageTitle || '管理后台'}
+              {pageTitle || t('admin.common.admin', '管理后台')}
             </h1>
             {pageEn && (
               <span style={{
@@ -200,7 +209,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               href={siteUrl}
               target="_blank"
               rel="noopener noreferrer"
-              title="访问首页"
+              title={t('admin.header.visitSite', '访问首页')}
               className="text-sub"
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -242,7 +251,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <i className="fa-regular fa-user" style={{ fontSize: 11, color: 'var(--color-text-dim)' }} />
                   </div>
                 )}
-                <span style={{ fontWeight: 500 }}>{user?.nickname || user?.username || '管理员'}</span>
+                <span style={{ fontWeight: 500 }}>{user?.nickname || user?.username || t('admin.user.admin', '管理员')}</span>
                 <i className={`fa-solid fa-chevron-${menuOpen ? 'up' : 'down'}`} style={{ fontSize: 9, color: 'var(--color-text-dim)', marginLeft: 2 }} />
               </button>
 
@@ -270,12 +279,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     )}
                   </div>
 
-                  <MenuItem icon="fa-regular fa-user" label="个人资料" onClick={() => go('/profile')} />
-                  <MenuItem icon="fa-regular fa-gear" label="系统设置" onClick={() => go('/settings')} />
+                  <MenuItem icon="fa-regular fa-user" label={t('admin.user.profile', '个人资料')} onClick={() => go('/profile')} />
+                  <MenuItem icon="fa-regular fa-gear" label={t('admin.user.settings', '系统设置')} onClick={() => go('/settings')} />
 
                   <div style={{ height: 1, background: 'var(--color-divider)', margin: '4px 0' }} />
 
-                  <MenuItem icon="fa-solid fa-right-from-bracket" label="退出登录" onClick={handleLogout} danger />
+                  <MenuItem icon="fa-solid fa-right-from-bracket" label={t('admin.user.logout', '退出登录')} onClick={handleLogout} danger />
                 </div>
               )}
             </div>

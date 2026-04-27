@@ -2,24 +2,15 @@
 
 import { coverProps, randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';
+import { formatDateInTimeZone } from '@/lib/timezone';
 import PostLink from '@/components/blog/PostLink';
 
-function formatDate(ts: string | number) {
-  // Pin timeZone to Asia/Shanghai so the server (which runs in UTC
-  // inside the container) and the client (browser local TZ) agree.
-  // Without this, a post created at 2026-02-26 00:30 +08:00 renders
-  // as 2026/02/25 on the server (UTC) and 2026/02/26 on a CN browser,
-  // tripping React's hydration-mismatch warning. Asia/Shanghai matches
-  // the rest of the codebase's date formatters (PostPage etc).
-  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-  return d.toLocaleDateString('zh-CN', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    timeZone: 'Asia/Shanghai',
-  });
+function formatDate(ts: string | number, timeZone: string) {
+  return formatDateInTimeZone(ts, 'zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }, timeZone);
 }
 
 export default function PostCard({ post, priority }: { post: any; priority?: boolean }) {
-  const { options } = useThemeContext();
+  const { options, timeZone } = useThemeContext();
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
 
   return (
@@ -56,7 +47,7 @@ export default function PostCard({ post, priority }: { post: any; priority?: boo
             </p>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#9ca3af' }}>
-            <span>{formatDate(post.created_at)}</span>
+            <span>{formatDate(post.created_at, timeZone)}</span>
             {post.categories?.[0] && (
               <span style={{ color: '#3368d9', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 {/* admin 在「主题 → 分类」给分类设的 icon (FontAwesome class)；

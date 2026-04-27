@@ -6,6 +6,7 @@ import PostLink from '@/components/blog/PostLink';
 import SharedFadeCover from '@/components/blog/FadeCover';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';
+import { formatDateInTimeZone } from '@/lib/timezone';
 
 function LazyCardImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -109,7 +110,7 @@ interface NavigationData {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 export default function PostNavigation({ postId, coverUrl, pageSize }: { postId: number; coverUrl?: string; pageSize?: number }) {
-  const { options } = useThemeContext();
+  const { options, timeZone } = useThemeContext();
   const [data, setData] = useState<NavigationData | null>(null);
   const [activeTab, setActiveTab] = useState('related');
   const [refreshing, setRefreshing] = useState(false);
@@ -252,8 +253,7 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
           <div className="post-related-grid">
             {/* 友链更新 — 特殊渲染 */}
             {activeTab === 'feeds' && feeds.length > 0 && feeds.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE).map((item, idx) => {
-              const date = new Date((item.pub_date || 0) * 1000);
-              const mon = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', timeZone: 'Asia/Shanghai' });
+              const mon = formatDateInTimeZone(item.pub_date || 0, 'zh-CN', { month: 'short', day: 'numeric' }, timeZone);
               return (
                 <a key={idx} href={item.link} target="_blank" rel="noopener noreferrer" className="post-related-card">
                   <div className="post-related-card-cover" style={{ background: 'var(--color-bg-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -281,8 +281,7 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
             {activeTab !== 'feeds' && activeItems.map(post => {
               const cat = post.categories?.[0];
               const coverSrc = post.cover_url || randomCoverUrl(post.id, options);
-              const date = new Date((post.created_at || 0) * 1000);
-              const mon = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', timeZone: 'Asia/Shanghai' });
+              const mon = formatDateInTimeZone(post.created_at || 0, 'zh-CN', { month: 'short', day: 'numeric' }, timeZone);
               return (
                 <PostLink key={post.id} post={post} className="post-related-card cover-zoom">
                   <div className="post-related-card-cover">

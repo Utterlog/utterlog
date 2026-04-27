@@ -5,24 +5,24 @@ import { useState } from 'react';
 import { getCategoryIcon } from './constants';
 import { coverProps, randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';
+import { formatDateInTimeZone, formatDateTimeInTimeZone } from '@/lib/timezone';
 import PostLink from '@/components/blog/PostLink';
 
 const ACCENT = '#F53102';
 
-function formatDate(ts: string | number) {
-  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-  const mon = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'Asia/Shanghai' });
-  const day = Number(d.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'Asia/Shanghai' }));
+function formatDate(ts: string | number, timeZone: string) {
+  const mon = formatDateInTimeZone(ts, 'en-US', { month: 'short' }, timeZone);
+  const day = Number(formatDateInTimeZone(ts, 'en-US', { day: 'numeric' }, timeZone));
   return { mon, day };
 }
 
 export default function PostCard({ post, isNewest, priority }: { post: any; isNewest?: boolean; priority?: boolean }) {
-  const { mon, day } = formatDate(post.created_at);
+  const { options, timeZone } = useThemeContext();
+  const { mon, day } = formatDate(post.created_at, timeZone);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
   const isNew = isNewest === true;
-  const { options } = useThemeContext();
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
   const [hovered, setHovered] = useState(false);
 
@@ -49,8 +49,10 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
               padding: '4px 6px', whiteSpace: 'nowrap',
             }}>
               {(() => {
-                const d = typeof post.created_at === 'number' ? new Date(post.created_at * 1000) : new Date(post.created_at);
-                return d.toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace('-', '/').replace('-', '/').slice(0, 16);
+                return formatDateTimeInTimeZone(post.created_at, 'sv-SE', {
+                  year: 'numeric', month: '2-digit', day: '2-digit',
+                  hour: '2-digit', minute: '2-digit', hour12: false,
+                }, timeZone).replace('-', '/').replace('-', '/').slice(0, 16);
               })()}
             </div>
           )}

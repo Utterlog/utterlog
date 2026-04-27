@@ -1,6 +1,6 @@
 {
   "name": "utterlog-admin",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "private": true,
   "scripts": {
     "sync:themes": "node ./scripts/sync-theme-styles.mjs",

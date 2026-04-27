@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/lib/store';
 import { authApi } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { useI18n } from '@/lib/i18n';
 
 function base64urlToBuffer(b64: string): ArrayBuffer {
   const base64 = b64.replace(/-/g, '+').replace(/_/g, '/');
@@ -20,6 +21,7 @@ function bufferToBase64url(buf: ArrayBuffer): string {
 }
 
 export default function Login() {
+  const { t } = useI18n();
   const { login, validate2FA, cancel2FA, setAuth } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +49,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password) {
-      toast.error('请输入邮箱和密码');
+      toast.error(t('admin.login.toast.enterEmailPassword', '请输入邮箱和密码'));
       return;
     }
     setSubmitting(true);
@@ -57,19 +59,19 @@ export default function Login() {
       if (pending2FA) {
         setNeedTotp(true);
         setSubmitting(false);
-        toast('请输入动态验证码', { icon: 'i' });
+        toast(t('admin.login.toast.enterTotp', '请输入动态验证码'), { icon: 'i' });
         return;
       }
       if (!accessToken) {
-        toast.error('登录异常，请重试');
+        toast.error(t('admin.login.toast.abnormal', '登录异常，请重试'));
         setSubmitting(false);
         return;
       }
-      toast.success('登录成功');
+      toast.success(t('admin.login.toast.success', '登录成功'));
       // Delay redirect so the toast is actually visible before navigation wipes it
       setTimeout(() => { window.location.href = '/admin/'; }, 800);
     } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || '登录失败');
+      toast.error(err?.response?.data?.error?.message || t('admin.login.toast.failed', '登录失败'));
       setSubmitting(false);
     }
   };
@@ -78,17 +80,17 @@ export default function Login() {
     e.preventDefault();
     const code = totpCode.trim();
     if (code.length < 6) {
-      toast.error('请输入 6 位验证码');
+      toast.error(t('admin.login.toast.enterSixDigitCode', '请输入 6 位验证码'));
       return;
     }
     setSubmitting(true);
     try {
       await validate2FA(code);
-      toast.success('登录成功');
+      toast.success(t('admin.login.toast.success', '登录成功'));
       // Delay redirect so the toast is actually visible before navigation wipes it
       setTimeout(() => { window.location.href = '/admin/'; }, 800);
     } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || '验证码错误');
+      toast.error(err?.response?.data?.error?.message || t('admin.login.toast.invalidCode', '验证码错误'));
       setSubmitting(false);
       setTotpCode('');
     }
@@ -117,7 +119,7 @@ export default function Login() {
       }
 
       const credential = await navigator.credentials.get({ publicKey: options }) as PublicKeyCredential;
-      if (!credential) throw new Error('认证取消');
+      if (!credential) throw new Error(t('admin.login.passkeyCancelled', '认证取消'));
 
       const assertion = credential.response as AuthenticatorAssertionResponse;
       const response: any = await authApi.passkeyLoginFinish({
@@ -134,12 +136,12 @@ export default function Login() {
 
       const { user, access_token, refresh_token } = response.data;
       setAuth(user, access_token, refresh_token);
-      toast.success('登录成功');
+      toast.success(t('admin.login.toast.success', '登录成功'));
       // Delay redirect so the toast is actually visible before navigation wipes it
       setTimeout(() => { window.location.href = '/admin/'; }, 800);
     } catch (err: any) {
-      const msg = err?.response?.data?.error?.message || err?.message || '通行密钥验证失败';
-      if (!msg.includes('取消')) toast.error(msg);
+      const msg = err?.response?.data?.error?.message || err?.message || t('admin.login.passkeyFailed', '通行密钥验证失败');
+      if (!msg.includes(t('admin.login.cancelKeyword', '取消'))) toast.error(msg);
     } finally {
       setPasskeyLoading(false);
     }
@@ -156,7 +158,7 @@ export default function Login() {
       await authApi.forgotPassword(forgotEmail);
       setForgotSent(true);
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || '发送失败，请稍后再试');
+      toast.error(e?.response?.data?.message || t('admin.login.forgotSendFailed', '发送失败，请稍后再试'));
     }
     setForgotSending(false);
   };
@@ -185,14 +187,14 @@ export default function Login() {
           </svg>
           <h1 style={{ fontSize: 18, fontWeight: 700, margin: '12px 0 4px', fontFamily: "'Ubuntu', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif", letterSpacing: '-0.01em' }}>Utterlog</h1>
           <p style={{ fontSize: 12, color: 'var(--color-text-dim)', margin: 0 }}>
-            {needTotp ? '请输入动态验证码' : '管理后台登录'}
+            {needTotp ? t('admin.login.enterTotpSubtitle', '请输入动态验证码') : t('admin.login.subtitle', '管理后台登录')}
           </p>
         </div>
 
         {!needTotp ? (
           <>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>邮箱</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>{t('admin.login.email', '邮箱')}</label>
               <input
                 type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 className="input" placeholder="you@example.com" autoFocus
@@ -201,14 +203,14 @@ export default function Login() {
 
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <label style={{ fontSize: 13, fontWeight: 500 }}>密码</label>
+                <label style={{ fontSize: 13, fontWeight: 500 }}>{t('admin.login.password', '密码')}</label>
                 <button
                   type="button"
                   tabIndex={-1}
                   onClick={() => setShowForgot(true)}
                   style={{ fontSize: 12, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                 >
-                  找回密码
+                  {t('admin.login.forgotPassword', '找回密码')}
                 </button>
               </div>
               <input
@@ -218,14 +220,14 @@ export default function Login() {
             </div>
 
             <button type="submit" className="btn btn-primary" disabled={submitting} style={{ width: '100%' }}>
-              {submitting ? '登录中...' : '登录'}
+              {submitting ? t('admin.login.signingIn', '登录中...') : t('admin.login.signIn', '登录')}
             </button>
 
             {showPasskey && (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0 16px' }}>
                   <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-                  <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>或</span>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>{t('admin.login.or', '或')}</span>
                   <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
                 </div>
                 <button
@@ -236,7 +238,7 @@ export default function Login() {
                   style={{ width: '100%', gap: 8 }}
                 >
                   <i className="fa-light fa-fingerprint" style={{ fontSize: 16 }} />
-                  {passkeyLoading ? '验证中...' : '使用通行密钥登录'}
+                  {passkeyLoading ? t('admin.login.verifying', '验证中...') : t('admin.login.usePasskey', '使用通行密钥登录')}
                 </button>
               </>
             )}
@@ -245,9 +247,9 @@ export default function Login() {
           <>
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
-                6 位验证码
+                {t('admin.login.sixDigitCode', '6 位验证码')}
                 <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--color-text-dim)', marginLeft: 6 }}>
-                  （Authenticator App 生成）
+                  {t('admin.login.authenticatorHint', '（Authenticator App 生成）')}
                 </span>
               </label>
               <input
@@ -263,7 +265,7 @@ export default function Login() {
                 }}
               />
               <p style={{ fontSize: 11, color: 'var(--color-text-dim)', marginTop: 6, margin: '6px 0 0' }}>
-                没有 App？使用 8 位备用恢复码
+                {t('admin.login.recoveryCodeHint', '没有 App？使用 8 位备用恢复码')}
               </p>
             </div>
 
@@ -274,10 +276,10 @@ export default function Login() {
                 className="btn btn-secondary"
                 style={{ flex: 1 }}
               >
-                返回
+                {t('admin.common.back', '返回')}
               </button>
               <button type="submit" className="btn btn-primary" disabled={submitting} style={{ flex: 2 }}>
-                {submitting ? '验证中...' : '验证'}
+                {submitting ? t('admin.login.verifying', '验证中...') : t('admin.login.verify', '验证')}
               </button>
             </div>
           </>
@@ -296,9 +298,9 @@ export default function Login() {
             background: 'var(--color-bg-card)', borderRadius: 0,
             boxShadow: '0 12px 40px rgba(0,0,0,0.15)', padding: 28,
           }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>找回密码</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{t('admin.login.forgotPassword', '找回密码')}</h2>
             <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 20 }}>
-              输入管理员邮箱，系统将发送密码重置链接
+              {t('admin.login.forgotDescription', '输入管理员邮箱，系统将发送密码重置链接')}
             </p>
 
             {forgotSent ? (
@@ -306,16 +308,16 @@ export default function Login() {
                 <div style={{ fontSize: 32, marginBottom: 12 }}>
                   <i className="fa-light fa-envelope-open-text" style={{ color: 'var(--color-primary)' }} />
                 </div>
-                <p style={{ fontSize: 14, fontWeight: 500 }}>重置链接已发送</p>
+                <p style={{ fontSize: 14, fontWeight: 500 }}>{t('admin.login.resetLinkSent', '重置链接已发送')}</p>
                 <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginTop: 6 }}>
-                  请检查 {forgotEmail} 的收件箱
+                  {t('admin.login.checkInbox', '请检查 {email} 的收件箱', { email: forgotEmail })}
                 </p>
                 <button
                   onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(''); }}
                   className="btn btn-primary"
                   style={{ marginTop: 16, width: '100%' }}
                 >
-                  返回登录
+                  {t('admin.login.backToLogin', '返回登录')}
                 </button>
               </div>
             ) : (
@@ -324,7 +326,7 @@ export default function Login() {
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
                   type="email"
-                  placeholder="管理员邮箱"
+                  placeholder={t('admin.login.adminEmailPlaceholder', '管理员邮箱')}
                   className="input"
                   style={{ marginBottom: 16 }}
                 />
@@ -335,7 +337,7 @@ export default function Login() {
                     className="btn btn-secondary"
                     style={{ flex: 1 }}
                   >
-                    取消
+                    {t('admin.common.cancel', '取消')}
                   </button>
                   <button
                     type="button"
@@ -344,7 +346,7 @@ export default function Login() {
                     style={{ flex: 1 }}
                     onClick={handleForgotSubmit}
                   >
-                    {forgotSending ? '发送中...' : '发送重置链接'}
+                    {forgotSending ? t('admin.login.sending', '发送中...') : t('admin.login.sendResetLink', '发送重置链接')}
                   </button>
                 </div>
               </>

@@ -23,6 +23,7 @@ export default async function ArchivesPage() {
       categories={ctx.categories}
       tags={ctx.tags}
       stats={ctx.archiveStats}
+      timeZone={ctx.timeZone}
     />
   );
 }

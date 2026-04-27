@@ -1,5 +1,6 @@
 import './globals.css';
 import { Providers } from './providers';
+import { isValidTimeZone, localTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 
 const API_BASE = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -16,22 +17,24 @@ function normalizeLocale(locale?: string): string {
 // <html data-theme="…"> and <html lang="…"> as server-rendered attributes.
 // Falls back silently when the API isn't reachable (build-time, dev
 // cold-start, etc.) so we never block render on options-fetching.
-async function getRootDisplayOptions(): Promise<{ activeTheme: string; locale: string }> {
-  if (!API_BASE) return { activeTheme: 'Utterlog', locale: 'zh-CN' };
+async function getRootDisplayOptions(): Promise<{ activeTheme: string; locale: string; timeZone: string }> {
+  if (!API_BASE) return { activeTheme: 'Utterlog', locale: 'zh-CN', timeZone: localTimeZone() };
   try {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 2000);
     const res = await fetch(`${API_BASE}/options`, { next: { revalidate: 60 }, signal: ac.signal });
     clearTimeout(timer);
-    if (!res.ok) return { activeTheme: 'Utterlog', locale: 'zh-CN' };
+    if (!res.ok) return { activeTheme: 'Utterlog', locale: 'zh-CN', timeZone: localTimeZone() };
     const json = await res.json();
     const opts = json.data || json || {};
+    const timeZone = resolveSiteTimeZone(opts);
     return {
       activeTheme: (opts.active_theme || 'Utterlog').toString().trim() || 'Utterlog',
       locale: normalizeLocale(opts.site_locale),
+      timeZone: isValidTimeZone(timeZone) ? timeZone : localTimeZone(),
     };
   } catch {
-    return { activeTheme: 'Utterlog', locale: 'zh-CN' };
+    return { activeTheme: 'Utterlog', locale: 'zh-CN', timeZone: localTimeZone() };
   }
 }
 
@@ -112,9 +115,9 @@ export default async function RootLayout({
   // Server-render the blog theme name onto <html data-theme="…">.
   // Two-attribute split avoids fighting with the admin color theme
   // (which writes data-color via providers.tsx + lib/store.ts).
-  const { activeTheme, locale } = await getRootDisplayOptions();
+  const { activeTheme, locale, timeZone } = await getRootDisplayOptions();
   return (
-    <html lang={locale} data-theme={activeTheme} suppressHydrationWarning>
+    <html lang={locale} data-theme={activeTheme} data-timezone={timeZone} suppressHydrationWarning>
       <head>
         {/* System-immutable assets (FA Pro 7.2.0, all webfonts including
             CJK) served from R2 + Cloudflare with Cache-Control immutable

@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 
 // SVG Ring chart component
 function Ring({ percent, size = 48, stroke = 4, color = 'var(--color-primary)', label, sub }: {
@@ -28,6 +29,7 @@ function Ring({ percent, size = 48, stroke = 4, color = 'var(--color-primary)', 
 }
 
 export default function SystemStatusPanel({ isOpen }: { isOpen: boolean }) {
+  const { locale, t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const [data, setData] = useState<any>(null);
   const [ok, setOk] = useState(false);
@@ -49,12 +51,12 @@ export default function SystemStatusPanel({ isOpen }: { isOpen: boolean }) {
     // Only poll frequently when expanded
     const statusInterval = setInterval(fetchStatus, expanded ? 3000 : 30000);
     const clockInterval = setInterval(() => {
-      setClock(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      setClock(new Date().toLocaleTimeString(locale || 'zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     }, 1000);
     // Init clock immediately
-    setClock(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    setClock(new Date().toLocaleTimeString(locale || 'zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     return () => { clearInterval(statusInterval); clearInterval(clockInterval); };
-  }, [expanded]);
+  }, [expanded, locale]);
 
   const memPct = parseInt(data?.memory?.percent || '0');
   const diskPct = parseInt(data?.disk?.percent || '0');
@@ -77,7 +79,7 @@ export default function SystemStatusPanel({ isOpen }: { isOpen: boolean }) {
           boxShadow: ok ? '0 0 6px rgba(22,163,106,0.5)' : '0 0 6px rgba(220,38,38,0.5)',
           animation: 'pulse-dot 2s infinite',
         }} />
-        {isOpen && <span>系统状态</span>}
+        {isOpen && <span>{t('admin.system.status', '系统状态')}</span>}
         {isOpen && <span style={{ marginLeft: '4px', fontFamily: 'monospace', fontSize: '11px', color: 'var(--color-text-sub)' }}>{clock}</span>}
         {isOpen && (
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{
@@ -95,18 +97,18 @@ export default function SystemStatusPanel({ isOpen }: { isOpen: boolean }) {
 
           {/* Ring charts 2x2 */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-            <Ring percent={data.cpu?.percent || 0} color="#16a34a" label="CPU" sub={`${data.cpu?.cores || 0} 核`} />
-            <Ring percent={memPct} color="#2563eb" label="内存" sub={`${data.memory?.used_gb || 0} / ${data.memory?.total_gb || 0} GB`} />
-            <Ring percent={diskPct} color="#f59e0b" label="磁盘" sub={`${formatDisk(data.disk?.used)} / ${formatDisk(data.disk?.total)}`} />
-            <LoadRing loadAvg={data.load?.avg} cores={data.cpu?.cores || 1} />
+            <Ring percent={data.cpu?.percent || 0} color="#16a34a" label="CPU" sub={t('admin.system.cores', '{count} 核', { count: data.cpu?.cores || 0 })} />
+            <Ring percent={memPct} color="#2563eb" label={t('admin.system.memory', '内存')} sub={`${data.memory?.used_gb || 0} / ${data.memory?.total_gb || 0} GB`} />
+            <Ring percent={diskPct} color="#f59e0b" label={t('admin.system.disk', '磁盘')} sub={`${formatDisk(data.disk?.used)} / ${formatDisk(data.disk?.total)}`} />
+            <LoadRing loadAvg={data.load?.avg} cores={data.cpu?.cores || 1} label={t('admin.system.load', '负载')} />
           </div>
 
           {/* Info rows */}
           <div style={{ fontSize: '10px' }}>
             {[
-              { k: '系统', v: data.server?.os },
-              { k: '运行时间', v: formatUptime(data.server?.uptime) },
-              { k: '主机 IP', v: data.server?.ip || '-', flag: data.server?.country_code },
+              { k: t('admin.system.os', '系统'), v: data.server?.os },
+              { k: t('admin.system.uptime', '运行时间'), v: formatUptime(data.server?.uptime, t) },
+              { k: t('admin.system.hostIp', '主机 IP'), v: data.server?.ip || '-', flag: data.server?.country_code },
               { k: 'Go', v: formatVersion(data.server?.runtime?.replace('Go go', '')) },
               { k: 'Next.js', v: '16.0' },
               { k: 'PgSQL', v: formatVersion(data.database?.version) },
@@ -128,7 +130,7 @@ export default function SystemStatusPanel({ isOpen }: { isOpen: boolean }) {
 }
 
 // Load ring — single circle with 1m percent, sub shows 1m/5m/15m
-function LoadRing({ loadAvg, cores }: { loadAvg?: string; cores: number }) {
+function LoadRing({ loadAvg, cores, label }: { loadAvg?: string; cores: number; label: string }) {
   const parts = (loadAvg || '0 0 0').trim().split(/\s+/).map(Number);
   const [l1, l5, l15] = parts;
   const pct1 = Math.min((l1 / cores) * 100, 100);
@@ -137,7 +139,7 @@ function LoadRing({ loadAvg, cores }: { loadAvg?: string; cores: number }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-      <Ring percent={parseFloat(pct1.toFixed(1))} color="#8b5cf6" label="负载" sub={`${pct1.toFixed(0)}% / ${pct5.toFixed(0)}% / ${pct15.toFixed(0)}%`} />
+      <Ring percent={parseFloat(pct1.toFixed(1))} color="#8b5cf6" label={label} sub={`${pct1.toFixed(0)}% / ${pct5.toFixed(0)}% / ${pct15.toFixed(0)}%`} />
     </div>
   );
 }
@@ -167,14 +169,14 @@ function formatVersion(v?: string): string {
   return v;
 }
 
-function formatUptime(uptime?: string): string {
+function formatUptime(uptime: string | undefined, t: (key: string, fallback?: string, vars?: Record<string, string | number>) => string): string {
   if (!uptime) return '-';
   const h = uptime.match(/(\d+)h/);
   const m = uptime.match(/(\d+)m/);
   const s = uptime.match(/(\d+)\./);
   const parts = [];
-  if (h) parts.push(h[1] + '时');
-  if (m) parts.push(m[1] + '分');
-  if (!h && !m && s) parts.push(s[1] + '秒');
+  if (h) parts.push(t('admin.time.hoursShort', '{count}时', { count: h[1] }));
+  if (m) parts.push(t('admin.time.minutesShort', '{count}分', { count: m[1] }));
+  if (!h && !m && s) parts.push(t('admin.time.secondsShort', '{count}秒', { count: s[1] }));
   return parts.join('') || uptime;
 }

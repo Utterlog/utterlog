@@ -19,6 +19,7 @@ import (
 	"utterlog-go/internal/i18n"
 	"utterlog-go/internal/middleware"
 	"utterlog-go/internal/model"
+	"utterlog-go/internal/siteclock"
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -103,6 +104,7 @@ func ListOptions(c *gin.Context) {
 	for _, o := range opts {
 		result[o.Name] = o.Value
 	}
+	result["site_timezone_effective"] = siteclock.Name()
 	util.Success(c, result)
 }
 
@@ -119,6 +121,13 @@ func UpdateOptions(c *gin.Context) {
 
 	for k, v := range req {
 		val := fmt.Sprintf("%v", v)
+		if k == siteclock.OptionName {
+			val = strings.TrimSpace(val)
+			if !siteclock.IsValid(val) {
+				util.BadRequest(c, "无效时区，请使用 IANA 时区名称，例如 Asia/Shanghai")
+				return
+			}
+		}
 		config.DB.Exec(fmt.Sprintf("INSERT INTO %s (name, value, created_at, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT (name) DO UPDATE SET value = $2, updated_at = $4", t),
 			k, val, 0, 0)
 	}

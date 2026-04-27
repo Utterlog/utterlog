@@ -6,8 +6,10 @@ import toast from 'react-hot-toast';
 import { Button, Input, Table, Modal, ConfirmDialog, EmptyState } from '@/components/ui';
 import { useForm } from 'react-hook-form';
 import { usePostsToolbar } from '@/layouts/PostsLayout';
+import { useI18n } from '@/lib/i18n';
 
 export default function CategoriesPage() {
+  const { t } = useI18n();
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,13 +31,13 @@ export default function CategoriesPage() {
       <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
         <div style={{ marginLeft: 'auto' }}>
           <Button className="btn-toolbar" onClick={openCreate}>
-            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />新建分类
+            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />{t('admin.categories.newCategory', '新建分类')}
           </Button>
         </div>
       </div>
     );
     return () => setToolbar(null);
-  }, []);
+  }, [t]);
 
   useEffect(() => { fetchCategories(); }, []);
 
@@ -44,7 +46,7 @@ export default function CategoriesPage() {
     try {
       const response: any = await categoriesApi.list();
       setCategories(response.data || []);
-    } catch { toast.error('获取分类失败'); }
+    } catch { toast.error(t('admin.categories.toast.fetchFailed', '获取分类失败')); }
     finally { setLoading(false); }
   };
 
@@ -81,21 +83,21 @@ export default function CategoriesPage() {
       };
       if (editingId) {
         await categoriesApi.update(editingId, payload);
-        toast.success('更新成功');
+        toast.success(t('admin.common.updateSuccess', '更新成功'));
       } else {
         await categoriesApi.create(payload);
-        toast.success('创建成功');
+        toast.success(t('admin.common.createSuccess', '创建成功'));
       }
       setIsModalOpen(false);
       fetchCategories();
-    } catch { toast.error(editingId ? '更新失败' : '创建失败'); }
+    } catch { toast.error(editingId ? t('admin.common.updateFailed', '更新失败') : t('admin.common.createFailed', '创建失败')); }
     finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    try { await categoriesApi.delete(deleteId); toast.success('删除成功'); fetchCategories(); }
-    catch { toast.error('删除失败'); }
+    try { await categoriesApi.delete(deleteId); toast.success(t('admin.posts.toast.deleteSuccess', '删除成功')); fetchCategories(); }
+    catch { toast.error(t('admin.posts.toast.deleteFailed', '删除失败')); }
     finally { setDeleteId(null); }
   };
 
@@ -111,9 +113,9 @@ export default function CategoriesPage() {
       const svgMatch = text.match(/<svg[\s\S]*<\/svg>/i);
       if (svgMatch) {
         setIconValue(svgMatch[0]);
-        toast.success('SVG 图标已添加');
+        toast.success(t('admin.categories.toast.svgAdded', 'SVG 图标已添加'));
       } else {
-        toast.error('无效的 SVG 文件');
+        toast.error(t('admin.categories.toast.invalidSvg', '无效的 SVG 文件'));
       }
       if (fileRef.current) fileRef.current.value = '';
       return;
@@ -121,7 +123,7 @@ export default function CategoriesPage() {
 
     // Image: upload to media
     if (!['png', 'gif', 'jpg', 'jpeg', 'webp', 'avif', 'ico'].includes(ext || '')) {
-      toast.error('请上传 SVG/PNG/GIF/JPG/WebP/AVIF 格式');
+      toast.error(t('admin.categories.toast.invalidIconFormat', '请上传 SVG/PNG/GIF/JPG/WebP/AVIF 格式'));
       if (fileRef.current) fileRef.current.value = '';
       return;
     }
@@ -134,9 +136,9 @@ export default function CategoriesPage() {
       const url = r.url || r.data?.url;
       if (url) {
         setIconValue(url);
-        toast.success('图标已上传');
+        toast.success(t('admin.categories.toast.iconUploaded', '图标已上传'));
       }
-    } catch { toast.error('上传失败'); }
+    } catch { toast.error(t('admin.common.uploadFailed', '上传失败')); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
   };
 
@@ -161,15 +163,15 @@ export default function CategoriesPage() {
 
   const columns = [
     { key: 'icon', title: '', width: '40px', render: (row: any) => renderIcon(row.icon) },
-    { key: 'name', title: '名称', width: '160px', render: (row: any) => (
+    { key: 'name', title: t('admin.common.name', '名称'), width: '160px', render: (row: any) => (
       <div>
         <p style={{ fontWeight: 500, fontSize: '14px' }}>{row.name}</p>
         <p className="text-dim" style={{ fontSize: '12px' }}>/{row.slug}</p>
       </div>
     )},
-    { key: 'description', title: '描述', render: (row: any) => <span className="text-sub" style={{ fontSize: '13px' }}>{row.description || '—'}</span> },
-    { key: 'count', title: '文章数', width: '90px' },
-    { key: 'actions', title: '操作', width: '100px', render: (row: any) => (
+    { key: 'description', title: t('admin.common.description', '描述'), render: (row: any) => <span className="text-sub" style={{ fontSize: '13px' }}>{row.description || '—'}</span> },
+    { key: 'count', title: t('admin.categories.postCount', '文章数'), width: '90px' },
+    { key: 'actions', title: t('admin.posts.columns.actions', '操作'), width: '100px', render: (row: any) => (
       <div style={{ display: 'flex', gap: '4px' }}>
         <button onClick={() => openEdit(row)} className="action-btn primary"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
         <button onClick={() => setDeleteId(row.id)} className="action-btn danger"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
@@ -180,7 +182,7 @@ export default function CategoriesPage() {
   return (
     <div>
       {categories.length === 0 && !loading ? (
-        <EmptyState title="暂无分类" description="创建您的第一个文章分类" actionText="新建分类" onAction={openCreate} />
+        <EmptyState title={t('admin.categories.emptyTitle', '暂无分类')} description={t('admin.categories.emptyDescription', '创建您的第一个文章分类')} actionText={t('admin.categories.newCategory', '新建分类')} onAction={openCreate} />
       ) : (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <Table columns={columns} data={categories} loading={loading} />
@@ -188,11 +190,11 @@ export default function CategoriesPage() {
       )}
 
       {/* Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? '编辑分类' : '新建分类'}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? t('admin.categories.editCategory', '编辑分类') : t('admin.categories.newCategory', '新建分类')}>
         <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Icon */}
           <div>
-            <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>分类图标</label>
+            <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.categories.icon', '分类图标')}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
                 width: 48, height: 48, borderRadius: 6, border: '1px dashed var(--color-border)',
@@ -204,21 +206,21 @@ export default function CategoriesPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <label className="btn btn-secondary text-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '4px 10px' }}>
-                    <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '12px' }} /> 上传图片
+                    <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '12px' }} /> {t('admin.cover.uploadImage', '上传图片')}
                     <input ref={fileRef} type="file" accept=".svg,.png,.gif,.jpg,.jpeg,.webp,.avif,.ico" style={{ display: 'none' }} onChange={handleIconUpload} />
                   </label>
                   {iconValue && (
-                    <button type="button" className="btn btn-ghost text-dim" style={{ fontSize: '12px', padding: '4px 8px' }} onClick={() => setIconValue('')}>清除</button>
+                    <button type="button" className="btn btn-ghost text-dim" style={{ fontSize: '12px', padding: '4px 8px' }} onClick={() => setIconValue('')}>{t('admin.common.clear', '清除')}</button>
                   )}
                 </div>
-                <p className="text-dim" style={{ fontSize: '11px' }}>支持 FontAwesome 类名、SVG 代码、PNG/GIF/JPG/WebP/AVIF</p>
+                <p className="text-dim" style={{ fontSize: '11px' }}>{t('admin.categories.iconHint', '支持 FontAwesome 类名、SVG 代码、PNG/GIF/JPG/WebP/AVIF')}</p>
               </div>
             </div>
             {/* SVG code input */}
             <div style={{ marginTop: '8px' }}>
               <input
                 className="input text-sm font-mono"
-                placeholder="fa-sharp fa-light fa-code 或 SVG 代码 / 图片 URL"
+                placeholder={t('admin.categories.iconPlaceholder', 'fa-sharp fa-light fa-code 或 SVG 代码 / 图片 URL')}
                 value={iconValue}
                 onChange={e => setIconValue(e.target.value)}
                 style={{ fontSize: '12px' }}
@@ -226,30 +228,30 @@ export default function CategoriesPage() {
             </div>
           </div>
 
-          <Input label="名称" {...register('name', { required: '名称不能为空' })} error={errors.name?.message} />
-          <Input label="Slug" {...register('slug', { required: 'Slug不能为空' })} error={errors.slug?.message} />
+          <Input label={t('admin.common.name', '名称')} {...register('name', { required: t('admin.validation.nameRequired', '名称不能为空') })} error={errors.name?.message} />
+          <Input label="Slug" {...register('slug', { required: t('admin.validation.slugRequired', 'Slug不能为空') })} error={errors.slug?.message} />
           <div>
-            <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>父分类</label>
+            <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.categories.parent', '父分类')}</label>
             <select className="input" {...register('parent_id')}>
-              <option value="">无</option>
+              <option value="">{t('admin.common.none', '无')}</option>
               {categories.filter(c => c.id !== editingId).map((cat) => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>描述</label>
-            <textarea rows={2} className="input" {...register('description')} placeholder="可选" />
+            <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.common.description', '描述')}</label>
+            <textarea rows={2} className="input" {...register('description')} placeholder={t('admin.common.optional', '可选')} />
           </div>
-          <Input label="关键词" {...register('seo_keywords')} placeholder="多个关键词用逗号分隔，如: Linux,服务器,运维" />
+          <Input label={t('admin.posts.columns.keywords', '关键词')} {...register('seo_keywords')} placeholder={t('admin.categories.keywordsPlaceholder', '多个关键词用逗号分隔，如: Linux,服务器,运维')} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px' }}>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>取消</Button>
-            <Button type="submit" loading={submitting}>{editingId ? '保存' : '创建'}</Button>
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>{t('admin.common.cancel', '取消')}</Button>
+            <Button type="submit" loading={submitting}>{editingId ? t('admin.common.save', '保存') : t('admin.common.create', '创建')}</Button>
           </div>
         </form>
       </Modal>
 
-      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="确认删除" message="删除分类后，相关文章将变为未分类，是否确认？" />
+      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('admin.posts.confirmDeleteTitle', '确认删除')} message={t('admin.categories.confirmDeleteMessage', '删除分类后，相关文章将变为未分类，是否确认？')} />
     </div>
   );
 }

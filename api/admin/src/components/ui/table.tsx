@@ -1,5 +1,7 @@
 
 
+import { useI18n } from '@/lib/i18n';
+
 interface TableProps {
   columns: { key: string; title: React.ReactNode; width?: string; render?: (row: any, col?: any, idx?: number) => React.ReactNode }[];
   data: any[];
@@ -13,11 +15,13 @@ interface TableProps {
   tableLayout?: 'fixed' | 'auto';
 }
 
-export function Table({ columns, data, keyField = 'id', loading, emptyText = '暂无数据', rowStyle, tableLayout = 'fixed' }: TableProps) {
+export function Table({ columns, data, keyField = 'id', loading, emptyText, rowStyle, tableLayout = 'fixed' }: TableProps) {
+  const { t } = useI18n();
+
   if (!loading && data.length === 0) {
     return (
       <div className="text-dim" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px', fontSize: '14px' }}>
-        {emptyText}
+        {emptyText || t('admin.common.noData', '暂无数据')}
       </div>
     );
   }
@@ -71,13 +75,15 @@ interface PaginationProps {
 }
 
 export function Pagination({ currentPage, totalPages, onPageChange, total }: PaginationProps) {
+  const { t } = useI18n();
+
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '10px 16px', borderTop: '1px solid var(--color-divider)',
     }}>
       <span className="text-dim" style={{ fontSize: '13px' }}>
-        {total !== undefined ? `共 ${total} 条` : ''}
+        {total !== undefined ? t('admin.common.totalItems', '共 {total} 条', { total }) : ''}
       </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button

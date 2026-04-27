@@ -3,8 +3,10 @@ import { useEffect, useState } from 'react';
 import { momentsApi, optionsApi, mediaApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button, Modal, ConfirmDialog } from '@/components/ui';
+import { useI18n } from '@/lib/i18n';
 
 export default function MomentsPage() {
+  const { t } = useI18n();
   const [moments, setMoments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,7 +27,7 @@ export default function MomentsPage() {
   const fetchData = async () => {
     setLoading(true);
     try { const r: any = await momentsApi.list(); setMoments(r.data || []); }
-    catch { toast.error('获取失败'); }
+    catch { toast.error(t('admin.moments.toast.fetchFailed', '获取失败')); }
     finally { setLoading(false); }
   };
 
@@ -44,16 +46,16 @@ export default function MomentsPage() {
     try {
       await optionsApi.update('moment_tags', newTags.join(','));
     } catch {
-      toast.error('保存标签失败');
+      toast.error(t('admin.moments.toast.saveTagsFailed', '保存标签失败'));
     }
   };
 
   const addTag = () => {
-    const t = newTag.trim();
-    if (!t || tags.includes(t)) { setNewTag(''); return; }
-    saveTags([...tags, t]);
+    const tag = newTag.trim();
+    if (!tag || tags.includes(tag)) { setNewTag(''); return; }
+    saveTags([...tags, tag]);
     setNewTag('');
-    toast.success(`已添加标签「${t}」`);
+    toast.success(t('admin.moments.toast.tagAdded', '已添加标签「{tag}」', { tag }));
   };
 
   const removeTag = (tag: string) => {
@@ -94,28 +96,28 @@ export default function MomentsPage() {
         const url = r.url || r.data?.url;
         if (url) setFormImages(prev => [...prev, url]);
       }
-    } catch { toast.error('上传失败'); }
+    } catch { toast.error(t('admin.common.uploadFailed', '上传失败')); }
     finally { setImgUploading(false); e.target.value = ''; }
   };
 
   const removeFormImage = (idx: number) => setFormImages(prev => prev.filter((_, i) => i !== idx));
 
   const onSubmit = async () => {
-    if (!form.content.trim()) { toast.error('内容不能为空'); return; }
+    if (!form.content.trim()) { toast.error(t('admin.moments.toast.contentRequired', '内容不能为空')); return; }
     setSubmitting(true);
     const payload = { ...form, images: formImages.length > 0 ? formImages : [] };
     try {
-      if (editingId) { await momentsApi.update(editingId, payload); toast.success('更新成功'); }
-      else { await momentsApi.create(payload); toast.success('发布成功'); }
+      if (editingId) { await momentsApi.update(editingId, payload); toast.success(t('admin.common.updateSuccess', '更新成功')); }
+      else { await momentsApi.create(payload); toast.success(t('admin.moments.toast.published', '发布成功')); }
       setIsModalOpen(false); fetchData();
-    } catch { toast.error('操作失败'); }
+    } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
     finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    try { await momentsApi.delete(deleteId); toast.success('删除成功'); fetchData(); }
-    catch { toast.error('删除失败'); }
+    try { await momentsApi.delete(deleteId); toast.success(t('admin.posts.toast.deleteSuccess', '删除成功')); fetchData(); }
+    catch { toast.error(t('admin.posts.toast.deleteFailed', '删除失败')); }
     finally { setDeleteId(null); }
   };
 
@@ -133,13 +135,13 @@ export default function MomentsPage() {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-        <span className="text-dim" style={{ fontSize: '13px' }}>共 {moments.length} 条说说</span>
+        <span className="text-dim" style={{ fontSize: '13px' }}>{t('admin.moments.total', '共 {count} 条说说', { count: moments.length })}</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
           <Button variant="secondary" onClick={() => setShowTagManager(!showTagManager)} style={{ width: 88, minWidth: 88 }}>
-            <i className="fa-regular fa-tags" style={{ fontSize: '14px' }} />关键词
+            <i className="fa-regular fa-tags" style={{ fontSize: '14px' }} />{t('admin.posts.columns.keywords', '关键词')}
           </Button>
           <Button onClick={openCreate} style={{ width: 88, minWidth: 88 }}>
-            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />发布
+            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />{t('admin.moments.publish', '发布')}
           </Button>
         </div>
       </div>
@@ -147,8 +149,8 @@ export default function MomentsPage() {
       {/* Tag Manager */}
       {showTagManager && (
         <div className="card" style={{ padding: '20px', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>说说关键词管理</h3>
-          <p className="text-dim" style={{ fontSize: '12px', marginBottom: '16px' }}>管理前台说说发布时可选的关键词标签，发布后显示在卡片右上角</p>
+          <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>{t('admin.moments.tagManagerTitle', '说说关键词管理')}</h3>
+          <p className="text-dim" style={{ fontSize: '12px', marginBottom: '16px' }}>{t('admin.moments.tagManagerHint', '管理前台说说发布时可选的关键词标签，发布后显示在卡片右上角')}</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
             {tags.map(tag => (
               <span
@@ -173,23 +175,23 @@ export default function MomentsPage() {
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
               className="input focus-ring"
-              placeholder="输入新关键词"
+              placeholder={t('admin.moments.newTagPlaceholder', '输入新关键词')}
               value={newTag}
               onChange={e => setNewTag(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
               style={{ width: '180px' }}
             />
-            <Button variant="secondary" onClick={addTag}>添加</Button>
+            <Button variant="secondary" onClick={addTag}>{t('admin.common.add', '添加')}</Button>
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>加载中...</div>
+        <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>{t('common.loading', '加载中...')}</div>
       ) : moments.length === 0 ? (
         <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>
-          <p style={{ fontSize: '15px', marginBottom: '12px' }}>还没有说说</p>
-          <Button onClick={openCreate}><i className="fa-regular fa-plus" style={{ fontSize: '16px' }} />发第一条</Button>
+          <p style={{ fontSize: '15px', marginBottom: '12px' }}>{t('admin.moments.empty', '还没有说说')}</p>
+          <Button onClick={openCreate}><i className="fa-regular fa-plus" style={{ fontSize: '16px' }} />{t('admin.moments.first', '发第一条')}</Button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -218,7 +220,7 @@ export default function MomentsPage() {
                         }}>{m.mood}</span>
                       </>
                     )}
-                    {m.visibility !== 'public' && <><span>&middot;</span><span>{m.visibility === 'private' ? '仅自己' : '不公开'}</span></>}
+                    {m.visibility !== 'public' && <><span>&middot;</span><span>{m.visibility === 'private' ? t('admin.moments.visibility.private', '仅自己') : t('admin.moments.visibility.unlisted', '不公开')}</span></>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '4px', flexShrink: 0, marginLeft: '12px' }}>
@@ -231,13 +233,13 @@ export default function MomentsPage() {
         </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? '编辑说说' : '发布说说'}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? t('admin.moments.editMoment', '编辑说说') : t('admin.moments.publishMoment', '发布说说')}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <textarea className="input focus-ring" rows={5} placeholder="说点什么..." value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} style={{ resize: 'vertical' }} />
+          <textarea className="input focus-ring" rows={5} placeholder={t('admin.moments.contentPlaceholder', '说点什么...')} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} style={{ resize: 'vertical' }} />
 
           {/* Image upload */}
           <div>
-            <label className="text-sub" style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '6px' }}>图片附件</label>
+            <label className="text-sub" style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.moments.imageAttachments', '图片附件')}</label>
             {formImages.length > 0 && (
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
                 {formImages.map((url, idx) => (
@@ -252,7 +254,7 @@ export default function MomentsPage() {
             )}
             <label
               className="btn btn-secondary btn-toolbar-square"
-              title={imgUploading ? '上传中...' : '上传图片'}
+              title={imgUploading ? t('admin.cover.uploading', '上传中...') : t('admin.cover.uploadImage', '上传图片')}
               style={{ cursor: imgUploading ? 'wait' : 'pointer', opacity: imgUploading ? 0.6 : 1 }}
             >
               <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />
@@ -262,7 +264,7 @@ export default function MomentsPage() {
 
           {/* Tag selector */}
           <div>
-            <label className="text-sub" style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '6px' }}>关键词</label>
+            <label className="text-sub" style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.posts.columns.keywords', '关键词')}</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {tags.map(tag => (
                 <button
@@ -282,7 +284,7 @@ export default function MomentsPage() {
               ))}
               <input
                 className="input focus-ring"
-                placeholder="自定义"
+                placeholder={t('admin.posts.permalinkCustom', '自定义')}
                 value={tags.includes(form.mood) ? '' : form.mood}
                 onChange={e => setForm({ ...form, mood: e.target.value })}
                 style={{ width: '80px', fontSize: '12px', padding: '4px 8px' }}
@@ -291,21 +293,21 @@ export default function MomentsPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px' }}>
-            <input className="input focus-ring" placeholder="位置（可选）" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} style={{ flex: 1 }} />
+            <input className="input focus-ring" placeholder={t('admin.moments.locationPlaceholder', '位置（可选）')} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} style={{ flex: 1 }} />
           </div>
           <select className="input" value={form.visibility} onChange={(e) => setForm({ ...form, visibility: e.target.value })}>
-            <option value="public">公开</option>
-            <option value="unlisted">不公开</option>
-            <option value="private">仅自己</option>
+            <option value="public">{t('admin.moments.visibility.public', '公开')}</option>
+            <option value="unlisted">{t('admin.moments.visibility.unlisted', '不公开')}</option>
+            <option value="private">{t('admin.moments.visibility.private', '仅自己')}</option>
           </select>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '4px' }}>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>取消</Button>
-            <Button onClick={onSubmit} loading={submitting}>{editingId ? '保存' : '发布'}</Button>
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>{t('admin.common.cancel', '取消')}</Button>
+            <Button onClick={onSubmit} loading={submitting}>{editingId ? t('admin.common.save', '保存') : t('admin.moments.publish', '发布')}</Button>
           </div>
         </div>
       </Modal>
 
-      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="确认删除" message="删除后无法恢复" />
+      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('admin.posts.confirmDeleteTitle', '确认删除')} message={t('admin.common.deleteIrreversible', '删除后无法恢复')} />
     </div>
   );
 }

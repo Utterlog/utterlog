@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
 import rehypeSlug from 'rehype-slug';
+import { useI18n } from '@/lib/i18n';
 
 /* ── toolbar shortcut helpers ── */
 function wrap(
@@ -356,18 +357,39 @@ function SafePreview({ value }: { value: string }) {
 export default function MarkdownEditor({
   value,
   onChange,
-  placeholder = '开始写作...',
+  placeholder,
   className = '',
   minHeight = '500px',
   onImportMd,
   onInsertContent,
 }: MarkdownEditorProps) {
+  const { t } = useI18n();
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [showHeadings, setShowHeadings] = useState(false);
   const [showTable, setShowTable] = useState(false);
   const [tableHover, setTableHover] = useState({ r: 0, c: 0 });
   const [showCodeLang, setShowCodeLang] = useState(false);
   const [showColor, setShowColor] = useState(false);
+  const editorPlaceholder = placeholder ?? t('admin.editor.placeholder', '开始写作...');
+  const toolbarLabel = (label: string) => ({
+    '任务列表': t('admin.editor.toolbar.taskList', '任务列表'),
+    '列表': t('admin.editor.toolbar.list', '列表'),
+    '粗体': t('admin.editor.toolbar.bold', '粗体'),
+    '斜体': t('admin.editor.toolbar.italic', '斜体'),
+    '荧光笔': t('admin.editor.toolbar.highlight', '荧光笔'),
+    '链接': t('admin.editor.toolbar.link', '链接'),
+    '图片': t('admin.editor.toolbar.image', '图片'),
+    '代码': t('admin.editor.toolbar.code', '代码'),
+    '引用': t('admin.editor.toolbar.quote', '引用'),
+    '分割线': t('admin.editor.toolbar.divider', '分割线'),
+    '折叠面板': t('admin.editor.toolbar.collapse', '折叠面板'),
+    '资源下载': t('admin.editor.toolbar.download', '资源下载'),
+    '视频': t('admin.editor.toolbar.video', '视频'),
+    '音乐': t('admin.content.music', '音乐'),
+    '图书': t('admin.content.books', '图书'),
+    '电影': t('admin.content.movies', '电影'),
+    '说说': t('admin.pages.builtin.page_moments', '说说'),
+  }[label] || label);
 
   const handleToolbar = useCallback(
     (btn: TBBtn) => {
@@ -425,7 +447,7 @@ export default function MarkdownEditor({
         <div style={{ position: 'relative' }}>
           <button
             type="button"
-            title="标题"
+            title={t('admin.editor.toolbar.heading', '标题')}
             onClick={() => setShowHeadings(!showHeadings)}
             style={{
               padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
@@ -465,7 +487,7 @@ export default function MarkdownEditor({
             <span key={`sep-${idx}`} style={{ width: '1px', height: '16px', background: 'var(--color-border)', margin: '0 4px' }} />
           ) : btn.label === 'color' ? (
             <div key="color" style={{ position: 'relative' }}>
-              <button type="button" title="字体颜色" onClick={() => setShowColor(!showColor)} style={{
+              <button type="button" title={t('admin.editor.toolbar.textColor', '字体颜色')} onClick={() => setShowColor(!showColor)} style={{
                 padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center',
               }}>
@@ -478,7 +500,7 @@ export default function MarkdownEditor({
                   border: '1px solid var(--color-border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                   borderRadius: '8px', width: '180px',
                 }}>
-                  <p style={{ fontSize: '11px', color: 'var(--color-text-dim)', marginBottom: '8px' }}>选择字体颜色</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-dim)', marginBottom: '8px' }}>{t('admin.editor.chooseTextColor', '选择字体颜色')}</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
                     {['#f43f5e', '#f97316', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#1a1a1a', '#6b7280'].map(color => (
                       <button key={color} type="button" onClick={() => {
@@ -504,7 +526,7 @@ export default function MarkdownEditor({
                       flex: 1, fontSize: '11px', padding: '4px', background: 'var(--color-bg-soft)',
                       border: '1px solid var(--color-border)', cursor: 'pointer', color: 'var(--color-text-main)',
                     }}>
-                      自定义颜色
+                      {t('admin.editor.customColor', '自定义颜色')}
                     </button>
                   </div>
                 </div>
@@ -514,7 +536,7 @@ export default function MarkdownEditor({
             <button
               key={btn.label}
               type="button"
-              title={btn.label}
+              title={toolbarLabel(btn.label)}
               style={{
                 padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--color-text-sub)', transition: 'color 0.15s',
@@ -537,7 +559,7 @@ export default function MarkdownEditor({
         )}
         {/* Code block language picker */}
         <div style={{ position: 'relative' }}>
-          <button type="button" title="代码块" onClick={() => setShowCodeLang(!showCodeLang)} style={{
+          <button type="button" title={t('admin.editor.toolbar.codeBlock', '代码块')} onClick={() => setShowCodeLang(!showCodeLang)} style={{
             padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center',
             fontSize: '10px', fontFamily: 'monospace',
@@ -580,7 +602,7 @@ export default function MarkdownEditor({
         </div>
         {/* Table grid picker */}
         <div style={{ position: 'relative' }}>
-          <button type="button" title="表格" onClick={() => setShowTable(!showTable)} style={{
+          <button type="button" title={t('admin.editor.toolbar.table', '表格')} onClick={() => setShowTable(!showTable)} style={{
             padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center',
           }}>
@@ -593,7 +615,7 @@ export default function MarkdownEditor({
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}>
               <p style={{ fontSize: '11px', color: 'var(--color-text-dim)', marginBottom: '6px' }}>
-                {tableHover.r > 0 ? `${tableHover.r} x ${tableHover.c}` : '选择表格大小'}
+                {tableHover.r > 0 ? `${tableHover.r} x ${tableHover.c}` : t('admin.editor.chooseTableSize', '选择表格大小')}
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '2px' }}>
                 {Array.from({ length: 36 }, (_, i) => {
@@ -607,7 +629,7 @@ export default function MarkdownEditor({
                       onClick={() => {
                         if (taRef.current) {
                           const { selectionStart: s, value } = taRef.current;
-                          const header = '| ' + Array.from({ length: c }, (_, j) => `列${j + 1}`).join(' | ') + ' |';
+                          const header = '| ' + Array.from({ length: c }, (_, j) => t('admin.editor.tableColumn', '列{index}', { index: j + 1 })).join(' | ') + ' |';
                           const sep = '| ' + Array(c).fill('---').join(' | ') + ' |';
                           const rows = Array.from({ length: r }, () => '| ' + Array(c).fill('  ').join(' | ') + ' |').join('\n');
                           const table = `\n${header}\n${sep}\n${rows}\n`;
@@ -636,15 +658,15 @@ export default function MarkdownEditor({
             color: 'var(--color-primary)', fontSize: '11px', padding: '4px 6px',
             display: 'flex', alignItems: 'center', gap: '4px',
           }}>
-            <i className="fa-light fa-file-import" style={{ fontSize: '12px' }} /> 导入 .md
+            <i className="fa-light fa-file-import" style={{ fontSize: '12px' }} /> {t('admin.editor.importMd', '导入 .md')}
           </button>
         )}
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
           {(() => { const s = calcStats(value); return (
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--color-text-dim)' }}>
-              <span>{s.words} 字</span>
-              <span>{s.paragraphs} 段</span>
-              <span>{s.readingTime} 分钟</span>
+              <span>{t('admin.editor.stats.words', '{count} 字', { count: s.words })}</span>
+              <span>{t('admin.editor.stats.paragraphs', '{count} 段', { count: s.paragraphs })}</span>
+              <span>{t('admin.editor.stats.minutes', '{count} 分钟', { count: s.readingTime })}</span>
             </span>
           ); })()}
           <span style={{ width: '1px', height: '16px', background: 'var(--color-border)' }} />
@@ -655,8 +677,8 @@ export default function MarkdownEditor({
             MakeItDown <i className="fa-light fa-arrow-up-right-from-square" style={{ fontSize: '8px' }} />
           </a>
           <span style={{ width: '1px', height: '16px', background: 'var(--color-border)' }} />
-          <span style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>预览</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-dim)', opacity: 0.6 }}>已同步</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>{t('admin.editor.preview', '预览')}</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-dim)', opacity: 0.6 }}>{t('admin.editor.synced', '已同步')}</span>
         </span>
       </div>
 
@@ -676,7 +698,7 @@ export default function MarkdownEditor({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
+            placeholder={editorPlaceholder}
             className="flex-1 w-full resize-none bg-transparent text-sm text-main font-mono leading-relaxed focus:outline-none placeholder:text-dim"
             style={{ padding: '16px 20px', minHeight: 0, overflowY: 'auto' }}
             spellCheck={false}
@@ -692,7 +714,7 @@ export default function MarkdownEditor({
             {value ? (
               <SafePreview value={value} />
             ) : (
-              <p className="text-dim italic">预览区域，输入 Markdown 后实时渲染...</p>
+              <p className="text-dim italic">{t('admin.editor.previewPlaceholder', '预览区域，输入 Markdown 后实时渲染...')}</p>
             )}
           </div>
         </div>

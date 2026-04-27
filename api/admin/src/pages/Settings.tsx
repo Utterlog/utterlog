@@ -4,6 +4,8 @@ import { optionsApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button, Input, Toggle } from '@/components/ui';
 import api from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
+import { setAdminTimeZone } from '@/lib/timezone';
 import { useForm } from 'react-hook-form';
 import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC, FormRowRadioC } from '@/components/form/FormC';
 import SystemUpdatePanel from '@/components/SystemUpdatePanel';
@@ -17,11 +19,52 @@ const subTitleRow = { display: 'flex', justifyContent: 'space-between', alignIte
 // Tab IDs recognized on #hash so deep links like /settings#update land
 // directly on the right pane. Keep in sync with `tabs` below.
 const VALID_TABS = new Set(['general', 'seo', 'email', 'telegram', 'comment', 'media', 'image', 'update']);
+const COMMON_TIME_ZONES = [
+  'Asia/Shanghai',
+  'Asia/Tashkent',
+  'Asia/Tokyo',
+  'Asia/Seoul',
+  'Asia/Singapore',
+  'Asia/Dubai',
+  'Europe/Moscow',
+  'Europe/London',
+  'Europe/Paris',
+  'UTC',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'Australia/Sydney',
+];
 
 function initialTabFromHash(): string {
   if (typeof window === 'undefined') return 'general';
   const h = window.location.hash.replace(/^#/, '');
   return VALID_TABS.has(h) ? h : 'general';
+}
+
+function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  } catch {
+    return '';
+  }
+}
+
+function buildTimeZoneOptions(current: string | undefined, t: (key: string, fallback?: string, vars?: Record<string, string | number>) => string) {
+  const detected = browserTimeZone();
+  const set = new Set(COMMON_TIME_ZONES);
+  if (detected) set.add(detected);
+  if (current) set.add(current);
+  return [
+    {
+      value: '',
+      label: detected
+        ? t('admin.settings.general.timezoneAutoWithBrowser', '自动识别本地时区（当前浏览器：{timezone}）', { timezone: detected })
+        : t('admin.settings.general.timezoneAuto', '自动识别本地时区'),
+    },
+    ...Array.from(set).map((tz) => ({ value: tz, label: tz })),
+  ];
 }
 
 /**
@@ -36,6 +79,7 @@ function initialTabFromHash(): string {
  * 自动重置 —— 用户改完路径或重新上传就会立即重新尝试加载。
  */
 function BrandingPreview({ src, alt }: { src: string; alt: string }) {
+  const { t } = useI18n();
   const [error, setError] = useState(false);
   if (!src || error) {
     return (
@@ -45,7 +89,7 @@ function BrandingPreview({ src, alt }: { src: string; alt: string }) {
       }}>
         <i className={`fa-regular ${error ? 'fa-image-slash' : 'fa-image'}`} style={{ fontSize: '24px', opacity: 0.4 }} />
         {error && (
-          <span style={{ fontSize: '10px', opacity: 0.7 }}>加载失败</span>
+          <span style={{ fontSize: '10px', opacity: 0.7 }}>{t('admin.settings.branding.loadFailed', '加载失败')}</span>
         )}
       </div>
     );
@@ -61,6 +105,7 @@ function BrandingPreview({ src, alt }: { src: string; alt: string }) {
 }
 
 export default function SettingsPage() {
+  const { t, reload: reloadI18n } = useI18n();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(initialTabFromHash);
@@ -86,6 +131,8 @@ export default function SettingsPage() {
 
   const { register, handleSubmit, reset, getValues, watch, setValue } = useForm();
   const emailProvider = watch('email_provider', 'smtp');
+  const currentSiteTimezone = watch('site_timezone', '');
+  const effectiveSiteTimezone = watch('site_timezone_effective', '');
   const mediaDriver = watch('media_driver', 'local');
   const imageQuality = watch('image_quality', 82);
   const storageLimitGb = watch('storage_limit_gb', 10);
@@ -119,6 +166,7 @@ export default function SettingsPage() {
     try {
       const response: any = await optionsApi.list();
       const s = response.data || {};
+      setAdminTimeZone(s.site_timezone, s.site_timezone_effective);
       reset({
         // 常规
         site_title: s.site_title || '',
@@ -128,6 +176,8 @@ export default function SettingsPage() {
         site_brand_mode: s.site_brand_mode || (s.site_logo ? 'logo' : 'text'),
         site_subtitle: s.site_subtitle || '',
         site_locale: s.site_locale || 'zh-CN',
+        site_timezone: s.site_timezone || '',
+        site_timezone_effective: s.site_timezone_effective || '',
         admin_email: s.admin_email || '',
         // site_description / site_keywords moved to SEO tab as
         // seo_default_description / seo_default_keywords. The DB
@@ -266,7 +316,7 @@ export default function SettingsPage() {
         }
       } catch {}
     } catch {
-      toast.error('获取设置失败');
+      toast.error(t('admin.settings.toast.fetchFailed', '获取设置失败'));
     } finally {
       setLoading(false);
     }
@@ -279,7 +329,7 @@ export default function SettingsPage() {
     // vanishes (the save POST just doesn't include that key, so the DB
     // row stays unchanged and on reload the field reverts).
     general: [
-      'site_title', 'site_brand_mode', 'site_subtitle', 'site_locale', 'site_url',
+      'site_title', 'site_brand_mode', 'site_subtitle', 'site_locale', 'site_timezone', 'site_url',
       'admin_email', 'site_since',
       'site_logo', 'site_logo_dark', 'site_favicon',
       'beian_gongan', 'beian_icp',
@@ -337,9 +387,13 @@ export default function SettingsPage() {
       } else {
         await optionsApi.updateMany(data);
       }
-      toast.success('设置已保存');
+      if (activeTab === 'general') {
+        setAdminTimeZone(data.site_timezone, data.site_timezone || effectiveSiteTimezone);
+        await reloadI18n();
+      }
+      toast.success(t('admin.settings.toast.saved', '设置已保存'));
     } catch {
-      toast.error('保存失败');
+      toast.error(t('admin.settings.toast.saveFailed', '保存失败'));
     } finally {
       setSaving(false);
     }
@@ -350,7 +404,7 @@ export default function SettingsPage() {
     try {
       const vals = getValues();
       if (!vals.s3_bucket || !vals.s3_access_key || !vals.s3_secret_key) {
-        toast.error('请先填写 Bucket、Access Key 和 Secret Key');
+        toast.error(t('admin.settings.toast.fillBucketKeys', '请先填写 Bucket、Access Key 和 Secret Key'));
         setTestingStorage(false);
         return;
       }
@@ -362,10 +416,10 @@ export default function SettingsPage() {
         access_key: vals.s3_access_key,
         secret_key: vals.s3_secret_key,
       });
-      if (r.success) toast.success('连接成功');
-      else toast.error(r.error?.message || r.error || '连接失败');
+      if (r.success) toast.success(t('admin.common.connectionSuccess', '连接成功'));
+      else toast.error(r.error?.message || r.error || t('admin.common.connectionFailed', '连接失败'));
     } catch (e: any) {
-      const msg = e?.response?.data?.error?.message || e?.message || '连接失败';
+      const msg = e?.response?.data?.error?.message || e?.message || t('admin.common.connectionFailed', '连接失败');
       toast.error(msg);
     } finally {
       setTestingStorage(false);
@@ -389,10 +443,10 @@ export default function SettingsPage() {
       const url = r.url || r.data?.url;
       if (url) {
         reset({ ...getValues(), [field]: url });
-        toast.success('上传成功');
+        toast.success(t('admin.common.uploadSuccess', '上传成功'));
       }
     } catch {
-      toast.error('上传失败');
+      toast.error(t('admin.common.uploadFailed', '上传失败'));
     }
   };
 
@@ -402,7 +456,7 @@ export default function SettingsPage() {
     const ext = file.name.split('.').pop()?.toLowerCase();
     const allowed = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'ico', 'svg'];
     if (!ext || !allowed.includes(ext)) {
-      toast.error('请上传 PNG/JPG/GIF/WebP/AVIF/ICO/SVG 格式');
+      toast.error(t('admin.settings.toast.invalidBrandingFormat', '请上传 PNG/JPG/GIF/WebP/AVIF/ICO/SVG 格式'));
       e.target.value = '';
       return;
     }
@@ -415,23 +469,23 @@ export default function SettingsPage() {
       if (url) {
         reset({ ...getValues(), [field]: url });
         await optionsApi.updateMany({ [field]: url });
-        toast.success('上传成功');
+        toast.success(t('admin.common.uploadSuccess', '上传成功'));
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || '上传失败');
+      toast.error(err?.response?.data?.error?.message || t('admin.common.uploadFailed', '上传失败'));
     }
     e.target.value = '';
   };
 
   const tabs = [
-    { id: 'general', label: '常规设置', icon: 'fa-regular fa-globe' },
-    { id: 'seo', label: 'SEO 与 AI', icon: 'fa-regular fa-magnifying-glass' },
-    { id: 'email', label: '邮件设置', icon: 'fa-regular fa-envelope' },
+    { id: 'general', label: t('admin.settings.tabs.general', '常规设置'), icon: 'fa-regular fa-globe' },
+    { id: 'seo', label: t('admin.settings.tabs.seo', 'SEO 与 AI'), icon: 'fa-regular fa-magnifying-glass' },
+    { id: 'email', label: t('admin.settings.tabs.email', '邮件设置'), icon: 'fa-regular fa-envelope' },
     { id: 'telegram', label: 'Telegram', icon: 'fa-brands fa-telegram' },
-    { id: 'comment', label: '评论设置', icon: 'fa-regular fa-comments' },
-    { id: 'media', label: '存储设置', icon: 'fa-regular fa-database' },
-    { id: 'image', label: '图片处理', icon: 'fa-regular fa-image' },
-    { id: 'update', label: '系统更新', icon: 'fa-solid fa-cloud-arrow-down' },
+    { id: 'comment', label: t('admin.settings.tabs.comment', '评论设置'), icon: 'fa-regular fa-comments' },
+    { id: 'media', label: t('admin.settings.tabs.media', '存储设置'), icon: 'fa-regular fa-database' },
+    { id: 'image', label: t('admin.settings.tabs.image', '图片处理'), icon: 'fa-regular fa-image' },
+    { id: 'update', label: t('admin.settings.tabs.update', '系统更新'), icon: 'fa-solid fa-cloud-arrow-down' },
   ];
 
   if (loading) {
@@ -443,7 +497,7 @@ export default function SettingsPage() {
             <animateTransform attributeName="transform" type="rotate" dur="0.75s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
           </path>
         </svg>
-        <p className="text-dim" style={{ fontSize: '13px' }}>加载中...</p>
+        <p className="text-dim" style={{ fontSize: '13px' }}>{t('common.loading', '加载中...')}</p>
       </div>
     );
   }
@@ -478,38 +532,44 @@ export default function SettingsPage() {
           {/* ==================== 常规设置 ==================== */}
           {activeTab === 'general' && (
             <>
-              <FormSectionC title="站点基础信息" icon="fa-regular fa-circle-info">
-                <FormRowInputC label="站点名称" register={register('site_title')} placeholder="我的博客" />
+              <FormSectionC title={t('admin.settings.general.section', '站点基础信息')} icon="fa-regular fa-circle-info">
+                <FormRowInputC label={t('admin.settings.general.siteTitle', '站点名称')} register={register('site_title')} placeholder={t('admin.settings.general.siteTitlePlaceholder', '我的博客')} />
                 <FormRowRadioC
-                  label="标题显示方式"
-                  hint="Header 处显示文字、Logo 或两者；仅 Utterlog 和 Flux 主题响应"
+                  label={t('admin.settings.general.brandMode', '标题显示方式')}
+                  hint={t('admin.settings.general.brandModeHint', 'Header 处显示文字、Logo 或两者；仅 Utterlog 和 Flux 主题响应')}
                   register={register('site_brand_mode')}
                   options={[
-                    { value: 'text', label: '文字' },
-                    { value: 'text_logo', label: '文字 + Logo' },
+                    { value: 'text', label: t('admin.settings.general.brandText', '文字') },
+                    { value: 'text_logo', label: t('admin.settings.general.brandTextLogo', '文字 + Logo') },
                     { value: 'logo', label: 'Logo' },
                   ]}
                 />
-                <FormRowInputC label="副标题" register={register('site_subtitle')} placeholder="一句话 Slogan" />
+                <FormRowInputC label={t('admin.settings.general.subtitle', '副标题')} register={register('site_subtitle')} placeholder={t('admin.settings.general.subtitlePlaceholder', '一句话 Slogan')} />
                 <FormRowSelectC
-                  label="站点语言"
-                  hint="读取内置语言包和安装目录 locales/*.json；影响前台 lang、RSS 和后续界面翻译"
+                  label={t('admin.settings.general.siteLanguage', '站点语言')}
+                  hint={t('admin.settings.general.siteLanguageHint', '读取内置语言包和安装目录 locales/*.json；影响前台 lang、RSS 和后台界面翻译')}
                   register={register('site_locale')}
                   options={locales.map((loc) => ({
                     value: loc.locale,
-                    label: `${loc.native_name || loc.name || loc.locale} (${loc.locale})${loc.source === 'external' ? ' · 自定义' : ''}`,
+                    label: `${loc.native_name || loc.name || loc.locale} (${loc.locale})${loc.source === 'external' ? ` · ${t('admin.settings.general.customLanguagePack', '自定义')}` : ''}`,
                   }))}
                 />
-                <FormRowInputC label="站点网址" register={register('site_url')} placeholder="https://yourdomain.com" />
-                <FormRowInputC label="管理员邮箱" type="email" register={register('admin_email')} placeholder="admin@yourdomain.com" hint="接收系统升级、安全通知等消息" />
-                <FormRowInputC label="建站时间" type="date" register={register('site_since')} hint="留空则从第一篇文章算起。站点描述和关键词请到 SEO 与 AI tab 设置。" last />
+                <FormRowSelectC
+                  label={t('admin.settings.general.siteTimezone', '站点时区')}
+                  hint={t('admin.settings.general.siteTimezoneHint', '全站发布时间、归档和统计按此时区显示；留空自动使用本地时区。当前生效：{timezone}', { timezone: effectiveSiteTimezone || browserTimeZone() || 'UTC' })}
+                  register={register('site_timezone')}
+                  options={buildTimeZoneOptions(currentSiteTimezone, t)}
+                />
+                <FormRowInputC label={t('admin.settings.general.siteUrl', '站点网址')} register={register('site_url')} placeholder="https://yourdomain.com" />
+                <FormRowInputC label={t('admin.settings.general.adminEmail', '管理员邮箱')} type="email" register={register('admin_email')} placeholder="admin@yourdomain.com" hint={t('admin.settings.general.adminEmailHint', '接收系统升级、安全通知等消息')} />
+                <FormRowInputC label={t('admin.settings.general.siteSince', '建站时间')} type="date" register={register('site_since')} hint={t('admin.settings.general.siteSinceHint', '留空则从第一篇文章算起。站点描述和关键词请到 SEO 与 AI tab 设置。')} last />
               </FormSectionC>
 
-              <FormSectionC title="Logo & Favicon" icon="fa-regular fa-image" footerHint="上传后自动保存为固定地址（logo.格式 / dark-logo.格式 / favicon.格式），不压缩不转换。">
+              <FormSectionC title={t('admin.settings.branding.section', 'Logo & Favicon')} icon="fa-regular fa-image" footerHint={t('admin.settings.branding.footer', '上传后自动保存为固定地址（logo.格式 / dark-logo.格式 / favicon.格式），不压缩不转换。')}>
                 <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   {([
-                    { label: '网站 Logo', field: 'site_logo', purpose: 'logo' as const, placeholder: 'https://...' },
-                    { label: '深色模式 Logo', field: 'site_logo_dark', purpose: 'dark-logo' as const, placeholder: '留空沿用默认' },
+                    { label: t('admin.settings.branding.siteLogo', '网站 Logo'), field: 'site_logo', purpose: 'logo' as const, placeholder: 'https://...' },
+                    { label: t('admin.settings.branding.darkLogo', '深色模式 Logo'), field: 'site_logo_dark', purpose: 'dark-logo' as const, placeholder: t('admin.settings.branding.darkLogoPlaceholder', '留空沿用默认') },
                     { label: 'Favicon', field: 'site_favicon', purpose: 'favicon' as const, placeholder: 'https://...' },
                   ]).map(item => {
                     const val = watch(item.field);
@@ -531,7 +591,7 @@ export default function SettingsPage() {
                           <input className="input text-sm" style={{ flex: 1, fontSize: '12px' }} placeholder={item.placeholder} {...register(item.field)} />
                           <label
                             className="btn btn-secondary"
-                            title="上传图片"
+                            title={t('admin.common.uploadImage', '上传图片')}
                             style={{ cursor: 'pointer', flexShrink: 0, width: 40, minWidth: 40, height: 40, minHeight: 40, padding: 0 }}
                           >
                             <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />
@@ -545,34 +605,34 @@ export default function SettingsPage() {
               </FormSectionC>
 
               <FormSectionC
-                title="ICP / 公安备案"
+                title={t('admin.settings.beian.section', 'ICP / 公安备案')}
                 icon="fa-regular fa-shield-halved"
-                footerHint="公安备案链接自动从备案号提取编号生成；ICP 备案链接固定指向 beian.miit.gov.cn。"
+                footerHint={t('admin.settings.beian.footer', '公安备案链接自动从备案号提取编号生成；ICP 备案链接固定指向 beian.miit.gov.cn。')}
               >
                 <FormRowInputC
-                  label="公安联网备案号"
+                  label={t('admin.settings.beian.gongan', '公安联网备案号')}
                   register={register('beian_gongan')}
-                  placeholder="鲁公网安备00000000000000号"
+                  placeholder={t('admin.settings.beian.gonganPlaceholder', '鲁公网安备00000000000000号')}
                 />
                 <FormRowInputC
-                  label="ICP 备案号"
+                  label={t('admin.settings.beian.icp', 'ICP 备案号')}
                   register={register('beian_icp')}
-                  placeholder="鲁ICP备00000000号"
+                  placeholder={t('admin.settings.beian.icpPlaceholder', '鲁ICP备00000000号')}
                   last
                 />
               </FormSectionC>
 
               <FormSectionC
-                title="代码注入"
+                title={t('admin.settings.codeInjection.section', '代码注入')}
                 icon="fa-regular fa-code"
-                footerHint="插入到页面 <head> 标签内，用于接入第三方统计 / 监控 / 验证脚本。请只填可信来源的代码。"
+                footerHint={t('admin.settings.codeInjection.footer', '插入到页面 <head> 标签内，用于接入第三方统计 / 监控 / 验证脚本。请只填可信来源的代码。')}
               >
                 <FormRowTextareaC
-                  label="自定义 <head> 代码"
+                  label={t('admin.settings.codeInjection.headCode', '自定义 <head> 代码')}
                   rows={6}
                   register={register('custom_head_code')}
-                  placeholder={'<!-- Google Analytics / 百度统计 / Clarity 等 -->\n<script async src="https://..."></script>'}
-                  hint="支持任意 <script> / <meta> / <link> 标签。保存后立即生效。"
+                  placeholder={t('admin.settings.codeInjection.headCodePlaceholder', '<!-- Google Analytics / 百度统计 / Clarity 等 -->\n<script async src="https://..."></script>')}
+                  hint={t('admin.settings.codeInjection.headCodeHint', '支持任意 <script> / <meta> / <link> 标签。保存后立即生效。')}
                   last
                 />
               </FormSectionC>
@@ -583,69 +643,69 @@ export default function SettingsPage() {
           {activeTab === 'seo' && (
             <>
               <FormSectionC
-                title="AI 抓取策略"
+                title={t('admin.settings.seo.aiCrawl.section', 'AI 抓取策略')}
                 icon="fa-regular fa-robot"
-                footerHint="生成的 /robots.txt 会按这些选项设置 GPTBot / ClaudeBot / CCBot / PerplexityBot / Google-Extended 的 Allow / Disallow。"
+                footerHint={t('admin.settings.seo.aiCrawl.footer', '生成的 /robots.txt 会按这些选项设置 GPTBot / ClaudeBot / CCBot / PerplexityBot / Google-Extended 的 Allow / Disallow。')}
               >
                 <FormRowToggleC
-                  label="允许 AI 爬虫读取站点"
-                  hint="关闭后 robots.txt 会拒绝所有 AI 训练爬虫；普通搜索引擎不受影响。"
+                  label={t('admin.settings.seo.aiCrawl.allow', '允许 AI 爬虫读取站点')}
+                  hint={t('admin.settings.seo.aiCrawl.allowHint', '关闭后 robots.txt 会拒绝所有 AI 训练爬虫；普通搜索引擎不受影响。')}
                   register={register('ai_crawl_allowed')}
                 />
                 <FormRowToggleC
-                  label="生成 /llms.txt 站点索引"
-                  hint="LLM 友好的 markdown 索引（标题 + 描述 + 文章列表），是 llmstxt.org 提议的新规范。"
+                  label={t('admin.settings.seo.aiCrawl.llmsTxt', '生成 /llms.txt 站点索引')}
+                  hint={t('admin.settings.seo.aiCrawl.llmsTxtHint', 'LLM 友好的 markdown 索引（标题 + 描述 + 文章列表），是 llmstxt.org 提议的新规范。')}
                   register={register('llms_txt_enabled')}
                 />
                 <FormRowToggleC
-                  label="生成 /llms-full.txt 全文版"
-                  hint="包含每篇文章 markdown 全文，体积更大；建议同时开启 ai_crawl_allowed 才有意义。"
+                  label={t('admin.settings.seo.aiCrawl.llmsFull', '生成 /llms-full.txt 全文版')}
+                  hint={t('admin.settings.seo.aiCrawl.llmsFullHint', '包含每篇文章 markdown 全文，体积更大；建议同时开启 ai_crawl_allowed 才有意义。')}
                   register={register('llms_full_enabled')}
                   last
                 />
               </FormSectionC>
 
               <FormSectionC
-                title="默认 SEO 元信息"
+                title={t('admin.settings.seo.meta.section', '默认 SEO 元信息')}
                 icon="fa-regular fa-tag"
-                footerHint="单篇文章未自定时使用这些值；文章自带的 cover_url / excerpt 会优先生效。"
+                footerHint={t('admin.settings.seo.meta.footer', '单篇文章未自定时使用这些值；文章自带的 cover_url / excerpt 会优先生效。')}
               >
                 <FormRowTextareaC
-                  label="默认描述"
+                  label={t('admin.settings.seo.meta.description', '默认描述')}
                   rows={2}
                   register={register('seo_default_description')}
-                  placeholder="一句话描述站点 — 用作 meta description / og:description 兜底"
+                  placeholder={t('admin.settings.seo.meta.descriptionPlaceholder', '一句话描述站点 - 用作 meta description / og:description 兜底')}
                 />
                 <FormRowInputC
-                  label="默认关键词"
+                  label={t('admin.settings.seo.meta.keywords', '默认关键词')}
                   register={register('seo_default_keywords')}
-                  placeholder="博客,技术,生活"
+                  placeholder={t('admin.settings.seo.meta.keywordsPlaceholder', '博客,技术,生活')}
                 />
                 <FormRowInputC
-                  label="默认分享图 URL"
+                  label={t('admin.settings.seo.meta.defaultImage', '默认分享图 URL')}
                   register={register('seo_default_image')}
                   placeholder="https://yourdomain.com/og-image.jpg"
-                  hint="建议 1200×630。X / Facebook / 微信卡片图兜底。"
+                  hint={t('admin.settings.seo.meta.defaultImageHint', '建议 1200x630。X / Facebook / 微信卡片图兜底。')}
                   last
                 />
               </FormSectionC>
 
               <FormSectionC
-                title="X (Twitter) 卡片"
+                title={t('admin.settings.seo.twitter.section', 'X (Twitter) 卡片')}
                 icon="fa-brands fa-x-twitter"
               >
                 <FormRowInputC
-                  label="X 用户名"
+                  label={t('admin.settings.seo.twitter.handle', 'X 用户名')}
                   register={register('seo_twitter_handle')}
                   placeholder="@yourhandle"
-                  hint="带 @ 前缀；用于 twitter:site 标签。"
+                  hint={t('admin.settings.seo.twitter.handleHint', '带 @ 前缀；用于 twitter:site 标签。')}
                 />
                 <FormRowSelectC
-                  label="卡片样式"
+                  label={t('admin.settings.seo.twitter.card', '卡片样式')}
                   register={register('seo_twitter_card')}
                   options={[
-                    { value: 'summary_large_image', label: '大图卡片 — summary_large_image (推荐)' },
-                    { value: 'summary', label: '小图卡片 — summary' },
+                    { value: 'summary_large_image', label: t('admin.settings.seo.twitter.largeCard', '大图卡片 - summary_large_image (推荐)') },
+                    { value: 'summary', label: t('admin.settings.seo.twitter.summaryCard', '小图卡片 - summary') },
                   ]}
                   last
                 />
@@ -657,22 +717,22 @@ export default function SettingsPage() {
           {activeTab === 'email' && (
             <>
               <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>发件人信息</h3>
+                <h3 style={sectionTitleStyle}>{t('admin.settings.email.sender.section', '发件人信息')}</h3>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                  <Input label="发件人邮箱" placeholder="noreply@yourdomain.com" {...register('email_from')} />
-                  <Input label="发件人名称" placeholder="Utterlog" {...register('email_from_name')} />
+                  <Input label={t('admin.settings.email.sender.email', '发件人邮箱')} placeholder="noreply@yourdomain.com" {...register('email_from')} />
+                  <Input label={t('admin.settings.email.sender.name', '发件人名称')} placeholder="Utterlog" {...register('email_from_name')} />
                 </div>
               </div>
 
               <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>邮件服务商</h3>
+                <h3 style={sectionTitleStyle}>{t('admin.settings.email.provider.section', '邮件服务商')}</h3>
                 <div style={{ marginBottom: '24px' }}>
-                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>选择服务商</label>
+                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>{t('admin.settings.email.provider.choose', '选择服务商')}</label>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     {[
-                      { value: 'smtp', label: 'SMTP', icon: 'fa-regular fa-envelope', desc: '通用 SMTP 协议' },
-                      { value: 'resend', label: 'Resend', icon: 'fa-regular fa-paper-plane', desc: '免费 3000 封/月' },
-                      { value: 'sendflare', label: 'Sendflare', icon: 'fa-solid fa-dove', desc: '免费 5000 封/月' },
+                      { value: 'smtp', label: 'SMTP', icon: 'fa-regular fa-envelope', desc: t('admin.settings.email.provider.smtpDesc', '通用 SMTP 协议') },
+                      { value: 'resend', label: 'Resend', icon: 'fa-regular fa-paper-plane', desc: t('admin.settings.email.provider.resendDesc', '免费 3000 封/月') },
+                      { value: 'sendflare', label: 'Sendflare', icon: 'fa-solid fa-dove', desc: t('admin.settings.email.provider.sendflareDesc', '免费 5000 封/月') },
                     ].map(d => (
                       <label key={d.value} style={{
                         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
@@ -695,38 +755,38 @@ export default function SettingsPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <i className="fa-regular fa-envelope" style={{ fontSize: '15px', color: 'var(--color-primary)' }} />
-                        <h4 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>SMTP 配置</h4>
+                        <h4 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>{t('admin.settings.email.smtp.section', 'SMTP 配置')}</h4>
                       </div>
                       <a href="https://support.google.com/a/answer/176600" target="_blank" rel="noopener noreferrer" className="text-dim" style={{ fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <i className="fa-regular fa-arrow-up-right-from-square" style={{ fontSize: '10px' }} /> Gmail SMTP 指南
+                        <i className="fa-regular fa-arrow-up-right-from-square" style={{ fontSize: '10px' }} /> {t('admin.settings.email.smtp.gmailGuide', 'Gmail SMTP 指南')}
                       </a>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <div>
-                        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>SMTP 主机</label>
+                        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.settings.email.smtp.host', 'SMTP 主机')}</label>
                         <input className="input text-sm" {...register('smtp_host')} placeholder="smtp.gmail.com" />
                       </div>
                       <div>
-                        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>端口</label>
+                        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.settings.email.smtp.port', '端口')}</label>
                         <input className="input text-sm" {...register('smtp_port')} placeholder="587" />
                       </div>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <div>
-                        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>用户名</label>
+                        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.settings.email.smtp.username', '用户名')}</label>
                         <input className="input text-sm" {...register('smtp_user')} />
                       </div>
                       <div>
-                        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>密码</label>
+                        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.settings.email.smtp.password', '密码')}</label>
                         <input className="input text-sm" type="password" {...register('smtp_pass')} />
                       </div>
                     </div>
                     <div>
-                      <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>加密方式</label>
+                      <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.settings.email.smtp.encryption', '加密方式')}</label>
                       <select className="input text-sm" {...register('smtp_encryption')} style={{ maxWidth: '200px' }}>
                         <option value="tls">TLS</option>
                         <option value="ssl">SSL</option>
-                        <option value="none">无加密</option>
+                        <option value="none">{t('admin.settings.email.smtp.noEncryption', '无加密')}</option>
                       </select>
                     </div>
                   </div>
@@ -737,7 +797,7 @@ export default function SettingsPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <i className="fa-regular fa-paper-plane" style={{ fontSize: '15px', color: 'var(--color-primary)' }} />
-                        <h4 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>Resend 配置</h4>
+                        <h4 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>{t('admin.settings.email.resend.section', 'Resend 配置')}</h4>
                       </div>
                       <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="text-dim" style={{ fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         <i className="fa-regular fa-arrow-up-right-from-square" style={{ fontSize: '10px' }} /> resend.com
@@ -746,7 +806,7 @@ export default function SettingsPage() {
                     <div>
                       <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>API Key</label>
                       <input className="input text-sm" type="password" {...register('resend_api_key')} placeholder="re_..." />
-                      <p className="text-xs text-dim" style={{ marginTop: '6px' }}>在 resend.com Dashboard 的 API Keys 中创建</p>
+                      <p className="text-xs text-dim" style={{ marginTop: '6px' }}>{t('admin.settings.email.resend.apiKeyHint', '在 resend.com Dashboard 的 API Keys 中创建')}</p>
                     </div>
                   </div>
                 )}
@@ -756,7 +816,7 @@ export default function SettingsPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <i className="fa-solid fa-dove" style={{ fontSize: '15px', color: 'var(--color-primary)' }} />
-                        <h4 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>Sendflare 配置</h4>
+                        <h4 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>{t('admin.settings.email.sendflare.section', 'Sendflare 配置')}</h4>
                       </div>
                       <a href="https://sendflare.com?affiliateCode=98ee3f7h4nqf" target="_blank" rel="noopener noreferrer" className="text-dim" style={{ fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         <i className="fa-regular fa-arrow-up-right-from-square" style={{ fontSize: '10px' }} /> sendflare.com
@@ -765,19 +825,19 @@ export default function SettingsPage() {
                     <div>
                       <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>API Key</label>
                       <input className="input text-sm" type="password" {...register('sendflare_api_key')} placeholder="sf_..." />
-                      <p className="text-xs text-dim" style={{ marginTop: '6px' }}>在 sendflare.com Dashboard 的 API Keys 中创建</p>
+                      <p className="text-xs text-dim" style={{ marginTop: '6px' }}>{t('admin.settings.email.sendflare.apiKeyHint', '在 sendflare.com Dashboard 的 API Keys 中创建')}</p>
                     </div>
                   </div>
                 )}
               </div>
 
               <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>测试邮件</h3>
-                <p className="text-xs text-dim" style={{ marginTop: '-16px', marginBottom: '16px' }}>保存设置后发送测试邮件，验证邮件服务是否正常</p>
+                <h3 style={sectionTitleStyle}>{t('admin.settings.email.test.section', '测试邮件')}</h3>
+                <p className="text-xs text-dim" style={{ marginTop: '-16px', marginBottom: '16px' }}>{t('admin.settings.email.test.description', '保存设置后发送测试邮件，验证邮件服务是否正常')}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <input
                     className="input text-sm"
-                    placeholder="收件邮箱（留空发送到管理员邮箱）"
+                    placeholder={t('admin.settings.email.test.recipientPlaceholder', '收件邮箱（留空发送到管理员邮箱）')}
                     style={{ maxWidth: '320px' }}
                     id="test-email-input"
                   />
@@ -789,13 +849,13 @@ export default function SettingsPage() {
                       const input = document.getElementById('test-email-input') as HTMLInputElement;
                       try {
                         const r: any = await api.post('/options/test-email', { to: input?.value || '' });
-                        toast.success(r.data?.message || '测试邮件已发送');
+                        toast.success(r.data?.message || t('admin.settings.email.test.sent', '测试邮件已发送'));
                       } catch (e: any) {
-                        toast.error(e?.response?.data?.error?.message || '发送失败');
+                        toast.error(e?.response?.data?.error?.message || t('admin.common.sendFailed', '发送失败'));
                       }
                     }}
                   >
-                    <i className="fa-regular fa-paper-plane" style={{ fontSize: '13px' }} /> 发送
+                    <i className="fa-regular fa-paper-plane" style={{ fontSize: '13px' }} /> {t('admin.common.send', '发送')}
                   </button>
                 </div>
               </div>
@@ -806,18 +866,18 @@ export default function SettingsPage() {
           {activeTab === 'telegram' && (
             <>
               <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>Bot 连接</h3>
+                <h3 style={sectionTitleStyle}>{t('admin.settings.telegram.connection.section', 'Bot 连接')}</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div>
                     <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>Bot Token</label>
-                    <input className="input text-sm" type="password" placeholder="从 @BotFather 获取" {...register('telegram_bot_token')} />
-                    <p className="text-xs text-dim" style={{ marginTop: '4px' }}>在 Telegram 中搜索 <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)' }}>@BotFather</a>，发送 /newbot 创建</p>
+                    <input className="input text-sm" type="password" placeholder={t('admin.settings.telegram.botTokenPlaceholder', '从 @BotFather 获取')} {...register('telegram_bot_token')} />
+                    <p className="text-xs text-dim" style={{ marginTop: '4px' }}>{t('admin.settings.telegram.botFatherPrefix', '在 Telegram 中搜索')} <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)' }}>@BotFather</a>{t('admin.settings.telegram.botFatherSuffix', '，发送 /newbot 创建')}</p>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
                       <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>Chat ID</label>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <input className="input text-sm" placeholder="你的用户/群组 ID" style={{ flex: 1 }} {...register('telegram_chat_id')} />
+                        <input className="input text-sm" placeholder={t('admin.settings.telegram.chatIdPlaceholder', '你的用户/群组 ID')} style={{ flex: 1 }} {...register('telegram_chat_id')} />
                         <button
                           type="button"
                           className="btn btn-secondary text-sm"
@@ -830,13 +890,13 @@ export default function SettingsPage() {
                               const vals = getValues();
                               const r: any = await api.post('/telegram/get-chat-id', { bot_token: vals.telegram_bot_token });
                               setTgChats(r.data?.chats || []);
-                              if (!r.data?.chats?.length) toast(r.data?.hint || '未找到聊天记录，请先向 Bot 发送一条消息', { icon: 'ℹ️' });
-                            } catch (e: any) { toast.error(e?.response?.data?.error?.message || '获取失败'); }
+                              if (!r.data?.chats?.length) toast(r.data?.hint || t('admin.settings.telegram.noChats', '未找到聊天记录，请先向 Bot 发送一条消息'), { icon: 'ℹ️' });
+                            } catch (e: any) { toast.error(e?.response?.data?.error?.message || t('admin.common.fetchFailed', '获取失败')); }
                             finally { setFetchingChatId(false); }
                           }}
                         >
                           {fetchingChatId ? <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '12px' }} /> : <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '12px' }} />}
-                          获取
+                          {t('admin.common.fetch', '获取')}
                         </button>
                       </div>
                       {tgChats.length > 0 && (
@@ -850,7 +910,7 @@ export default function SettingsPage() {
                               className="hover-bg"
                             >
                               <i className={chat.type === 'channel' ? 'fa-regular fa-bullhorn' : chat.type === 'group' || chat.type === 'supergroup' ? 'fa-regular fa-users' : 'fa-regular fa-user'} style={{ fontSize: '12px', color: 'var(--color-text-sub)', width: '14px' }} />
-                              <span style={{ flex: 1, color: 'var(--color-text)' }}>{chat.name || '(未知)'}</span>
+                              <span style={{ flex: 1, color: 'var(--color-text)' }}>{chat.name || t('admin.common.unknownWrapped', '(未知)')}</span>
                               <span style={{ color: 'var(--color-text-dim)', fontFamily: 'monospace' }}>{chat.id}</span>
                             </button>
                           ))}
@@ -859,7 +919,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>Webhook Secret</label>
-                      <input className="input text-sm" type="password" placeholder="自定义密钥（可选）" {...register('telegram_webhook_secret')} />
+                      <input className="input text-sm" type="password" placeholder={t('admin.settings.telegram.webhookSecretPlaceholder', '自定义密钥（可选）')} {...register('telegram_webhook_secret')} />
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '4px' }}>
@@ -874,11 +934,11 @@ export default function SettingsPage() {
                             bot_token: vals.telegram_bot_token,
                             chat_id: vals.telegram_chat_id,
                           });
-                          toast.success(r.data?.message || '连接成功');
-                        } catch (e: any) { toast.error(e?.response?.data?.error?.message || '连接失败'); }
+                          toast.success(r.data?.message || t('admin.common.connectionSuccess', '连接成功'));
+                        } catch (e: any) { toast.error(e?.response?.data?.error?.message || t('admin.common.connectionFailed', '连接失败')); }
                       }}
                     >
-                      <i className="fa-regular fa-plug" style={{ fontSize: '13px' }} /> 测试连接
+                      <i className="fa-regular fa-plug" style={{ fontSize: '13px' }} /> {t('admin.common.testConnection', '测试连接')}
                     </button>
                     <button
                       type="button"
@@ -887,37 +947,37 @@ export default function SettingsPage() {
                       onClick={async () => {
                         try {
                           const r: any = await api.post('/telegram/setup-webhook');
-                          toast.success(r.data?.message || 'Webhook 设置成功');
-                        } catch (e: any) { toast.error(e?.response?.data?.error?.message || 'Webhook 设置失败'); }
+                          toast.success(r.data?.message || t('admin.settings.telegram.webhookSuccess', 'Webhook 设置成功'));
+                        } catch (e: any) { toast.error(e?.response?.data?.error?.message || t('admin.settings.telegram.webhookFailed', 'Webhook 设置失败')); }
                       }}
                     >
-                      <i className="fa-regular fa-link" style={{ fontSize: '13px' }} /> 设置 Webhook
+                      <i className="fa-regular fa-link" style={{ fontSize: '13px' }} /> {t('admin.settings.telegram.setupWebhook', '设置 Webhook')}
                     </button>
                   </div>
                   <p className="text-xs text-dim" style={{ padding: '10px 12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', lineHeight: 1.8 }}>
-                    <strong>Webhook</strong> 是 Telegram 向你的服务器推送消息的回调地址。设置后，Bot 收到的消息会实时转发到你的博客后端，用于评论审批、回复等功能。需要先保存 Bot Token，再点「设置 Webhook」。
+                    <strong>Webhook</strong> {t('admin.settings.telegram.webhookDescription', '是 Telegram 向你的服务器推送消息的回调地址。设置后，Bot 收到的消息会实时转发到你的博客后端，用于评论审批、回复等功能。需要先保存 Bot Token，再点「设置 Webhook」。')}
                   </p>
                 </div>
               </div>
 
-              <FormSectionC title="通知功能" icon="fa-regular fa-bell">
-                <FormRowToggleC label="新评论通知" register={register('tg_notify_comment')} />
-                <FormRowToggleC label="新关注通知" register={register('tg_notify_follow')} />
-                <FormRowToggleC label="文章发布通知" register={register('tg_notify_publish')} />
-                <FormRowToggleC label="每日数据报告" register={register('tg_daily_report')} last />
+              <FormSectionC title={t('admin.settings.telegram.notifications.section', '通知功能')} icon="fa-regular fa-bell">
+                <FormRowToggleC label={t('admin.settings.telegram.notifications.newComment', '新评论通知')} register={register('tg_notify_comment')} />
+                <FormRowToggleC label={t('admin.settings.telegram.notifications.newFollow', '新关注通知')} register={register('tg_notify_follow')} />
+                <FormRowToggleC label={t('admin.settings.telegram.notifications.postPublished', '文章发布通知')} register={register('tg_notify_publish')} />
+                <FormRowToggleC label={t('admin.settings.telegram.notifications.dailyReport', '每日数据报告')} register={register('tg_daily_report')} last />
               </FormSectionC>
 
-              <FormSectionC title="管理功能" icon="fa-regular fa-user-shield">
-                <FormRowToggleC label="评论审批" hint="回复 /approve 通过" register={register('tg_comment_approve')} />
-                <FormRowToggleC label="回复评论" hint="直接回复消息即可" register={register('tg_comment_reply')} />
-                <FormRowToggleC label="发布说说" hint="发送文字/图片自动发布" register={register('tg_publish_moment')} />
-                <FormRowToggleC label="AI 聊天" hint="/ai 开头消息对接 AI 助手" register={register('tg_ai_chat')} last />
+              <FormSectionC title={t('admin.settings.telegram.management.section', '管理功能')} icon="fa-regular fa-user-shield">
+                <FormRowToggleC label={t('admin.settings.telegram.management.commentApproval', '评论审批')} hint={t('admin.settings.telegram.management.commentApprovalHint', '回复 /approve 通过')} register={register('tg_comment_approve')} />
+                <FormRowToggleC label={t('admin.settings.telegram.management.replyComments', '回复评论')} hint={t('admin.settings.telegram.management.replyCommentsHint', '直接回复消息即可')} register={register('tg_comment_reply')} />
+                <FormRowToggleC label={t('admin.settings.telegram.management.publishMoment', '发布说说')} hint={t('admin.settings.telegram.management.publishMomentHint', '发送文字/图片自动发布')} register={register('tg_publish_moment')} />
+                <FormRowToggleC label={t('admin.settings.telegram.management.aiChat', 'AI 聊天')} hint={t('admin.settings.telegram.management.aiChatHint', '/ai 开头消息对接 AI 助手')} register={register('tg_ai_chat')} last />
               </FormSectionC>
 
-              <FormSectionC title="图片上传" icon="fa-regular fa-image">
+              <FormSectionC title={t('admin.settings.telegram.imageUpload.section', '图片上传')} icon="fa-regular fa-image">
                 <FormRowToggleC
-                  label="自动上传图片到媒体库"
-                  hint="通过 Telegram 发送图片时，自动上传到媒体库"
+                  label={t('admin.settings.telegram.imageUpload.autoUpload', '自动上传图片到媒体库')}
+                  hint={t('admin.settings.telegram.imageUpload.autoUploadHint', '通过 Telegram 发送图片时，自动上传到媒体库')}
                   register={register('tg_auto_upload_image')}
                   last
                 />
@@ -928,26 +988,26 @@ export default function SettingsPage() {
           {/* ==================== 评论设置 ==================== */}
           {activeTab === 'comment' && (
             <>
-              <FormSectionC title="评论开关" icon="fa-regular fa-comments">
-                <FormRowToggleC label="允许评论" register={register('allow_comments')} />
-                <FormRowToggleC label="评论需要审核" register={register('comment_moderation')} />
+              <FormSectionC title={t('admin.settings.comment.switches.section', '评论开关')} icon="fa-regular fa-comments">
+                <FormRowToggleC label={t('admin.settings.comment.switches.allowComments', '允许评论')} register={register('allow_comments')} />
+                <FormRowToggleC label={t('admin.settings.comment.switches.requireModeration', '评论需要审核')} register={register('comment_moderation')} />
                 <FormRowToggleC
-                  label="信任历史访客"
-                  hint="评论者邮箱或浏览器指纹之前有过通过的评论，自动通过审核"
+                  label={t('admin.settings.comment.switches.trustReturning', '信任历史访客')}
+                  hint={t('admin.settings.comment.switches.trustReturningHint', '评论者邮箱或浏览器指纹之前有过通过的评论，自动通过审核')}
                   register={register('comment_trust_returning')}
                 />
-                <FormRowToggleC label="评论需要填写邮箱" register={register('comment_require_email')} />
-                <FormRowToggleC label="新评论邮件通知管理员" register={register('comment_notify_admin')} last />
+                <FormRowToggleC label={t('admin.settings.comment.switches.requireEmail', '评论需要填写邮箱')} register={register('comment_require_email')} />
+                <FormRowToggleC label={t('admin.settings.comment.switches.notifyAdmin', '新评论邮件通知管理员')} register={register('comment_notify_admin')} last />
               </FormSectionC>
 
-              <FormSectionC title="排序" icon="fa-regular fa-arrow-down-wide-short" footerHint="访客在评论区可以自行切换并存到本地，这里设的是没切换过时的初始顺序。">
+              <FormSectionC title={t('admin.settings.comment.order.section', '排序')} icon="fa-regular fa-arrow-down-wide-short" footerHint={t('admin.settings.comment.order.footer', '访客在评论区可以自行切换并存到本地，这里设的是没切换过时的初始顺序。')}>
                 <FormRowRadioC
-                  label="默认排序"
-                  hint="访客首次进入评论区的初始顺序"
+                  label={t('admin.settings.comment.order.defaultOrder', '默认排序')}
+                  hint={t('admin.settings.comment.order.defaultOrderHint', '访客首次进入评论区的初始顺序')}
                   register={register('comment_order')}
                   options={[
-                    { value: 'newest', label: '最新在前' },
-                    { value: 'oldest', label: '最早在前' },
+                    { value: 'newest', label: t('admin.settings.comment.order.newestFirst', '最新在前') },
+                    { value: 'oldest', label: t('admin.settings.comment.order.oldestFirst', '最早在前') },
                   ]}
                   last
                 />
@@ -955,14 +1015,14 @@ export default function SettingsPage() {
 
               {/* 人机验证：保留自定义 3 列图标 radio 卡片（非表单式 UI），
                   只把子输入转成 FormRowInputC 保持风格一致 */}
-              <FormSectionC title="人机验证" icon="fa-regular fa-shield-halved">
+              <FormSectionC title={t('admin.settings.comment.captcha.section', '人机验证')} icon="fa-regular fa-shield-halved">
                 <div style={{ padding: '14px 14px 10px', borderBottom: watch('comment_captcha_mode') === 'pow' ? '1px solid var(--color-divider)' : undefined }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)', marginBottom: 10 }}>验证方式</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)', marginBottom: 10 }}>{t('admin.settings.comment.captcha.method', '验证方式')}</div>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     {([
-                      { value: 'off', label: '关闭', desc: '不验证' },
-                      { value: 'pow', label: 'PoW 验证', desc: '点击计算' },
-                      { value: 'image', label: '图片验证码', desc: '输入字符' },
+                      { value: 'off', label: t('admin.common.off', '关闭'), desc: t('admin.settings.comment.captcha.offDesc', '不验证') },
+                      { value: 'pow', label: t('admin.settings.comment.captcha.pow', 'PoW 验证'), desc: t('admin.settings.comment.captcha.powDesc', '点击计算') },
+                      { value: 'image', label: t('admin.settings.comment.captcha.image', '图片验证码'), desc: t('admin.settings.comment.captcha.imageDesc', '输入字符') },
                     ] as const).map(opt => (
                       <label key={opt.value} style={{
                         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
@@ -980,8 +1040,8 @@ export default function SettingsPage() {
                 </div>
                 {watch('comment_captcha_mode') === 'pow' && (
                   <FormRowInputC
-                    label="验证难度"
-                    hint="1-6，越大越难"
+                    label={t('admin.settings.comment.captcha.difficulty', '验证难度')}
+                    hint={t('admin.settings.comment.captcha.difficultyHint', '1-6，越大越难')}
                     type="number"
                     register={register('comment_captcha_difficulty')}
                     last
@@ -992,21 +1052,21 @@ export default function SettingsPage() {
               {/* AI 评论审核 —— 复用全局 ai_providers，admin 可在「常规设置 →
                   AI → 用途路由」给 'comment-audit' purpose 单独绑 provider，
                   也可不绑自动 fallback 默认链。 */}
-              <FormSectionC title="AI 评论审核" icon="fa-regular fa-shield-check" footerHint="启用后访客评论先经 AI 判断是否合规，再走原有人机验证 / 信任路径。AI 审核失败按下方策略处理，提示词在最下方「自定义提示词」可改。">
-                <FormRowToggleC label="启用 AI 审核" register={register('ai_comment_audit_enabled')} />
+              <FormSectionC title={t('admin.settings.comment.aiAudit.section', 'AI 评论审核')} icon="fa-regular fa-shield-check" footerHint={t('admin.settings.comment.aiAudit.footer', '启用后访客评论先经 AI 判断是否合规，再走原有人机验证 / 信任路径。AI 审核失败按下方策略处理，提示词在最下方「自定义提示词」可改。')}>
+                <FormRowToggleC label={t('admin.settings.comment.aiAudit.enable', '启用 AI 审核')} register={register('ai_comment_audit_enabled')} />
                 <FormRowInputC
-                  label="审核阈值"
-                  hint="0-1 之间。AI 返回的 confidence ≥ 阈值才算通过，越高越严格"
+                  label={t('admin.settings.comment.aiAudit.threshold', '审核阈值')}
+                  hint={t('admin.settings.comment.aiAudit.thresholdHint', '0-1 之间。AI 返回的 confidence >= 阈值才算通过，越高越严格')}
                   type="number"
                   register={register('ai_comment_audit_threshold')}
                 />
                 <FormRowSelectC
-                  label="审核失败处理"
+                  label={t('admin.settings.comment.aiAudit.failAction', '审核失败处理')}
                   register={register('ai_comment_audit_fail_action')}
                   options={[
-                    { value: 'reject', label: '直接拦截（标记为垃圾）' },
-                    { value: 'pending', label: '转人工审核（待审核队列）' },
-                    { value: 'ignore', label: '忽略（继续按原状态处理）' },
+                    { value: 'reject', label: t('admin.settings.comment.aiAudit.reject', '直接拦截（标记为垃圾）') },
+                    { value: 'pending', label: t('admin.settings.comment.aiAudit.pending', '转人工审核（待审核队列）') },
+                    { value: 'ignore', label: t('admin.settings.comment.aiAudit.ignore', '忽略（继续按原状态处理）') },
                   ]}
                   last
                 />
@@ -1014,51 +1074,51 @@ export default function SettingsPage() {
 
               {/* AI 智能回复 —— 用 ai_purpose_comment-reply_provider 路由。
                   审核通过的评论异步生成回复入队列，按 mode 决定后续流程。 */}
-              <FormSectionC title="AI 智能回复" icon="fa-regular fa-robot" footerHint="审核通过的评论自动调 AI 生成回复。auto 模式直接发布，audit 模式入队列等管理员审核（推荐），suggest 仅显示建议不发布。提示词在最下方「自定义提示词」可改。">
-                <FormRowToggleC label="启用 AI 智能回复" register={register('ai_comment_reply_enabled')} />
+              <FormSectionC title={t('admin.settings.comment.aiReply.section', 'AI 智能回复')} icon="fa-regular fa-robot" footerHint={t('admin.settings.comment.aiReply.footer', '审核通过的评论自动调 AI 生成回复。auto 模式直接发布，audit 模式入队列等管理员审核（推荐），suggest 仅显示建议不发布。提示词在最下方「自定义提示词」可改。')}>
+                <FormRowToggleC label={t('admin.settings.comment.aiReply.enable', '启用 AI 智能回复')} register={register('ai_comment_reply_enabled')} />
                 <FormRowSelectC
-                  label="回复模式"
+                  label={t('admin.settings.comment.aiReply.mode', '回复模式')}
                   register={register('ai_comment_reply_mode')}
                   options={[
-                    { value: 'audit', label: '人工审核模式（推荐）—— 入队列等审核' },
-                    { value: 'auto', label: '全自动模式 —— 生成后直接发布' },
-                    { value: 'suggest', label: '仅建议模式 —— 入队列但不发布' },
+                    { value: 'audit', label: t('admin.settings.comment.aiReply.modeAudit', '人工审核模式（推荐）- 入队列等审核') },
+                    { value: 'auto', label: t('admin.settings.comment.aiReply.modeAuto', '全自动模式 - 生成后直接发布') },
+                    { value: 'suggest', label: t('admin.settings.comment.aiReply.modeSuggest', '仅建议模式 - 入队列但不发布') },
                   ]}
                 />
                 <FormRowInputC
-                  label="AI 标识文本"
-                  hint="附加在 AI 回复末尾的标识，留空则不显示。透明性原则建议保留"
+                  label={t('admin.settings.comment.aiReply.badgeText', 'AI 标识文本')}
+                  hint={t('admin.settings.comment.aiReply.badgeTextHint', '附加在 AI 回复末尾的标识，留空则不显示。透明性原则建议保留')}
                   register={register('ai_comment_reply_badge_text')}
                 />
                 <FormRowInputC
-                  label="每小时调用上限"
-                  hint="防止 API 费用失控，0 为不限制"
+                  label={t('admin.settings.comment.aiReply.rateLimit', '每小时调用上限')}
+                  hint={t('admin.settings.comment.aiReply.rateLimitHint', '防止 API 费用失控，0 为不限制')}
                   type="number"
                   register={register('ai_comment_reply_rate_limit')}
                 />
                 <FormRowInputC
-                  label="回复延迟（秒）"
-                  hint="审核通过后延迟多少秒再调 AI，0 为立即。建议 30-120 秒让回复更自然"
+                  label={t('admin.settings.comment.aiReply.delay', '回复延迟（秒）')}
+                  hint={t('admin.settings.comment.aiReply.delayHint', '审核通过后延迟多少秒再调 AI，0 为立即。建议 30-120 秒让回复更自然')}
                   type="number"
                   register={register('ai_comment_reply_delay')}
                 />
                 <FormRowToggleC
-                  label="上下文：包含文章标题"
-                  hint="把当前文章标题传给 AI，回复更贴题"
+                  label={t('admin.settings.comment.aiReply.contextTitle', '上下文：包含文章标题')}
+                  hint={t('admin.settings.comment.aiReply.contextTitleHint', '把当前文章标题传给 AI，回复更贴题')}
                   register={register('ai_comment_reply_context_title')}
                 />
                 <FormRowToggleC
-                  label="上下文：包含文章摘要（前 300 字）"
+                  label={t('admin.settings.comment.aiReply.contextExcerpt', '上下文：包含文章摘要（前 300 字）')}
                   register={register('ai_comment_reply_context_excerpt')}
                 />
                 <FormRowToggleC
-                  label="上下文：包含父级评论"
-                  hint="访客回复其他人评论时，把对方的评论传给 AI"
+                  label={t('admin.settings.comment.aiReply.contextParent', '上下文：包含父级评论')}
+                  hint={t('admin.settings.comment.aiReply.contextParentHint', '访客回复其他人评论时，把对方的评论传给 AI')}
                   register={register('ai_comment_reply_context_parent')}
                 />
                 <FormRowToggleC
-                  label="仅对文章首条评论回复"
-                  hint="开启后同一文章 AI 只回复一次"
+                  label={t('admin.settings.comment.aiReply.onlyFirst', '仅对文章首条评论回复')}
+                  hint={t('admin.settings.comment.aiReply.onlyFirstHint', '开启后同一文章 AI 只回复一次')}
                   register={register('ai_comment_reply_only_first')}
                   last
                 />
@@ -1070,7 +1130,7 @@ export default function SettingsPage() {
           {activeTab === 'media' && (
             <>
               <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>存储用量</h3>
+                <h3 style={sectionTitleStyle}>{t('admin.settings.media.usage.section', '存储用量')}</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {(() => {
                     const drivers = storageStats.drivers || {};
@@ -1100,12 +1160,12 @@ export default function SettingsPage() {
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <span className="text-sm text-sub" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <i className="fa-regular fa-hard-drive" style={{ fontSize: '12px' }} /> 本地存储
-                            <span className="text-dim" style={{ fontSize: '12px' }}>({local.files} 个文件)</span>
+                            <i className="fa-regular fa-hard-drive" style={{ fontSize: '12px' }} /> {t('admin.settings.media.localStorage', '本地存储')}
+                            <span className="text-dim" style={{ fontSize: '12px' }}>({t('admin.settings.media.fileCount', '{count} 个文件', { count: local.files })})</span>
                           </span>
                           <span className="text-xs text-sub font-mono">
                             {useDisk
-                              ? <>{formatSize(diskUsed)} / {formatSize(diskTotal)}<span className="text-dim" style={{ marginLeft: 6 }}>剩余 {formatSize(diskFree)}</span></>
+                              ? <>{formatSize(diskUsed)} / {formatSize(diskTotal)}<span className="text-dim" style={{ marginLeft: 6 }}>{t('admin.settings.media.remaining', '剩余 {size}', { size: formatSize(diskFree) })}</span></>
                               : formatSize(local.size)
                             }
                           </span>
@@ -1115,7 +1175,7 @@ export default function SettingsPage() {
                         </div>
                         {useDisk && (
                           <div className="text-dim" style={{ fontSize: '11px', marginTop: '4px' }}>
-                            其中 utterlog 上传文件 {formatSize(local.size)}（占主机磁盘 {((local.size / diskTotal) * 100).toFixed(1)}%）
+                            {t('admin.settings.media.uploadsDiskUsage', '其中 utterlog 上传文件 {size}（占主机磁盘 {percent}%）', { size: formatSize(local.size), percent: ((local.size / diskTotal) * 100).toFixed(1) })}
                           </div>
                         )}
                       </div>
@@ -1126,7 +1186,7 @@ export default function SettingsPage() {
                             <span className="text-sm text-sub" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <i className={mediaDriver === 'r2' ? 'fa-brands fa-cloudflare' : 'fa-brands fa-aws'} style={{ fontSize: '12px' }} />
                               {mediaDriver === 'r2' ? 'Cloudflare R2' : 'AWS S3'}
-                              <span className="text-dim" style={{ fontSize: '12px' }}>({cloud.files} 个文件)</span>
+                              <span className="text-dim" style={{ fontSize: '12px' }}>({t('admin.settings.media.fileCount', '{count} 个文件', { count: cloud.files })})</span>
                             </span>
                             <span className="text-xs text-sub font-mono">{formatSize(cloud.size)}</span>
                           </div>
@@ -1141,14 +1201,14 @@ export default function SettingsPage() {
               </div>
 
               <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>存储方式</h3>
+                <h3 style={sectionTitleStyle}>{t('admin.settings.media.driver.section', '存储方式')}</h3>
                 <div style={{ marginBottom: '24px' }}>
-                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>存储驱动</label>
+                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>{t('admin.settings.media.driver.label', '存储驱动')}</label>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     {[
-                      { value: 'local', label: '本地存储', icon: 'fa-regular fa-hard-drive', desc: '文件保存在服务器本地' },
-                      { value: 's3', label: 'AWS S3', icon: 'fa-brands fa-aws', desc: 'Amazon S3 / 兼容存储' },
-                      { value: 'r2', label: 'Cloudflare R2', icon: 'fa-brands fa-cloudflare', desc: '零出口费用对象存储' },
+                      { value: 'local', label: t('admin.settings.media.localStorage', '本地存储'), icon: 'fa-regular fa-hard-drive', desc: t('admin.settings.media.driver.localDesc', '文件保存在服务器本地') },
+                      { value: 's3', label: 'AWS S3', icon: 'fa-brands fa-aws', desc: t('admin.settings.media.driver.s3Desc', 'Amazon S3 / 兼容存储') },
+                      { value: 'r2', label: 'Cloudflare R2', icon: 'fa-brands fa-cloudflare', desc: t('admin.settings.media.driver.r2Desc', '零出口费用对象存储') },
                     ].map(d => (
                       <label key={d.value} style={{
                         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
@@ -1170,7 +1230,7 @@ export default function SettingsPage() {
                   <div style={{ padding: '24px', border: '1px solid var(--color-border)', background: 'var(--color-bg-soft)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <i className={mediaDriver === 'r2' ? 'fa-brands fa-cloudflare' : 'fa-brands fa-aws'} style={{ fontSize: '16px', color: 'var(--color-primary)' }} />
-                      <h4 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>{mediaDriver === 'r2' ? 'Cloudflare R2' : 'AWS S3'} 配置</h4>
+                      <h4 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>{t('admin.settings.media.cloudConfig', '{provider} 配置', { provider: mediaDriver === 'r2' ? 'Cloudflare R2' : 'AWS S3' })}</h4>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -1203,27 +1263,27 @@ export default function SettingsPage() {
                     <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '20px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                         <i className="fa-regular fa-globe" style={{ fontSize: '13px', color: 'var(--color-primary)' }} />
-                        <label className="text-sub" style={{ fontSize: '13px', fontWeight: 500 }}>自定义域名 (CDN)</label>
+                        <label className="text-sub" style={{ fontSize: '13px', fontWeight: 500 }}>{t('admin.settings.media.customDomain', '自定义域名 (CDN)')}</label>
                       </div>
                       <input className="input text-sm" {...register('s3_custom_domain')} placeholder="https://cdn.yourdomain.com" style={{ maxWidth: '400px' }} />
                       <p className="text-dim" style={{ fontSize: '12px', marginTop: '8px', lineHeight: 1.6 }}>
-                        绑定自定义域名后，所有文件 URL 将使用此域名访问。
-                        {mediaDriver === 'r2' && ' R2 可在 Cloudflare Dashboard 中绑定自定义域名。'}
-                        {mediaDriver === 's3' && ' 建议配合 CloudFront 或其他 CDN 使用。'}
-                        留空则使用 Bucket 原始地址。
+                        {t('admin.settings.media.customDomainHint', '绑定自定义域名后，所有文件 URL 将使用此域名访问。')}
+                        {mediaDriver === 'r2' && ` ${t('admin.settings.media.r2CustomDomainHint', 'R2 可在 Cloudflare Dashboard 中绑定自定义域名。')}`}
+                        {mediaDriver === 's3' && ` ${t('admin.settings.media.s3CdnHint', '建议配合 CloudFront 或其他 CDN 使用。')}`}
+                        {t('admin.settings.media.customDomainEmptyHint', ' 留空则使用 Bucket 原始地址。')}
                       </p>
                     </div>
 
                     <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '20px' }}>
-                      <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>空间容量限制 (GB)</label>
+                      <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.settings.media.storageLimit', '空间容量限制 (GB)')}</label>
                       <input className="input text-sm" type="number" min={1} {...register('storage_limit_gb')} placeholder="10" style={{ width: '160px' }} />
-                      <p className="text-xs text-dim" style={{ marginTop: '4px' }}>超过此容量将不允许继续上传</p>
+                      <p className="text-xs text-dim" style={{ marginTop: '4px' }}>{t('admin.settings.media.storageLimitHint', '超过此容量将不允许继续上传')}</p>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '4px' }}>
                       <button type="button" className="btn btn-secondary text-sm" onClick={testStorageConnection} disabled={testingStorage} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <i className={testingStorage ? 'fa-solid fa-spinner fa-spin' : 'fa-regular fa-plug'} style={{ fontSize: '13px' }} />
-                        {testingStorage ? '测试中...' : '测试连接'}
+                        {testingStorage ? t('admin.common.testing', '测试中...') : t('admin.common.testConnection', '测试连接')}
                       </button>
                     </div>
                   </div>
@@ -1231,20 +1291,20 @@ export default function SettingsPage() {
               </div>
 
               <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>分类存储路由</h3>
+                <h3 style={sectionTitleStyle}>{t('admin.settings.media.folderRouting.section', '分类存储路由')}</h3>
                 <p className="text-dim" style={{ fontSize: '12px', marginBottom: '20px', lineHeight: 1.7 }}>
-                  为每个上传分类单独指定存储位置。选择「云端」时，该分类的文件将上传至已配置的 S3/R2；选择「本地」时始终保存在服务器本地。「跟随全局」使用上方存储方式设置。
+                  {t('admin.settings.media.folderRouting.description', '为每个上传分类单独指定存储位置。选择「云端」时，该分类的文件将上传至已配置的 S3/R2；选择「本地」时始终保存在服务器本地。「跟随全局」使用上方存储方式设置。')}
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   {[
-                    { key: 'folder_driver_covers', label: '文章封面', icon: 'fa-regular fa-image' },
-                    { key: 'folder_driver_books', label: '书单封面', icon: 'fa-regular fa-book' },
-                    { key: 'folder_driver_movies', label: '影视封面', icon: 'fa-regular fa-film' },
-                    { key: 'folder_driver_music', label: '音乐封面', icon: 'fa-regular fa-music' },
-                    { key: 'folder_driver_links', label: '友链头像', icon: 'fa-regular fa-link' },
-                    { key: 'folder_driver_moments', label: '动态图片', icon: 'fa-regular fa-bolt' },
-                    { key: 'folder_driver_albums', label: '相册图片', icon: 'fa-regular fa-images' },
-                    { key: 'folder_driver_avatars', label: '用户头像', icon: 'fa-regular fa-user' },
+                    { key: 'folder_driver_covers', label: t('admin.settings.media.folderRouting.covers', '文章封面'), icon: 'fa-regular fa-image' },
+                    { key: 'folder_driver_books', label: t('admin.settings.media.folderRouting.books', '书单封面'), icon: 'fa-regular fa-book' },
+                    { key: 'folder_driver_movies', label: t('admin.settings.media.folderRouting.movies', '影视封面'), icon: 'fa-regular fa-film' },
+                    { key: 'folder_driver_music', label: t('admin.settings.media.folderRouting.music', '音乐封面'), icon: 'fa-regular fa-music' },
+                    { key: 'folder_driver_links', label: t('admin.settings.media.folderRouting.links', '友链头像'), icon: 'fa-regular fa-link' },
+                    { key: 'folder_driver_moments', label: t('admin.settings.media.folderRouting.moments', '动态图片'), icon: 'fa-regular fa-bolt' },
+                    { key: 'folder_driver_albums', label: t('admin.settings.media.folderRouting.albums', '相册图片'), icon: 'fa-regular fa-images' },
+                    { key: 'folder_driver_avatars', label: t('admin.settings.media.folderRouting.avatars', '用户头像'), icon: 'fa-regular fa-user' },
                   ].map(({ key, label, icon }) => (
                     <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', border: '1px solid var(--color-border)', background: 'var(--color-bg-soft)' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
@@ -1252,9 +1312,9 @@ export default function SettingsPage() {
                         {label}
                       </span>
                       <select className="input text-sm" {...register(key)} style={{ width: '100px', padding: '3px 8px', fontSize: '12px' }}>
-                        <option value="">跟随全局</option>
-                        <option value="local">本地</option>
-                        <option value="cloud">云端</option>
+                        <option value="">{t('admin.settings.media.folderRouting.followGlobal', '跟随全局')}</option>
+                        <option value="local">{t('admin.settings.media.folderRouting.local', '本地')}</option>
+                        <option value="cloud">{t('admin.settings.media.folderRouting.cloud', '云端')}</option>
                       </select>
                     </div>
                   ))}
@@ -1262,14 +1322,14 @@ export default function SettingsPage() {
               </div>
 
               <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>上传限制</h3>
+                <h3 style={sectionTitleStyle}>{t('admin.settings.media.uploadLimits.section', '上传限制')}</h3>
                 <div className="grid gap-y-6">
-                  <Input label="最大上传大小 (MB)" type="number" {...register('max_upload_size')} />
+                  <Input label={t('admin.settings.media.uploadLimits.maxSize', '最大上传大小 (MB)')} type="number" {...register('max_upload_size')} />
                   <div>
-                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>允许的文件类型</label>
-                    <textarea className="input text-sm font-mono" rows={3} {...register('allowed_extensions')} placeholder="每行一个扩展名，或用逗号分隔" />
+                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.settings.media.uploadLimits.allowedTypes', '允许的文件类型')}</label>
+                    <textarea className="input text-sm font-mono" rows={3} {...register('allowed_extensions')} placeholder={t('admin.settings.media.uploadLimits.allowedTypesPlaceholder', '每行一个扩展名，或用逗号分隔')} />
                     <p className="text-xs text-dim" style={{ marginTop: '6px' }}>
-                      常用：jpg, jpeg, png, gif, webp, svg, ico, mp4, mp3, pdf, zip, doc, docx, xls, xlsx, ppt, pptx, txt, md
+                      {t('admin.settings.media.uploadLimits.commonTypes', '常用：jpg, jpeg, png, gif, webp, svg, ico, mp4, mp3, pdf, zip, doc, docx, xls, xlsx, ppt, pptx, txt, md')}
                     </p>
                   </div>
                 </div>
@@ -1280,33 +1340,33 @@ export default function SettingsPage() {
           {/* ==================== 图片处理 ==================== */}
           {activeTab === 'image' && (
             <>
-              <FormSectionC title="压缩与转换" icon="fa-regular fa-file-image" description="上传图片时自动重新编码（仅 PNG/JPEG 输入会进入处理流程；WebP/AVIF/GIF/SVG 等直通保存）">
+              <FormSectionC title={t('admin.settings.image.processing.section', '压缩与转换')} icon="fa-regular fa-file-image" description={t('admin.settings.image.processing.description', '上传图片时自动重新编码（仅 PNG/JPEG 输入会进入处理流程；WebP/AVIF/GIF/SVG 等直通保存）')}>
                 <FormRowSelectC
-                  label="上传后自动转换格式"
+                  label={t('admin.settings.image.processing.convertFormat', '上传后自动转换格式')}
                   register={register('image_convert_format')}
                   options={[
-                    { value: '',     label: '不转换（保持原格式）' },
-                    { value: 'webp', label: 'WebP（推荐，体积小兼容好）' },
-                    { value: 'avif', label: 'AVIF（体积更小，编码慢 1-3s/张）' },
+                    { value: '',     label: t('admin.settings.image.processing.keepOriginal', '不转换（保持原格式）') },
+                    { value: 'webp', label: t('admin.settings.image.processing.webp', 'WebP（推荐，体积小兼容好）') },
+                    { value: 'avif', label: t('admin.settings.image.processing.avif', 'AVIF（体积更小，编码慢 1-3s/张）') },
                     { value: 'jpg',  label: 'JPEG' },
                   ]}
                 />
                 <FormRowInputC
-                  label="压缩质量"
-                  hint={`当前 ${imageQuality}，推荐 75-85，越低体积越小但画质降低（WebP / JPEG / AVIF 均生效）`}
+                  label={t('admin.settings.image.processing.quality', '压缩质量')}
+                  hint={t('admin.settings.image.processing.qualityHint', '当前 {quality}，推荐 75-85，越低体积越小但画质降低（WebP / JPEG / AVIF 均生效）', { quality: imageQuality })}
                   type="range"
                   register={register('image_quality')}
                 />
                 <FormRowInputC
-                  label="最大宽度 (px)"
-                  hint="留空不限制，建议 1920 或 2560。超过此宽度的图片会自动等比缩小（Lanczos 算法）"
+                  label={t('admin.settings.image.processing.maxWidth', '最大宽度 (px)')}
+                  hint={t('admin.settings.image.processing.maxWidthHint', '留空不限制，建议 1920 或 2560。超过此宽度的图片会自动等比缩小（Lanczos 算法）')}
                   type="number"
                   register={register('image_max_width')}
                   placeholder="1920"
                 />
                 <FormRowToggleC
-                  label="去除 EXIF 信息"
-                  hint="编码后的图片本身一律不含 EXIF（重新编码自动去除）。此开关控制是否把原图的 EXIF 元数据（相机/镜头/光圈/拍摄日期）保存到数据库，供前台 LazyImage 显示拍摄参数。开启=不保存=前台不显示；关闭=保存=前台可显示"
+                  label={t('admin.settings.image.processing.stripExif', '去除 EXIF 信息')}
+                  hint={t('admin.settings.image.processing.stripExifHint', '编码后的图片本身一律不含 EXIF（重新编码自动去除）。此开关控制是否把原图的 EXIF 元数据（相机/镜头/光圈/拍摄日期）保存到数据库，供前台 LazyImage 显示拍摄参数。开启=不保存=前台不显示；关闭=保存=前台可显示')}
                   register={register('image_strip_exif')}
                   last
                 />
@@ -1314,25 +1374,25 @@ export default function SettingsPage() {
 
               <div className="card" style={cardStyle}>
                 <div style={subTitleRow}>
-                  <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>随机图片 API</h3>
+                  <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>{t('admin.settings.image.random.section', '随机图片 API')}</h3>
                   <Toggle {...register('random_image_enabled')} />
                 </div>
-                <p className="text-xs text-dim" style={{ marginTop: '8px', marginBottom: '20px' }}>文章没有特色图片时，自动从 API 获取随机封面</p>
+                <p className="text-xs text-dim" style={{ marginTop: '8px', marginBottom: '20px' }}>{t('admin.settings.image.random.description', '文章没有特色图片时，自动从 API 获取随机封面')}</p>
                 <ImgEtBuilder register={register} watch={watch} setValue={setValue} />
               </div>
 
               <div className="card" style={cardStyle}>
-                <h3 style={sectionTitleStyle}>图片显示效果</h3>
-                <p className="text-xs text-dim" style={{ marginTop: '-16px', marginBottom: '20px' }}>前端文章特色图片和正文图片的加载动画效果</p>
+                <h3 style={sectionTitleStyle}>{t('admin.settings.image.display.section', '图片显示效果')}</h3>
+                <p className="text-xs text-dim" style={{ marginTop: '-16px', marginBottom: '20px' }}>{t('admin.settings.image.display.description', '前端文章特色图片和正文图片的加载动画效果')}</p>
                 <div className="grid gap-y-6">
                   <div>
-                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>显示效果</label>
+                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>{t('admin.settings.image.display.effect', '显示效果')}</label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                       {[
-                        { value: 'fade',  label: '淡入',    desc: '模糊渐变透明' },
-                        { value: 'pixel', label: '像素化',  desc: '马赛克块消散' },
-                        { value: 'scale', label: '缩放',    desc: '从小放到正常' },
-                        { value: 'none',  label: '无',      desc: '直接显示' },
+                        { value: 'fade',  label: t('admin.settings.image.display.fade', '淡入'),    desc: t('admin.settings.image.display.fadeDesc', '模糊渐变透明') },
+                        { value: 'pixel', label: t('admin.settings.image.display.pixel', '像素化'),  desc: t('admin.settings.image.display.pixelDesc', '马赛克块消散') },
+                        { value: 'scale', label: t('admin.settings.image.display.scale', '缩放'),    desc: t('admin.settings.image.display.scaleDesc', '从小放到正常') },
+                        { value: 'none',  label: t('admin.settings.image.display.none', '无'),      desc: t('admin.settings.image.display.noneDesc', '直接显示') },
                       ].map(effect => {
                         const val = watch('image_display_effect', 'fade');
                         return (
@@ -1352,18 +1412,18 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>动画时长 (ms)</label>
+                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.settings.image.display.duration', '动画时长 (ms)')}</label>
                     <input className="input text-sm" type="number" {...register('image_display_duration')} placeholder="300" />
                   </div>
                 </div>
               </div>
 
-              <FormSectionC title="懒加载" icon="fa-regular fa-hourglass-half" description="图片进入可视区域时才加载，提升页面加载速度。关闭后图片在页面打开时立即下载（适合幻灯片、长截图归档等场景）">
-                <FormRowToggleC label="启用懒加载" register={register('image_lazy_load')} last />
+              <FormSectionC title={t('admin.settings.image.lazy.section', '懒加载')} icon="fa-regular fa-hourglass-half" description={t('admin.settings.image.lazy.description', '图片进入可视区域时才加载，提升页面加载速度。关闭后图片在页面打开时立即下载（适合幻灯片、长截图归档等场景）')}>
+                <FormRowToggleC label={t('admin.settings.image.lazy.enable', '启用懒加载')} register={register('image_lazy_load')} last />
               </FormSectionC>
 
-              <FormSectionC title="图片灯箱" icon="fa-regular fa-expand" description="点击文章图片时全屏预览，支持缩放、拖拽、键盘导航、图片组切换。关闭后点击图片不响应（图片若包在链接里则跟随链接跳转）">
-                <FormRowToggleC label="启用灯箱" register={register('image_lightbox')} last />
+              <FormSectionC title={t('admin.settings.image.lightbox.section', '图片灯箱')} icon="fa-regular fa-expand" description={t('admin.settings.image.lightbox.description', '点击文章图片时全屏预览，支持缩放、拖拽、键盘导航、图片组切换。关闭后点击图片不响应（图片若包在链接里则跟随链接跳转）')}>
+                <FormRowToggleC label={t('admin.settings.image.lightbox.enable', '启用灯箱')} register={register('image_lightbox')} last />
               </FormSectionC>
             </>
           )}
@@ -1375,23 +1435,22 @@ export default function SettingsPage() {
             <div>
               <div style={sectionTitleStyle as React.CSSProperties}>
                 <i className="fa-solid fa-cloud-arrow-down" style={{ marginRight: 8, color: 'var(--color-primary)' }} />
-                系统更新
+                {t('admin.settings.update.section', '系统更新')}
               </div>
               <p className="text-dim" style={{ fontSize: 13, lineHeight: 1.7, marginBottom: 20 }}>
-                Utterlog 通过 GitHub Releases 推送新版本。下方会实时比对你当前运行的版本和最新发布；
-                有新版本时点「一键升级」即可。升级过程保留所有数据、配置和用户上传。
+                {t('admin.settings.update.description', 'Utterlog 通过 GitHub Releases 推送新版本。下方会实时比对你当前运行的版本和最新发布；有新版本时点「一键升级」即可。升级过程保留所有数据、配置和用户上传。')}
               </p>
               <SystemUpdatePanel />
               <div style={{ marginTop: 24, padding: '14px 18px', background: 'var(--color-bg-soft, #fafafa)', border: '1px solid var(--color-border)', fontSize: 12, color: 'var(--color-text-dim)', lineHeight: 1.8 }}>
                 <div style={{ fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>
                   <i className="fa-regular fa-circle-info" style={{ marginRight: 6 }} />
-                  其它升级方式
+                  {t('admin.settings.update.otherMethods', '其它升级方式')}
                 </div>
-                · 命令行：<code style={{ fontFamily: 'ui-monospace,monospace', fontSize: 11, background: 'var(--color-bg-card, #fff)', padding: '1px 5px', border: '1px solid var(--color-border)' }}>curl -fsSL https://utterlog.io/update.sh | bash</code>
+                · {t('admin.settings.update.commandLine', '命令行')}：<code style={{ fontFamily: 'ui-monospace,monospace', fontSize: 11, background: 'var(--color-bg-card, #fff)', padding: '1px 5px', border: '1px solid var(--color-border)' }}>curl -fsSL https://utterlog.io/update.sh | bash</code>
                 <br />
-                · 历史版本：<a href="https://utterlog.io/changelog" target="_blank" rel="noopener" style={{ color: 'var(--color-primary)' }}>utterlog.io/changelog</a>
+                · {t('admin.settings.update.changelog', '历史版本')}：<a href="https://utterlog.io/changelog" target="_blank" rel="noopener" style={{ color: 'var(--color-primary)' }}>utterlog.io/changelog</a>
                 <br />
-                · 文档：<a href="https://docs.utterlog.io/update/" target="_blank" rel="noopener" style={{ color: 'var(--color-primary)' }}>docs.utterlog.io/update</a>
+                · {t('admin.settings.update.docs', '文档')}：<a href="https://docs.utterlog.io/update/" target="_blank" rel="noopener" style={{ color: 'var(--color-primary)' }}>docs.utterlog.io/update</a>
               </div>
             </div>
           )}
@@ -1400,7 +1459,7 @@ export default function SettingsPage() {
           {activeTab !== 'update' && (
             <div style={{ paddingTop: '24px', borderTop: '1px solid var(--color-border)', marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
               <Button onClick={handleSubmit(onSubmit)} loading={saving}>
-                保存设置
+                {t('admin.settings.saveSettings', '保存设置')}
               </Button>
             </div>
           )}
@@ -1414,6 +1473,7 @@ export default function SettingsPage() {
 // Visual builder for https://img.et/<w>/<h>?type=...&r=...&s=...&format=...
 // Writes result URL to the `random_image_api` form field.
 function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any; setValue: any }) {
+  const { t } = useI18n();
   const currentUrl: string = watch('random_image_api') || '';
 
   // Local builder state — persisted into the URL on change
@@ -1453,37 +1513,37 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
   };
 
   const typeOptions = [
-    { value: '', label: '任意 / 随机' },
-    { value: 'banner', label: 'banner — 通用横幅、默认头图' },
-    { value: 'landscape', label: 'landscape — 风景、山水、自然场景' },
-    { value: 'beauty', label: 'beauty — 人物、人像、美图' },
-    { value: 'anime', label: 'anime — 动漫、插画、二次元' },
-    { value: 'city', label: 'city — 城市、建筑、街景' },
-    { value: 'nature', label: 'nature — 森林、海洋、天空、植物' },
-    { value: 'car', label: 'car — 汽车、机车、赛道' },
-    { value: 'game', label: 'game — 游戏、电竞、虚拟场景' },
-    { value: 'food', label: 'food — 美食、甜点、饮品' },
-    { value: 'animal', label: 'animal — 动物、萌宠、野生生态' },
-    { value: 'travel', label: 'travel — 旅行、目的地、度假' },
-    { value: 'space', label: 'space — 星空、宇宙、科幻' },
-    { value: 'tech', label: 'tech — 科技、数码、未来感' },
-    { value: 'business', label: 'business — 商务、办公、团队' },
-    { value: 'sports', label: 'sports — 运动、健身、赛事' },
-    { value: 'architecture', label: 'architecture — 建筑、室内、空间设计' },
+    { value: '', label: t('admin.settings.image.random.typeAny', '任意 / 随机') },
+    { value: 'banner', label: t('admin.settings.image.random.typeBanner', 'banner - 通用横幅、默认头图') },
+    { value: 'landscape', label: t('admin.settings.image.random.typeLandscape', 'landscape - 风景、山水、自然场景') },
+    { value: 'beauty', label: t('admin.settings.image.random.typeBeauty', 'beauty - 人物、人像、美图') },
+    { value: 'anime', label: t('admin.settings.image.random.typeAnime', 'anime - 动漫、插画、二次元') },
+    { value: 'city', label: t('admin.settings.image.random.typeCity', 'city - 城市、建筑、街景') },
+    { value: 'nature', label: t('admin.settings.image.random.typeNature', 'nature - 森林、海洋、天空、植物') },
+    { value: 'car', label: t('admin.settings.image.random.typeCar', 'car - 汽车、机车、赛道') },
+    { value: 'game', label: t('admin.settings.image.random.typeGame', 'game - 游戏、电竞、虚拟场景') },
+    { value: 'food', label: t('admin.settings.image.random.typeFood', 'food - 美食、甜点、饮品') },
+    { value: 'animal', label: t('admin.settings.image.random.typeAnimal', 'animal - 动物、萌宠、野生生态') },
+    { value: 'travel', label: t('admin.settings.image.random.typeTravel', 'travel - 旅行、目的地、度假') },
+    { value: 'space', label: t('admin.settings.image.random.typeSpace', 'space - 星空、宇宙、科幻') },
+    { value: 'tech', label: t('admin.settings.image.random.typeTech', 'tech - 科技、数码、未来感') },
+    { value: 'business', label: t('admin.settings.image.random.typeBusiness', 'business - 商务、办公、团队') },
+    { value: 'sports', label: t('admin.settings.image.random.typeSports', 'sports - 运动、健身、赛事') },
+    { value: 'architecture', label: t('admin.settings.image.random.typeArchitecture', 'architecture - 建筑、室内、空间设计') },
   ];
 
   const formatOptions = [
-    { value: 'webp', label: 'WebP（推荐，体积小）' },
-    { value: 'avif', label: 'AVIF（更小，新浏览器）' },
-    { value: 'jpg', label: 'JPEG（兼容性好）' },
-    { value: 'png', label: 'PNG（有损压缩）' },
+    { value: 'webp', label: t('admin.settings.image.random.formatWebp', 'WebP（推荐，体积小）') },
+    { value: 'avif', label: t('admin.settings.image.random.formatAvif', 'AVIF（更小，新浏览器）') },
+    { value: 'jpg', label: t('admin.settings.image.random.formatJpeg', 'JPEG（兼容性好）') },
+    { value: 'png', label: t('admin.settings.image.random.formatPng', 'PNG（有损压缩）') },
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Service preset selector */}
       <div>
-        <label className="text-sub" style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>服务</label>
+        <label className="text-sub" style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>{t('admin.settings.image.random.service', '服务')}</label>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             type="button"
@@ -1496,10 +1556,10 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
               cursor: 'pointer',
             }}
           >
-            img.et （推荐）
+            {t('admin.settings.image.random.imgEtRecommended', 'img.et （推荐）')}
           </button>
           <span className="text-dim" style={{ fontSize: 11, alignSelf: 'center', marginLeft: 4 }}>
-            或在下方直接填自定义 URL
+            {t('admin.settings.image.random.customUrlHint', '或在下方直接填自定义 URL')}
           </span>
         </div>
       </div>
@@ -1507,7 +1567,7 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
       {/* Params grid (only enabled when img.et is selected) */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <div>
-          <label className="text-sub" style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>宽度 (px)</label>
+          <label className="text-sub" style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>{t('admin.settings.image.random.width', '宽度 (px)')}</label>
           <input
             type="number"
             value={parsed.width}
@@ -1518,7 +1578,7 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
           />
         </div>
         <div>
-          <label className="text-sub" style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>高度 (px)</label>
+          <label className="text-sub" style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>{t('admin.settings.image.random.height', '高度 (px)')}</label>
           <input
             type="number"
             value={parsed.height}
@@ -1529,7 +1589,7 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
           />
         </div>
         <div>
-          <label className="text-sub" style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>输出格式 format</label>
+          <label className="text-sub" style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>{t('admin.settings.image.random.outputFormat', '输出格式 format')}</label>
           <select
             value={parsed.format}
             onChange={(e) => update({ format: e.target.value })}
@@ -1540,7 +1600,7 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
         </div>
 
         <div>
-          <label className="text-sub" style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>类型 type</label>
+          <label className="text-sub" style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>{t('admin.settings.image.random.type', '类型 type')}</label>
           <select
             value={parsed.type}
             onChange={(e) => update({ type: e.target.value })}
@@ -1551,28 +1611,28 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
         </div>
         <div>
           <label className="text-sub" style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>
-            固定 r
-            <span className="text-dim" style={{ fontWeight: 400, marginLeft: 4 }}>（按规则锁定图片）</span>
+            {t('admin.settings.image.random.fixedR', '固定 r')}
+            <span className="text-dim" style={{ fontWeight: 400, marginLeft: 4 }}>{t('admin.settings.image.random.fixedRHint', '（按规则锁定图片）')}</span>
           </label>
           <input
             type="text"
             value={parsed.r}
             onChange={(e) => update({ r: e.target.value })}
             className="input text-sm"
-            placeholder="留空"
+            placeholder={t('admin.common.empty', '留空')}
           />
         </div>
         <div>
           <label className="text-sub" style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>
-            多图位置 s
-            <span className="text-dim" style={{ fontWeight: 400, marginLeft: 4 }}>（0/1/2/...）</span>
+            {t('admin.settings.image.random.positionS', '多图位置 s')}
+            <span className="text-dim" style={{ fontWeight: 400, marginLeft: 4 }}>{t('admin.settings.image.random.positionSHint', '（0/1/2/...）')}</span>
           </label>
           <input
             type="text"
             value={parsed.s}
             onChange={(e) => update({ s: e.target.value })}
             className="input text-sm"
-            placeholder="留空"
+            placeholder={t('admin.common.empty', '留空')}
           />
         </div>
       </div>
@@ -1580,9 +1640,9 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
       {/* Raw URL input + preview */}
       <div>
         <label className="text-sub" style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
-          最终 API 地址
+          {t('admin.settings.image.random.finalUrl', '最终 API 地址')}
           <span className="text-dim" style={{ fontWeight: 400, marginLeft: 6, fontSize: 11 }}>
-            （可直接编辑；改上方参数会覆盖）
+            {t('admin.settings.image.random.finalUrlHint', '（可直接编辑；改上方参数会覆盖）')}
           </span>
         </label>
         <input
@@ -1596,7 +1656,7 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
       {/* Preview */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <label className="text-sub" style={{ fontSize: 13, fontWeight: 500 }}>预览</label>
+          <label className="text-sub" style={{ fontSize: 13, fontWeight: 500 }}>{t('admin.common.preview', '预览')}</label>
           <button
             type="button"
             onClick={() => setValue('random_image_api', currentUrl + (currentUrl.includes('?') ? '&' : '?') + '_=' + Date.now(), { shouldDirty: true })}
@@ -1605,9 +1665,9 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4,
             }}
-            title="刷新预览"
+            title={t('admin.settings.image.random.refreshPreview', '刷新预览')}
           >
-            <i className="fa-regular fa-arrows-rotate" style={{ fontSize: 11 }} /> 换一张
+            <i className="fa-regular fa-arrows-rotate" style={{ fontSize: 11 }} /> {t('admin.settings.image.random.nextImage', '换一张')}
           </button>
         </div>
         {currentUrl ? (
@@ -1622,23 +1682,23 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
               src={currentUrl}
               alt="preview"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => { (e.currentTarget.parentElement!.innerHTML = '<span style="color: var(--color-text-dim); font-size: 12px">图片加载失败，请检查 URL 或参数</span>'); }}
+              onError={(e) => { (e.currentTarget.parentElement!.innerHTML = `<span style="color: var(--color-text-dim); font-size: 12px">${t('admin.settings.image.random.previewLoadFailed', '图片加载失败，请检查 URL 或参数')}</span>`); }}
             />
           </div>
         ) : (
           <div className="text-dim" style={{ padding: 40, textAlign: 'center', fontSize: 12, background: 'var(--color-bg-soft)', border: '1px dashed var(--color-border)' }}>
-            填入参数后会显示预览
+            {t('admin.settings.image.random.previewEmpty', '填入参数后会显示预览')}
           </div>
         )}
       </div>
 
       <p className="text-xs text-dim" style={{ lineHeight: 1.7 }}>
         <i className="fa-regular fa-lightbulb" style={{ marginRight: 6, color: 'var(--color-primary)' }} />
-        <strong>用法示例</strong>：
+        <strong>{t('admin.settings.image.random.example', '用法示例')}</strong>：
         <code style={{ background: 'var(--color-bg-soft)', padding: '1px 5px', margin: '0 4px', fontSize: 11 }}>
           https://img.et/1920/1080?type=landscape&format=webp
         </code>
-        现代浏览器默认用 <strong>webp</strong>；Safari 17+ / Chrome 100+ 可选 <strong>avif</strong> 体积更小。更多详细用法可访问{' '}
+        {t('admin.settings.image.random.exampleDescription', '现代浏览器默认用 webp；Safari 17+ / Chrome 100+ 可选 avif 体积更小。更多详细用法可访问')}{' '}
         <a
           href="https://img.et"
           target="_blank"
@@ -1648,7 +1708,7 @@ function ImgEtBuilder({ register, watch, setValue }: { register: any; watch: any
           img.et
           <i className="fa-regular fa-up-right-from-square" style={{ fontSize: 10 }} />
         </a>
-        。
+        {t('admin.common.period', '。')}
       </p>
     </div>
   );

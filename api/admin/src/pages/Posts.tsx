@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { Button, Input, Table, Pagination, Badge, ConfirmDialog, Modal } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
 import { usePostsToolbar } from '@/layouts/PostsLayout';
+import { useI18n } from '@/lib/i18n';
 
 // Mirrors web/lib/permalink.ts. Kept inline so the admin SPA can
 // render a preview without reaching into the web/ tree.
@@ -22,14 +23,15 @@ const PERMALINK_PRESETS: { key: string; label: string; template: string; example
   { key: 'id',          label: 'archives / 数据库 id',   template: '/archives/%post_id%',                example: '/archives/42' },
 ];
 
-const statusMap: Record<string, { label: string; variant: 'default' | 'success' | 'warning' }> = {
-  publish: { label: '已发布', variant: 'success' },
-  draft: { label: '草稿', variant: 'default' },
-  private: { label: '私密', variant: 'warning' },
-  pending: { label: '待审核', variant: 'warning' },
+const statusVariants: Record<string, 'default' | 'success' | 'warning'> = {
+  publish: 'success',
+  draft: 'default',
+  private: 'warning',
+  pending: 'warning',
 };
 
 export default function PostsPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +57,16 @@ export default function PostsPage() {
 
   const { setToolbar } = usePostsToolbar();
 
+  const statusLabel = (value: string) => {
+    const labels: Record<string, string> = {
+      publish: t('admin.status.published', '已发布'),
+      draft: t('admin.status.draft', '草稿'),
+      private: t('admin.status.private', '私密'),
+      pending: t('admin.status.pendingReview', '待审核'),
+    };
+    return labels[value] || value;
+  };
+
   useEffect(() => { fetchPosts(); }, [page, status, perPage, orderDir]);
 
   // Hydrate the settings popup the first time it opens — cheap enough
@@ -73,7 +85,7 @@ export default function PostsPage() {
   const saveSettings = async () => {
     const hasPostLocator = ['%postname%', '%display_id%', '%post_id%'].some(token => permalinkStructure.includes(token));
     if (!hasPostLocator) {
-      toast.error('固定连接必须包含 %postname%、%display_id% 或 %post_id%，否则无法定位文章');
+      toast.error(t('admin.posts.toast.invalidPermalink', '固定连接必须包含 %postname%、%display_id% 或 %post_id%，否则无法定位文章'));
       return;
     }
     setSettingsSaving(true);
@@ -82,9 +94,9 @@ export default function PostsPage() {
         posts_per_page: postsPerPage,
         permalink_structure: permalinkStructure,
       });
-      toast.success('设置已保存');
+      toast.success(t('admin.settings.toast.saved', '设置已保存'));
       setSettingsOpen(false);
-    } catch { toast.error('保存失败'); }
+    } catch { toast.error(t('admin.settings.toast.saveFailed', '保存失败')); }
     finally { setSettingsSaving(false); }
   };
 
@@ -101,15 +113,15 @@ export default function PostsPage() {
       setPosts(response.data?.posts || response.data || []);
       setTotal(response.meta?.total || 0);
       setTotalPages(response.meta?.total_pages || 1);
-    } catch { toast.error('获取文章列表失败'); }
+    } catch { toast.error(t('admin.posts.toast.fetchFailed', '获取文章列表失败')); }
     finally { setLoading(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
-    try { await postsApi.delete(deleteId); toast.success('删除成功'); fetchPosts(); }
-    catch { toast.error('删除失败'); }
+    try { await postsApi.delete(deleteId); toast.success(t('admin.posts.toast.deleteSuccess', '删除成功')); fetchPosts(); }
+    catch { toast.error(t('admin.posts.toast.deleteFailed', '删除失败')); }
     finally { setDeleting(false); setDeleteId(null); }
   };
 
@@ -118,18 +130,21 @@ export default function PostsPage() {
     const ids = Array.from(selected);
 
     if (batchAction === 'delete') {
-      if (!confirm(`确认删除 ${ids.length} 篇文章？此操作不可恢复。`)) return;
+      if (!confirm(t('admin.posts.confirmBatchDelete', '确认删除 {count} 篇文章？此操作不可恢复。', { count: ids.length }))) return;
       try {
         for (const id of ids) await postsApi.delete(id);
-        toast.success(`已删除 ${ids.length} 篇文章`);
+        toast.success(t('admin.posts.toast.batchDeleted', '已删除 {count} 篇文章', { count: ids.length }));
         fetchPosts();
-      } catch { toast.error('批量删除失败'); }
+      } catch { toast.error(t('admin.posts.toast.batchDeleteFailed', '批量删除失败')); }
     } else if (['draft', 'private', 'publish'].includes(batchAction)) {
       try {
         for (const id of ids) await postsApi.update(id, { status: batchAction });
-        toast.success(`已将 ${ids.length} 篇文章移至${batchAction === 'draft' ? '草稿箱' : batchAction === 'private' ? '私密' : '已发布'}`);
+        toast.success(t('admin.posts.toast.batchMoved', '已将 {count} 篇文章移至{target}', {
+          count: ids.length,
+          target: batchAction === 'draft' ? t('admin.posts.target.drafts', '草稿箱') : statusLabel(batchAction),
+        }));
         fetchPosts();
-      } catch { toast.error('批量操作失败'); }
+      } catch { toast.error(t('admin.posts.toast.batchActionFailed', '批量操作失败')); }
     }
     setBatchAction('');
   };
@@ -150,10 +165,10 @@ export default function PostsPage() {
     ), width: '40px', render: (row: any) => (
       <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
     )},
-    { key: 'display_id', title: '编号', width: '72px', render: (row: any) => (
+    { key: 'display_id', title: t('admin.posts.columns.number', '编号'), width: '72px', render: (row: any) => (
       <span
         className="text-dim"
-        title={`内部 ID: ${row.id}`}
+        title={t('admin.posts.internalId', '内部 ID: {id}', { id: row.id })}
         style={{ fontSize: '11px' }}
       >
         {row.status === 'publish' && row.display_id > 0 ? row.display_id : '-'}
@@ -161,7 +176,7 @@ export default function PostsPage() {
     )},
     { key: 'title', title: (
       <span onClick={() => setOrderDir(d => d === 'desc' ? 'asc' : 'desc')} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', userSelect: 'none' }}>
-        标题
+        {t('admin.posts.columns.title', '标题')}
         <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1, fontSize: '10px', color: 'var(--color-text-dim)' }}>
           <span style={{ opacity: orderDir === 'asc' ? 1 : 0.3 }}>▲</span>
           <span style={{ marginTop: '-3px', opacity: orderDir === 'desc' ? 1 : 0.3 }}>▼</span>
@@ -172,7 +187,7 @@ export default function PostsPage() {
       // table; ellipsis still kicks in past ~440px.
       <p className="text-main" style={{ fontWeight: 500, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, maxWidth: '440px' }}>{row.title}</p>
     )},
-    { key: 'category', title: '分类', width: '140px', render: (row: any) => {
+    { key: 'category', title: t('common.categories', '分类'), width: '140px', render: (row: any) => {
       const cat = row.categories?.[0];
       if (!cat) return <span className="text-dim" style={{ fontSize: '11px' }}>-</span>;
       return (
@@ -182,7 +197,7 @@ export default function PostsPage() {
         </span>
       );
     }},
-    { key: 'tags', title: '关键词', render: (row: any) => {
+    { key: 'tags', title: t('admin.posts.columns.keywords', '关键词'), render: (row: any) => {
       const tags = row.tags || [];
       if (!tags.length) return <span className="text-dim" style={{ fontSize: '11px' }}>-</span>;
       // No wrap — the column is in an auto-layout table and grows to
@@ -199,46 +214,45 @@ export default function PostsPage() {
         </div>
       );
     }},
-    { key: 'time', title: '时间', width: '160px', render: (row: any) => {
+    { key: 'time', title: t('admin.posts.columns.time', '时间'), width: '160px', render: (row: any) => {
       // Drafts show when they were started; everything else shows the
       // publish date (falling back to created_at for legacy rows that
       // never got a published_at populated).
       const ts = row.status === 'draft' ? row.created_at : (row.published_at || row.created_at);
       return <span className="text-dim" style={{ fontSize: '12px' }}>{formatDate(ts)}</span>;
     }},
-    { key: 'stats', title: '浏览/评论', width: '100px', render: (row: any) => (
+    { key: 'stats', title: t('admin.posts.columns.viewsComments', '浏览/评论'), width: '100px', render: (row: any) => (
       <span className="text-dim" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}><i className="fa-regular fa-eye" style={{ fontSize: '11px' }} />{row.view_count || 0}</span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}><i className="fa-regular fa-comments" style={{ fontSize: '11px' }} />{row.comment_count || 0}</span>
       </span>
     )},
-    { key: 'status', title: '状态', width: '72px', render: (row: any) => {
-      const s = statusMap[row.status] || { label: row.status, variant: 'default' as const };
-      return <Badge variant={s.variant}>{s.label}</Badge>;
+    { key: 'status', title: t('admin.posts.columns.status', '状态'), width: '72px', render: (row: any) => {
+      return <Badge variant={statusVariants[row.status] || 'default'}>{statusLabel(row.status)}</Badge>;
     }},
-    { key: 'actions', title: <span style={{ textAlign: 'right', display: 'block' }}>操作</span>, width: '190px', render: (row: any) => (
+    { key: 'actions', title: <span style={{ textAlign: 'right', display: 'block' }}>{t('admin.posts.columns.actions', '操作')}</span>, width: '190px', render: (row: any) => (
       <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-        <button onClick={() => navigate(`/posts/edit/${row.id}`)} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-        <button onClick={() => window.open(`/posts/${row.slug}`, '_blank')} className="action-btn" title="预览"><i className="fa-regular fa-eye" style={{ fontSize: '14px' }} /></button>
+        <button onClick={() => navigate(`/posts/edit/${row.id}`)} className="action-btn primary" title={t('admin.common.edit', '编辑')}><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+        <button onClick={() => window.open(`/posts/${row.slug}`, '_blank')} className="action-btn" title={t('admin.common.preview', '预览')}><i className="fa-regular fa-eye" style={{ fontSize: '14px' }} /></button>
         <button
           onClick={async () => {
             const newStatus = row.status === 'draft' ? 'publish' : 'draft';
-            try { await postsApi.update(row.id, { status: newStatus }); toast.success(newStatus === 'draft' ? '已移至草稿箱' : '已发布'); fetchPosts(); }
-            catch { toast.error('操作失败'); }
+            try { await postsApi.update(row.id, { status: newStatus }); toast.success(newStatus === 'draft' ? t('admin.posts.toast.movedToDrafts', '已移至草稿箱') : t('admin.posts.toast.published', '已发布')); fetchPosts(); }
+            catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
           }}
           className={`action-btn${row.status === 'draft' ? ' primary' : ''}`}
-          title={row.status === 'draft' ? '取消草稿（发布）' : '移至草稿箱'}
+          title={row.status === 'draft' ? t('admin.posts.action.publishDraft', '取消草稿（发布）') : t('admin.posts.action.moveToDrafts', '移至草稿箱')}
         ><i className="fa-regular fa-file-lines" style={{ fontSize: '14px' }} /></button>
         <button
           onClick={async () => {
             const newStatus = row.status === 'private' ? 'publish' : 'private';
-            try { await postsApi.update(row.id, { status: newStatus }); toast.success(newStatus === 'private' ? '已设为私密' : '已发布'); fetchPosts(); }
-            catch { toast.error('操作失败'); }
+            try { await postsApi.update(row.id, { status: newStatus }); toast.success(newStatus === 'private' ? t('admin.posts.toast.setPrivate', '已设为私密') : t('admin.posts.toast.published', '已发布')); fetchPosts(); }
+            catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
           }}
           className={`action-btn${row.status === 'private' ? ' warning' : ''}`}
-          title={row.status === 'private' ? '取消私密（发布）' : '设为私密'}
+          title={row.status === 'private' ? t('admin.posts.action.publishPrivate', '取消私密（发布）') : t('admin.posts.action.setPrivate', '设为私密')}
         ><i className="fa-regular fa-eye-slash" style={{ fontSize: '14px' }} /></button>
-        <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
+        <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title={t('admin.common.delete', '删除')}><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
       </div>
     )},
   ];
@@ -249,10 +263,10 @@ export default function PostsPage() {
         {/* 左侧：状态筛选 + 新建文章 */}
         <div style={{ display: 'flex', gap: '4px' }}>
           {([
-            { key: '', label: '全部' },
-            { key: 'publish', label: '已发布' },
-            { key: 'draft', label: '草稿' },
-            { key: 'private', label: '私密' },
+            { key: '', label: t('admin.menus.all', '全部') },
+            { key: 'publish', label: statusLabel('publish') },
+            { key: 'draft', label: statusLabel('draft') },
+            { key: 'private', label: statusLabel('private') },
           ] as const).map(s => (
             <Button key={s.key} className="btn-toolbar" variant={status === s.key ? 'primary' : 'secondary'} onClick={() => { setStatus(s.key); setPage(1); }}>
               {s.label}
@@ -260,23 +274,23 @@ export default function PostsPage() {
           ))}
         </div>
         <Button className="btn-toolbar" onClick={() => navigate('/posts/create')}>
-          <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />新建文章
+          <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />{t('admin.posts.newPost', '新建文章')}
         </Button>
 
         {/* 右侧：搜索框 + 设置 */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <Input placeholder="检索标题 / 摘要 / 正文" value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchPosts())} style={{ width: '240px' }} />
-          <Button className="btn-square" title="搜索" onClick={() => { setPage(1); fetchPosts(); }}>
+          <Input placeholder={t('admin.posts.searchPlaceholder', '检索标题 / 摘要 / 正文')} value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchPosts())} style={{ width: '240px' }} />
+          <Button className="btn-square" title={t('common.search', '搜索')} onClick={() => { setPage(1); fetchPosts(); }}>
             <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
           </Button>
-          <Button className="btn-square" variant="secondary" title="文章设置" onClick={openSettings}>
+          <Button className="btn-square" variant="secondary" title={t('admin.posts.settingsTitle', '文章设置')} onClick={openSettings}>
             <i className="fa-regular fa-gear" style={{ fontSize: '14px' }} />
           </Button>
         </div>
       </div>
     );
     return () => setToolbar(null);
-  }, [search, status]);
+  }, [search, status, t]);
 
   return (
     <div>
@@ -284,19 +298,19 @@ export default function PostsPage() {
         {/* Batch action bar */}
         {selected.size > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', background: 'var(--color-bg-soft)', borderBottom: '1px solid var(--color-border)' }}>
-            <span className="text-sub" style={{ fontSize: '13px' }}>已选 {selected.size} 项</span>
+            <span className="text-sub" style={{ fontSize: '13px' }}>{t('admin.posts.selectedCount', '已选 {count} 项', { count: selected.size })}</span>
             <select value={batchAction} onChange={e => setBatchAction(e.target.value)} className="input" style={{ width: '120px', fontSize: '12px', padding: '4px 8px' }}>
-              <option value="">批量操作</option>
-              <option value="draft">移到草稿箱</option>
-              <option value="private">移到私密</option>
-              <option value="publish">设为已发布</option>
-              <option value="delete">删除</option>
+              <option value="">{t('admin.posts.batchAction', '批量操作')}</option>
+              <option value="draft">{t('admin.posts.batchMoveDraft', '移到草稿箱')}</option>
+              <option value="private">{t('admin.posts.batchMovePrivate', '移到私密')}</option>
+              <option value="publish">{t('admin.posts.batchSetPublished', '设为已发布')}</option>
+              <option value="delete">{t('admin.common.delete', '删除')}</option>
             </select>
             <Button variant="secondary" onClick={handleBatchAction} disabled={!batchAction} style={{ fontSize: '12px', padding: '4px 12px' }}>
-              执行
+              {t('admin.posts.execute', '执行')}
             </Button>
             <button onClick={() => setSelected(new Set())} style={{ fontSize: '12px', color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}>
-              取消选择
+              {t('admin.posts.cancelSelection', '取消选择')}
             </button>
           </div>
         )}
@@ -305,34 +319,34 @@ export default function PostsPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid var(--color-border)' }}>
           <span className="text-dim" style={{ fontSize: '12px' }}>
-            共 {total} 篇文章
+            {t('admin.posts.totalPosts', '共 {total} 篇文章', { total })}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <select value={perPage} onChange={e => { setPerPage(parseInt(e.target.value)); setPage(1); }} className="input" style={{ width: '80px', fontSize: '12px', padding: '4px 6px' }}>
-              <option value={10}>10 条/页</option>
-              <option value={20}>20 条/页</option>
-              <option value={50}>50 条/页</option>
-              <option value={100}>100 条/页</option>
+              <option value={10}>{t('admin.posts.perPage', '{count} 条/页', { count: 10 })}</option>
+              <option value={20}>{t('admin.posts.perPage', '{count} 条/页', { count: 20 })}</option>
+              <option value={50}>{t('admin.posts.perPage', '{count} 条/页', { count: 50 })}</option>
+              <option value={100}>{t('admin.posts.perPage', '{count} 条/页', { count: 100 })}</option>
             </select>
             <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
         </div>
       </div>
 
-      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="确认删除" message="删除后无法恢复，是否确认？" confirmText="删除" loading={deleting} />
+      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('admin.posts.confirmDeleteTitle', '确认删除')} message={t('admin.posts.confirmDeleteMessage', '删除后无法恢复，是否确认？')} confirmText={t('admin.common.delete', '删除')} loading={deleting} />
 
-      <Modal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title="文章设置">
+      <Modal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('admin.posts.settingsTitle', '文章设置')}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* 每页文章数 */}
           <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px', color: 'var(--color-text-main)' }}>每页文章数</label>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px', color: 'var(--color-text-main)' }}>{t('admin.posts.postsPerPage', '每页文章数')}</label>
             <Input type="number" min={1} max={100} value={postsPerPage} onChange={(e: any) => setPostsPerPage(parseInt(e.target.value) || 10)} style={{ width: '140px' }} />
-            <p className="text-dim" style={{ fontSize: '12px', marginTop: '4px' }}>影响首页和分类/标签列表的分页大小</p>
+            <p className="text-dim" style={{ fontSize: '12px', marginTop: '4px' }}>{t('admin.posts.postsPerPageHint', '影响首页和分类/标签列表的分页大小')}</p>
           </div>
 
           {/* 固定连接 */}
           <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px', color: 'var(--color-text-main)' }}>固定连接</label>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px', color: 'var(--color-text-main)' }}>{t('admin.posts.permalink', '固定连接')}</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {PERMALINK_PRESETS.map(p => (
                 <label key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', border: '1px solid var(--color-border)', cursor: 'pointer', background: permalinkStructure === p.template ? 'var(--color-bg-soft)' : 'transparent' }}>
@@ -344,7 +358,7 @@ export default function PostsPage() {
                     style={{ accentColor: 'var(--color-primary)' }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', color: 'var(--color-text-main)' }}>{p.label}</div>
+                    <div style={{ fontSize: '13px', color: 'var(--color-text-main)' }}>{t(`admin.posts.permalinkPreset.${p.key}`, p.label)}</div>
                     <code style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>{p.template}</code>
                     <span className="text-dim" style={{ fontSize: '11px', marginLeft: '8px' }}>→ {p.example}</span>
                   </div>
@@ -360,7 +374,7 @@ export default function PostsPage() {
                   style={{ accentColor: 'var(--color-primary)', marginTop: '2px' }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', color: 'var(--color-text-main)', marginBottom: '4px' }}>自定义</div>
+                  <div style={{ fontSize: '13px', color: 'var(--color-text-main)', marginBottom: '4px' }}>{t('admin.posts.permalinkCustom', '自定义')}</div>
                   <Input
                     value={permalinkStructure}
                     onChange={(e: any) => setPermalinkStructure(e.target.value)}
@@ -368,19 +382,19 @@ export default function PostsPage() {
                     style={{ width: '100%', fontFamily: 'monospace', fontSize: '12px' }}
                   />
                   <p className="text-dim" style={{ fontSize: '11px', marginTop: '4px' }}>
-                    可用占位符：<code>%postname%</code>（slug）、<code>%display_id%</code>（发布序号，推荐）、<code>%post_id%</code>（数据库 ID）、<code>%year%</code>、<code>%month%</code>、<code>%day%</code>、<code>%category%</code>
+                    {t('admin.posts.permalinkPlaceholdersPrefix', '可用占位符：')}<code>%postname%</code>{t('admin.posts.placeholder.slug', '（slug）')}、<code>%display_id%</code>{t('admin.posts.placeholder.displayId', '（发布序号，推荐）')}、<code>%post_id%</code>{t('admin.posts.placeholder.postId', '（数据库 ID）')}、<code>%year%</code>、<code>%month%</code>、<code>%day%</code>、<code>%category%</code>
                   </p>
                 </div>
               </label>
             </div>
             <p className="text-dim" style={{ fontSize: '11px', marginTop: '8px', lineHeight: 1.5 }}>
-              旧的 <code>/posts/slug</code> 链接会 308 重定向到新格式，老书签不会坏。
+              {t('admin.posts.permalinkRedirectHintPrefix', '旧的')} <code>/posts/slug</code> {t('admin.posts.permalinkRedirectHintSuffix', '链接会 308 重定向到新格式，老书签不会坏。')}
             </p>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid var(--color-border)', paddingTop: '14px' }}>
-            <Button variant="secondary" onClick={() => setSettingsOpen(false)} disabled={settingsSaving}>取消</Button>
-            <Button onClick={saveSettings} loading={settingsSaving}>保存</Button>
+            <Button variant="secondary" onClick={() => setSettingsOpen(false)} disabled={settingsSaving}>{t('admin.common.cancel', '取消')}</Button>
+            <Button onClick={saveSettings} loading={settingsSaving}>{t('admin.common.save', '保存')}</Button>
           </div>
         </div>
       </Modal>

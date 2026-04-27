@@ -4,8 +4,10 @@ import { linksApi, mediaApi } from '@/lib/api';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button, Input, Modal, ConfirmDialog, EmptyState } from '@/components/ui';
+import { useI18n } from '@/lib/i18n';
 
 export default function LinksPage() {
+  const { t } = useI18n();
   const [links, setLinks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,9 +33,9 @@ export default function LinksPage() {
       const d = r?.data || r;
       const fetched = d?.fetched ?? 0;
       const newItems = d?.new_items ?? 0;
-      toast.success(`已刷新 ${fetched} 个订阅，新增 ${newItems} 条`);
+      toast.success(t('admin.links.toast.feedsRefreshed', '已刷新 {fetched} 个订阅，新增 {newItems} 条', { fetched, newItems }));
     } catch {
-      toast.error('刷新失败');
+      toast.error(t('admin.common.refreshFailed', '刷新失败'));
     } finally {
       setRefreshingFeeds(false);
     }
@@ -43,30 +45,30 @@ export default function LinksPage() {
     setBusy('icon');
     setIconBust(Date.now());
     setTimeout(() => setBusy(null), 400);
-    toast.success('已刷新所有友链图标缓存');
+    toast.success(t('admin.links.toast.iconsRefreshed', '已刷新所有友链图标缓存'));
   };
 
   const clearCache = async () => {
-    if (!confirm('确定清空服务端缓存？验证码、在线数等临时缓存会重建。')) return;
+    if (!confirm(t('admin.links.confirm.clearCache', '确定清空服务端缓存？验证码、在线数等临时缓存会重建。'))) return;
     setBusy('cache');
     try {
       const r: any = await api.post('/admin/system/clear-cache');
       const d = r?.data || r;
-      toast.success(`已清空 ${d?.cleared ?? 0} 条缓存`);
+      toast.success(t('admin.links.toast.cacheCleared', '已清空 {count} 条缓存', { count: d?.cleared ?? 0 }));
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message || '清空失败');
+      toast.error(e?.response?.data?.error?.message || t('admin.common.clearFailed', '清空失败'));
     } finally { setBusy(null); }
   };
 
   const clearRSSCache = async () => {
-    if (!confirm('确定清空 RSS 订阅缓存？所有已抓取的文章会被删除，下次刷新重新拉取。')) return;
+    if (!confirm(t('admin.links.confirm.clearRssCache', '确定清空 RSS 订阅缓存？所有已抓取的文章会被删除，下次刷新重新拉取。'))) return;
     setBusy('rss');
     try {
       const r: any = await api.post('/admin/system/clear-rss-cache');
       const d = r?.data || r;
-      toast.success(`已清空 ${d?.cleared_items ?? 0} 条订阅缓存`);
+      toast.success(t('admin.links.toast.rssCacheCleared', '已清空 {count} 条订阅缓存', { count: d?.cleared_items ?? 0 }));
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message || '清空失败');
+      toast.error(e?.response?.data?.error?.message || t('admin.common.clearFailed', '清空失败'));
     } finally { setBusy(null); }
   };
 
@@ -78,7 +80,7 @@ export default function LinksPage() {
       const r: any = await mediaApi.upload(file, 'avatars');
       const url = r.url || r.data?.url;
       if (url) setForm(prev => ({ ...prev, logo: url }));
-    } catch { toast.error('上传失败'); }
+    } catch { toast.error(t('admin.media.toast.uploadFailed', '上传失败')); }
     finally { setAvatarUploading(false); e.target.value = ''; }
   };
 
@@ -90,10 +92,10 @@ export default function LinksPage() {
   const addGroup = () => {
     const g = newGroupName.trim();
     if (!g) return;
-    if (existingGroups.includes(g)) { toast.error(`分类「${g}」已存在`); setNewGroupName(''); return; }
+    if (existingGroups.includes(g)) { toast.error(t('admin.links.toast.groupExists', '分类「{group}」已存在', { group: g })); setNewGroupName(''); return; }
     setCustomGroups(prev => [...prev, g]);
     setNewGroupName('');
-    toast.success(`分类「${g}」已添加`);
+    toast.success(t('admin.links.toast.groupAdded', '分类「{group}」已添加', { group: g }));
   };
 
   const renameGroup = async (oldName: string, newName: string) => {
@@ -103,10 +105,10 @@ export default function LinksPage() {
       for (const link of toUpdate) {
         await linksApi.update(link.id, { ...link, group_name: newName.trim() });
       }
-      toast.success(`分类「${oldName}」已重命名为「${newName}」`);
+      toast.success(t('admin.links.toast.groupRenamed', '分类「{oldName}」已重命名为「{newName}」', { oldName, newName }));
       setEditingGroup(null);
       fetchLinks();
-    } catch { toast.error('重命名失败'); }
+    } catch { toast.error(t('admin.links.toast.renameFailed', '重命名失败')); }
   };
 
   const deleteGroup = async (groupName: string) => {
@@ -115,10 +117,10 @@ export default function LinksPage() {
       for (const link of toUpdate) {
         await linksApi.update(link.id, { ...link, group_name: 'default' });
       }
-      toast.success(`分类「${groupName}」已删除，${toUpdate.length} 条友链已移至默认分类`);
+      toast.success(t('admin.links.toast.groupDeleted', '分类「{group}」已删除，{count} 条友链已移至默认分类', { group: groupName, count: toUpdate.length }));
       if (activeGroup === groupName) setActiveGroup('all');
       fetchLinks();
-    } catch { toast.error('删除失败'); }
+    } catch { toast.error(t('admin.common.deleteFailed', '删除失败')); }
   };
 
   const [form, setForm] = useState({
@@ -132,7 +134,7 @@ export default function LinksPage() {
     try {
       const r: any = await linksApi.list();
       setLinks(r.data || []);
-    } catch { toast.error('获取友链失败'); }
+    } catch { toast.error(t('admin.links.toast.fetchFailed', '获取友链失败')); }
     finally { setLoading(false); }
   };
 
@@ -171,57 +173,57 @@ export default function LinksPage() {
   };
 
   const onSubmit = async () => {
-    if (!form.name.trim() || !form.url.trim()) { toast.error('名称和链接不能为空'); return; }
+    if (!form.name.trim() || !form.url.trim()) { toast.error(t('admin.links.toast.nameUrlRequired', '名称和链接不能为空')); return; }
     setSubmitting(true);
     try {
       if (editingId) {
         await linksApi.update(editingId, form);
-        toast.success('更新成功');
+        toast.success(t('admin.common.updateSuccess', '更新成功'));
       } else {
         await linksApi.create(form);
-        toast.success('创建成功');
+        toast.success(t('admin.common.createSuccess', '创建成功'));
       }
       setIsModalOpen(false);
       fetchLinks();
-    } catch { toast.error(editingId ? '更新失败' : '创建失败'); }
+    } catch { toast.error(editingId ? t('admin.common.updateFailed', '更新失败') : t('admin.common.createFailed', '创建失败')); }
     finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    try { await linksApi.delete(deleteId); toast.success('删除成功'); fetchLinks(); }
-    catch { toast.error('删除失败'); }
+    try { await linksApi.delete(deleteId); toast.success(t('admin.common.deleteSuccess', '删除成功')); fetchLinks(); }
+    catch { toast.error(t('admin.common.deleteFailed', '删除失败')); }
     finally { setDeleteId(null); }
   };
 
-  const groupLabel = (g: string) => g === 'all' ? '全部' : g === 'default' ? '默认' : g;
+  const groupLabel = (g: string) => g === 'all' ? t('admin.common.all', '全部') : g === 'default' ? t('admin.links.defaultGroup', '默认') : g;
 
   return (
     <div>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <span className="text-dim" style={{ fontSize: '13px' }}>共 {links.length} 条友链</span>
+        <span className="text-dim" style={{ fontSize: '13px' }}>{t('admin.links.total', '共 {count} 条友链', { count: links.length })}</span>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <Button variant="secondary" onClick={refreshIcons} loading={busy === 'icon'} disabled={busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
             <i className="fa-regular fa-image" />
-            刷新 ico
+            {t('admin.links.refreshIco', '刷新 ico')}
           </Button>
           <Button variant="secondary" onClick={clearCache} loading={busy === 'cache'} disabled={busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
             <i className="fa-regular fa-broom-wide" />
-            清空缓存
+            {t('admin.links.clearCache', '清空缓存')}
           </Button>
           <Button variant="secondary" onClick={clearRSSCache} loading={busy === 'rss'} disabled={busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
             <i className="fa-regular fa-trash-can" />
-            清空 RSS
+            {t('admin.links.clearRss', '清空 RSS')}
           </Button>
           <Button variant="secondary" onClick={refreshFeeds} loading={refreshingFeeds} disabled={refreshingFeeds || busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
             <i className="fa-regular fa-arrows-rotate" />
-            刷新订阅
+            {t('admin.links.refreshFeeds', '刷新订阅')}
           </Button>
-          <Button variant="secondary" onClick={() => setShowGroupModal(true)} style={{ padding: '0 18px' }}>分类</Button>
+          <Button variant="secondary" onClick={() => setShowGroupModal(true)} style={{ padding: '0 18px' }}>{t('admin.links.groups', '分类')}</Button>
           <Button onClick={openCreate} style={{ padding: '0 20px', gap: '8px' }}>
             <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />
-            添加
+            {t('admin.common.add', '添加')}
           </Button>
         </div>
       </div>
@@ -249,7 +251,7 @@ export default function LinksPage() {
       )}
 
       {links.length === 0 && !loading ? (
-        <EmptyState title="暂无友链" description="添加您的第一个友情链接" actionText="添加友链" onAction={openCreate} />
+        <EmptyState title={t('admin.links.empty', '暂无友链')} description={t('admin.links.emptyDescription', '添加您的第一个友情链接')} actionText={t('admin.links.addLink', '添加友链')} onAction={openCreate} />
       ) : (
         <div className="card" style={{ overflow: 'hidden' }}>
           <table className="table">
@@ -257,12 +259,12 @@ export default function LinksPage() {
               <tr>
                 <th style={{ width: '40px' }}>#</th>
                 <th style={{ width: '36px' }}></th>
-                <th style={{ width: '120px' }}>站点名称</th>
-                <th>描述</th>
-                <th>网址</th>
+                <th style={{ width: '120px' }}>{t('admin.links.columns.name', '站点名称')}</th>
+                <th>{t('admin.links.columns.description', '描述')}</th>
+                <th>{t('admin.links.columns.url', '网址')}</th>
                 <th>RSS</th>
-                <th style={{ width: '80px' }}>分组</th>
-                <th style={{ width: '72px', textAlign: 'right' }}>操作</th>
+                <th style={{ width: '80px' }}>{t('admin.links.columns.group', '分组')}</th>
+                <th style={{ width: '72px', textAlign: 'right' }}>{t('admin.common.actions', '操作')}</th>
               </tr>
             </thead>
             <tbody>
@@ -291,7 +293,7 @@ export default function LinksPage() {
                         </span>
                       ) : <span className="text-dim">—</span>}
                     </td>
-                    <td className="text-dim" style={{ fontSize: '12px' }}>{link.group_name === 'default' || !link.group_name ? '默认' : link.group_name}</td>
+                    <td className="text-dim" style={{ fontSize: '12px' }}>{link.group_name === 'default' || !link.group_name ? t('admin.links.defaultGroup', '默认') : link.group_name}</td>
                     <td style={{ textAlign: 'right' }}>
                       <button onClick={() => openEdit(link)} className="text-primary-themed" style={{ padding: '4px 6px', background: 'none', border: 'none', cursor: 'pointer' }}>
                         <i className="fa-regular fa-pen" style={{ fontSize: '13px' }} />
@@ -309,12 +311,12 @@ export default function LinksPage() {
       )}
 
       {/* Create/Edit Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? '编辑友链' : '添加友链'}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? t('admin.links.editLink', '编辑友链') : t('admin.links.addLink', '添加友链')}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <Input label="名称" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="站点名称" />
+            <Input label={t('admin.links.name', '名称')} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('admin.links.namePlaceholder', '站点名称')} />
             <div>
-              <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>分类</label>
+              <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.links.groups', '分类')}</label>
               <input
                 className="input focus-ring"
                 value={form.group_name}
@@ -328,9 +330,9 @@ export default function LinksPage() {
             </div>
           </div>
 
-          <Input label="链接" value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://example.com" />
+          <Input label={t('admin.links.url', '链接')} value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://example.com" />
           <div>
-            <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>头像 / Logo</label>
+            <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.links.logo', '头像 / Logo')}</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               {/* Preview */}
               {(form.logo || form.url) && (
@@ -343,38 +345,38 @@ export default function LinksPage() {
                   />
                 </div>
               )}
-              <input className="input focus-ring" style={{ flex: 1 }} value={form.logo} onChange={e => setForm({ ...form, logo: e.target.value })} placeholder="留空自动获取 favicon" />
+              <input className="input focus-ring" style={{ flex: 1 }} value={form.logo} onChange={e => setForm({ ...form, logo: e.target.value })} placeholder={t('admin.links.logoPlaceholder', '留空自动获取 favicon')} />
               <label
                 className="btn btn-secondary btn-toolbar-square"
-                title={avatarUploading ? '上传中...' : '上传头像'}
+                title={avatarUploading ? t('admin.media.uploading', '上传中...') : t('admin.links.uploadAvatar', '上传头像')}
                 style={{ cursor: avatarUploading ? 'wait' : 'pointer' }}
               >
                 <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} disabled={avatarUploading} />
               </label>
             </div>
-            <p className="text-dim" style={{ fontSize: '11px', marginTop: '4px' }}>不填写则自动从 favicon.im 获取站点图标</p>
+            <p className="text-dim" style={{ fontSize: '11px', marginTop: '4px' }}>{t('admin.links.logoHint', '不填写则自动从 favicon.im 获取站点图标')}</p>
           </div>
-          <Input label="RSS 地址" value={form.rss_url} onChange={e => setForm({ ...form, rss_url: e.target.value })} placeholder="https://example.com/feed（可选）" />
+          <Input label={t('admin.links.rssUrl', 'RSS 地址')} value={form.rss_url} onChange={e => setForm({ ...form, rss_url: e.target.value })} placeholder={t('admin.links.rssPlaceholder', 'https://example.com/feed（可选）')} />
 
           <div>
-            <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>描述</label>
-            <textarea rows={2} className="input focus-ring" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="简短介绍（可选）" style={{ resize: 'vertical' }} />
+            <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.links.description', '描述')}</label>
+            <textarea rows={2} className="input focus-ring" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder={t('admin.links.descriptionPlaceholder', '简短介绍（可选）')} style={{ resize: 'vertical' }} />
           </div>
 
-          <Input label="排序" type="number" value={form.order_num} onChange={e => setForm({ ...form, order_num: Number(e.target.value) })} />
+          <Input label={t('admin.common.sortOrder', '排序')} type="number" value={form.order_num} onChange={e => setForm({ ...form, order_num: Number(e.target.value) })} />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '4px' }}>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>取消</Button>
-            <Button onClick={onSubmit} loading={submitting}>{editingId ? '保存' : '创建'}</Button>
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>{t('admin.common.cancel', '取消')}</Button>
+            <Button onClick={onSubmit} loading={submitting}>{editingId ? t('admin.common.save', '保存') : t('admin.common.create', '创建')}</Button>
           </div>
         </div>
       </Modal>
 
-      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="确认删除" message="是否确认删除此友情链接？" />
+      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('admin.common.confirmDelete', '确认删除')} message={t('admin.links.confirmDelete', '是否确认删除此友情链接？')} />
 
       {/* Group Management Modal */}
-      <Modal isOpen={showGroupModal} onClose={() => { setShowGroupModal(false); setEditingGroup(null); }} title="分类管理">
+      <Modal isOpen={showGroupModal} onClose={() => { setShowGroupModal(false); setEditingGroup(null); }} title={t('admin.links.groupManagement', '分类管理')}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {/* Existing groups */}
           {existingGroups.length > 0 ? (
@@ -395,9 +397,9 @@ export default function LinksPage() {
                         style={{ flex: 1, fontSize: '13px', padding: '4px 8px' }}
                       />
                     ) : (
-                      <span className="text-main" style={{ flex: 1, fontSize: '13px', fontWeight: 500 }}>{g === 'default' ? '默认' : g}</span>
+                      <span className="text-main" style={{ flex: 1, fontSize: '13px', fontWeight: 500 }}>{g === 'default' ? t('admin.links.defaultGroup', '默认') : g}</span>
                     )}
-                    <span className="text-dim" style={{ fontSize: '11px', flexShrink: 0 }}>{count} 条</span>
+                    <span className="text-dim" style={{ fontSize: '11px', flexShrink: 0 }}>{t('admin.links.countItems', '{count} 条', { count })}</span>
                     {g !== 'default' && !isEditing && (
                       <>
                         <button onClick={() => setEditingGroup({ old: g, new: g })} className="text-primary-themed" style={{ padding: '2px', background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -413,7 +415,7 @@ export default function LinksPage() {
               })}
             </div>
           ) : (
-            <p className="text-dim" style={{ fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>暂无分类</p>
+            <p className="text-dim" style={{ fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>{t('admin.links.noGroups', '暂无分类')}</p>
           )}
 
           {/* Add new group */}
@@ -423,11 +425,11 @@ export default function LinksPage() {
                 className="input focus-ring"
                 value={newGroupName}
                 onChange={e => setNewGroupName(e.target.value)}
-                placeholder="输入新分类名称"
+                placeholder={t('admin.links.newGroupPlaceholder', '输入新分类名称')}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addGroup(); } }}
                 style={{ flex: 1 }}
               />
-              <Button variant="secondary" onClick={addGroup}>添加</Button>
+              <Button variant="secondary" onClick={addGroup}>{t('admin.common.add', '添加')}</Button>
             </div>
           </div>
         </div>

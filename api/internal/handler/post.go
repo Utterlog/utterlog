@@ -11,6 +11,7 @@ import (
 	"utterlog-go/config"
 	"utterlog-go/internal/middleware"
 	"utterlog-go/internal/model"
+	"utterlog-go/internal/siteclock"
 	"utterlog-go/internal/textutil"
 	"utterlog-go/internal/util"
 
@@ -545,7 +546,7 @@ func ArchiveStats(c *gin.Context) {
 	config.DB.Get(&siteSince, "SELECT COALESCE(value, '') FROM "+t("options")+" WHERE name = 'site_since'")
 	var sinceTime int64
 	if siteSince != "" {
-		if parsed, err := time.Parse("2006-01-02", siteSince); err == nil {
+		if parsed, err := siteclock.ParseDate(siteSince); err == nil {
 			sinceTime = parsed.Unix()
 		}
 	}
@@ -554,7 +555,7 @@ func ArchiveStats(c *gin.Context) {
 	}
 	days := 0
 	if sinceTime > 0 {
-		days = int((time.Now().Unix()-sinceTime)/86400) + 1
+		days = int((siteclock.Now().Unix()-sinceTime)/86400) + 1
 	}
 
 	// Daily post counts for heatmap (last 365 days)
@@ -563,9 +564,11 @@ func ArchiveStats(c *gin.Context) {
 		Count int    `db:"count" json:"count"`
 	}
 	var heatmap []dayCount
+	tzName := siteclock.Name()
+	cutoff := time.Now().Add(-365 * 24 * time.Hour).Unix()
 	config.DB.Select(&heatmap, fmt.Sprintf(
-		"SELECT TO_CHAR(TO_TIMESTAMP(created_at), 'YYYY-MM-DD') as date, COUNT(*) as count FROM %s WHERE status = 'publish' AND type = 'post' AND created_at > EXTRACT(EPOCH FROM NOW() - INTERVAL '365 days') GROUP BY date ORDER BY date",
-		t("posts")))
+		"SELECT TO_CHAR(TO_TIMESTAMP(created_at) AT TIME ZONE $1, 'YYYY-MM-DD') as date, COUNT(*) as count FROM %s WHERE status = 'publish' AND type = 'post' AND created_at > $2 GROUP BY date ORDER BY date",
+		t("posts")), tzName, cutoff)
 	if heatmap == nil {
 		heatmap = []dayCount{}
 	}

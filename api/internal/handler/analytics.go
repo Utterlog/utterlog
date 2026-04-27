@@ -12,6 +12,7 @@ import (
 	"time"
 	"utterlog-go/config"
 	"utterlog-go/internal/model"
+	"utterlog-go/internal/siteclock"
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -344,8 +345,9 @@ func AnalyticsOverview(c *gin.Context) {
 		Count int    `db:"count" json:"count"`
 	}
 	h24ago := time.Now().Add(-24 * time.Hour).Unix()
+	tzName := siteclock.Name()
 	config.DB.Select(&hourly, fmt.Sprintf(
-		"SELECT TO_CHAR(TO_TIMESTAMP(created_at), 'HH24') as hour, COUNT(*) as count FROM %s WHERE created_at >= $1 GROUP BY hour ORDER BY hour", t), h24ago)
+		"SELECT TO_CHAR(TO_TIMESTAMP(created_at) AT TIME ZONE $1, 'HH24') as hour, COUNT(*) as count FROM %s WHERE created_at >= $2 GROUP BY hour ORDER BY hour", t), tzName, h24ago)
 
 	// Daily chart (last 30d)
 	var daily []struct {
@@ -354,7 +356,7 @@ func AnalyticsOverview(c *gin.Context) {
 	}
 	d30ago := time.Now().Add(-30 * 24 * time.Hour).Unix()
 	config.DB.Select(&daily, fmt.Sprintf(
-		"SELECT TO_CHAR(TO_TIMESTAMP(created_at), 'MM-DD') as date, COUNT(*) as count FROM %s WHERE created_at >= $1 GROUP BY date ORDER BY date", t), d30ago)
+		"SELECT TO_CHAR(TO_TIMESTAMP(created_at) AT TIME ZONE $1, 'MM-DD') as date, COUNT(*) as count FROM %s WHERE created_at >= $2 GROUP BY date ORDER BY date", t), tzName, d30ago)
 
 	// Recent visitors
 	var recent []struct {
@@ -971,7 +973,7 @@ func DashboardStats(c *gin.Context) {
 	config.DB.Get(&siteSince, "SELECT COALESCE(value,'') FROM "+t("options")+" WHERE name='site_since'")
 	var sinceTime int64
 	if siteSince != "" {
-		if parsed, err := time.Parse("2006-01-02", siteSince); err == nil {
+		if parsed, err := siteclock.ParseDate(siteSince); err == nil {
 			sinceTime = parsed.Unix()
 		}
 	}
@@ -980,7 +982,7 @@ func DashboardStats(c *gin.Context) {
 	}
 	days := 0
 	if sinceTime > 0 {
-		days = int((time.Now().Unix()-sinceTime)/86400) + 1
+		days = int((siteclock.Now().Unix()-sinceTime)/86400) + 1
 	}
 
 	// 30-day trend — visits (PV, total requests) and visitors (UV, distinct IPs)
@@ -992,12 +994,13 @@ func DashboardStats(c *gin.Context) {
 	}
 	var trend []dayCount
 	d30ago := time.Now().Add(-30 * 24 * time.Hour).Unix()
+	tzName := siteclock.Name()
 	config.DB.Select(&trend, fmt.Sprintf(
-		"SELECT TO_CHAR(TO_TIMESTAMP(created_at), 'MM-DD') as date, COUNT(*) as count, COUNT(*) as visits, COUNT(DISTINCT COALESCE(NULLIF(visitor_id,''), ip)) as visitors FROM %s WHERE created_at >= $1 GROUP BY date ORDER BY date",
-		t("access_logs")), d30ago)
+		"SELECT TO_CHAR(TO_TIMESTAMP(created_at) AT TIME ZONE $1, 'MM-DD') as date, COUNT(*) as count, COUNT(*) as visits, COUNT(DISTINCT COALESCE(NULLIF(visitor_id,''), ip)) as visitors FROM %s WHERE created_at >= $2 GROUP BY date ORDER BY date",
+		t("access_logs")), tzName, d30ago)
 
 	// Today visits
-	todayStart := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Now().Location()).Unix()
+	todayStart := siteclock.TodayStartUnix()
 	var todayVisits int
 	config.DB.Get(&todayVisits, fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE created_at >= $1", t("access_logs")), todayStart)
 

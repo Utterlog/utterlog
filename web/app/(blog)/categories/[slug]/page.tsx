@@ -48,5 +48,5 @@ export default async function CategoryPostsPage({ params }: CategoryPageProps) {
   const theme = getThemeComponents(ctx.theme.name);
   const CategoryComponent = theme.CategoryPage || DefaultCategoryPage;
 
-  return <CategoryComponent category={category} posts={posts} />;
+  return <CategoryComponent category={category} posts={posts} timeZone={ctx.timeZone} />;
 }

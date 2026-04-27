@@ -5,15 +5,14 @@ import AISummary from './AISummary';
 import PostNavigation from './PostNavigation';
 import CommentList from './CommentList';
 import AIReaderChat from './AIReaderChat';
+import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 
-function formatDate(ts: string | number) {
-  // Pin TZ to Asia/Shanghai so SSR (UTC inside container) and the
-  // browser agree — same hydration-mismatch fix as the other themes.
-  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai' });
+function formatDate(ts: string | number, timeZone: string) {
+  return formatDateInTimeZone(ts, 'zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }, timeZone);
 }
 
-export default function PostPage({ post }: { post: any }) {
+export default function PostPage({ post, options }: { post: any; options?: Record<string, string> }) {
+  const timeZone = resolveSiteTimeZone(options);
   return (
     // Outer relative wrapper —— TOC 的 absolute 定位锚点。article 卡片
     // 用了 overflow:hidden（圆角 + border 内部裁切），如果 TOC 放在卡
@@ -27,7 +26,7 @@ export default function PostPage({ post }: { post: any }) {
           {/* Meta —— 左侧时间/阅读量/字数/阅读时长/评论数，最右侧分类。
               阅读时长按 300 字/分钟估算，最少 1 分钟。字段任一为 0 不渲染。 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', fontSize: '13px', color: '#9ca3af' }}>
-            <span>{formatDate(post.created_at)}</span>
+            <span>{formatDate(post.created_at, timeZone)}</span>
             {/* view_count = DB + 1 (cosmetic)，跟 Azure/Chred/Flux 主题
                 的 PostPage 行为对齐。后端 /track 每次访问都 +1，刷新就再
                 +1，cosmetic 跟 DB 永远对齐。 */}

@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button, Table, Pagination, ConfirmDialog, Modal } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 
 const defaultAvatar = 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=64';
 
@@ -113,7 +114,7 @@ function ParentPopover({ parent, children }: { parent: any; children: React.Reac
           </div>
           <div style={{ padding: '4px 12px 8px', fontSize: '11px', color: '#999', borderTop: '1px solid rgba(0,0,0,0.04)', display: 'flex', justifyContent: 'space-between' }}>
             <span>{parent.author}</span>
-            {parent.created_at > 0 && <span>{new Date(parent.created_at * 1000).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '/')}</span>}
+            {parent.created_at > 0 && <span>{formatDate(parent.created_at)}</span>}
           </div>
         </div>
       )}
@@ -122,6 +123,7 @@ function ParentPopover({ parent, children }: { parent: any; children: React.Reac
 }
 
 function CommentCell({ row }: { row: any }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
@@ -158,7 +160,7 @@ function CommentCell({ row }: { row: any }) {
           onClick={() => setExpanded(!expanded)}
           style={{ fontSize: '11px', color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0 0' }}
         >
-          {expanded ? '收起' : '展开'}
+          {expanded ? t('admin.common.collapse', '收起') : t('admin.common.expand', '展开')}
         </button>
       )}
     </div>
@@ -166,6 +168,7 @@ function CommentCell({ row }: { row: any }) {
 }
 
 export default function CommentsPage({ initialStatus }: { initialStatus?: string } = {}) {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -221,7 +224,7 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
       setTotal(response.meta?.total || 0);
       setTotalPages(response.meta?.total_pages || 1);
     } catch {
-      toast.error('获取评论失败');
+      toast.error(t('admin.comments.toast.fetchFailed', '获取评论失败'));
     } finally {
       setLoading(false);
     }
@@ -241,8 +244,8 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
       await commentsApi.update(id, { status: newStatus });
       removeFromList(id); // status changed → no longer belongs to current tab
       fetchCounts();
-      toast.success('状态更新成功');
-    } catch { toast.error('操作失败'); }
+      toast.success(t('admin.comments.toast.statusUpdated', '状态更新成功'));
+    } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
   };
 
   const handleDelete = async () => {
@@ -252,14 +255,14 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
     try {
       if (isPermanent) {
         await commentsApi.delete(deleteId);
-        toast.success('已永久删除');
+        toast.success(t('admin.comments.toast.permanentDeleted', '已永久删除'));
       } else {
         await commentsApi.update(deleteId, { status: 'trash' });
-        toast.success('已移至回收站');
+        toast.success(t('admin.comments.toast.movedToTrash', '已移至回收站'));
       }
       removeFromList(deleteId);
       fetchCounts();
-    } catch { toast.error('操作失败'); }
+    } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
     finally { setDeleteId(null); }
   };
 
@@ -268,12 +271,12 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
     setReplying(true);
     try {
       await commentsApi.reply(replyId, replyContent);
-      toast.success('回复成功');
+      toast.success(t('admin.comments.toast.replySuccess', '回复成功'));
       setReplyId(null);
       setReplyContent('');
       // Reply adds a new comment — refetch to show it
       fetchComments();
-    } catch { toast.error('回复失败'); }
+    } catch { toast.error(t('admin.comments.toast.replyFailed', '回复失败')); }
     finally { setReplying(false); }
   };
 
@@ -281,8 +284,8 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
     try {
       await commentsApi.update(id, { featured: !current });
       updateInList(id, { featured: !current });
-      toast.success(current ? '已取消精选' : '已设为精选');
-    } catch { toast.error('操作失败'); }
+      toast.success(current ? t('admin.comments.toast.unfeatured', '已取消精选') : t('admin.comments.toast.featured', '已设为精选'));
+    } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
   };
 
   const handleEditSave = async () => {
@@ -300,9 +303,9 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
         author_url: editComment.url,
         content: editComment.content,
       });
-      toast.success('评论已更新');
+      toast.success(t('admin.comments.toast.updated', '评论已更新'));
       setEditComment(null);
-    } catch { toast.error('更新失败'); }
+    } catch { toast.error(t('admin.common.updateFailed', '更新失败')); }
   };
 
   const handleEmptyTrash = async () => {
@@ -313,8 +316,8 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
       }
       setComments([]);
       setTotal(0);
-      toast.success('回收站已清空');
-    } catch { toast.error('清空失败'); }
+      toast.success(t('admin.comments.toast.trashEmptied', '回收站已清空'));
+    } catch { toast.error(t('admin.common.clearFailed', '清空失败')); }
     finally { setEmptyTrash(false); }
   };
 
@@ -341,23 +344,23 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
       setTotal(prev => Math.max(prev - ids.length, 0));
       setSelectedIds(new Set());
       fetchCounts();
-      toast.success(`已处理 ${ids.length} 条评论`);
-    } catch { toast.error('批量操作失败'); }
+      toast.success(t('admin.comments.toast.batchProcessed', '已处理 {count} 条评论', { count: ids.length }));
+    } catch { toast.error(t('admin.comments.toast.batchFailed', '批量操作失败')); }
   };
 
   const statusTabs = [
-    { key: '', label: '全部', count: 0 },
-    { key: 'pending', label: '待审核', count: pendingCount },
-    { key: 'mine', label: '我的', count: 0 },
-    { key: 'spam', label: '垃圾', count: spamCount },
-    { key: 'trash', label: '回收站', count: 0 },
-    { key: 'annotations', label: '段落点评', count: 0 },
+    { key: '', label: t('admin.common.all', '全部'), count: 0 },
+    { key: 'pending', label: t('admin.comments.status.pending', '待审核'), count: pendingCount },
+    { key: 'mine', label: t('admin.comments.status.mine', '我的'), count: 0 },
+    { key: 'spam', label: t('admin.comments.status.spam', '垃圾'), count: spamCount },
+    { key: 'trash', label: t('admin.comments.status.trash', '回收站'), count: 0 },
+    { key: 'annotations', label: t('admin.comments.status.annotations', '段落点评'), count: 0 },
   ];
 
   const columns = [
     {
       key: 'author',
-      title: <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}><input type="checkbox" checked={comments.length > 0 && selectedIds.size === comments.length} onChange={toggleSelectAll} style={{ accentColor: 'var(--color-primary)', cursor: 'pointer' }} /><span>作者</span>{selectedIds.size > 0 && <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 500 }}>已选 {selectedIds.size}</span>}</label>,
+      title: <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}><input type="checkbox" checked={comments.length > 0 && selectedIds.size === comments.length} onChange={toggleSelectAll} style={{ accentColor: 'var(--color-primary)', cursor: 'pointer' }} /><span>{t('admin.comments.columns.author', '作者')}</span>{selectedIds.size > 0 && <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 500 }}>{t('admin.common.selectedCount', '已选 {count}', { count: selectedIds.size })}</span>}</label>,
       width: '220px',
       render: (row: any) => (
         <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
@@ -390,13 +393,13 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
     },
     {
       key: 'content',
-      title: '评论',
+      title: t('admin.comments.columns.comment', '评论'),
       width: '300px',
       render: (row: any) => <CommentCell row={row} />,
     },
     {
       key: 'post',
-      title: '回复至',
+      title: t('admin.comments.columns.replyTo', '回复至'),
       width: '180px',
       render: (row: any) => (
         <div style={{ fontSize: '12px' }}>
@@ -416,7 +419,7 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
     },
     {
       key: 'created_at',
-      title: '提交于',
+      title: t('admin.comments.columns.submittedAt', '提交于'),
       width: '120px',
       render: (row: any) => (
         <span className="text-dim" style={{ fontSize: '12px' }}>{formatDate(row.created_at)}</span>
@@ -424,55 +427,55 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
     },
     {
       key: 'actions',
-      title: '操作',
+      title: t('admin.common.actions', '操作'),
       width: '140px',
       render: (row: any) => (
         <div style={{ display: 'flex', gap: '4px', fontSize: '12px' }}>
           {/* Approved: featured + edit + reply + spam + delete */}
           {row.status === 'approved' && (
             <>
-              <button onClick={() => toggleFeatured(row.id, row.featured)} className={`action-btn${row.featured ? ' warning' : ''}`} title={row.featured ? '取消精选' : '设为精选'}>
+              <button onClick={() => toggleFeatured(row.id, row.featured)} className={`action-btn${row.featured ? ' warning' : ''}`} title={row.featured ? t('admin.comments.unfeature', '取消精选') : t('admin.comments.feature', '设为精选')}>
                 <i className={row.featured ? 'fa-solid fa-star' : 'fa-regular fa-star'} style={{ fontSize: '14px' }} />
               </button>
-              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-              <button onClick={() => { setReplyId(row.id); setReplyContent(''); }} className="action-btn primary" title="回复"><i className="fa-regular fa-comments" style={{ fontSize: '14px' }} /></button>
-              <button onClick={() => handleStatusChange(row.id, 'spam')} className="action-btn warning" title="标记垃圾">
+              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title={t('admin.common.edit', '编辑')}><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => { setReplyId(row.id); setReplyContent(''); }} className="action-btn primary" title={t('admin.comments.reply', '回复')}><i className="fa-regular fa-comments" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => handleStatusChange(row.id, 'spam')} className="action-btn warning" title={t('admin.comments.markSpam', '标记垃圾')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
               </button>
-              <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title={t('admin.common.delete', '删除')}><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
             </>
           )}
           {/* Pending: approve + edit + spam + delete */}
           {row.status === 'pending' && (
             <>
-              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success('已通过'); } catch { toast.error('操作失败'); } }} className="action-btn success" title="通过">
+              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success(t('admin.comments.toast.approved', '已通过')); } catch { toast.error(t('admin.common.operationFailed', '操作失败')); } }} className="action-btn success" title={t('admin.comments.approve', '通过')}>
                 <i className="fa-solid fa-check" style={{ fontSize: '14px' }} />
               </button>
-              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-              <button onClick={() => { handleStatusChange(row.id, 'spam'); fetchCounts(); }} className="action-btn warning" title="垃圾箱">
+              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title={t('admin.common.edit', '编辑')}><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => { handleStatusChange(row.id, 'spam'); fetchCounts(); }} className="action-btn warning" title={t('admin.comments.moveToSpam', '垃圾箱')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
               </button>
-              <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title={t('admin.common.delete', '删除')}><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
             </>
           )}
           {/* Spam: approve + edit + delete */}
           {row.status === 'spam' && (
             <>
-              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success('已恢复'); } catch { toast.error('操作失败'); } }} className="action-btn success" title="恢复通过">
+              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success(t('admin.comments.toast.restored', '已恢复')); } catch { toast.error(t('admin.common.operationFailed', '操作失败')); } }} className="action-btn success" title={t('admin.comments.restoreApproved', '恢复通过')}>
                 <i className="fa-solid fa-check" style={{ fontSize: '14px' }} />
               </button>
-              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-              <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title="永久删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title={t('admin.common.edit', '编辑')}><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title={t('admin.comments.permanentDelete', '永久删除')}><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
             </>
           )}
           {/* Trash: restore + edit + delete */}
           {row.status === 'trash' && (
             <>
-              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success('已恢复'); } catch { toast.error('操作失败'); } }} className="action-btn success" title="恢复">
+              <button onClick={async () => { try { await commentsApi.approve(row.id); removeFromList(row.id); fetchCounts(); toast.success(t('admin.comments.toast.restored', '已恢复')); } catch { toast.error(t('admin.common.operationFailed', '操作失败')); } }} className="action-btn success" title={t('admin.comments.restore', '恢复')}>
                 <i className="fa-solid fa-check" style={{ fontSize: '14px' }} />
               </button>
-              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-              <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title="永久删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => setEditComment({ ...row })} className="action-btn primary" title={t('admin.common.edit', '编辑')}><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+              <button onClick={() => setDeleteId(row.id)} className="action-btn danger" title={t('admin.comments.permanentDelete', '永久删除')}><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
             </>
           )}
         </div>
@@ -511,19 +514,19 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
 
         {status === 'trash' && comments.length > 0 && (
           <Button variant="danger" onClick={() => setEmptyTrash(true)}>
-            <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} /> 清空
+            <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} /> {t('admin.common.clear', '清空')}
           </Button>
         )}
         {selectedIds.size > 0 && (
           <>
             <Button variant="secondary" onClick={() => batchAction('approve')}>
-              <i className="fa-solid fa-check" style={{ fontSize: '12px' }} /> 通过
+              <i className="fa-solid fa-check" style={{ fontSize: '12px' }} /> {t('admin.comments.approve', '通过')}
             </Button>
             <Button variant="secondary" onClick={() => batchAction('spam')}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> 垃圾
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> {t('admin.comments.spam', '垃圾')}
             </Button>
             <Button variant="danger" onClick={() => setBatchDeleteConfirm(true)}>
-              <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} /> 删除
+              <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} /> {t('admin.common.delete', '删除')}
             </Button>
           </>
         )}
@@ -532,11 +535,11 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
           value={search}
           onChange={e => setSearch(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && (setPage(1), fetchComments())}
-          placeholder="搜索评论内容 / 昵称 / 邮箱"
+          placeholder={t('admin.comments.searchPlaceholder', '搜索评论内容 / 昵称 / 邮箱')}
           className="input"
           style={{ width: '220px', marginLeft: 'auto', fontSize: '13px' }}
         />
-        <Button className="btn-square" title="搜索" onClick={() => { setPage(1); fetchComments(); }}>
+        <Button className="btn-square" title={t('admin.common.search', '搜索')} onClick={() => { setPage(1); fetchComments(); }}>
           <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
         </Button>
       </div>
@@ -551,7 +554,7 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid var(--color-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="text-dim" style={{ fontSize: '12px' }}>共 {total} 条</span>
+            <span className="text-dim" style={{ fontSize: '12px' }}>{t('admin.common.totalItems', '共 {count} 条', { count: total })}</span>
             <select
               value={perPage}
               onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
@@ -561,9 +564,9 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
                 borderRadius: '2px', cursor: 'pointer',
               }}
             >
-              <option value={20}>20 条/页</option>
-              <option value={50}>50 条/页</option>
-              <option value={100}>100 条/页</option>
+              <option value={20}>{t('admin.common.perPage', '{count} 条/页', { count: 20 })}</option>
+              <option value={50}>{t('admin.common.perPage', '{count} 条/页', { count: 50 })}</option>
+              <option value={100}>{t('admin.common.perPage', '{count} 条/页', { count: 100 })}</option>
             </select>
           </div>
           <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
@@ -574,60 +577,60 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
         isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
-        title={comments.find(c => c.id === deleteId)?.status === 'trash' ? '永久删除' : '移至回收站'}
-        message={comments.find(c => c.id === deleteId)?.status === 'trash' ? '此操作不可恢复，确认永久删除？' : '评论将移至回收站，可在回收站中恢复或彻底删除。'}
+        title={comments.find(c => c.id === deleteId)?.status === 'trash' ? t('admin.comments.permanentDelete', '永久删除') : t('admin.comments.moveToTrash', '移至回收站')}
+        message={comments.find(c => c.id === deleteId)?.status === 'trash' ? t('admin.comments.confirmPermanentDelete', '此操作不可恢复，确认永久删除？') : t('admin.comments.confirmMoveToTrash', '评论将移至回收站，可在回收站中恢复或彻底删除。')}
       />
 
       <ConfirmDialog
         isOpen={batchDeleteConfirm}
         onClose={() => setBatchDeleteConfirm(false)}
         onConfirm={() => { setBatchDeleteConfirm(false); batchAction('delete'); }}
-        title={status === 'trash' ? '批量永久删除' : '批量移至回收站'}
-        message={status === 'trash' ? `确认永久删除选中的 ${selectedIds.size} 条评论？此操作不可恢复。` : `确认将选中的 ${selectedIds.size} 条评论移至回收站？`}
+        title={status === 'trash' ? t('admin.comments.batchPermanentDelete', '批量永久删除') : t('admin.comments.batchMoveToTrash', '批量移至回收站')}
+        message={status === 'trash' ? t('admin.comments.confirmBatchPermanentDelete', '确认永久删除选中的 {count} 条评论？此操作不可恢复。', { count: selectedIds.size }) : t('admin.comments.confirmBatchMoveToTrash', '确认将选中的 {count} 条评论移至回收站？', { count: selectedIds.size })}
       />
 
-      <Modal isOpen={!!replyId} onClose={() => setReplyId(null)} title="回复评论" size="sm">
+      <Modal isOpen={!!replyId} onClose={() => setReplyId(null)} title={t('admin.comments.replyComment', '回复评论')} size="sm">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <textarea
             value={replyContent}
             onChange={(e) => setReplyContent(e.target.value)}
             rows={4}
-            placeholder="输入回复内容..."
+            placeholder={t('admin.comments.replyPlaceholder', '输入回复内容...')}
             className="input"
             style={{ resize: 'vertical' }}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-            <Button variant="secondary" onClick={() => setReplyId(null)}>取消</Button>
-            <Button onClick={handleReply} disabled={replying}>{replying ? '回复中...' : '回复'}</Button>
+            <Button variant="secondary" onClick={() => setReplyId(null)}>{t('admin.common.cancel', '取消')}</Button>
+            <Button onClick={handleReply} disabled={replying}>{replying ? t('admin.comments.replying', '回复中...') : t('admin.comments.reply', '回复')}</Button>
           </div>
         </div>
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={!!editComment} onClose={() => setEditComment(null)} title="编辑评论" size="sm">
+      <Modal isOpen={!!editComment} onClose={() => setEditComment(null)} title={t('admin.comments.editComment', '编辑评论')} size="sm">
         {editComment && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div>
-                <label className="text-dim" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>昵称</label>
+                <label className="text-dim" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>{t('admin.comments.nickname', '昵称')}</label>
                 <input value={editComment.author || ''} onChange={e => setEditComment({ ...editComment, author: e.target.value })} className="input" style={{ width: '100%' }} />
               </div>
               <div>
-                <label className="text-dim" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>邮箱</label>
+                <label className="text-dim" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>{t('admin.comments.email', '邮箱')}</label>
                 <input value={editComment.email || ''} onChange={e => setEditComment({ ...editComment, email: e.target.value })} className="input" style={{ width: '100%' }} />
               </div>
             </div>
             <div>
-              <label className="text-dim" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>网址</label>
+              <label className="text-dim" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>{t('admin.comments.website', '网址')}</label>
               <input value={editComment.url || ''} onChange={e => setEditComment({ ...editComment, url: e.target.value })} className="input" style={{ width: '100%' }} />
             </div>
             <div>
-              <label className="text-dim" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>评论内容</label>
+              <label className="text-dim" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>{t('admin.comments.content', '评论内容')}</label>
               <textarea value={editComment.content || ''} onChange={e => setEditComment({ ...editComment, content: e.target.value })} className="input" rows={5} style={{ width: '100%', resize: 'vertical' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <Button variant="secondary" onClick={() => setEditComment(null)}>取消</Button>
-              <Button onClick={handleEditSave}>保存</Button>
+              <Button variant="secondary" onClick={() => setEditComment(null)}>{t('admin.common.cancel', '取消')}</Button>
+              <Button onClick={handleEditSave}>{t('admin.common.save', '保存')}</Button>
             </div>
           </div>
         )}
@@ -639,8 +642,8 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
         isOpen={emptyTrash}
         onClose={() => setEmptyTrash(false)}
         onConfirm={handleEmptyTrash}
-        title="清空回收站"
-        message="将永久删除回收站中的所有评论，此操作无法撤销。确认清空？"
+        title={t('admin.comments.emptyTrash', '清空回收站')}
+        message={t('admin.comments.confirmEmptyTrash', '将永久删除回收站中的所有评论，此操作无法撤销。确认清空？')}
       />
     </div>
   );

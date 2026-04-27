@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getPosts } from '@/lib/blog-api';
+import { getOptions, getPosts } from '@/lib/blog-api';
 import PostLink from '@/components/blog/PostLink';
 import PageTitle from '@/components/blog/PageTitle';
+import { datePartsInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 
 interface Props { params: Promise<{ year: string; month: string }> }
 
@@ -21,10 +22,14 @@ export default async function MonthArchive({ params }: Props) {
   const { year, month } = await params;
   const y = Number(year), m = Number(month);
 
-  const res = await getPosts({ per_page: 500, status: 'publish' }).catch(() => ({ data: [] }));
+  const [res, optsRes] = await Promise.all([
+    getPosts({ per_page: 500, status: 'publish' }).catch(() => ({ data: [] })),
+    getOptions().catch(() => ({ data: {} })),
+  ]);
+  const timeZone = resolveSiteTimeZone((optsRes as any).data || {});
   const posts = (res.data || []).filter((p: any) => {
-    const d = typeof p.created_at === 'number' ? new Date(p.created_at * 1000) : new Date(p.created_at);
-    return d.getFullYear() === y && d.getMonth() + 1 === m;
+    const parts = datePartsInTimeZone(p.created_at, timeZone);
+    return parts.year === y && parts.month === m;
   });
 
   return (
@@ -43,8 +48,7 @@ export default async function MonthArchive({ params }: Props) {
       <div style={{ padding: '0 32px 32px' }}>
       <div style={{ border: '1px solid var(--color-border)' }}>
         {posts.map((post: any, idx: number) => {
-          const d = typeof post.created_at === 'number' ? new Date(post.created_at * 1000) : new Date(post.created_at);
-          const day = String(d.getDate()).padStart(2, '0');
+          const day = String(datePartsInTimeZone(post.created_at, timeZone).day).padStart(2, '0');
           return (
             <PostLink key={post.id} post={post} style={{
               display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px',

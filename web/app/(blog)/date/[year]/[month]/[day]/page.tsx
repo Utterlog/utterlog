@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getPosts } from '@/lib/blog-api';
+import { getOptions, getPosts } from '@/lib/blog-api';
 import PostLink from '@/components/blog/PostLink';
 import PageTitle from '@/components/blog/PageTitle';
+import { datePartsInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 
 interface Props { params: Promise<{ year: string; month: string; day: string }> }
 
@@ -21,10 +22,14 @@ export default async function DayArchive({ params }: Props) {
   const { year, month, day } = await params;
   const y = Number(year), m = Number(month), dd = Number(day);
 
-  const res = await getPosts({ per_page: 500, status: 'publish' }).catch(() => ({ data: [] }));
+  const [res, optsRes] = await Promise.all([
+    getPosts({ per_page: 500, status: 'publish' }).catch(() => ({ data: [] })),
+    getOptions().catch(() => ({ data: {} })),
+  ]);
+  const timeZone = resolveSiteTimeZone((optsRes as any).data || {});
   const posts = (res.data || []).filter((p: any) => {
-    const d = typeof p.created_at === 'number' ? new Date(p.created_at * 1000) : new Date(p.created_at);
-    return d.getFullYear() === y && d.getMonth() + 1 === m && d.getDate() === dd;
+    const parts = datePartsInTimeZone(p.created_at, timeZone);
+    return parts.year === y && parts.month === m && parts.day === dd;
   });
 
   return (

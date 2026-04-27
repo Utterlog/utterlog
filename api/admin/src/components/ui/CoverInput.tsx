@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { mediaApi } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { useI18n } from '@/lib/i18n';
 
 interface CoverInputProps {
   value: string;
@@ -11,9 +12,11 @@ interface CoverInputProps {
   placeholder?: string;
 }
 
-export function CoverInput({ value, onChange, folder, label = '封面图片', placeholder = 'https://...' }: CoverInputProps) {
+export function CoverInput({ value, onChange, folder, label, placeholder = 'https://...' }: CoverInputProps) {
+  const { t } = useI18n();
   const [uploading, setUploading] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const displayLabel = label === undefined ? t('admin.cover.label', '封面图片') : label;
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -22,26 +25,26 @@ export function CoverInput({ value, onChange, folder, label = '封面图片', pl
     try {
       const r: any = await mediaApi.upload(file, folder);
       const url = r.url || r.data?.url;
-      if (url) { onChange(url); toast.success('上传成功'); }
-    } catch { toast.error('上传失败'); }
+      if (url) { onChange(url); toast.success(t('admin.common.uploadSuccess', '上传成功')); }
+    } catch { toast.error(t('admin.common.uploadFailed', '上传失败')); }
     finally { setUploading(false); e.target.value = ''; }
   };
 
   const handleFetch = async () => {
-    if (!value?.startsWith('http')) { toast.error('请先输入有效的图片 URL'); return; }
+    if (!value?.startsWith('http')) { toast.error(t('admin.cover.invalidUrl', '请先输入有效的图片 URL')); return; }
     setFetching(true);
     try {
       const r: any = await mediaApi.downloadUrl(value, folder);
       const url = r.url || r.data?.url;
-      if (url) { onChange(url); toast.success('已同步到存储'); }
-    } catch { toast.error('同步失败'); }
+      if (url) { onChange(url); toast.success(t('admin.cover.synced', '已同步到存储')); }
+    } catch { toast.error(t('admin.cover.syncFailed', '同步失败')); }
     finally { setFetching(false); }
   };
 
   return (
     <div>
-      {label && (
-        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{label}</label>
+      {displayLabel && (
+        <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{displayLabel}</label>
       )}
       <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
         {value && (
@@ -67,8 +70,8 @@ export function CoverInput({ value, onChange, folder, label = '封面图片', pl
               style={{ cursor: uploading ? 'wait' : 'pointer', fontSize: '12px', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
               {uploading
-                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />上传中...</>
-                : <><i className="fa-regular fa-upload" style={{ fontSize: '11px' }} />上传图片</>
+                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />{t('admin.cover.uploading', '上传中...')}</>
+                : <><i className="fa-regular fa-upload" style={{ fontSize: '11px' }} />{t('admin.cover.uploadImage', '上传图片')}</>
               }
               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} disabled={uploading} />
             </label>
@@ -78,11 +81,11 @@ export function CoverInput({ value, onChange, folder, label = '封面图片', pl
               style={{ fontSize: '12px', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               onClick={handleFetch}
               disabled={fetching || !value?.startsWith('http')}
-              title="将当前 URL 下载并保存到配置的存储"
+              title={t('admin.cover.syncTitle', '将当前 URL 下载并保存到配置的存储')}
             >
               {fetching
-                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />同步中...</>
-                : <><i className="fa-regular fa-cloud-arrow-down" style={{ fontSize: '11px' }} />同步到存储</>
+                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />{t('admin.cover.syncing', '同步中...')}</>
+                : <><i className="fa-regular fa-cloud-arrow-down" style={{ fontSize: '11px' }} />{t('admin.cover.syncToStorage', '同步到存储')}</>
               }
             </button>
           </div>

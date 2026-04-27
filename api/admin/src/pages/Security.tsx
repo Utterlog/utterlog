@@ -3,13 +3,14 @@ import { useEffect, useState } from 'react';
 import api, { optionsApi } from '@/lib/api';
 import { Button, Input } from '@/components/ui';
 import toast from 'react-hot-toast';
+import { useI18n } from '@/lib/i18n';
 
 const tabs = [
-  { id: '概览',     label: '概览',     icon: 'fa-regular fa-chart-pie' },
-  { id: '封禁管理', label: '封禁管理', icon: 'fa-regular fa-ban' },
-  { id: 'IP 信誉',  label: 'IP 信誉',  icon: 'fa-regular fa-shield-halved' },
-  { id: '安全事件', label: '安全事件', icon: 'fa-regular fa-clock-rotate-left' },
-  { id: '防御设置', label: '防御设置', icon: 'fa-regular fa-sliders' },
+  { id: '概览',     label: '概览',     key: 'admin.security.tabs.overview', icon: 'fa-regular fa-chart-pie' },
+  { id: '封禁管理', label: '封禁管理', key: 'admin.security.tabs.bans', icon: 'fa-regular fa-ban' },
+  { id: 'IP 信誉',  label: 'IP 信誉',  key: 'admin.security.tabs.reputation', icon: 'fa-regular fa-shield-halved' },
+  { id: '安全事件', label: '安全事件', key: 'admin.security.tabs.events', icon: 'fa-regular fa-clock-rotate-left' },
+  { id: '防御设置', label: '防御设置', key: 'admin.security.tabs.settings', icon: 'fa-regular fa-sliders' },
 ];
 
 // Match Settings page styling
@@ -18,6 +19,7 @@ const sectionTitleStyle = { fontSize: '15px', fontWeight: 600, marginBottom: '24
 const subTitleRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } as const;
 
 export default function SecurityPage() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('概览');
   const [overview, setOverview] = useState<any>(null);
   const [bans, setBans] = useState<any[]>([]);
@@ -59,9 +61,9 @@ export default function SecurityPage() {
         require_login: accessOpts.require_login,
         rate_limit: accessOpts.rate_limit,
       });
-      toast.success('访问控制已保存');
+      toast.success(t('admin.security.toast.accessSaved', '访问控制已保存'));
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message || '保存失败');
+      toast.error(e?.response?.data?.error?.message || t('admin.settings.toast.saveFailed', '保存失败'));
     } finally {
       setSavingAccess(false);
     }
@@ -71,22 +73,22 @@ export default function SecurityPage() {
     if (!banIP) return;
     try {
       await api.post('/security/ban', { ip: banIP, reason: banReason, duration: parseInt(banDuration) });
-      toast.success('已封禁'); setBanIP(''); setBanReason('');
+      toast.success(t('admin.security.toast.banned', '已封禁')); setBanIP(''); setBanReason('');
       api.get('/security/bans').then((r: any) => setBans(r.data || []));
-    } catch { toast.error('封禁失败'); }
+    } catch { toast.error(t('admin.security.toast.banFailed', '封禁失败')); }
   };
 
   const handleUnban = async (ip: string) => {
-    try { await api.post('/security/unban', { ip }); toast.success('已解封'); setBans(bans.filter(b => b.ip !== ip)); } catch { toast.error('操作失败'); }
+    try { await api.post('/security/unban', { ip }); toast.success(t('admin.security.toast.unbanned', '已解封')); setBans(bans.filter(b => b.ip !== ip)); } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
   };
 
   const handleResetRep = async (ip: string) => {
-    try { await api.post('/security/reputation/reset', { ip }); toast.success('已重置'); } catch { toast.error('操作失败'); }
+    try { await api.post('/security/reputation/reset', { ip }); toast.success(t('admin.security.toast.reset', '已重置')); } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
   };
 
   const saveSettings = async () => {
     setSaving(true);
-    try { await api.post('/security/settings', settings); toast.success('设置已保存'); } catch { toast.error('保存失败'); }
+    try { await api.post('/security/settings', settings); toast.success(t('admin.settings.toast.saved', '设置已保存')); } catch { toast.error(t('admin.settings.toast.saveFailed', '保存失败')); }
     setSaving(false);
   };
 
@@ -115,7 +117,7 @@ export default function SecurityPage() {
             }}
           >
             <i className={tab.icon} style={{ fontSize: '13px' }} />
-            {tab.label}
+            {t(tab.key, tab.label)}
           </button>
         ))}
       </div>
@@ -125,9 +127,9 @@ export default function SecurityPage() {
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
             {[
-              { label: '活跃封禁', value: overview.active_bans, color: '#dc2626' },
-              { label: '24h 安全事件', value: overview.events_24h, color: '#f59e0b' },
-              { label: '高风险 IP', value: overview.risky_ips, color: '#8b5cf6' },
+              { label: t('admin.security.overview.activeBans', '活跃封禁'), value: overview.active_bans, color: '#dc2626' },
+              { label: t('admin.security.overview.events24h', '24h 安全事件'), value: overview.events_24h, color: '#f59e0b' },
+              { label: t('admin.security.overview.riskyIps', '高风险 IP'), value: overview.risky_ips, color: '#8b5cf6' },
             ].map((s, i) => (
               <div key={i} className="card" style={{ padding: '20px' }}>
                 <p className="text-dim" style={{ fontSize: '12px' }}>{s.label}</p>
@@ -137,24 +139,24 @@ export default function SecurityPage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div className="card" style={{ padding: '16px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>防御状态</h3>
+              <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>{t('admin.security.overview.defenseStatus', '防御状态')}</h3>
               <div style={{ fontSize: '13px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                  <span>CC 防御</span>
-                  <span style={{ color: overview.cc_enabled ? '#16a34a' : '#dc2626' }}>{overview.cc_enabled ? '● 开启' : '● 关闭'}</span>
+                  <span>{t('admin.security.settings.ccDefense', 'CC 防御')}</span>
+                  <span style={{ color: overview.cc_enabled ? '#16a34a' : '#dc2626' }}>{overview.cc_enabled ? t('admin.common.onDot', '● 开启') : t('admin.common.offDot', '● 关闭')}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                  <span>GeoIP 封锁</span>
-                  <span style={{ color: overview.geo_enabled ? '#16a34a' : '#dc2626' }}>{overview.geo_enabled ? '● 开启' : '● 关闭'}</span>
+                  <span>{t('admin.security.settings.geoBlock', 'GeoIP 封锁')}</span>
+                  <span style={{ color: overview.geo_enabled ? '#16a34a' : '#dc2626' }}>{overview.geo_enabled ? t('admin.common.onDot', '● 开启') : t('admin.common.offDot', '● 关闭')}</span>
                 </div>
               </div>
             </div>
             <div className="card" style={{ padding: '16px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>统计</h3>
+              <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>{t('admin.security.overview.stats', '统计')}</h3>
               <div style={{ fontSize: '13px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span>累计封禁</span><span>{overview.total_bans}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span>追踪 IP</span><span>{overview.tracked_ips}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span>安全事件</span><span>{overview.total_events}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span>{t('admin.security.overview.totalBans', '累计封禁')}</span><span>{overview.total_bans}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span>{t('admin.security.overview.trackedIps', '追踪 IP')}</span><span>{overview.tracked_ips}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span>{t('admin.security.overview.totalEvents', '安全事件')}</span><span>{overview.total_events}</span></div>
               </div>
             </div>
           </div>
@@ -165,27 +167,27 @@ export default function SecurityPage() {
       {activeTab === '封禁管理' && (
         <div>
           <div className="card" style={{ padding: '16px', marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-            <div style={{ flex: 1 }}><label className="text-xs text-sub block mb-1">IP 地址</label><Input value={banIP} onChange={e => setBanIP(e.target.value)} placeholder="192.168.1.1" /></div>
-            <div style={{ flex: 1 }}><label className="text-xs text-sub block mb-1">原因</label><Input value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="可选" /></div>
-            <div style={{ width: '100px' }}><label className="text-xs text-sub block mb-1">时长(分)</label><Input value={banDuration} onChange={e => setBanDuration(e.target.value)} placeholder="60" /></div>
-            <Button onClick={handleBan}>封禁</Button>
+            <div style={{ flex: 1 }}><label className="text-xs text-sub block mb-1">{t('admin.security.bans.ipAddress', 'IP 地址')}</label><Input value={banIP} onChange={e => setBanIP(e.target.value)} placeholder="192.168.1.1" /></div>
+            <div style={{ flex: 1 }}><label className="text-xs text-sub block mb-1">{t('admin.security.bans.reason', '原因')}</label><Input value={banReason} onChange={e => setBanReason(e.target.value)} placeholder={t('admin.common.optional', '可选')} /></div>
+            <div style={{ width: '100px' }}><label className="text-xs text-sub block mb-1">{t('admin.security.bans.durationMinutes', '时长(分)')}</label><Input value={banDuration} onChange={e => setBanDuration(e.target.value)} placeholder="60" /></div>
+            <Button onClick={handleBan}>{t('admin.security.bans.ban', '封禁')}</Button>
           </div>
 
           <div className="card" style={{ overflow: 'hidden' }}>
             <table className="table" style={{ width: '100%', fontSize: '12px' }}>
-              <thead><tr><th style={{ padding: '8px 12px' }}>IP</th><th>原因</th><th>类型</th><th>时长</th><th>过期</th><th>操作</th></tr></thead>
+              <thead><tr><th style={{ padding: '8px 12px' }}>IP</th><th>{t('admin.security.bans.reason', '原因')}</th><th>{t('admin.security.bans.type', '类型')}</th><th>{t('admin.security.bans.duration', '时长')}</th><th>{t('admin.security.bans.expires', '过期')}</th><th>{t('admin.common.actions', '操作')}</th></tr></thead>
               <tbody>
                 {bans.map((b: any, i: number) => (
                   <tr key={i}>
                     <td style={{ padding: '6px 12px', fontWeight: 500 }}>{typeof b.ip === 'string' ? b.ip : ''}</td>
                     <td className="text-dim">{typeof b.reason === 'string' ? b.reason : ''}</td>
-                    <td><span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '2px', background: b.ban_type === 'auto' ? '#fef3c7' : '#fee2e2', color: b.ban_type === 'auto' ? '#92400e' : '#991b1b' }}>{b.ban_type === 'auto' ? '自动' : '手动'}</span></td>
-                    <td className="text-dim">{b.duration ? b.duration + '分' : '永久'}</td>
-                    <td className="text-dim">{b.expires_at ? fmtTime(b.expires_at) : '永久'}</td>
-                    <td><button onClick={() => handleUnban(b.ip)} className="text-primary-themed" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>解封</button></td>
+                    <td><span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '2px', background: b.ban_type === 'auto' ? '#fef3c7' : '#fee2e2', color: b.ban_type === 'auto' ? '#92400e' : '#991b1b' }}>{b.ban_type === 'auto' ? t('admin.security.bans.auto', '自动') : t('admin.security.bans.manual', '手动')}</span></td>
+                    <td className="text-dim">{b.duration ? t('admin.security.bans.minutes', '{count}分', { count: b.duration }) : t('admin.security.bans.permanent', '永久')}</td>
+                    <td className="text-dim">{b.expires_at ? fmtTime(b.expires_at) : t('admin.security.bans.permanent', '永久')}</td>
+                    <td><button onClick={() => handleUnban(b.ip)} className="text-primary-themed" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>{t('admin.security.bans.unban', '解封')}</button></td>
                   </tr>
                 ))}
-                {bans.length === 0 && <tr><td colSpan={6} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>暂无封禁</td></tr>}
+                {bans.length === 0 && <tr><td colSpan={6} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>{t('admin.security.bans.empty', '暂无封禁')}</td></tr>}
               </tbody>
             </table>
           </div>
@@ -196,7 +198,7 @@ export default function SecurityPage() {
       {activeTab === 'IP 信誉' && (
         <div className="card" style={{ overflow: 'hidden' }}>
           <table className="table" style={{ width: '100%', fontSize: '12px' }}>
-            <thead><tr><th style={{ padding: '8px 12px' }}>IP</th><th>评分</th><th>风险</th><th>请求数</th><th>最后活跃</th><th>操作</th></tr></thead>
+            <thead><tr><th style={{ padding: '8px 12px' }}>IP</th><th>{t('admin.security.reputation.score', '评分')}</th><th>{t('admin.security.reputation.risk', '风险')}</th><th>{t('admin.security.reputation.requests', '请求数')}</th><th>{t('admin.security.reputation.lastSeen', '最后活跃')}</th><th>{t('admin.common.actions', '操作')}</th></tr></thead>
             <tbody>
               {reputation.map((r: any, i: number) => (
                 <tr key={i}>
@@ -205,13 +207,13 @@ export default function SecurityPage() {
                   <td><span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '2px',
                     background: r.risk_level === 'danger' ? '#fee2e2' : r.risk_level === 'warning' ? '#fef3c7' : '#dcfce7',
                     color: r.risk_level === 'danger' ? '#991b1b' : r.risk_level === 'warning' ? '#92400e' : '#166534',
-                  }}>{r.risk_level === 'danger' ? '危险' : r.risk_level === 'warning' ? '警告' : '安全'}</span></td>
+                  }}>{r.risk_level === 'danger' ? t('admin.security.reputation.danger', '危险') : r.risk_level === 'warning' ? t('admin.security.reputation.warning', '警告') : t('admin.security.reputation.safe', '安全')}</span></td>
                   <td className="text-dim">{r.request_count || 0}</td>
                   <td className="text-dim">{fmtTime(r.last_seen)}</td>
-                  <td><button onClick={() => handleResetRep(r.ip)} className="text-dim" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px' }}>重置</button></td>
+                  <td><button onClick={() => handleResetRep(r.ip)} className="text-dim" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px' }}>{t('admin.common.reset', '重置')}</button></td>
                 </tr>
               ))}
-              {reputation.length === 0 && <tr><td colSpan={6} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>暂无数据</td></tr>}
+              {reputation.length === 0 && <tr><td colSpan={6} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>{t('admin.common.noData', '暂无数据')}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -221,7 +223,7 @@ export default function SecurityPage() {
       {activeTab === '安全事件' && (
         <div className="card" style={{ overflow: 'hidden' }}>
           <table className="table" style={{ width: '100%', fontSize: '12px' }}>
-            <thead><tr><th style={{ padding: '8px 12px' }}>时间</th><th>IP</th><th>事件</th><th>详情</th><th>评分</th></tr></thead>
+            <thead><tr><th style={{ padding: '8px 12px' }}>{t('admin.common.time', '时间')}</th><th>IP</th><th>{t('admin.security.events.event', '事件')}</th><th>{t('admin.security.events.detail', '详情')}</th><th>{t('admin.security.reputation.score', '评分')}</th></tr></thead>
             <tbody>
               {timeline.map((e: any, i: number) => (
                 <tr key={i}>
@@ -232,7 +234,7 @@ export default function SecurityPage() {
                   <td style={{ color: (e.score_delta || 0) > 0 ? '#dc2626' : 'var(--color-text-dim)' }}>{e.score_delta > 0 ? '+' + e.score_delta : e.score_delta || 0}</td>
                 </tr>
               ))}
-              {timeline.length === 0 && <tr><td colSpan={5} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>暂无事件</td></tr>}
+              {timeline.length === 0 && <tr><td colSpan={5} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>{t('admin.security.events.empty', '暂无事件')}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -244,8 +246,8 @@ export default function SecurityPage() {
           {/* 访问控制（来自原「系统设置 → 安全设置」）*/}
           <div className="card" style={cardStyle}>
             <div style={{ ...subTitleRow, marginBottom: '20px' }}>
-              <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>访问控制</h3>
-              <Button onClick={saveAccessOpts} loading={savingAccess} size="sm">保存</Button>
+              <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>{t('admin.security.access.section', '访问控制')}</h3>
+              <Button onClick={saveAccessOpts} loading={savingAccess} size="sm">{t('admin.common.save', '保存')}</Button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
@@ -254,11 +256,11 @@ export default function SecurityPage() {
                   checked={accessOpts.require_login}
                   onChange={(e) => setAccessOpts({ ...accessOpts, require_login: e.target.checked })}
                 />
-                需要登录才能访问前台
+                {t('admin.security.access.requireLogin', '需要登录才能访问前台')}
               </label>
               <div>
                 <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>
-                  API 限流 <span className="text-dim" style={{ fontWeight: 400 }}>（次/分钟，超出返回 429）</span>
+                  {t('admin.security.access.apiRateLimit', 'API 限流')} <span className="text-dim" style={{ fontWeight: 400 }}>{t('admin.security.access.apiRateLimitHint', '（次/分钟，超出返回 429）')}</span>
                 </label>
                 <input
                   className="input text-sm"
@@ -272,19 +274,19 @@ export default function SecurityPage() {
           </div>
 
           <div className="card" style={cardStyle}>
-            <h3 style={sectionTitleStyle}>CC 防御（频率限制）</h3>
+            <h3 style={sectionTitleStyle}>{t('admin.security.settings.ccTitle', 'CC 防御（频率限制）')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
                 <input type="checkbox" checked={settings.cc_enabled ?? false} onChange={(e) => setSettings({ ...settings, cc_enabled: e.target.checked })} />
-                启用 CC 防御
+                {t('admin.security.settings.enableCc', '启用 CC 防御')}
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>5 秒内最大请求</label>
+                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.security.settings.ccLimit5s', '5 秒内最大请求')}</label>
                   <input className="input text-sm" type="number" value={settings.cc_limit_5s || 30} onChange={(e) => setSettings({ ...settings, cc_limit_5s: parseInt(e.target.value) })} />
                 </div>
                 <div>
-                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>60 秒内最大请求</label>
+                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.security.settings.ccLimit60s', '60 秒内最大请求')}</label>
                   <input className="input text-sm" type="number" value={settings.cc_limit_60s || 120} onChange={(e) => setSettings({ ...settings, cc_limit_60s: parseInt(e.target.value) })} />
                 </div>
               </div>
@@ -292,22 +294,22 @@ export default function SecurityPage() {
           </div>
 
           <div className="card" style={cardStyle}>
-            <h3 style={sectionTitleStyle}>GeoIP 地域封锁</h3>
+            <h3 style={sectionTitleStyle}>{t('admin.security.settings.geoTitle', 'GeoIP 地域封锁')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
                 <input type="checkbox" checked={settings.geo_enabled ?? false} onChange={(e) => setSettings({ ...settings, geo_enabled: e.target.checked })} />
-                启用地域封锁
+                {t('admin.security.settings.enableGeo', '启用地域封锁')}
               </label>
               <div>
-                <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>模式</label>
+                <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.security.settings.geoMode', '模式')}</label>
                 <select className="input text-sm" value={settings.geo_mode || 'whitelist'} onChange={(e) => setSettings({ ...settings, geo_mode: e.target.value })}>
-                  <option value="whitelist">白名单（只允许列表中的国家）</option>
-                  <option value="blacklist">黑名单（封锁列表中的国家）</option>
+                  <option value="whitelist">{t('admin.security.settings.geoWhitelist', '白名单（只允许列表中的国家）')}</option>
+                  <option value="blacklist">{t('admin.security.settings.geoBlacklist', '黑名单（封锁列表中的国家）')}</option>
                 </select>
               </div>
               <div>
                 <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>
-                  国家代码 <span className="text-dim" style={{ fontWeight: 400 }}>（逗号分隔，如 CN,HK,TW）</span>
+                  {t('admin.security.settings.countryCodes', '国家代码')} <span className="text-dim" style={{ fontWeight: 400 }}>{t('admin.security.settings.countryCodesHint', '（逗号分隔，如 CN,HK,TW）')}</span>
                 </label>
                 <input className="input text-sm" value={(settings.geo_countries || []).join(',')} onChange={(e) => setSettings({ ...settings, geo_countries: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) })} />
               </div>
@@ -316,7 +318,7 @@ export default function SecurityPage() {
 
           <div style={{ paddingTop: '24px', borderTop: '1px solid var(--color-border)', marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={saveSettings} loading={saving}>
-              保存 CC / GeoIP 设置
+              {t('admin.security.settings.saveCcGeo', '保存 CC / GeoIP 设置')}
             </Button>
           </div>
         </div>

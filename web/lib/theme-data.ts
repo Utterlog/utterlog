@@ -1,6 +1,7 @@
 import { getOptions, getCategories, getTags, getArchiveStats } from './blog-api';
 import type { ThemeContextData, MenuItem } from './theme-context';
 import { getThemeManifest, DEFAULT_THEME } from './theme';
+import { resolveSiteTimeZone } from './timezone';
 
 // Server-side first: INTERNAL_API_URL points at the api container
 // (http://api:8080/api/v1) so SSR fetches actually reach the backend.
@@ -96,6 +97,7 @@ export async function getThemeContextData(): Promise<ThemeContextData> {
 
   const themeName = opts.active_theme || DEFAULT_THEME;
   const manifest = getThemeManifest(themeName);
+  const timeZone = resolveSiteTimeZone(opts);
 
   // Resolve owner avatar based on avatar_source
   const ownerData = ownerRes.data || ownerRes || {};
@@ -156,6 +158,7 @@ export async function getThemeContextData(): Promise<ThemeContextData> {
     categories,
     tags,
     locale: opts.site_locale || 'zh-CN',
+    timeZone,
     archiveStats: {
       post_count: stats.post_count || 0,
       comment_count: stats.comment_count || 0,

@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { formatDateTimeInTimeZone, localTimeZone } from './timezone';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -16,15 +17,13 @@ function toDate(input: string | number | Date): Date {
 export function formatDate(date: string | number | Date): string {
   const d = toDate(date);
   if (isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('zh-CN', {
+  return formatDateTimeInTimeZone(d, 'zh-CN', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    // Pin TZ so SSR (UTC inside container) and the browser agree.
-    timeZone: 'Asia/Shanghai',
-  });
+  }, localTimeZone());
 }
 
 export function formatRelativeTime(date: string | number | Date): string {

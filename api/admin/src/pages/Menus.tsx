@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { optionsApi, postsApi, categoriesApi, themesApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui';
+import { useI18n } from '@/lib/i18n';
 
 interface MenuItem {
   href: string;
@@ -17,36 +18,29 @@ interface MenuItem {
 // Built-in blog pages — slugs must mirror the route table in
 // api/internal/handler and the theme's default menu. Kept in sync
 // with Pages.tsx's builtinPages list.
-const BUILTIN_PAGES: { label: string; href: string }[] = [
-  { label: '首页',   href: '/' },
-  { label: '关于',   href: '/about' },
-  { label: '归档',   href: '/archives' },
-  { label: '说说',   href: '/moments' },
-  { label: '相册',   href: '/albums' },
-  { label: '音乐',   href: '/music' },
-  { label: '电影',   href: '/movies' },
-  { label: '图书',   href: '/books' },
-  { label: '好物',   href: '/goods' },
-  { label: '友链',   href: '/links' },
-  { label: '订阅',   href: '/feeds' },
+const BUILTIN_PAGES: { key: string; label: string; href: string }[] = [
+  { key: 'home', label: '首页',   href: '/' },
+  { key: 'about', label: '关于',   href: '/about' },
+  { key: 'archives', label: '归档',   href: '/archives' },
+  { key: 'moments', label: '说说',   href: '/moments' },
+  { key: 'albums', label: '相册',   href: '/albums' },
+  { key: 'music', label: '音乐',   href: '/music' },
+  { key: 'movies', label: '电影',   href: '/movies' },
+  { key: 'books', label: '图书',   href: '/books' },
+  { key: 'goods', label: '好物',   href: '/goods' },
+  { key: 'links', label: '友链',   href: '/links' },
+  { key: 'feeds', label: '订阅',   href: '/feeds' },
 ];
 
 type Position = { key: string; label: string; hint: string };
 
-const FALLBACK_POSITIONS: Position[] = [
+const fallbackPositions: Position[] = [
   { key: 'header', label: '顶部导航', hint: '主题 Header 主菜单' },
   { key: 'sidebar', label: '侧栏导航', hint: '主题侧栏（如适用）' },
   { key: 'footer', label: '页脚导航', hint: '主题页脚（如适用）' },
 ];
 
-const defaultHeaderMenu: MenuItem[] = [
-  { href: '/', label: '首页' },
-  { href: '/about', label: '关于' },
-  { href: '/archives', label: '归档' },
-  { href: '/moments', label: '说说' },
-  { href: '/links', label: '友链' },
-  { href: '/feeds', label: '订阅' },
-];
+const FALLBACK_POSITIONS = fallbackPositions;
 
 function parseMenu(raw: string | undefined): MenuItem[] {
   if (!raw) return [];
@@ -61,10 +55,11 @@ function parseMenu(raw: string | undefined): MenuItem[] {
 function isFixedAllSidebarItem(item?: MenuItem) {
   const label = (item?.label || '').trim();
   const href = (item?.href || '').trim();
-  return item?.type === 'all' || href === '__all__' || (label === '全部' && (!href || href === '/' || href === '#'));
+  return item?.type === 'all' || href === '__all__' || ((label === '全部' || label.toLowerCase() === 'all') && (!href || href === '/' || href === '#'));
 }
 
 export default function MenusPage() {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [menus, setMenus] = useState<Record<string, MenuItem[]>>({});
@@ -115,7 +110,7 @@ export default function MenusPage() {
       const activeManifest = (themeData.themes || []).find((t: any) => t.id === theme || t.enabled);
       const manifestPositions = activeManifest?.menuPositions || activeManifest?.menu_positions || [];
       const pos: Position[] = manifestPositions.length
-        ? manifestPositions.map((p: any) => ({ key: p.key, label: p.label, hint: p.description || `${p.label} 菜单位置` }))
+        ? manifestPositions.map((p: any) => ({ key: p.key, label: p.label, hint: p.description || t('admin.menus.positionHint', '{label} 菜单位置', { label: p.label }) }))
         : FALLBACK_POSITIONS;
       setActiveTheme(theme);
       setPositions(pos);
@@ -131,7 +126,7 @@ export default function MenusPage() {
       });
       setMenus(next);
     } catch {
-      toast.error('读取菜单失败');
+      toast.error(t('admin.menus.toast.fetchFailed', '读取菜单失败'));
     } finally {
       setLoading(false);
     }
@@ -149,13 +144,13 @@ export default function MenusPage() {
   };
 
   const addItem = () => {
-    updateItems([...(menus[activePos] || []), { href: '/', label: '新项目' }]);
+    updateItems([...(menus[activePos] || []), { href: '/', label: t('admin.menus.newItem', '新项目') }]);
   };
 
   const addChild = (parentIdx: number) => {
     const items = [...(menus[activePos] || [])];
     const parent = { ...items[parentIdx] };
-    parent.children = [...(parent.children || []), { href: '/', label: '子项目' }];
+    parent.children = [...(parent.children || []), { href: '/', label: t('admin.menus.newChildItem', '子项目') }];
     items[parentIdx] = parent;
     updateItems(items);
   };
@@ -218,7 +213,14 @@ export default function MenusPage() {
 
   const resetToDefault = () => {
     if (activePos === 'header') {
-      updateItems(defaultHeaderMenu);
+      updateItems([
+        { href: '/', label: t('admin.menus.builtin.home', '首页') },
+        { href: '/about', label: t('admin.menus.builtin.about', '关于') },
+        { href: '/archives', label: t('admin.menus.builtin.archives', '归档') },
+        { href: '/moments', label: t('admin.menus.builtin.moments', '说说') },
+        { href: '/links', label: t('admin.menus.builtin.links', '友链') },
+        { href: '/feeds', label: t('admin.menus.builtin.feeds', '订阅') },
+      ]);
     } else {
       updateItems([]);
     }
@@ -232,16 +234,16 @@ export default function MenusPage() {
         payload[`menu_${p.key}`] = JSON.stringify(normalizeItems(p.key, menus[p.key] || []));
       });
       await optionsApi.updateMany(payload);
-      toast.success('菜单已保存');
+      toast.success(t('admin.menus.toast.saved', '菜单已保存'));
     } catch {
-      toast.error('保存失败');
+      toast.error(t('admin.settings.toast.saveFailed', '保存失败'));
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div className="text-dim" style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>;
+    return <div className="text-dim" style={{ padding: '40px', textAlign: 'center' }}>{t('common.loading', '加载中...')}</div>;
   }
 
   const items = menus[activePos] || [];
@@ -252,14 +254,14 @@ export default function MenusPage() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
         <span className="text-dim" style={{ fontSize: '13px' }}>
-          当前主题 <code style={{ color: 'var(--color-primary)' }}>{activeTheme || '—'}</code> 声明了 {positions.length} 个菜单位置
+          {t('admin.menus.themePositionSummary', '当前主题 {theme} 声明了 {count} 个菜单位置', { theme: activeTheme || '—', count: positions.length })}
         </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
           <Button variant="secondary" onClick={resetToDefault}>
-            <i className="fa-regular fa-rotate-left" style={{ fontSize: '13px' }} /> 重置默认
+            <i className="fa-regular fa-rotate-left" style={{ fontSize: '13px' }} /> {t('admin.menus.resetDefault', '重置默认')}
           </Button>
           <Button onClick={onSave} loading={saving}>
-            保存
+            {t('admin.common.save', '保存')}
           </Button>
         </div>
       </div>
@@ -278,12 +280,12 @@ export default function MenusPage() {
               background: 'none', cursor: 'pointer',
             }}
           >
-            {p.label}
+            {t(`admin.menus.position.${p.key}`, p.label)}
           </button>
         ))}
       </div>
 
-      <p className="text-dim" style={{ fontSize: '12px', marginBottom: '16px' }}>{posDef?.hint}</p>
+      <p className="text-dim" style={{ fontSize: '12px', marginBottom: '16px' }}>{posDef ? t(`admin.menus.positionHint.${posDef.key}`, posDef.hint) : ''}</p>
 
       <div className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {isAzureSidebar && (
@@ -299,12 +301,12 @@ export default function MenusPage() {
               </div>
               <div style={{ flex: '0 0 200px', display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 36, padding: '0 12px', color: 'var(--color-text-main)', fontSize: 13, border: '1px solid var(--color-border)', background: 'var(--color-bg-card)' }}>
                 <i className="fa-sharp fa-light fa-grid-2" style={{ color: 'var(--color-primary)' }} />
-                全部
+                {t('admin.menus.all', '全部')}
               </div>
               <div className="text-dim" style={{ flex: 1, fontSize: '12px' }}>
-                Azure Hero 固定分类 tab，前台始终显示，不写入菜单配置。
+                {t('admin.menus.azureFixedAllHint', 'Azure Hero 固定分类 tab，前台始终显示，不写入菜单配置。')}
               </div>
-              <button disabled title="固定项不可删除"
+              <button disabled title={t('admin.menus.fixedCannotDelete', '固定项不可删除')}
                 style={{ padding: '6px 10px', fontSize: '12px', background: 'none', border: '1px solid var(--color-border)', cursor: 'not-allowed', color: 'var(--color-text-dim)', opacity: 0.55 }}>
                 <i className="fa-regular fa-lock" style={{ fontSize: '12px' }} />
               </button>
@@ -314,7 +316,7 @@ export default function MenusPage() {
 
         {items.length === 0 ? (
           <div className="text-dim" style={{ padding: '32px', textAlign: 'center', fontSize: '13px' }}>
-            {isAzureSidebar ? '暂无自定义侧栏项；未添加时前台使用默认分类列表。' : '暂无菜单项，点击下方"添加菜单项"开始'}
+            {isAzureSidebar ? t('admin.menus.emptyAzureSidebar', '暂无自定义侧栏项；未添加时前台使用默认分类列表。') : t('admin.menus.empty', '暂无菜单项，点击下方"添加菜单项"开始')}
           </div>
         ) : items.map((item, idx) => (
           <div key={idx} style={{ border: '1px solid var(--color-border)', padding: '12px' }}>
@@ -334,28 +336,28 @@ export default function MenusPage() {
                 style={{ flex: '0 0 200px', fontSize: '13px' }}
                 value={item.label}
                 onChange={e => updateItem(idx, 'label', e.target.value)}
-                placeholder="菜单文本"
+                placeholder={t('admin.menus.itemLabelPlaceholder', '菜单文本')}
               />
               <input
                 className="input"
                 style={{ flex: 1, fontSize: '13px' }}
                 value={item.href}
                 onChange={e => updateItem(idx, 'href', e.target.value)}
-                placeholder="/path 或 https://..."
+                placeholder={t('admin.menus.itemHrefPlaceholder', '/path 或 https://...')}
               />
               {!isAzureSidebar && (
                 <>
-                  <button onClick={() => setPickerOpen({ target: idx })} title="从已有页面添加子菜单"
+                  <button onClick={() => setPickerOpen({ target: idx })} title={t('admin.menus.addChildFromExisting', '从已有页面添加子菜单')}
                     style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', cursor: 'pointer' }}>
                     <i className="fa-regular fa-list-tree" style={{ fontSize: '12px' }} />
                   </button>
-                  <button onClick={() => addChild(idx)} title="添加空白子菜单"
+                  <button onClick={() => addChild(idx)} title={t('admin.menus.addBlankChild', '添加空白子菜单')}
                     style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', cursor: 'pointer' }}>
                     <i className="fa-regular fa-diagram-subtask" style={{ fontSize: '12px' }} />
                   </button>
                 </>
               )}
-              <button onClick={() => removeItem(idx)} title="删除"
+              <button onClick={() => removeItem(idx)} title={t('admin.common.delete', '删除')}
                 style={{ padding: '6px 10px', fontSize: '12px', background: 'none', border: '1px solid var(--color-border)', cursor: 'pointer', color: '#dc2626' }}>
                 <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} />
               </button>
@@ -370,7 +372,7 @@ export default function MenusPage() {
                       style={{ flex: '0 0 180px', fontSize: '12px' }}
                       value={child.label}
                       onChange={e => updateChild(idx, cIdx, 'label', e.target.value)}
-                      placeholder="子菜单文本"
+                      placeholder={t('admin.menus.childLabelPlaceholder', '子菜单文本')}
                     />
                     <input
                       className="input"
@@ -392,10 +394,10 @@ export default function MenusPage() {
 
         <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-start', position: 'relative' }}>
           <Button variant="secondary" onClick={addItem}>
-            <i className="fa-regular fa-plus" style={{ fontSize: '13px' }} /> 添加菜单项
+            <i className="fa-regular fa-plus" style={{ fontSize: '13px' }} /> {t('admin.menus.addItem', '添加菜单项')}
           </Button>
           <Button variant="secondary" onClick={() => setPickerOpen({ target: 'root' })}>
-            <i className="fa-regular fa-file-lines" style={{ fontSize: '13px' }} /> 从已有页面添加
+            <i className="fa-regular fa-file-lines" style={{ fontSize: '13px' }} /> {t('admin.menus.addFromExisting', '从已有页面添加')}
           </Button>
 
           {pickerOpen && (
@@ -409,17 +411,17 @@ export default function MenusPage() {
               }}
             >
               <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--color-border)' }}>
-                内置页面
+                {t('admin.menus.builtinPages', '内置页面')}
               </div>
               {BUILTIN_PAGES.map(p => (
                 <button
                   key={p.href}
-                  onClick={() => addPick({ label: p.label, href: p.href, type: 'page' })}
+                  onClick={() => addPick({ label: t(`admin.menus.builtin.${p.key}`, p.label), href: p.href, type: 'page' })}
                   style={{ display: 'flex', width: '100%', padding: '8px 12px', fontSize: '13px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'space-between' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-soft)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                 >
-                  <span className="text-main">{p.label}</span>
+                  <span className="text-main">{t(`admin.menus.builtin.${p.key}`, p.label)}</span>
                   <code style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>{p.href}</code>
                 </button>
               ))}
@@ -427,7 +429,7 @@ export default function MenusPage() {
               {customPages.length > 0 && (
                 <>
                   <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
-                    自定义页面
+                    {t('admin.menus.customPages', '自定义页面')}
                   </div>
                   {customPages.map(p => (
                     <button
@@ -447,7 +449,7 @@ export default function MenusPage() {
               {categories.length > 0 && (
                 <>
                   <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
-                    分类
+                    {t('common.categories', '分类')}
                   </div>
                   {categories.map(c => (
                     <button

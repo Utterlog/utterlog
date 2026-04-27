@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Post } from '@/types';
 import PostLink from './PostLink';
+import { formatDateInTimeZone, localTimeZone } from '@/lib/timezone';
 
 function formatDate(dateInput: string | number): string {
   const ts = typeof dateInput === 'number' ? dateInput : Number(dateInput);
@@ -10,7 +11,7 @@ function formatDate(dateInput: string | number): string {
     ? new Date(ts)
     : new Date(dateInput);
   if (isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai' });
+  return formatDateInTimeZone(date, 'zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }, localTimeZone());
 }
 
 function estimateReadingTime(content: string): number {

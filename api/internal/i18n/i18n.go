@@ -90,13 +90,17 @@ func Load(locale string) LocalePack {
 	pack := mergePack(base, selected)
 
 	for _, external := range loadExternalPacks() {
-		if external.Locale == DefaultLocale || external.Locale == locale {
+		if external.Locale == DefaultLocale && locale != DefaultLocale {
+			for k, v := range external.Messages {
+				pack.Messages[k] = v
+			}
+			continue
+		}
+		if external.Locale == locale {
 			pack = mergePack(pack, external)
 		}
 	}
-	if pack.Locale == "" {
-		pack.Locale = DefaultLocale
-	}
+	pack.Locale = locale
 	if pack.Direction == "" {
 		pack.Direction = "ltr"
 	}
@@ -190,8 +194,9 @@ func parsePack(raw []byte, fallbackLocale string) (LocalePack, bool) {
 
 func mergePack(base, override LocalePack) LocalePack {
 	out := base
-	if out.Messages == nil {
-		out.Messages = map[string]string{}
+	out.Messages = map[string]string{}
+	for k, v := range base.Messages {
+		out.Messages[k] = v
 	}
 	if override.Locale != "" {
 		out.Locale = override.Locale

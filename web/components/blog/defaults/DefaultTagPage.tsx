@@ -1,24 +1,20 @@
 import Link from 'next/link';
 import PostLink from '../PostLink';
 import PageTitle from '@/components/blog/PageTitle';
+import { datePartsInTimeZone, formatMonthDayInTimeZone } from '@/lib/timezone';
 
-function toDate(ts: string | number) {
-  return typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-}
-
-function groupByYear(posts: any[]) {
+function groupByYear(posts: any[], timeZone: string) {
   const map = new Map<number, any[]>();
   for (const post of posts) {
-    const year = toDate(post.created_at).getFullYear();
+    const year = datePartsInTimeZone(post.created_at, timeZone).year;
     if (!map.has(year)) map.set(year, []);
     map.get(year)!.push(post);
   }
   return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
 }
 
-function formatMMDD(ts: string | number) {
-  const d = toDate(ts);
-  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+function formatMMDD(ts: string | number, timeZone: string) {
+  return formatMonthDayInTimeZone(ts, timeZone);
 }
 
 function postCategoryIcon(post: any): string {
@@ -30,10 +26,11 @@ function postCategoryIcon(post: any): string {
 interface DefaultTagPageProps {
   tag: any;
   posts: any[];
+  timeZone?: string;
 }
 
-export default function DefaultTagPage({ tag, posts }: DefaultTagPageProps) {
-  const yearGroups = groupByYear(posts);
+export default function DefaultTagPage({ tag, posts, timeZone = 'UTC' }: DefaultTagPageProps) {
+  const yearGroups = groupByYear(posts, timeZone);
 
   return (
     <div>
@@ -56,7 +53,7 @@ export default function DefaultTagPage({ tag, posts }: DefaultTagPageProps) {
                 <PostLink key={post.id} post={post}
                   style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', borderBottom: idx < yearPosts.length - 1 ? '1px solid var(--color-divider)' : 'none', textDecoration: 'none', transition: 'background 0.1s' }}
                   className="hover:bg-soft post-list-link">
-                  <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '50px', flexShrink: 0 }}>{formatMMDD(post.created_at)}</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '50px', flexShrink: 0 }}>{formatMMDD(post.created_at, timeZone)}</span>
                   <i className={postCategoryIcon(post)} title={post.categories?.[0]?.name || ''} style={{ fontSize: '13px', color: 'var(--color-primary)', flexShrink: 0, width: '14px', textAlign: 'center' }} />
                   <span className="post-list-title" style={{ flex: 1, fontSize: '15px', fontWeight: 500, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color 0.15s' }}>{post.title}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--color-text-dim)', flexShrink: 0 }}>

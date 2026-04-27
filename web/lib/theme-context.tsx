@@ -61,6 +61,7 @@ export interface ThemeContextData {
   tags: Tag[];
   archiveStats: ArchiveStats;
   locale: string;
+  timeZone: string;
   theme: {
     name: string;
     manifest?: import('./theme').ThemeManifest;
@@ -86,6 +87,7 @@ export function useThemeContext(): ThemeContextData {
       tags: [],
       archiveStats: { post_count: 0, comment_count: 0, word_count: 0, days: 0, total_views: 0, heatmap: [] },
       locale: 'zh-CN',
+      timeZone: 'UTC',
       theme: { name: 'Azure' },
       options: {},
     };

@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui';
+import { useI18n } from '@/lib/i18n';
 
 interface SyncSite {
   site_uuid: string;
@@ -32,25 +33,26 @@ interface CreatedToken {
   label: string;
 }
 
-function fmtTime(ts: number) {
+function fmtTime(ts: number, locale = 'zh-CN') {
   if (!ts) return '—';
   const d = new Date(ts * 1000);
-  return d.toLocaleString('zh-CN');
+  return d.toLocaleString(locale);
 }
 
-function stageLabel(stage: string) {
+function stageLabel(stage: string, t: (key: string, fallback?: string, vars?: Record<string, string | number>) => string) {
   const map: Record<string, string> = {
-    import: '导入数据中',
-    media_scan: '扫描媒体文件',
-    media_pull: '下载媒体',
-    rewrite: '改写文章链接',
-    geoip: '填充 IP 地理',
-    done: '完成',
+    import: t('admin.syncSites.stage.import', '导入数据中'),
+    media_scan: t('admin.syncSites.stage.mediaScan', '扫描媒体文件'),
+    media_pull: t('admin.syncSites.stage.mediaPull', '下载媒体'),
+    rewrite: t('admin.syncSites.stage.rewrite', '改写文章链接'),
+    geoip: t('admin.syncSites.stage.geoip', '填充 IP 地理'),
+    done: t('admin.syncSites.stage.done', '完成'),
   };
   return map[stage] || stage;
 }
 
 export default function SyncSitesPanel() {
+  const { t, locale } = useI18n();
   const [sites, setSites] = useState<SyncSite[]>([]);
   const [jobs, setJobs] = useState<SyncJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export default function SyncSitesPanel() {
       const r = await api.get<any>('/admin/sync/wordpress/sites');
       setSites(r.data?.sites || []);
     } catch (e: any) {
-      toast.error('加载站点失败: ' + (e?.message || 'unknown'));
+      toast.error(t('admin.syncSites.toast.loadSitesFailed', '加载站点失败: {reason}', { reason: e?.message || t('admin.common.unknownError', '未知错误') }));
     }
   }
 
@@ -135,7 +137,7 @@ export default function SyncSitesPanel() {
 
   async function submitCreate() {
     if (!createForm.label.trim()) {
-      toast.error('请填写站点名称');
+      toast.error(t('admin.syncSites.toast.siteNameRequired', '请填写站点名称'));
       return;
     }
     try {
@@ -146,19 +148,19 @@ export default function SyncSitesPanel() {
       await loadSites();
     } catch (e: any) {
       const msg = e?.response?.data?.error?.message || e?.message;
-      toast.error('创建失败: ' + msg);
+      toast.error(t('admin.syncSites.toast.createFailed', '创建失败: {reason}', { reason: msg || t('admin.common.unknownError', '未知错误') }));
     }
   }
 
   async function deleteSite(site: SyncSite) {
-    if (!confirm(`确定删除站点「${site.label || site.site_uuid}」?\n\n只删除授权，不影响已导入的内容。\n要删除内容请另外用 rollback 接口。`)) return;
+    if (!confirm(t('admin.syncSites.confirmDelete', '确定删除站点「{name}」？\n\n只删除授权，不影响已导入的内容。\n要删除内容请另外用 rollback 接口。', { name: site.label || site.site_uuid }))) return;
     try {
       await api.delete(`/admin/sync/wordpress/sites/${encodeURIComponent(site.site_uuid)}`);
-      toast.success('已删除');
+      toast.success(t('admin.common.deleted', '已删除'));
       await loadSites();
     } catch (e: any) {
       const msg = e?.response?.data?.error?.message || e?.message;
-      toast.error('删除失败: ' + msg);
+      toast.error(t('admin.syncSites.toast.deleteFailed', '删除失败: {reason}', { reason: msg || t('admin.common.unknownError', '未知错误') }));
     }
   }
 
@@ -168,7 +170,7 @@ export default function SyncSitesPanel() {
       setCopiedField(key);
       setTimeout(() => setCopiedField(''), 1800);
     } catch {
-      toast.error('复制失败，请手动选择');
+      toast.error(t('admin.syncSites.toast.copyFailed', '复制失败，请手动选择'));
     }
   }
 
@@ -176,11 +178,10 @@ export default function SyncSitesPanel() {
     <div>
       <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
         <i className="fa-brands fa-wordpress" style={{ color: 'var(--color-primary)' }} />
-        WordPress 同步
+        {t('admin.syncSites.title', 'WordPress 同步')}
       </div>
       <p style={{ fontSize: 13, color: 'var(--color-text-dim)', lineHeight: 1.7, marginBottom: 20 }}>
-        授权一个 WordPress 站点推送内容到 Utterlog。每个站点生成独立的 Site UUID + Token，
-        装 <code>utterlog-sync</code> 插件后填入对应字段即可。Token <b>只显示一次</b>。
+        {t('admin.syncSites.descriptionPrefix', '授权一个 WordPress 站点推送内容到 Utterlog。每个站点生成独立的 Site UUID + Token，装')} <code>utterlog-sync</code> {t('admin.syncSites.descriptionSuffix', '插件后填入对应字段即可。Token')} <b>{t('admin.syncSites.onceOnly', '只显示一次')}</b>。
       </p>
 
       {/* Sites list */}
@@ -190,35 +191,35 @@ export default function SyncSitesPanel() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>
-            已授权站点 <span style={{ color: 'var(--color-text-muted)', fontWeight: 400, marginLeft: 6 }}>({sites.length})</span>
+            {t('admin.syncSites.authorizedSites', '已授权站点')} <span style={{ color: 'var(--color-text-muted)', fontWeight: 400, marginLeft: 6 }}>({sites.length})</span>
           </div>
           <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <i className="fa-solid fa-plus" style={{ marginRight: 6 }} /> 新建授权
+            <i className="fa-solid fa-plus" style={{ marginRight: 6 }} /> {t('admin.syncSites.newAuthorization', '新建授权')}
           </Button>
         </div>
 
         {loading ? (
           <div style={{ padding: '30px 16px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: 13 }}>
-            <i className="fa-solid fa-spinner fa-spin" /> 加载中...
+            <i className="fa-solid fa-spinner fa-spin" /> {t('admin.common.loading', '加载中...')}
           </div>
         ) : sites.length === 0 ? (
           <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: 13 }}>
             <div style={{ fontSize: 32, color: 'var(--color-text-muted)', marginBottom: 10 }}>
               <i className="fa-brands fa-wordpress" />
             </div>
-            还没有授权任何 WordPress 站点。
+            {t('admin.syncSites.empty', '还没有授权任何 WordPress 站点。')}
             <br />
-            点上方「新建授权」生成第一个。
+            {t('admin.syncSites.emptyHint', '点上方「新建授权」生成第一个。')}
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: 'var(--color-bg-soft, #fafafa)', color: 'var(--color-text-dim)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>站点名称</th>
+                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>{t('admin.syncSites.siteName', '站点名称')}</th>
                 <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>Site UUID</th>
-                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>源站地址</th>
-                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>最后使用</th>
-                <th style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 500, width: 80 }}>任务</th>
+                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>{t('admin.syncSites.sourceUrl', '源站地址')}</th>
+                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>{t('admin.syncSites.lastUsed', '最后使用')}</th>
+                <th style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 500, width: 80 }}>{t('admin.syncSites.jobs', '任务')}</th>
                 <th style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 500 }}></th>
               </tr>
             </thead>
@@ -227,14 +228,14 @@ export default function SyncSitesPanel() {
                 const uuid = s.site_uuid || '';
                 return (
                 <tr key={uuid || 'row-' + idx} style={{ borderTop: '1px solid var(--color-border)' }}>
-                  <td style={{ padding: '10px 14px', fontWeight: 500 }}>{s.label || '(未命名)'}</td>
+                  <td style={{ padding: '10px 14px', fontWeight: 500 }}>{s.label || t('admin.common.unnamedWrapped', '(未命名)')}</td>
                   <td style={{ padding: '10px 14px', fontFamily: 'ui-monospace,monospace', fontSize: 11 }}>
-                    {uuid ? uuid.slice(0, 16) + '…' : <span style={{ color: 'var(--color-text-muted)' }}>(无 UUID)</span>}
+                    {uuid ? uuid.slice(0, 16) + '…' : <span style={{ color: 'var(--color-text-muted)' }}>{t('admin.syncSites.noUuid', '(无 UUID)')}</span>}
                     {uuid && (
                       <button
                         type="button"
                         onClick={() => copy(uuid, 's-' + uuid)}
-                        title="复制完整 UUID"
+                        title={t('admin.syncSites.copyFullUuid', '复制完整 UUID')}
                         style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}
                       >
                         <i className={`fa-solid ${copiedField === 's-' + uuid ? 'fa-check' : 'fa-copy'}`} style={{ fontSize: 11 }} />
@@ -245,7 +246,7 @@ export default function SyncSitesPanel() {
                     {s.source_url || '—'}
                   </td>
                   <td style={{ padding: '10px 14px', color: 'var(--color-text-dim)', fontSize: 11 }}>
-                    {s.last_seen_at ? fmtTime(s.last_seen_at) : <span style={{ color: 'var(--color-text-muted)' }}>从未</span>}
+                    {s.last_seen_at ? fmtTime(s.last_seen_at, locale) : <span style={{ color: 'var(--color-text-muted)' }}>{t('admin.common.never', '从未')}</span>}
                   </td>
                   <td style={{ padding: '10px 14px', textAlign: 'center' }}>{s.recent_jobs || 0}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right' }}>
@@ -254,7 +255,7 @@ export default function SyncSitesPanel() {
                       onClick={() => deleteSite(s)}
                       style={{ background: 'none', border: '1px solid var(--color-border)', padding: '4px 10px', fontSize: 11, cursor: 'pointer', color: 'var(--color-danger, #dc2626)', fontFamily: 'inherit' }}
                     >
-                      <i className="fa-solid fa-trash" /> 删除
+                      <i className="fa-solid fa-trash" /> {t('admin.common.delete', '删除')}
                     </button>
                   </td>
                 </tr>
@@ -274,25 +275,25 @@ export default function SyncSitesPanel() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600, color: 'var(--color-primary)' }}>
               <i className="fa-solid fa-circle-notch fa-spin" />
-              任务进行中
+              {t('admin.syncSites.job.running', '任务进行中')}
               <span style={{ fontSize: 11, color: 'var(--color-text-dim)', fontFamily: 'ui-monospace,monospace', fontWeight: 400 }}>
                 {(j.job_id || '').slice(0, 16)}…
               </span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>
-              已运行 <b style={{ fontFamily: 'ui-monospace,monospace' }}>{fmtElapsed(j.started_at)}</b>
+              {t('admin.syncSites.job.elapsed', '已运行')} <b style={{ fontFamily: 'ui-monospace,monospace' }}>{fmtElapsed(j.started_at)}</b>
             </div>
           </div>
 
           <div style={{ fontSize: 12, color: 'var(--color-text)', marginBottom: 10 }}>
-            <b>当前阶段：</b> {stageLabel(j.stage)}
+            <b>{t('admin.syncSites.job.currentStage', '当前阶段：')}</b> {stageLabel(j.stage, t)}
           </div>
 
           {/* Media progress bar */}
           {j.media_total > 0 && (
             <div style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>
-                <span>媒体文件下载</span>
+                <span>{t('admin.syncSites.job.mediaDownload', '媒体文件下载')}</span>
                 <span style={{ fontFamily: 'ui-monospace,monospace' }}>{j.media_done} / {j.media_total} ({mediaPercent(j)}%)</span>
               </div>
               <div style={{ height: 6, background: 'var(--color-surface,#fff)', border: '1px solid var(--color-border)' }}>
@@ -310,12 +311,12 @@ export default function SyncSitesPanel() {
           {j.posts_rewritten > 0 && (
             <div style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>
               <i className="fa-solid fa-pen-to-square" style={{ marginRight: 4 }} />
-              已改写 <b style={{ fontFamily: 'ui-monospace,monospace', color: 'var(--color-text)' }}>{j.posts_rewritten}</b> 篇文章的链接
+              {t('admin.syncSites.job.rewrittenLinks', '已改写 {count} 篇文章的链接', { count: j.posts_rewritten })}
             </div>
           )}
 
           <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 8 }}>
-            自动刷新中 · 每 3 秒 · 完成后会自动停止
+            {t('admin.syncSites.job.autoRefresh', '自动刷新中 · 每 3 秒 · 完成后会自动停止')}
           </div>
         </div>
       ))}
@@ -325,17 +326,17 @@ export default function SyncSitesPanel() {
         <div style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', fontSize: 13, fontWeight: 600 }}>
             <i className="fa-solid fa-clock-rotate-left" style={{ marginRight: 6, color: 'var(--color-primary)' }} />
-            最近同步任务
+            {t('admin.syncSites.recentJobs', '最近同步任务')}
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: 'var(--color-bg-soft, #fafafa)', color: 'var(--color-text-dim)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>Job ID</th>
-                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>状态</th>
-                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>阶段</th>
-                <th style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 500 }}>媒体</th>
-                <th style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 500 }}>改写</th>
-                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>开始时间</th>
+                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>{t('admin.common.status', '状态')}</th>
+                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>{t('admin.syncSites.stage', '阶段')}</th>
+                <th style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 500 }}>{t('admin.syncSites.media', '媒体')}</th>
+                <th style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 500 }}>{t('admin.syncSites.rewrite', '改写')}</th>
+                <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500 }}>{t('admin.syncSites.startedAt', '开始时间')}</th>
               </tr>
             </thead>
             <tbody>
@@ -355,12 +356,12 @@ export default function SyncSitesPanel() {
                       {j.status}
                     </span>
                   </td>
-                  <td style={{ padding: '8px 14px', color: 'var(--color-text-dim)' }}>{stageLabel(j.stage)}</td>
+                  <td style={{ padding: '8px 14px', color: 'var(--color-text-dim)' }}>{stageLabel(j.stage, t)}</td>
                   <td style={{ padding: '8px 14px', textAlign: 'right', fontFamily: 'ui-monospace,monospace' }}>
                     {j.media_done}/{j.media_total}
                   </td>
                   <td style={{ padding: '8px 14px', textAlign: 'right', fontFamily: 'ui-monospace,monospace' }}>{j.posts_rewritten}</td>
-                  <td style={{ padding: '8px 14px', color: 'var(--color-text-dim)', fontSize: 11 }}>{fmtTime(j.started_at)}</td>
+                  <td style={{ padding: '8px 14px', color: 'var(--color-text-dim)', fontSize: 11 }}>{fmtTime(j.started_at, locale)}</td>
                 </tr>
                 );
               })}
@@ -368,27 +369,27 @@ export default function SyncSitesPanel() {
           </table>
           <div style={{ padding: '8px 14px', textAlign: 'right', background: 'var(--color-bg-soft, #fafafa)' }}>
             <button type="button" onClick={refreshAll} style={{ background: 'none', border: 'none', color: 'var(--color-text-dim)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-              <i className="fa-solid fa-arrows-rotate" style={{ marginRight: 4 }} /> 刷新
+              <i className="fa-solid fa-arrows-rotate" style={{ marginRight: 4 }} /> {t('admin.common.refresh', '刷新')}
             </button>
           </div>
         </div>
       )}
 
       {/* Create site modal */}
-      <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="新建 WordPress 同步授权" size="sm">
+      <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title={t('admin.syncSites.createTitle', '新建 WordPress 同步授权')} size="sm">
         <div>
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 6 }}>站点名称（自己记）</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 6 }}>{t('admin.syncSites.siteNamePrivate', '站点名称（自己记）')}</div>
             <input
               type="text"
               value={createForm.label}
               onChange={(e) => setCreateForm((f) => ({ ...f, label: e.target.value }))}
-              placeholder="例如：我的旧博客"
+              placeholder={t('admin.syncSites.siteNamePlaceholder', '例如：我的旧博客')}
               style={{ width: '100%', height: 40, padding: '0 12px', border: '1px solid var(--color-border)', fontFamily: 'inherit', fontSize: 13 }}
             />
           </div>
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 6 }}>源站地址（旧 WordPress 博客 URL）</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 6 }}>{t('admin.syncSites.sourceUrlLabel', '源站地址（旧 WordPress 博客 URL）')}</div>
             <input
               type="text"
               value={createForm.source_url}
@@ -397,13 +398,13 @@ export default function SyncSitesPanel() {
               style={{ width: '100%', height: 40, padding: '0 12px', border: '1px solid var(--color-border)', fontFamily: 'inherit', fontSize: 13 }}
             />
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 6 }}>
-              server 扫文章内容里的图片 URL 时会匹配这个域名下的 <code>/wp-content/uploads/</code> 路径。
+              {t('admin.syncSites.sourceUrlHintPrefix', 'server 扫文章内容里的图片 URL 时会匹配这个域名下的')} <code>/wp-content/uploads/</code> {t('admin.syncSites.sourceUrlHintSuffix', '路径。')}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setCreateOpen(false)}>取消</Button>
+            <Button variant="secondary" onClick={() => setCreateOpen(false)}>{t('admin.common.cancel', '取消')}</Button>
             <Button onClick={submitCreate}>
-              <i className="fa-solid fa-key" style={{ marginRight: 6 }} /> 生成 UUID + Token
+              <i className="fa-solid fa-key" style={{ marginRight: 6 }} /> {t('admin.syncSites.generateToken', '生成 UUID + Token')}
             </Button>
           </div>
         </div>
@@ -411,17 +412,17 @@ export default function SyncSitesPanel() {
 
       {/* Created token — shown ONCE */}
       {created && (
-        <Modal isOpen={!!created} onClose={() => setCreated(null)} title="授权已生成 · 请立即保存" size="md">
+        <Modal isOpen={!!created} onClose={() => setCreated(null)} title={t('admin.syncSites.createdTitle', '授权已生成 · 请立即保存')} size="md">
           <div>
             <div style={{ padding: '10px 14px', background: '#fefce8', border: '1px solid #fde68a', fontSize: 12, color: '#713f12', marginBottom: 18, lineHeight: 1.6 }}>
               <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: 6 }} />
-              <b>Token 只显示这一次</b>。关闭后无法再次查看，丢失需要重新生成。
+              <b>{t('admin.syncSites.tokenOnce', 'Token 只显示这一次')}</b>。{t('admin.syncSites.tokenOnceHint', '关闭后无法再次查看，丢失需要重新生成。')}
             </div>
 
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 6 }}>站点名称</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 6 }}>{t('admin.syncSites.siteName', '站点名称')}</div>
               <div style={{ padding: '8px 12px', background: 'var(--color-bg-soft, #fafafa)', border: '1px solid var(--color-border)', fontFamily: 'inherit', fontSize: 13 }}>
-                {created.label || '(未命名)'}
+                {created.label || t('admin.common.unnamedWrapped', '(未命名)')}
               </div>
             </div>
 
@@ -430,7 +431,7 @@ export default function SyncSitesPanel() {
                 <span>Site UUID</span>
                 <button type="button" onClick={() => copy(created.site_uuid, 'uuid')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', fontSize: 11, fontFamily: 'inherit' }}>
                   <i className={`fa-solid ${copiedField === 'uuid' ? 'fa-check' : 'fa-copy'}`} style={{ marginRight: 3 }} />
-                  {copiedField === 'uuid' ? '已复制' : '复制'}
+                  {copiedField === 'uuid' ? t('admin.common.copied', '已复制') : t('admin.common.copy', '复制')}
                 </button>
               </div>
               <div style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid var(--color-border)', fontFamily: 'ui-monospace,monospace', fontSize: 12, wordBreak: 'break-all' }}>
@@ -443,7 +444,7 @@ export default function SyncSitesPanel() {
                 <span>Sync Token</span>
                 <button type="button" onClick={() => copy(created.token, 'tok')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', fontSize: 11, fontFamily: 'inherit' }}>
                   <i className={`fa-solid ${copiedField === 'tok' ? 'fa-check' : 'fa-copy'}`} style={{ marginRight: 3 }} />
-                  {copiedField === 'tok' ? '已复制' : '复制'}
+                  {copiedField === 'tok' ? t('admin.common.copied', '已复制') : t('admin.common.copy', '复制')}
                 </button>
               </div>
               <div style={{ padding: '8px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', fontFamily: 'ui-monospace,monospace', fontSize: 12, wordBreak: 'break-all', color: '#0c4a6e' }}>
@@ -452,7 +453,7 @@ export default function SyncSitesPanel() {
             </div>
 
             <div style={{ padding: '10px 14px', background: '#f0fdf4', borderLeft: '3px solid #16a34a', fontSize: 12, color: '#166534', marginBottom: 16, lineHeight: 1.6 }}>
-              <b>下一步</b>：在你的 WordPress 后台装 <code>utterlog-sync</code> 插件，设置页填：
+              <b>{t('admin.syncSites.nextStep', '下一步')}</b>：{t('admin.syncSites.nextStepInstallPrefix', '在你的 WordPress 后台装')} <code>utterlog-sync</code> {t('admin.syncSites.nextStepInstallSuffix', '插件，设置页填：')}
               <br />
               URL: <code>{window.location.origin}</code>
               <br />
@@ -472,9 +473,9 @@ export default function SyncSitesPanel() {
                 }}
               >
                 <i className={`fa-solid ${copiedField === 'all' ? 'fa-check' : 'fa-copy'}`} style={{ marginRight: 6 }} />
-                {copiedField === 'all' ? '已复制全部' : '复制三行配置'}
+                {copiedField === 'all' ? t('admin.syncSites.copiedAll', '已复制全部') : t('admin.syncSites.copyAll', '复制三行配置')}
               </Button>
-              <Button onClick={() => setCreated(null)}>我已保存，关闭</Button>
+              <Button onClick={() => setCreated(null)}>{t('admin.syncSites.closeSaved', '我已保存，关闭')}</Button>
             </div>
           </div>
         </Modal>

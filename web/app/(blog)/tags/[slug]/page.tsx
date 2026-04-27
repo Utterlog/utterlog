@@ -50,5 +50,5 @@ export default async function TagPostsPage({ params }: TagPageProps) {
   const theme = getThemeComponents(ctx.theme.name);
   const TagComponent = theme.TagPage || DefaultTagPage;
 
-  return <TagComponent tag={tag} posts={posts} />;
+  return <TagComponent tag={tag} posts={posts} timeZone={ctx.timeZone} />;
 }

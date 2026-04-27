@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Button, Input, Textarea, Select, Modal, Toggle } from '@/components/ui';
 import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC, FormRowRangeC } from '@/components/form/FormC';
 import { useAuthStore } from '@/lib/store';
+import { useI18n } from '@/lib/i18n';
 
 interface Provider {
   id?: number;
@@ -28,14 +29,14 @@ const defaultProvider: Provider = {
 };
 
 const settingsTabs = [
-  { id: '提供商',     label: '提供商',     icon: 'fa-regular fa-server' },
-  { id: '功能分配',   label: '功能分配',   icon: 'fa-regular fa-shuffle' },
-  { id: '聊天配置',   label: '聊天配置',   icon: 'fa-regular fa-message' },
-  { id: '文章设置',   label: '文章设置',   icon: 'fa-regular fa-pen-to-square' },
-  { id: '博主资料',   label: '博主资料',   icon: 'fa-regular fa-user-pen' },
-  { id: '系统提示词', label: '系统提示词', icon: 'fa-regular fa-terminal' },
-  { id: '数据权限',   label: '数据权限',   icon: 'fa-regular fa-shield-halved' },
-  { id: '批量任务',   label: '批量任务',   icon: 'fa-regular fa-list-check' },
+  { id: '提供商',     label: '提供商',     key: 'admin.aiSettings.tabs.providers', icon: 'fa-regular fa-server' },
+  { id: '功能分配',   label: '功能分配',   key: 'admin.aiSettings.tabs.routing', icon: 'fa-regular fa-shuffle' },
+  { id: '聊天配置',   label: '聊天配置',   key: 'admin.aiSettings.tabs.chat', icon: 'fa-regular fa-message' },
+  { id: '文章设置',   label: '文章设置',   key: 'admin.aiSettings.tabs.posts', icon: 'fa-regular fa-pen-to-square' },
+  { id: '博主资料',   label: '博主资料',   key: 'admin.aiSettings.tabs.profile', icon: 'fa-regular fa-user-pen' },
+  { id: '系统提示词', label: '系统提示词', key: 'admin.aiSettings.tabs.systemPrompt', icon: 'fa-regular fa-terminal' },
+  { id: '数据权限',   label: '数据权限',   key: 'admin.aiSettings.tabs.permissions', icon: 'fa-regular fa-shield-halved' },
+  { id: '批量任务',   label: '批量任务',   key: 'admin.aiSettings.tabs.batch', icon: 'fa-regular fa-list-check' },
 ];
 
 // Align with Settings.tsx: 28px padding, 24px bottom margin between cards
@@ -60,6 +61,7 @@ function SectionTitle({ icon, children, as = 'h3' }: { icon: string; children: R
 const AI_PREFIX = 'ai_';
 
 export default function AiSettingsPage() {
+  const { t } = useI18n();
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('提供商');
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -240,12 +242,12 @@ export default function AiSettingsPage() {
       const d = r.data || r;
       setBatchJobs((prev) => ({ ...prev, [type]: d }));
       if (d.total === 0) {
-        toast.success(`所有文章的${label}已齐全`);
+        toast.success(t('admin.aiSettings.toast.batchCompleteAll', '所有文章的{label}已齐全', { label }));
       } else {
-        toast.success(`开始生成 ${d.total} 项${label}（后台运行）`);
+        toast.success(t('admin.aiSettings.toast.batchStarted', '开始生成 {count} 项{label}（后台运行）', { count: d.total, label }));
       }
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message || '启动失败');
+      toast.error(e?.response?.data?.error?.message || t('admin.aiSettings.toast.startFailed', '启动失败'));
     } finally {
       setBatchLoading((prev) => ({ ...prev, [type]: false }));
     }
@@ -254,9 +256,9 @@ export default function AiSettingsPage() {
   const stopBatch = async (type: 'questions' | 'summary' | 'all') => {
     try {
       await api.post(`/ai/batch-stop?type=${type}`);
-      toast.success('已请求停止，等当前请求完成后退出');
+      toast.success(t('admin.aiSettings.toast.stopRequested', '已请求停止，等当前请求完成后退出'));
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message || '停止失败');
+      toast.error(e?.response?.data?.error?.message || t('admin.aiSettings.toast.stopFailed', '停止失败'));
     }
   };
 
@@ -296,9 +298,9 @@ export default function AiSettingsPage() {
         aiOpts[k] = v;
       });
       await api.put('/options', aiOpts);
-      toast.success('设置已保存');
+      toast.success(t('admin.settings.toast.saved', '设置已保存'));
     } catch {
-      toast.error('保存失败');
+      toast.error(t('admin.settings.toast.saveFailed', '保存失败'));
     }
     setSavingConfig(false);
   };
@@ -309,35 +311,35 @@ export default function AiSettingsPage() {
   const resetPrompt = (optionKey: string, defaultKey: string) => {
     const def = promptDefaults[defaultKey] ?? '';
     updateConfig(optionKey, def);
-    toast.success('已恢复默认提示词，记得点保存');
+    toast.success(t('admin.aiSettings.toast.promptReset', '已恢复默认提示词，记得点保存'));
   };
 
   // Provider CRUD
   const saveProvider = async () => {
     if (!editing) return;
     if (!editing.name || !editing.endpoint || !editing.model) {
-      toast.error('名称、端点和模型为必填项'); return;
+      toast.error(t('admin.aiSettings.toast.providerRequired', '名称、端点和模型为必填项')); return;
     }
     setSaving(true);
     try {
       const r: any = await api.post('/ai/providers', editing);
       if (r.success || r.data) {
-        toast.success('保存成功');
+        toast.success(t('admin.common.saveSuccess', '保存成功'));
         setEditing(null);
         load();
       } else {
-        toast.error('保存失败: ' + (r.error?.message || '未知错误'));
+        toast.error(t('admin.aiSettings.toast.saveFailedReason', '保存失败: {reason}', { reason: r.error?.message || t('admin.common.unknownError', '未知错误') }));
       }
     } catch (e: any) {
-      toast.error('保存错误: ' + (e?.response?.data?.error?.message || e?.message || '未知错误'));
+      toast.error(t('admin.aiSettings.toast.saveErrorReason', '保存错误: {reason}', { reason: e?.response?.data?.error?.message || e?.message || t('admin.common.unknownError', '未知错误') }));
     }
     setSaving(false);
   };
 
   const removeProvider = async (id: number) => {
-    if (!confirm('确定删除此提供商？')) return;
-    try { await api.delete(`/ai/providers/${id}`); toast.success('已删除'); load(); }
-    catch { toast.error('删除失败'); }
+    if (!confirm(t('admin.aiSettings.confirmDeleteProvider', '确定删除此提供商？'))) return;
+    try { await api.delete(`/ai/providers/${id}`); toast.success(t('admin.common.deleted', '已删除')); load(); }
+    catch { toast.error(t('admin.common.deleteFailed', '删除失败')); }
   };
 
   const testConnection = async () => {
@@ -345,9 +347,9 @@ export default function AiSettingsPage() {
     setTesting(true); setTestResult(null);
     try {
       const r: any = await api.post('/ai/test', { endpoint: editing.endpoint, model: editing.model, api_key: editing.api_key });
-      setTestResult({ ok: r.success, msg: r.success ? `连接成功: ${r.data?.content || 'OK'}` : (r.error?.message || '失败') });
+      setTestResult({ ok: r.success, msg: r.success ? t('admin.aiSettings.testSuccessReason', '连接成功: {reason}', { reason: r.data?.content || 'OK' }) : (r.error?.message || t('admin.common.failed', '失败')) });
     } catch (e: any) {
-      setTestResult({ ok: false, msg: e?.response?.data?.error?.message || e.message || '网络错误' });
+      setTestResult({ ok: false, msg: e?.response?.data?.error?.message || e.message || t('admin.common.networkError', '网络错误') });
     }
     setTesting(false);
   };
@@ -365,7 +367,7 @@ export default function AiSettingsPage() {
     updateConfig('ai_data_permissions', JSON.stringify(next));
   };
 
-  if (loading) return <div className="p-6 text-dim">加载中...</div>;
+  if (loading) return <div className="p-6 text-dim">{t('admin.common.loading', '加载中...')}</div>;
 
   return (
     <div>
@@ -385,7 +387,7 @@ export default function AiSettingsPage() {
             }}
           >
             <i className={tab.icon} style={{ fontSize: '13px' }} />
-            {tab.label}
+            {t(tab.key, tab.label)}
           </button>
         ))}
       </div>
@@ -394,8 +396,8 @@ export default function AiSettingsPage() {
       {activeTab === '提供商' && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <SectionTitle icon="fa-regular fa-server" as="h2">AI 提供商</SectionTitle>
-            <Button onClick={() => setEditing({ ...defaultProvider })}><i className="fa-regular fa-plus" style={{ fontSize: '14px' }} /> 添加</Button>
+            <SectionTitle icon="fa-regular fa-server" as="h2">{t('admin.aiSettings.providers.title', 'AI 提供商')}</SectionTitle>
+            <Button onClick={() => setEditing({ ...defaultProvider })}><i className="fa-regular fa-plus" style={{ fontSize: '14px' }} /> {t('admin.common.add', '添加')}</Button>
           </div>
           {/* Explicit flex gap — `space-y-2` (Tailwind 0.5rem) was the
               previous spacer but it leaves the cards reading as a single
@@ -407,9 +409,9 @@ export default function AiSettingsPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span className="text-main" style={{ fontSize: '14px', fontWeight: 600 }}>{p.name}</span>
-                    {p.is_default && <span style={{ fontSize: '10px', padding: '1px 6px', background: 'var(--color-primary)', color: '#fff' }}>默认</span>}
-                    {p.type === 'image' && <span style={{ fontSize: '10px', padding: '1px 6px', background: 'var(--color-bg-soft)' }}>图片</span>}
-                    {!p.is_active && <span className="text-dim" style={{ fontSize: '10px' }}>已禁用</span>}
+                    {p.is_default && <span style={{ fontSize: '10px', padding: '1px 6px', background: 'var(--color-primary)', color: '#fff' }}>{t('admin.common.default', '默认')}</span>}
+                    {p.type === 'image' && <span style={{ fontSize: '10px', padding: '1px 6px', background: 'var(--color-bg-soft)' }}>{t('admin.aiSettings.provider.type.image', '图片')}</span>}
+                    {!p.is_active && <span className="text-dim" style={{ fontSize: '10px' }}>{t('admin.common.disabled', '已禁用')}</span>}
                   </div>
                   <p className="text-dim" style={{ fontSize: '12px', marginTop: '2px' }}>{p.model} · {p.endpoint}</p>
                 </div>
@@ -419,20 +421,20 @@ export default function AiSettingsPage() {
                     handles hover tint + variant colors (primary blue for
                     edit, danger red for delete). */}
                 <div style={{ display: 'flex', gap: '4px' }}>
-                  <button onClick={() => setEditing(p)} className="action-btn primary" title="编辑">
+                  <button onClick={() => setEditing(p)} className="action-btn primary" title={t('admin.common.edit', '编辑')}>
                     <i className="fa-regular fa-pen" style={{ fontSize: '13px' }} />
                   </button>
-                  <button onClick={() => removeProvider(p.id)} className="action-btn danger" title="删除">
+                  <button onClick={() => removeProvider(p.id)} className="action-btn danger" title={t('admin.common.delete', '删除')}>
                     <i className="fa-regular fa-trash" style={{ fontSize: '13px' }} />
                   </button>
                 </div>
               </div>
             ))}
             {providers.length === 0 && (
-              <div className="card text-dim" style={{ padding: '40px', textAlign: 'center', fontSize: '14px' }}>暂无提供商，点击上方按钮添加</div>
+              <div className="card text-dim" style={{ padding: '40px', textAlign: 'center', fontSize: '14px' }}>{t('admin.aiSettings.providers.empty', '暂无提供商，点击上方按钮添加')}</div>
             )}
           </div>
-          <Modal isOpen={!!editing} onClose={() => setEditing(null)} title={editing?.id ? '编辑提供商' : '添加提供商'}>
+          <Modal isOpen={!!editing} onClose={() => setEditing(null)} title={editing?.id ? t('admin.aiSettings.providers.edit', '编辑提供商') : t('admin.aiSettings.providers.add', '添加提供商')}>
             {editing && (
               /* Modal form spacing matches the established admin pattern
                  (Movies / MusicPlaylists / SyncSitesPanel etc.): explicit
@@ -444,7 +446,7 @@ export default function AiSettingsPage() {
                 {!editing.id && Object.keys(presets).length > 0 && (
                   <>
                     <div>
-                      <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>快速预设</label>
+                      <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>{t('admin.aiSettings.providers.presets', '快速预设')}</label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {Object.entries(presets).map(([key, p]: [string, any]) => (
                           <Button key={key} variant="secondary" size="sm" onClick={() => applyPreset(key)}>{p.name}</Button>
@@ -458,35 +460,35 @@ export default function AiSettingsPage() {
                   </>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <Input label="名称" value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} placeholder="如: OpenAI" />
-                  <Select label="类型" value={editing.type} onChange={e => setEditing({ ...editing, type: e.target.value })}>
-                    <option value="text">文本</option>
-                    <option value="image">图片</option>
+                  <Input label={t('admin.aiSettings.providers.name', '名称')} value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} placeholder={t('admin.aiSettings.providers.namePlaceholder', '如: OpenAI')} />
+                  <Select label={t('admin.aiSettings.providers.type', '类型')} value={editing.type} onChange={e => setEditing({ ...editing, type: e.target.value })}>
+                    <option value="text">{t('admin.aiSettings.provider.type.text', '文本')}</option>
+                    <option value="image">{t('admin.aiSettings.provider.type.image', '图片')}</option>
                   </Select>
                 </div>
-                <Input label="API 端点" value={editing.endpoint} onChange={e => setEditing({ ...editing, endpoint: e.target.value })} placeholder="https://api.openai.com/v1/chat/completions" />
+                <Input label={t('admin.aiSettings.providers.endpoint', 'API 端点')} value={editing.endpoint} onChange={e => setEditing({ ...editing, endpoint: e.target.value })} placeholder="https://api.openai.com/v1/chat/completions" />
                 {editing.slug && presets[editing.slug] ? (
-                  <Select label="模型" value={editing.model} onChange={e => setEditing({ ...editing, model: e.target.value })}>
+                  <Select label={t('admin.aiSettings.providers.model', '模型')} value={editing.model} onChange={e => setEditing({ ...editing, model: e.target.value })}>
                     {presets[editing.slug].models.map((m: string) => <option key={m} value={m}>{m}</option>)}
                   </Select>
                 ) : (
-                  <Input label="模型" value={editing.model} onChange={e => setEditing({ ...editing, model: e.target.value })} placeholder="gpt-4.1-mini" />
+                  <Input label={t('admin.aiSettings.providers.model', '模型')} value={editing.model} onChange={e => setEditing({ ...editing, model: e.target.value })} placeholder="gpt-4.1-mini" />
                 )}
                 <Input label="API Key" type="password" value={editing.api_key} onChange={e => setEditing({ ...editing, api_key: e.target.value })} placeholder="sk-..." />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div>
-                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>温度 ({editing.temperature})</label>
+                    <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>{t('admin.aiSettings.providers.temperature', '温度 ({value})', { value: editing.temperature })}</label>
                     <input type="range" min="0" max="2" step="0.1" value={editing.temperature} onChange={e => setEditing({ ...editing, temperature: parseFloat(e.target.value) })} style={{ width: '100%' }} />
                   </div>
-                  <Input label="超时(秒)" type="number" value={editing.timeout} onChange={e => setEditing({ ...editing, timeout: parseInt(e.target.value) })} />
+                  <Input label={t('admin.aiSettings.providers.timeout', '超时(秒)')} type="number" value={editing.timeout} onChange={e => setEditing({ ...editing, timeout: parseInt(e.target.value) })} />
                 </div>
                 {/* Toggle group — light divider above so booleans read as
                     a separate concern from the connection fields. 14px
                     inner gap matches the per-row spacing of the form. */}
                 <div style={{ height: '1px', background: 'var(--color-border)' }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <Toggle label="启用" checked={editing.is_active} onChange={e => setEditing({ ...editing, is_active: e.target.checked })} />
-                  <Toggle label="设为默认" checked={editing.is_default} onChange={e => setEditing({ ...editing, is_default: e.target.checked })} />
+                  <Toggle label={t('admin.common.enabled', '启用')} checked={editing.is_active} onChange={e => setEditing({ ...editing, is_active: e.target.checked })} />
+                  <Toggle label={t('admin.aiSettings.providers.setDefault', '设为默认')} checked={editing.is_default} onChange={e => setEditing({ ...editing, is_default: e.target.checked })} />
                 </div>
                 {testResult && (
                   <div style={{ padding: '10px 14px', fontSize: '13px', background: testResult.ok ? 'rgba(76,175,115,0.1)' : 'rgba(220,53,69,0.1)', color: testResult.ok ? '#16a34a' : '#dc2626', border: `1px solid ${testResult.ok ? 'rgba(76,175,115,0.2)' : 'rgba(220,53,69,0.2)'}` }}>
@@ -494,9 +496,9 @@ export default function AiSettingsPage() {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '8px' }}>
-                  <Button className="btn-dialog" variant="secondary" onClick={testConnection} loading={testing}>测试连接</Button>
-                  <Button className="btn-dialog" variant="secondary" onClick={() => setEditing(null)}>取消</Button>
-                  <Button className="btn-dialog" onClick={saveProvider} loading={saving}>保存</Button>
+                  <Button className="btn-dialog" variant="secondary" onClick={testConnection} loading={testing}>{t('admin.common.testConnection', '测试连接')}</Button>
+                  <Button className="btn-dialog" variant="secondary" onClick={() => setEditing(null)}>{t('admin.common.cancel', '取消')}</Button>
+                  <Button className="btn-dialog" onClick={saveProvider} loading={saving}>{t('admin.common.save', '保存')}</Button>
                 </div>
               </div>
             )}
@@ -508,13 +510,13 @@ export default function AiSettingsPage() {
       {activeTab === '功能分配' && (
         <>
           <FormSectionC
-            title="功能模型分配"
+            title={t('admin.aiSettings.routing.title', '功能模型分配')}
             icon="fa-regular fa-shuffle"
-            description="为每个 AI 功能单独指定一个 type=文本 的提供商。留空 = 使用默认提供商（即 type=文本 + is_default=true 的那条）。某个功能的指定提供商失败时会自动回退到默认链。"
+            description={t('admin.aiSettings.routing.description', '为每个 AI 功能单独指定一个 type=文本 的提供商。留空 = 使用默认提供商（即 type=文本 + is_default=true 的那条）。某个功能的指定提供商失败时会自动回退到默认链。')}
           >
             {purposes.length === 0 ? (
               <div className="text-dim" style={{ fontSize: '13px', padding: '12px 0' }}>
-                后端尚未启用功能分配（升级到 v1.3+）
+                {t('admin.aiSettings.routing.empty', '后端尚未启用功能分配（升级到 v1.3+）')}
               </div>
             ) : (
               purposes.map((pu, idx) => {
@@ -526,12 +528,12 @@ export default function AiSettingsPage() {
                 return (
                   <FormRowSelectC
                     key={pu.key}
-                    label={pu.label}
-                    hint={pu.hint}
+                    label={t(`admin.aiSettings.purpose.${pu.key}.label`, pu.label)}
+                    hint={pu.hint ? t(`admin.aiSettings.purpose.${pu.key}.hint`, pu.hint) : undefined}
                     value={current}
                     onChange={v => updateConfig(optKey, v)}
                     options={[
-                      { value: '', label: '使用默认（按 is_default 顺序）' },
+                      { value: '', label: t('admin.aiSettings.routing.useDefault', '使用默认（按 is_default 顺序）') },
                       ...textProviders.map((p: any) => ({
                         value: String(p.id),
                         label: `${p.name} · ${p.model}`,
@@ -545,7 +547,7 @@ export default function AiSettingsPage() {
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
             <Button onClick={saveConfig} loading={savingConfig}>
-              保存
+              {t('admin.common.save', '保存')}
             </Button>
           </div>
         </>
@@ -554,31 +556,31 @@ export default function AiSettingsPage() {
       {/* ── 聊天配置 ── */}
       {activeTab === '聊天配置' && (
         <>
-          <FormSectionC title="前端聊天气泡" icon="fa-regular fa-comment-dots" footerHint="聊天气泡 = 全站浮动 AI 助手（首页 / 列表 / 归档等非文章页右下角圆形按钮）。文章详情页不显示气泡，让位给文章自带的「AI 陪读」（陪读有自己的对话上下文，是独立功能，不受这个开关控制）。">
+          <FormSectionC title={t('admin.aiSettings.chat.title', '前端聊天气泡')} icon="fa-regular fa-comment-dots" footerHint={t('admin.aiSettings.chat.footer', '聊天气泡 = 全站浮动 AI 助手（首页 / 列表 / 归档等非文章页右下角圆形按钮）。文章详情页不显示气泡，让位给文章自带的「AI 陪读」（陪读有自己的对话上下文，是独立功能，不受这个开关控制）。')}>
             <FormRowToggleC
-              label="启用聊天气泡"
-              hint="关闭后所有非文章页右下角的圆形 AI 助手按钮完全隐藏；不影响文章详情页的「AI 陪读」"
+              label={t('admin.aiSettings.chat.enableBubble', '启用聊天气泡')}
+              hint={t('admin.aiSettings.chat.enableBubbleHint', '关闭后所有非文章页右下角的圆形 AI 助手按钮完全隐藏；不影响文章详情页的「AI 陪读」')}
               checked={config.ai_chat_enabled === 'true'}
               onChange={v => updateConfig('ai_chat_enabled', String(v))}
             />
             <FormRowToggleC
-              label="允许访客（未登录）使用 AI 聊天"
-              hint="启用气泡后：关 → 仅登录用户能发送，访客看到气泡但点击会被拒；开 → 任何人可使用"
+              label={t('admin.aiSettings.chat.allowGuest', '允许访客（未登录）使用 AI 聊天')}
+              hint={t('admin.aiSettings.chat.allowGuestHint', '启用气泡后：关 → 仅登录用户能发送，访客看到气泡但点击会被拒；开 → 任何人可使用')}
               checked={config.ai_chat_guest === 'true'}
               onChange={v => updateConfig('ai_chat_guest', String(v))}
             />
             <FormRowSelectC
-              label="气泡位置"
+              label={t('admin.aiSettings.chat.position', '气泡位置')}
               value={config.ai_chat_position}
               onChange={v => updateConfig('ai_chat_position', v)}
               options={[
-                { value: 'right', label: '右下角' },
-                { value: 'left', label: '左下角' },
+                { value: 'right', label: t('admin.aiSettings.chat.positionRight', '右下角') },
+                { value: 'left', label: t('admin.aiSettings.chat.positionLeft', '左下角') },
               ]}
             />
             <FormRowRangeC
-              label="对话温度"
-              hint="越低越精确，越高越有创意"
+              label={t('admin.aiSettings.chat.temperature', '对话温度')}
+              hint={t('admin.aiSettings.chat.temperatureHint', '越低越精确，越高越有创意')}
               value={config.ai_chat_temp}
               onChange={v => updateConfig('ai_chat_temp', v)}
               min={0} max={2} step={0.1}
@@ -586,7 +588,7 @@ export default function AiSettingsPage() {
             />
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}>{t('admin.common.save', '保存')}</Button>
           </div>
         </>
       )}
@@ -596,15 +598,15 @@ export default function AiSettingsPage() {
         <>
           {/* 功能开关 */}
           <div className="card" style={cardStyle}>
-            <SectionTitle icon="fa-regular fa-bolt">AI 自动化功能</SectionTitle>
-            <p className="text-xs text-dim" style={{ marginTop: '-12px', marginBottom: '20px' }}>开启后，发布或更新文章时 AI 将自动执行对应任务</p>
+            <SectionTitle icon="fa-regular fa-bolt">{t('admin.aiSettings.posts.automationTitle', 'AI 自动化功能')}</SectionTitle>
+            <p className="text-xs text-dim" style={{ marginTop: '-12px', marginBottom: '20px' }}>{t('admin.aiSettings.posts.automationHint', '开启后，发布或更新文章时 AI 将自动执行对应任务')}</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               {[
-                { key: 'ai_summary_auto', icon: 'fa-regular fa-align-left', label: 'AI 摘要', desc: '自动生成摘要' },
-                { key: 'ai_image_auto', icon: 'fa-regular fa-image', label: 'AI 特色图', desc: '自动生成封面' },
-                { key: 'ai_slug_auto', icon: 'fa-regular fa-link', label: 'AI Slug', desc: 'URL 别名' },
-                { key: 'ai_keywords_auto', icon: 'fa-regular fa-tags', label: 'AI 关键词', desc: '提取关键词' },
-                { key: 'ai_polish_auto', icon: 'fa-regular fa-wand-magic-sparkles', label: 'AI 润色', desc: '润色优化排版' },
+                { key: 'ai_summary_auto', icon: 'fa-regular fa-align-left', label: t('admin.aiSettings.posts.autoSummary', 'AI 摘要'), desc: t('admin.aiSettings.posts.autoSummaryDesc', '自动生成摘要') },
+                { key: 'ai_image_auto', icon: 'fa-regular fa-image', label: t('admin.aiSettings.posts.autoImage', 'AI 特色图'), desc: t('admin.aiSettings.posts.autoImageDesc', '自动生成封面') },
+                { key: 'ai_slug_auto', icon: 'fa-regular fa-link', label: 'AI Slug', desc: t('admin.aiSettings.posts.autoSlugDesc', 'URL 别名') },
+                { key: 'ai_keywords_auto', icon: 'fa-regular fa-tags', label: t('admin.aiSettings.posts.autoKeywords', 'AI 关键词'), desc: t('admin.aiSettings.posts.autoKeywordsDesc', '提取关键词') },
+                { key: 'ai_polish_auto', icon: 'fa-regular fa-wand-magic-sparkles', label: t('admin.aiSettings.posts.autoPolish', 'AI 润色'), desc: t('admin.aiSettings.posts.autoPolishDesc', '润色优化排版') },
               ].map(item => (
                 <label key={item.key} style={{
                   flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
@@ -624,9 +626,9 @@ export default function AiSettingsPage() {
 
           {/* 摘要设置 */}
           {config.ai_summary_auto === 'true' && (
-            <FormSectionC title="摘要设置" icon="fa-regular fa-align-left">
+            <FormSectionC title={t('admin.aiSettings.posts.summarySettings', '摘要设置')} icon="fa-regular fa-align-left">
               <FormRowInputC
-                label="摘要最大长度"
+                label={t('admin.aiSettings.posts.summaryMaxLength', '摘要最大长度')}
                 type="number"
                 value={config.ai_summary_max_length}
                 onChange={v => updateConfig('ai_summary_max_length', v)}
@@ -641,7 +643,7 @@ export default function AiSettingsPage() {
 
           {/* 特色图设置 */}
           {config.ai_image_auto === 'true' && (
-            <FormSectionC title="特色图设置" icon="fa-regular fa-image" description="后端实际生效的提供商在「提供商」标签页里配置（type=图片，is_default）。下面四个参数（比例 / 风格 / 格式 / 质量 / 文字策略）会在文章编辑器点 ✨ AI 生成封面 时合成进 prompt 或用于上传后转码。">
+            <FormSectionC title={t('admin.aiSettings.posts.imageSettings', '特色图设置')} icon="fa-regular fa-image" description={t('admin.aiSettings.posts.imageSettingsDescription', '后端实际生效的提供商在「提供商」标签页里配置（type=图片，is_default）。下面四个参数（比例 / 风格 / 格式 / 质量 / 文字策略）会在文章编辑器点 AI 生成封面时合成进 prompt 或用于上传后转码。')}>
               {/* The old 'preferred model family' select was removed
                   — the dispatch reads from ai_providers (type=image),
                   so a UI hint that doesn't drive anything was just
@@ -651,55 +653,55 @@ export default function AiSettingsPage() {
                   while keeping the internal 32/68 label-value split. */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                 <FormRowSelectC
-                  label="图片比例"
+                  label={t('admin.aiSettings.posts.imageRatio', '图片比例')}
                   value={config.ai_image_ratio}
                   onChange={v => updateConfig('ai_image_ratio', v)}
                   options={[
-                    { value: '16:9', label: '16:9（推荐）' },
+                    { value: '16:9', label: t('admin.aiSettings.posts.ratioRecommended', '16:9（推荐）') },
                     { value: '1:1',  label: '1:1' },
                     { value: '4:3',  label: '4:3' },
                     { value: '3:2',  label: '3:2' },
                   ]}
                 />
                 <FormRowSelectC
-                  label="图片风格"
+                  label={t('admin.aiSettings.posts.imageStyle', '图片风格')}
                   value={config.ai_image_style}
                   onChange={v => updateConfig('ai_image_style', v)}
                   options={[
-                    { value: 'editorial',    label: '编辑风格' },
-                    { value: 'realistic',    label: '写实风格' },
-                    { value: 'cinematic',    label: '电影风格' },
-                    { value: 'illustration', label: '插画风格' },
-                    { value: 'minimal',      label: '极简风格' },
-                    { value: 'watercolor',   label: '水彩风格' },
+                    { value: 'editorial',    label: t('admin.aiSettings.posts.styleEditorial', '编辑风格') },
+                    { value: 'realistic',    label: t('admin.aiSettings.posts.styleRealistic', '写实风格') },
+                    { value: 'cinematic',    label: t('admin.aiSettings.posts.styleCinematic', '电影风格') },
+                    { value: 'illustration', label: t('admin.aiSettings.posts.styleIllustration', '插画风格') },
+                    { value: 'minimal',      label: t('admin.aiSettings.posts.styleMinimal', '极简风格') },
+                    { value: 'watercolor',   label: t('admin.aiSettings.posts.styleWatercolor', '水彩风格') },
                   ]}
                 />
                 <FormRowSelectC
-                  label="图片格式"
+                  label={t('admin.aiSettings.posts.imageFormat', '图片格式')}
                   value={config.ai_image_format}
                   onChange={v => updateConfig('ai_image_format', v)}
                   options={[
-                    { value: 'webp', label: 'WebP（推荐）' },
+                    { value: 'webp', label: t('admin.aiSettings.posts.formatWebpRecommended', 'WebP（推荐）') },
                     { value: 'png',  label: 'PNG' },
                     { value: 'jpg',  label: 'JPEG' },
                   ]}
                 />
                 <FormRowInputC
-                  label="压缩质量"
+                  label={t('admin.aiSettings.posts.compressionQuality', '压缩质量')}
                   type="number"
                   value={config.ai_image_quality}
                   onChange={v => updateConfig('ai_image_quality', v)}
-                  hint="1-100"
+                  hint={t('admin.aiSettings.posts.qualityHint', '1-100')}
                 />
               </div>
               <FormRowSelectC
-                label="文字策略"
+                label={t('admin.aiSettings.posts.textPolicy', '文字策略')}
                 value={config.ai_image_text}
                 onChange={v => updateConfig('ai_image_text', v)}
                 options={[
-                  { value: 'no_text',        label: '不包含文字' },
-                  { value: 'title_only',     label: '仅标题' },
-                  { value: 'subtle_caption', label: '微妙文字' },
+                  { value: 'no_text',        label: t('admin.aiSettings.posts.noText', '不包含文字') },
+                  { value: 'title_only',     label: t('admin.aiSettings.posts.titleOnly', '仅标题') },
+                  { value: 'subtle_caption', label: t('admin.aiSettings.posts.subtleCaption', '微妙文字') },
                 ]}
                 last
               />
@@ -708,24 +710,24 @@ export default function AiSettingsPage() {
 
           {/* 提示词配置 */}
           <FormSectionC
-            title="自定义提示词"
+            title={t('admin.aiSettings.prompts.title', '自定义提示词')}
             icon="fa-regular fa-terminal"
-            description="文本框默认填入内置提示词模板（中文版），可直接编辑保存。清空后保存即恢复默认；点「恢复默认」按钮把当前默认填回输入框（不会自动保存）。文本类占位符：{title} {content} {excerpt} {min_len} {max_len} {tags_count}。封面图额外占位符：{style}（自动填充选定的英文风格短语）、{text_policy}（文字策略短语）、{excerpt_block}（已格式化的『文章主题: ...\n』段落或空字符串）。"
+            description={t('admin.aiSettings.prompts.description', '文本框默认填入内置提示词模板（中文版），可直接编辑保存。清空后保存即恢复默认；点「恢复默认」按钮把当前默认填回输入框（不会自动保存）。文本类占位符：{title} {content} {excerpt} {min_len} {max_len} {tags_count}。封面图额外占位符：{style}（自动填充选定的英文风格短语）、{text_policy}（文字策略短语）、{excerpt_block}（已格式化的文章主题段落或空字符串）。')}
           >
             {([
-              { key: 'summary',   label: '摘要提示词',   rows: 8, optKey: 'ai_summary_prompt'   },
-              { key: 'slug',      label: 'Slug 提示词',  rows: 6, optKey: 'ai_slug_prompt'      },
-              { key: 'keywords',  label: '关键词提示词', rows: 5, optKey: 'ai_keywords_prompt'  },
-              { key: 'polish',    label: '润色提示词',   rows: 8, optKey: 'ai_polish_prompt'    },
-              { key: 'questions', label: '推荐问题提示词', rows: 5, optKey: 'ai_questions_prompt' },
+              { key: 'summary',   label: t('admin.aiSettings.prompts.summary', '摘要提示词'),   rows: 8, optKey: 'ai_summary_prompt'   },
+              { key: 'slug',      label: t('admin.aiSettings.prompts.slug', 'Slug 提示词'),  rows: 6, optKey: 'ai_slug_prompt'      },
+              { key: 'keywords',  label: t('admin.aiSettings.prompts.keywords', '关键词提示词'), rows: 5, optKey: 'ai_keywords_prompt'  },
+              { key: 'polish',    label: t('admin.aiSettings.prompts.polish', '润色提示词'),   rows: 8, optKey: 'ai_polish_prompt'    },
+              { key: 'questions', label: t('admin.aiSettings.prompts.questions', '推荐问题提示词'), rows: 5, optKey: 'ai_questions_prompt' },
               // 封面 prompt 占位符不一样：{title} {excerpt} {excerpt_block}
               // {style} {text_policy}. 改 admin 选项 → 风格 / 文字策略
               // dropdown 决定 {style} / {text_policy} 实际填什么。
-              { key: 'cover',           label: '封面图提示词',     rows: 6, optKey: 'ai_image_prompt'         },
+              { key: 'cover',           label: t('admin.aiSettings.prompts.cover', '封面图提示词'),     rows: 6, optKey: 'ai_image_prompt'         },
               // 评论 AI 占位符：{content} 是评论原文，{context_block}（仅 reply）
               // 是已格式化的「文章标题/摘要/父评论」段落，开关在评论设置里。
-              { key: 'comment-audit',   label: '评论审核提示词',   rows: 8, optKey: 'ai_comment_audit_prompt' },
-              { key: 'comment-reply',   label: '评论智能回复提示词', rows: 8, optKey: 'ai_comment_reply_prompt' },
+              { key: 'comment-audit',   label: t('admin.aiSettings.prompts.commentAudit', '评论审核提示词'),   rows: 8, optKey: 'ai_comment_audit_prompt' },
+              { key: 'comment-reply',   label: t('admin.aiSettings.prompts.commentReply', '评论智能回复提示词'), rows: 8, optKey: 'ai_comment_reply_prompt' },
             ] as const).map((row, idx, arr) => {
               const optKey = row.optKey;
               const def = promptDefaults[row.key] ?? '';
@@ -738,7 +740,7 @@ export default function AiSettingsPage() {
                   rows={row.rows}
                   value={current}
                   onChange={(v) => updateConfig(optKey, v)}
-                  placeholder="清空保存即恢复默认"
+                  placeholder={t('admin.aiSettings.prompts.restoreDefaultPlaceholder', '清空保存即恢复默认')}
                   mono
                   last={idx === arr.length - 1}
                   labelExtra={
@@ -746,7 +748,7 @@ export default function AiSettingsPage() {
                       type="button"
                       onClick={() => resetPrompt(optKey, row.key)}
                       disabled={isDefault}
-                      title={isDefault ? '当前已是默认' : '把内置默认提示词填回这个输入框'}
+                      title={isDefault ? t('admin.aiSettings.prompts.currentDefault', '当前已是默认') : t('admin.aiSettings.prompts.restoreDefaultTitle', '把内置默认提示词填回这个输入框')}
                       style={{
                         background: 'none', border: 'none', padding: '2px 6px',
                         fontSize: '12px', cursor: isDefault ? 'default' : 'pointer',
@@ -754,7 +756,7 @@ export default function AiSettingsPage() {
                       }}
                     >
                       <i className="fa-regular fa-rotate-left" style={{ fontSize: '11px', marginRight: '3px' }} />
-                      恢复默认
+                      {t('admin.aiSettings.prompts.restoreDefault', '恢复默认')}
                     </button>
                   }
                 />
@@ -763,7 +765,7 @@ export default function AiSettingsPage() {
           </FormSectionC>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}>{t('admin.common.save', '保存')}</Button>
           </div>
         </>
       )}
@@ -772,51 +774,51 @@ export default function AiSettingsPage() {
       {activeTab === '博主资料' && (
         <>
           <FormSectionC
-            title="博主资料 & AI 记忆"
+            title={t('admin.aiSettings.profile.title', '博主资料 & AI 记忆')}
             icon="fa-regular fa-user-pen"
-            description="AI 会根据这些信息了解你的写作风格和偏好，提供更个性化的回复"
+            description={t('admin.aiSettings.profile.description', 'AI 会根据这些信息了解你的写作风格和偏好，提供更个性化的回复')}
           >
             <FormRowInputC
-              label="博主昵称"
+              label={t('admin.aiSettings.profile.name', '博主昵称')}
               value={config.ai_blogger_name}
               onChange={v => updateConfig('ai_blogger_name', v)}
-              placeholder="你的名字或笔名"
+              placeholder={t('admin.aiSettings.profile.namePlaceholder', '你的名字或笔名')}
             />
             <FormRowTextareaC
-              label="博客简介"
+              label={t('admin.aiSettings.profile.bio', '博客简介')}
               rows={3}
               value={config.ai_blogger_bio}
               onChange={v => updateConfig('ai_blogger_bio', v)}
-              placeholder="简要描述你的博客主题和风格"
+              placeholder={t('admin.aiSettings.profile.bioPlaceholder', '简要描述你的博客主题和风格')}
             />
             <FormRowTextareaC
-              label="写作风格"
+              label={t('admin.aiSettings.profile.style', '写作风格')}
               rows={2}
               value={config.ai_blogger_style}
               onChange={v => updateConfig('ai_blogger_style', v)}
-              placeholder="例如：轻松幽默、技术严谨、文艺清新..."
+              placeholder={t('admin.aiSettings.profile.stylePlaceholder', '例如：轻松幽默、技术严谨、文艺清新...')}
             />
             <FormRowTextareaC
-              label="AI 记忆（MEMORY.md）"
-              hint="这些记忆会作为上下文发送给 AI，帮助它更好地理解你"
+              label={t('admin.aiSettings.profile.memory', 'AI 记忆（MEMORY.md）')}
+              hint={t('admin.aiSettings.profile.memoryHint', '这些记忆会作为上下文发送给 AI，帮助它更好地理解你')}
               rows={8}
               value={config.ai_blogger_memory}
               onChange={v => updateConfig('ai_blogger_memory', v)}
-              placeholder="AI 会自动在这里记录你的偏好和上下文..."
+              placeholder={t('admin.aiSettings.profile.memoryPlaceholder', 'AI 会自动在这里记录你的偏好和上下文...')}
             />
             <FormRowSelectC
-              label="记忆存储方式"
+              label={t('admin.aiSettings.profile.memoryStorage', '记忆存储方式')}
               value={config.ai_memory_storage}
               onChange={v => updateConfig('ai_memory_storage', v)}
               options={[
-                { value: 'local', label: '本地文件' },
-                { value: 's3', label: 'S3/R2 云存储' },
+                { value: 'local', label: t('admin.aiSettings.profile.storageLocal', '本地文件') },
+                { value: 's3', label: t('admin.aiSettings.profile.storageS3', 'S3/R2 云存储') },
               ]}
               last
             />
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}>{t('admin.common.save', '保存')}</Button>
           </div>
         </>
       )}
@@ -824,10 +826,10 @@ export default function AiSettingsPage() {
       {/* ── 系统提示词 ── */}
       {activeTab === '系统提示词' && (
         <>
-          <FormSectionC title="AI 系统提示词" icon="fa-regular fa-scroll">
+          <FormSectionC title={t('admin.aiSettings.systemPrompt.title', 'AI 系统提示词')} icon="fa-regular fa-scroll">
             <FormRowTextareaC
-              label="聊天系统提示词"
-              hint="定义 AI 的角色和行为方式，会在每次对话开始时发送给 AI"
+              label={t('admin.aiSettings.systemPrompt.chatPrompt', '聊天系统提示词')}
+              hint={t('admin.aiSettings.systemPrompt.chatPromptHint', '定义 AI 的角色和行为方式，会在每次对话开始时发送给 AI')}
               rows={8}
               value={config.ai_system_prompt}
               onChange={v => updateConfig('ai_system_prompt', v)}
@@ -835,7 +837,7 @@ export default function AiSettingsPage() {
             />
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}>{t('admin.common.save', '保存')}</Button>
           </div>
         </>
       )}
@@ -844,21 +846,21 @@ export default function AiSettingsPage() {
       {activeTab === '数据权限' && (
         <>
           <FormSectionC
-            title="AI 数据访问权限"
+            title={t('admin.aiSettings.permissions.title', 'AI 数据访问权限')}
             icon="fa-regular fa-shield-halved"
-            description="控制 AI 可以访问哪些站点数据作为上下文"
+            description={t('admin.aiSettings.permissions.description', '控制 AI 可以访问哪些站点数据作为上下文')}
           >
             {(() => {
               const perms = [
-                { key: 'site_basics',    label: '站点基础信息', hint: '系统版本、服务器信息' },
-                { key: 'theme_info',     label: '主题信息',     hint: '当前主题和配色' },
-                { key: 'active_plugins', label: '启用的插件',   hint: '插件列表' },
-                { key: 'posts',          label: '文章内容',     hint: '所有已发布文章的标题和内容' },
-                { key: 'pages_content',  label: '页面内容',     hint: '所有已发布页面' },
-                { key: 'taxonomies',     label: '分类和标签',   hint: '分类目录和标签列表' },
-                { key: 'comments',       label: '评论内容',     hint: '所有评论列表' },
-                { key: 'users_count',    label: '用户统计',     hint: '按角色统计用户数量' },
-                { key: 'database_query', label: '数据库查询',   hint: '允许 AI 执行只读 SQL 查询获取更多数据' },
+                { key: 'site_basics',    label: t('admin.aiSettings.permissions.siteBasics', '站点基础信息'), hint: t('admin.aiSettings.permissions.siteBasicsHint', '系统版本、服务器信息') },
+                { key: 'theme_info',     label: t('admin.aiSettings.permissions.themeInfo', '主题信息'),     hint: t('admin.aiSettings.permissions.themeInfoHint', '当前主题和配色') },
+                { key: 'active_plugins', label: t('admin.aiSettings.permissions.activePlugins', '启用的插件'),   hint: t('admin.aiSettings.permissions.activePluginsHint', '插件列表') },
+                { key: 'posts',          label: t('admin.aiSettings.permissions.posts', '文章内容'),     hint: t('admin.aiSettings.permissions.postsHint', '所有已发布文章的标题和内容') },
+                { key: 'pages_content',  label: t('admin.aiSettings.permissions.pagesContent', '页面内容'),     hint: t('admin.aiSettings.permissions.pagesContentHint', '所有已发布页面') },
+                { key: 'taxonomies',     label: t('admin.aiSettings.permissions.taxonomies', '分类和标签'),   hint: t('admin.aiSettings.permissions.taxonomiesHint', '分类目录和标签列表') },
+                { key: 'comments',       label: t('admin.aiSettings.permissions.comments', '评论内容'),     hint: t('admin.aiSettings.permissions.commentsHint', '所有评论列表') },
+                { key: 'users_count',    label: t('admin.aiSettings.permissions.usersCount', '用户统计'),     hint: t('admin.aiSettings.permissions.usersCountHint', '按角色统计用户数量') },
+                { key: 'database_query', label: t('admin.aiSettings.permissions.databaseQuery', '数据库查询'),   hint: t('admin.aiSettings.permissions.databaseQueryHint', '允许 AI 执行只读 SQL 查询获取更多数据') },
               ];
               return perms.map((item, idx) => (
                 <FormRowToggleC
@@ -873,7 +875,7 @@ export default function AiSettingsPage() {
             })()}
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>保存</Button>
+            <Button onClick={saveConfig} loading={savingConfig}>{t('admin.common.save', '保存')}</Button>
           </div>
         </>
       )}
@@ -892,25 +894,24 @@ export default function AiSettingsPage() {
                 <i className="fa-solid fa-wand-magic-sparkles" style={{ fontSize: '20px' }} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 600, margin: '0 0 6px' }}>一键生成全部 AI 数据</h3>
+                <h3 style={{ fontSize: '15px', fontWeight: 600, margin: '0 0 6px' }}>{t('admin.aiSettings.batch.allTitle', '一键生成全部 AI 数据')}</h3>
                 <p className="text-sub" style={{ fontSize: '13px', lineHeight: 1.7, margin: '0 0 14px' }}>
-                  为所有已发布文章批量生成 <strong>AI 摘要</strong> + <strong>陪读问题</strong>（跳过已有的）。
-                  任务后台异步运行，每项间隔 800ms 避免触发 AI 限流。
+                  {t('admin.aiSettings.batch.allDescription', '为所有已发布文章批量生成 AI 摘要 + 陪读问题（跳过已有的）。任务后台异步运行，每项间隔 800ms 避免触发 AI 限流。')}
                 </p>
                 <BatchProgress job={batchJobs.all} />
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   <Button
-                    onClick={() => startBatch('all', '/ai/batch-all', '任务')}
+                    onClick={() => startBatch('all', '/ai/batch-all', t('admin.aiSettings.batch.taskLabel', '任务'))}
                     loading={batchLoading.all || batchJobs.all?.running}
                     disabled={batchJobs.all?.running}
                     style={{ padding: '0 20px' }}
                   >
                     <i className="fa-solid fa-bolt" style={{ fontSize: '13px', marginRight: 8 }} />
-                    {batchJobs.all?.running ? '生成中…' : '一键生成全部'}
+                    {batchJobs.all?.running ? t('admin.aiSettings.batch.generating', '生成中…') : t('admin.aiSettings.batch.generateAll', '一键生成全部')}
                   </Button>
                   {batchJobs.all?.running && (
                     <Button variant="secondary" onClick={() => stopBatch('all')} style={{ padding: '0 18px' }}>
-                      <i className="fa-solid fa-stop" style={{ fontSize: '12px', marginRight: 6 }} /> 停止
+                      <i className="fa-solid fa-stop" style={{ fontSize: '12px', marginRight: 6 }} /> {t('admin.common.stop', '停止')}
                     </Button>
                   )}
                   <Button
@@ -918,18 +919,18 @@ export default function AiSettingsPage() {
                     disabled={batchJobs.all?.running}
                     style={{ padding: '0 20px' }}
                     onClick={async () => {
-                      if (!confirm('确定清空所有文章的 AI 摘要 + 陪读问题？下次一键生成会重新从头跑。')) return;
+                      if (!confirm(t('admin.aiSettings.batch.confirmClear', '确定清空所有文章的 AI 摘要 + 陪读问题？下次一键生成会重新从头跑。'))) return;
                       try {
                         const r: any = await api.post('/ai/batch-delete');
                         const d = r.data || r;
-                        toast.success(`已清空 ${d?.updated ?? 0} 篇文章的 AI 数据`);
+                        toast.success(t('admin.aiSettings.batch.clearSuccess', '已清空 {count} 篇文章的 AI 数据', { count: d?.updated ?? 0 }));
                       } catch (e: any) {
-                        toast.error(e?.response?.data?.error?.message || '清空失败');
+                        toast.error(e?.response?.data?.error?.message || t('admin.aiSettings.batch.clearFailed', '清空失败'));
                       }
                     }}
                   >
                     <i className="fa-regular fa-trash-can" style={{ fontSize: '13px', marginRight: 8 }} />
-                    批量清空 AI 数据
+                    {t('admin.aiSettings.batch.clearData', '批量清空 AI 数据')}
                   </Button>
                 </div>
               </div>
@@ -947,23 +948,23 @@ export default function AiSettingsPage() {
                 <i className="fa-regular fa-align-left" style={{ fontSize: '17px', color: 'var(--color-primary)' }} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 4px' }}>批量生成 AI 摘要</h3>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 4px' }}>{t('admin.aiSettings.batch.summaryTitle', '批量生成 AI 摘要')}</h3>
                 <p className="text-sub" style={{ fontSize: '12px', lineHeight: 1.7, margin: '0 0 12px' }}>
-                  为没有 AI 摘要的已发布文章生成摘要，用于文章预览、SEO description。
+                  {t('admin.aiSettings.batch.summaryDescription', '为没有 AI 摘要的已发布文章生成摘要，用于文章预览、SEO description。')}
                 </p>
                 <BatchProgress job={batchJobs.summary} />
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   <Button
-                    onClick={() => startBatch('summary', '/ai/batch-summary', 'AI 摘要')}
+                    onClick={() => startBatch('summary', '/ai/batch-summary', t('admin.aiSettings.batch.summaryLabel', 'AI 摘要'))}
                     loading={batchLoading.summary || batchJobs.summary?.running}
                     disabled={batchJobs.summary?.running}
                     variant="secondary"
                   >
-                    {batchJobs.summary?.running ? '生成中…' : '生成摘要'}
+                    {batchJobs.summary?.running ? t('admin.aiSettings.batch.generating', '生成中…') : t('admin.aiSettings.batch.generateSummary', '生成摘要')}
                   </Button>
                   {batchJobs.summary?.running && (
                     <Button variant="danger" onClick={() => stopBatch('summary')}>
-                      <i className="fa-solid fa-stop" style={{ fontSize: '12px', marginRight: 6 }} /> 停止
+                      <i className="fa-solid fa-stop" style={{ fontSize: '12px', marginRight: 6 }} /> {t('admin.common.stop', '停止')}
                     </Button>
                   )}
                 </div>
@@ -982,23 +983,23 @@ export default function AiSettingsPage() {
                 <i className="fa-regular fa-circle-question" style={{ fontSize: '17px', color: 'var(--color-primary)' }} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 4px' }}>批量生成陪读问题</h3>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 4px' }}>{t('admin.aiSettings.batch.questionsTitle', '批量生成陪读问题')}</h3>
                 <p className="text-sub" style={{ fontSize: '12px', lineHeight: 1.7, margin: '0 0 12px' }}>
-                  为没有陪读问题的文章生成 3 个读者可能问的问题（用于 AI 陪读面板）。
+                  {t('admin.aiSettings.batch.questionsDescription', '为没有陪读问题的文章生成 3 个读者可能问的问题（用于 AI 陪读面板）。')}
                 </p>
                 <BatchProgress job={batchJobs.questions} />
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   <Button
-                    onClick={() => startBatch('questions', '/ai/batch-questions', '陪读问题')}
+                    onClick={() => startBatch('questions', '/ai/batch-questions', t('admin.aiSettings.batch.questionsLabel', '陪读问题'))}
                     loading={batchLoading.questions || batchJobs.questions?.running}
                     disabled={batchJobs.questions?.running}
                     variant="secondary"
                   >
-                    {batchJobs.questions?.running ? '生成中…' : '生成问题'}
+                    {batchJobs.questions?.running ? t('admin.aiSettings.batch.generating', '生成中…') : t('admin.aiSettings.batch.generateQuestions', '生成问题')}
                   </Button>
                   {batchJobs.questions?.running && (
                     <Button variant="danger" onClick={() => stopBatch('questions')}>
-                      <i className="fa-solid fa-stop" style={{ fontSize: '12px', marginRight: 6 }} /> 停止
+                      <i className="fa-solid fa-stop" style={{ fontSize: '12px', marginRight: 6 }} /> {t('admin.common.stop', '停止')}
                     </Button>
                   )}
                 </div>
@@ -1009,7 +1010,7 @@ export default function AiSettingsPage() {
           <div className="card" style={{ padding: '16px 20px', background: 'var(--color-bg-soft)', border: '1px dashed var(--color-border)' }}>
             <p className="text-sub" style={{ fontSize: '12px', lineHeight: 1.8, margin: 0 }}>
               <i className="fa-regular fa-lightbulb" style={{ marginRight: 6, color: 'var(--color-primary)' }} />
-              任务在后台运行，关闭此页也继续。回到此页会自动显示最新进度。新发布文章会由发布流程**自动生成**，这里用于补齐历史数据。
+              {t('admin.aiSettings.batch.notice', '任务在后台运行，关闭此页也继续。回到此页会自动显示最新进度。新发布文章会由发布流程自动生成，这里用于补齐历史数据。')}
             </p>
           </div>
         </>
@@ -1020,6 +1021,7 @@ export default function AiSettingsPage() {
 
 // Reusable batch progress bar component
 function BatchProgress({ job }: { job: any }) {
+  const { t } = useI18n();
   if (!job || job.total === 0) return null;
   const total = Math.max(1, job.total);
   const progress = ((job.done + job.failed) / total) * 100;
@@ -1027,8 +1029,8 @@ function BatchProgress({ job }: { job: any }) {
     <div style={{ marginBottom: '12px', padding: '10px 12px', background: 'var(--color-bg-soft)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px' }}>
         <span>
-          {job.running ? '进行中…' : '已完成'} · 成功 {job.done}
-          {job.failed > 0 && <span style={{ color: '#dc2626' }}> · 失败 {job.failed}</span>}
+          {job.running ? t('admin.aiSettings.batch.running', '进行中…') : t('admin.aiSettings.batch.completed', '已完成')} · {t('admin.aiSettings.batch.successCount', '成功 {count}', { count: job.done })}
+          {job.failed > 0 && <span style={{ color: '#dc2626' }}> · {t('admin.aiSettings.batch.failedCount', '失败 {count}', { count: job.failed })}</span>}
         </span>
         <span className="text-dim">{job.done + job.failed} / {job.total}</span>
       </div>

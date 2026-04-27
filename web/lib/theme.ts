@@ -45,8 +45,8 @@ export interface ThemeComponents {
   Layout: React.ComponentType<{ children: React.ReactNode }>;
   // Optional page components — defaults provided if not implemented by theme
   ArchivePage?: React.ComponentType<any>;
-  CategoryPage?: React.ComponentType<{ category: any; posts: any[] }>;
-  TagPage?: React.ComponentType<{ tag: any; posts: any[] }>;
+  CategoryPage?: React.ComponentType<{ category: any; posts: any[]; timeZone?: string }>;
+  TagPage?: React.ComponentType<{ tag: any; posts: any[]; timeZone?: string }>;
   CategoriesPage?: React.ComponentType<{ categories: any[] }>;
   TagsPage?: React.ComponentType<{ tags: any[] }>;
   NotFoundPage?: React.ComponentType<any>;

@@ -3,14 +3,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { momentsApi, optionsApi, mediaApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
+import { useThemeContext } from '@/lib/theme-context';
+import { datePartsInTimeZone, formatDateInTimeZone, formatDateTimeInTimeZone } from '@/lib/timezone';
 import toast from 'react-hot-toast';
 
-function formatTime(ts: number) {
+function formatTime(ts: number, timeZone: string) {
   if (!ts) return null;
-  const d = new Date(ts * 1000);
-  const month = d.toLocaleDateString('zh-CN', { month: 'long' });
-  const day = d.getDate();
-  const time = d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  const parts = datePartsInTimeZone(ts, timeZone);
+  const month = formatDateInTimeZone(ts, 'zh-CN', { month: 'long' }, timeZone);
+  const day = parts.day;
+  const time = formatDateTimeInTimeZone(ts, 'zh-CN', { hour: '2-digit', minute: '2-digit' }, timeZone);
   return { month, day, time };
 }
 
@@ -103,6 +105,7 @@ function getMomentPositions(count: number) {
 }
 
 export default function MomentsPage() {
+  const { timeZone } = useThemeContext();
   const [moments, setMoments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showComposer, setShowComposer] = useState(false);
@@ -321,9 +324,9 @@ export default function MomentsPage() {
             let filtered = filterTag ? moments.filter(m => m.mood === filterTag) : [...moments];
             if (filterYear !== null) {
               filtered = filtered.filter(m => {
-                const d = new Date(m.created_at * 1000);
-                if (d.getFullYear() !== filterYear) return false;
-                if (filterMonth !== null && d.getMonth() !== filterMonth) return false;
+                const parts = datePartsInTimeZone(m.created_at, timeZone);
+                if (parts.year !== filterYear) return false;
+                if (filterMonth !== null && parts.month - 1 !== filterMonth) return false;
                 return true;
               });
             }
@@ -488,10 +491,10 @@ export default function MomentsPage() {
                 // 从 moments 数据中提取可用的年月
                 const yearMonths = new Map<number, Set<number>>();
                 moments.forEach(m => {
-                  const d = new Date(m.created_at * 1000);
-                  const y = d.getFullYear();
+                  const parts = datePartsInTimeZone(m.created_at, timeZone);
+                  const y = parts.year;
                   if (!yearMonths.has(y)) yearMonths.set(y, new Set());
-                  yearMonths.get(y)!.add(d.getMonth());
+                  yearMonths.get(y)!.add(parts.month - 1);
                 });
                 const years = Array.from(yearMonths.keys()).sort((a, b) => b - a);
                 const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];

@@ -2,7 +2,7 @@
   "name": "analytics",
   "displayName": "访问统计",
   "description": "在页面头部注入统计代码（Google Analytics / Umami / Plausible 等）",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "author": "Utterlog",
   "hooks": {
     "head_scripts": "<script>/* analytics code here */</script>"

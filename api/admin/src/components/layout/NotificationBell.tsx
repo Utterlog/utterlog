@@ -1,8 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 
 export default function NotificationBell() {
+  const { locale, t } = useI18n();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -54,10 +56,10 @@ export default function NotificationBell() {
     const d = new Date(num * 1000);
     const now = new Date();
     const diff = (now.getTime() - d.getTime()) / 1000;
-    if (diff < 60) return '刚刚';
-    if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前';
-    if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前';
-    return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    if (diff < 60) return t('admin.time.justNow', '刚刚');
+    if (diff < 3600) return t('admin.time.minutesAgo', '{count} 分钟前', { count: Math.floor(diff / 60) });
+    if (diff < 86400) return t('admin.time.hoursAgo', '{count} 小时前', { count: Math.floor(diff / 3600) });
+    return d.toLocaleDateString(locale || 'zh-CN', { month: 'short', day: 'numeric' });
   };
 
   return (
@@ -90,10 +92,10 @@ export default function NotificationBell() {
           }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
-              <span style={{ fontSize: '14px', fontWeight: 600 }}>通知</span>
+              <span style={{ fontSize: '14px', fontWeight: 600 }}>{t('admin.notification.title', '通知')}</span>
               {unread > 0 && (
                 <button onClick={markAllRead} style={{ fontSize: '12px', color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                  全部已读
+                  {t('admin.notification.markAllRead', '全部已读')}
                 </button>
               )}
             </div>
@@ -106,7 +108,7 @@ export default function NotificationBell() {
                 textDecoration: 'none', color: '#92400e', fontSize: '13px',
               }}>
                 <i className="fa-solid fa-comment-dots" style={{ fontSize: '14px' }} />
-                <span><strong>{pendingComments}</strong> 条评论等待审核</span>
+                <span>{t('admin.notification.pendingComments', '{count} 条评论等待审核', { count: pendingComments })}</span>
                 <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', marginLeft: 'auto', opacity: 0.5 }} />
               </a>
             )}
@@ -114,9 +116,9 @@ export default function NotificationBell() {
             {/* List */}
             <div style={{ flex: 1, overflow: 'auto' }}>
               {loading ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px' }}>加载中...</div>
+                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px' }}>{t('common.loading', '加载中...')}</div>
               ) : notifications.length === 0 ? (
-                <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px' }}>暂无通知</div>
+                <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px' }}>{t('admin.notification.empty', '暂无通知')}</div>
               ) : (
                 notifications.map((n, i) => (
                   <div key={i} style={{

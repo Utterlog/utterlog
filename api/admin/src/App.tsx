@@ -2,6 +2,7 @@ import { useEffect, useState, lazy, Suspense, Component, type ErrorInfo, type Re
 import { Routes, Route, useNavigate, Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/lib/store';
 import DashboardLayout from '@/layouts/DashboardLayout';
+import { useI18n } from '@/lib/i18n';
 
 /**
  * ChunkErrorBoundary — auto-reloads the page when a lazy-loaded chunk 404s.
@@ -139,13 +140,14 @@ function AuthGate() {
 }
 
 function RouteLoading() {
+  const { t } = useI18n();
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       height: '100%', minHeight: 200, color: 'var(--color-text-dim)', fontSize: 13,
     }}>
       <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 8, color: 'var(--color-primary)' }} />
-      加载中...
+      {t('common.loading', '加载中...')}
     </div>
   );
 }

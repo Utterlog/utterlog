@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import SystemStatusPanel from './SystemStatusPanel';
 import VersionBadge from '@/components/VersionBadge';
+import { useI18n } from '@/lib/i18n';
 
 interface MenuItem {
   to: string;
   icon: string;
   label: string;
+  key?: string;
   sub?: string;
   children?: { to: string; icon: string; label: string }[];
 }
@@ -24,7 +26,7 @@ const menuItems: MenuItem[] = [
   { to: '/pages', icon: 'fa-regular fa-file-lines', label: '页面', sub: 'Pages' },
   { to: '/moments', icon: 'fa-solid fa-comment-dots', label: '说说', sub: 'Moments' },
   {
-    to: '/music', icon: 'fa-solid fa-clapperboard', label: '娱乐', sub: 'Entertainment',
+    to: '/music', icon: 'fa-solid fa-clapperboard', label: '娱乐', key: 'admin.nav.entertainment', sub: 'Entertainment',
     children: [
       { to: '/music', label: '音乐', icon: 'fa-regular fa-music' },
       { to: '/movies', label: '电影', icon: 'fa-regular fa-film' },
@@ -63,12 +65,43 @@ const aiMenuItems: MenuItem[] = [
   { to: '/ai-settings', icon: 'fa-solid fa-sliders', label: 'AI 设置', sub: 'AI Settings' },
 ];
 
+const navKeys: Record<string, string> = {
+  '/': 'admin.nav.dashboard',
+  '/posts': 'admin.nav.posts',
+  '/posts/categories': 'admin.nav.categories',
+  '/posts/tags': 'admin.nav.tags',
+  '/pages': 'admin.nav.pages',
+  '/moments': 'admin.nav.moments',
+  '/music': 'admin.nav.music',
+  '/movies': 'admin.nav.movies',
+  '/videos': 'admin.nav.videos',
+  '/books': 'admin.nav.books',
+  '/games': 'admin.nav.games',
+  '/goods': 'admin.nav.goods',
+  '/follows': 'admin.nav.follows',
+  '/comments': 'admin.nav.comments',
+  '/comments/ai': 'admin.nav.aiCommentQueue',
+  '/links': 'admin.nav.links',
+  '/media': 'admin.nav.media',
+  '/albums': 'admin.nav.albums',
+  '/analytics': 'admin.nav.analytics',
+  '/security': 'admin.nav.security',
+  '/themes': 'admin.nav.themes',
+  '/plugins': 'admin.nav.plugins',
+  '/tools': 'admin.nav.tools',
+  '/settings': 'admin.nav.settings',
+  '/ai': 'admin.nav.aiAssistant',
+  '/ai-settings': 'admin.nav.aiSettings',
+  '/utterlog': 'admin.nav.utterlogCenter',
+};
+
 interface Props {
   collapsed: boolean;
   onToggle: () => void;
 }
 
 export default function Sidebar({ collapsed, onToggle }: Props) {
+  const { t } = useI18n();
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   const toggleExpand = (key: string) => {
@@ -80,6 +113,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   const renderMenuItem = (item: MenuItem) => {
     const hasChildren = !!item.children?.length;
     const expanded = expandedMenus.includes(item.to);
+    const label = t(item.key || navKeys[item.to] || '', item.label);
 
     if (hasChildren && !collapsed) {
       return (
@@ -97,7 +131,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           >
             <i className={item.icon} style={{ fontSize: 14, width: 16, textAlign: 'center', flexShrink: 0 }} />
             <span style={{ flex: 1, textAlign: 'left', display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
-              <span>{item.label}</span>
+              <span>{label}</span>
               {item.sub && (
                 <span style={{ fontSize: 10, color: 'var(--color-text-dim)', fontWeight: 400, letterSpacing: '0.02em' }}>
                   {item.sub}
@@ -119,7 +153,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
               })}
             >
               <i className={child.icon} style={{ fontSize: 12, width: 14, textAlign: 'center' }} />
-              <span>{child.label}</span>
+              <span>{t(navKeys[child.to] || '', child.label)}</span>
             </NavLink>
           ))}
         </div>
@@ -140,12 +174,12 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           textDecoration: 'none',
           justifyContent: collapsed ? 'center' : 'flex-start',
         })}
-        title={collapsed ? item.label : undefined}
+        title={collapsed ? label : undefined}
       >
         <i className={item.icon} style={{ fontSize: 14, width: 16, textAlign: 'center', flexShrink: 0 }} />
         {!collapsed && (
           <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
-            <span>{item.label}</span>
+            <span>{label}</span>
             {item.sub && (
               <span style={{ fontSize: 10, color: 'var(--color-text-dim)', fontWeight: 400, letterSpacing: '0.02em' }}>
                 {item.sub}
@@ -229,7 +263,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             textDecoration: 'none',
             justifyContent: collapsed ? 'center' : 'flex-start',
           })}
-          title={collapsed ? 'Utterlog 中心' : undefined}
+          title={collapsed ? t('admin.nav.utterlogCenter', 'Utterlog 中心') : undefined}
         >
           {({ isActive }) => (
             <>
@@ -239,7 +273,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
               </svg>
               {!collapsed && (
                 <span style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  Utterlog 中心
+                  {t('admin.nav.utterlogCenter', 'Utterlog 中心')}
                   <span style={{ fontSize: 10, color: 'var(--color-text-dim)', fontWeight: 400 }}>Network</span>
                 </span>
               )}

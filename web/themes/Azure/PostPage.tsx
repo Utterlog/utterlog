@@ -5,12 +5,12 @@ import AISummary from './AISummary';
 import PostNavigation from './PostNavigation';
 import FadeCover from '@/components/blog/FadeCover';
 import { randomCoverUrl } from '@/lib/blog-image';
+import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 import { getCategoryIcon } from './constants';
 import { CommentCount, CommentSection } from './PostInteractive';
 
-function formatDate(ts: string | number) {
-  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai' });
+function formatDate(ts: string | number, timeZone: string) {
+  return formatDateInTimeZone(ts, 'zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }, timeZone);
 }
 
 export default function PostPage({ post, options }: { post: any; options?: Record<string, string> }) {
@@ -19,6 +19,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
   // fallback uses the same admin-configured random_image_api as the
   // home cards / hero — no more "首页有图、内页一张默认 img.et" mismatch.
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
+  const timeZone = resolveSiteTimeZone(options);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
@@ -48,7 +49,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
 
       {/* Meta bar */}
       <div className="azure-post-meta">
-        <span className="azure-post-meta-item"><i className="fa-regular fa-calendar" aria-hidden="true" />{formatDate(post.created_at)}</span>
+        <span className="azure-post-meta-item"><i className="fa-regular fa-calendar" aria-hidden="true" />{formatDate(post.created_at, timeZone)}</span>
         {/* view_count 显示 = DB 真实值 + 1（cosmetic）。
             后端 /track 已经移除了 isFirstPostViewToday 守门 ——「访客
             点击就 +1，刷新一次再 +1」是用户明确的预期。所以 cosmetic +1

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import PostLink from '../PostLink';
 import Heatmap from '@/app/(blog)/archives/Heatmap';
 import PageTitle from '@/components/blog/PageTitle';
+import { datePartsInTimeZone, formatMonthDayInTimeZone } from '@/lib/timezone';
 
 function timeAgo(ts: number | string): string {
   const now = Date.now();
@@ -50,17 +51,15 @@ interface YearGroup {
   months: { month: number; label: string; posts: any[] }[];
 }
 
-function groupByYearMonth(posts: any[]): YearGroup[] {
+function groupByYearMonth(posts: any[], timeZone: string): YearGroup[] {
   const yearMap = new Map<number, Map<number, any[]>>();
   for (const post of posts) {
-    const ts = post.created_at;
-    const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-    const year = d.getFullYear();
-    const month = d.getMonth();
+    const { year, month } = datePartsInTimeZone(post.created_at, timeZone);
+    const monthIndex = month - 1;
     if (!yearMap.has(year)) yearMap.set(year, new Map());
     const monthMap = yearMap.get(year)!;
-    if (!monthMap.has(month)) monthMap.set(month, []);
-    monthMap.get(month)!.push(post);
+    if (!monthMap.has(monthIndex)) monthMap.set(monthIndex, []);
+    monthMap.get(monthIndex)!.push(post);
   }
 
   return Array.from(yearMap.entries())
@@ -73,9 +72,8 @@ function groupByYearMonth(posts: any[]): YearGroup[] {
     }));
 }
 
-function formatDate(ts: string | number) {
-  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+function formatDate(ts: string | number, timeZone: string) {
+  return formatMonthDayInTimeZone(ts, timeZone);
 }
 
 interface DefaultArchivePageProps {
@@ -83,11 +81,12 @@ interface DefaultArchivePageProps {
   categories: any[];
   tags: any[];
   stats: any;
+  timeZone?: string;
 }
 
-export default function DefaultArchivePage({ posts, categories, tags, stats }: DefaultArchivePageProps) {
+export default function DefaultArchivePage({ posts, categories, tags, stats, timeZone = 'UTC' }: DefaultArchivePageProps) {
   const sortedTags = [...tags].sort((a: any, b: any) => (b.count || 0) - (a.count || 0));
-  const archives = groupByYearMonth(posts);
+  const archives = groupByYearMonth(posts, timeZone);
   const latestPosts = getLatestPostPerCategory(posts, categories);
 
   return (
@@ -245,7 +244,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats }: D
                   borderBottom: idx < monthGroup.posts.length - 1 ? '1px solid var(--color-divider)' : 'none',
                   textDecoration: 'none', transition: 'background 0.1s',
                 }} className="hover:bg-soft">
-                  <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '50px', flexShrink: 0 }}>{formatDate(post.created_at)}</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '50px', flexShrink: 0 }}>{formatDate(post.created_at, timeZone)}</span>
                   <i className={`${getCatIcon(post.categories?.[0]?.name, post.categories?.[0]?.icon)} fa-fw`} style={{ color: 'var(--color-primary)', fontSize: '13px', flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: '14px', fontWeight: 500, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.title}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--color-text-dim)', flexShrink: 0 }}>

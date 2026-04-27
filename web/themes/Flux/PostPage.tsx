@@ -5,16 +5,17 @@ import AISummary from './AISummary';
 import PostNavigation from './PostNavigation';
 import FadeCover from '@/components/blog/FadeCover';
 import { randomCoverUrl } from '@/lib/blog-image';
+import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 import { getCategoryIcon } from './constants';
 import { CommentCount, CommentSection } from './PostInteractive';
 
-function formatDate(ts: string | number) {
-  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai' });
+function formatDate(ts: string | number, timeZone: string) {
+  return formatDateInTimeZone(ts, 'zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }, timeZone);
 }
 
 export default function PostPage({ post, options }: { post: any; options?: Record<string, string> }) {
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
+  const timeZone = resolveSiteTimeZone(options);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
@@ -52,7 +53,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 32px',
         fontSize: '13px', color: '#999', borderBottom: '1px solid #eee',
       }}>
-        <span><i className="fa-regular fa-calendar" style={{ marginRight: '4px' }} />{formatDate(post.created_at)}</span>
+        <span><i className="fa-regular fa-calendar" style={{ marginRight: '4px' }} />{formatDate(post.created_at, timeZone)}</span>
         {/* view_count = DB + 1 (cosmetic)，详见 Azure/PostPage.tsx 同位置注释。
             后端 /track 已移除 dedup，每次访问都 +1，cosmetic 跟 DB 永远对齐。 */}
         <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#0052D9' }} />{(post.view_count || 0) + 1} 阅读</span>

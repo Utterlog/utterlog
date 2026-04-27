@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getPosts } from '@/lib/blog-api';
+import { getOptions, getPosts } from '@/lib/blog-api';
 import PostLink from '@/components/blog/PostLink';
 import PageTitle from '@/components/blog/PageTitle';
+import { datePartsInTimeZone, formatMonthDayInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 
 interface Props { params: Promise<{ year: string }> }
 
@@ -11,12 +12,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `${year} 年度归档` };
 }
 
-function formatDate(ts: string | number) {
-  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
+function formatDate(ts: string | number, timeZone: string) {
+  const { month, day } = datePartsInTimeZone(ts, timeZone);
   return {
-    month: d.getMonth() + 1,
-    day: d.getDate(),
-    full: `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
+    month,
+    day,
+    full: formatMonthDayInTimeZone(ts, timeZone),
   };
 }
 
@@ -30,17 +31,19 @@ export default async function YearArchive({ params }: Props) {
   const { year } = await params;
   const y = Number(year);
 
-  const res = await getPosts({ per_page: 500, status: 'publish' }).catch(() => ({ data: [] }));
+  const [res, optsRes] = await Promise.all([
+    getPosts({ per_page: 500, status: 'publish' }).catch(() => ({ data: [] })),
+    getOptions().catch(() => ({ data: {} })),
+  ]);
+  const timeZone = resolveSiteTimeZone((optsRes as any).data || {});
   const allPosts = (res.data || []).filter((p: any) => {
-    const d = typeof p.created_at === 'number' ? new Date(p.created_at * 1000) : new Date(p.created_at);
-    return d.getFullYear() === y;
+    return datePartsInTimeZone(p.created_at, timeZone).year === y;
   });
 
   // Group by month
   const monthMap = new Map<number, any[]>();
   allPosts.forEach((p: any) => {
-    const d = typeof p.created_at === 'number' ? new Date(p.created_at * 1000) : new Date(p.created_at);
-    const m = d.getMonth() + 1;
+    const m = datePartsInTimeZone(p.created_at, timeZone).month;
     if (!monthMap.has(m)) monthMap.set(m, []);
     monthMap.get(m)!.push(p);
   });
@@ -71,7 +74,7 @@ export default async function YearArchive({ params }: Props) {
               borderBottom: idx < posts.length - 1 ? '1px solid var(--color-divider)' : 'none',
               textDecoration: 'none', transition: 'background 0.1s',
             }} className="hover:bg-soft">
-              <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '44px', flexShrink: 0 }}>{formatDate(post.created_at).full}</span>
+              <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '44px', flexShrink: 0 }}>{formatDate(post.created_at, timeZone).full}</span>
               <i className={postCategoryIcon(post)} title={post.categories?.[0]?.name || ''} style={{ fontSize: '13px', color: 'var(--color-primary)', flexShrink: 0, width: '14px', textAlign: 'center' }} />
               <span style={{ flex: 1, fontSize: '14px', color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.title}</span>
             </PostLink>

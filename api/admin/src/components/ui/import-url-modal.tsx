@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button, Input, Modal } from '@/components/ui';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import { useI18n } from '@/lib/i18n';
 
 interface ImportUrlModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface ImportUrlModalProps {
 }
 
 export function ImportUrlModal({ isOpen, onClose, onImport, type, platforms }: ImportUrlModalProps) {
+  const { t } = useI18n();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +26,7 @@ export function ImportUrlModal({ isOpen, onClose, onImport, type, platforms }: I
   };
 
   const handleImport = async () => {
-    if (!url.trim()) { toast.error('请输入链接'); return; }
+    if (!url.trim()) { toast.error(t('admin.import.enterUrl', '请输入链接')); return; }
     setLoading(true);
     try {
       const r: any = await api.post('/media/parse', { url: url.trim() });
@@ -32,24 +34,24 @@ export function ImportUrlModal({ isOpen, onClose, onImport, type, platforms }: I
         onImport(r.data);
         setUrl('');
         onClose();
-        toast.success('解析成功，请确认信息后保存');
+        toast.success(t('admin.import.parseSuccess', '解析成功，请确认信息后保存'));
       } else {
-        toast.error('解析失败');
+        toast.error(t('admin.import.parseFailed', '解析失败'));
       }
     } catch (e: any) {
-      toast.error('解析失败: ' + (e?.response?.data?.error?.message || e?.message || ''));
+      toast.error(t('admin.import.parseFailedWithReason', '解析失败: {reason}', { reason: e?.response?.data?.error?.message || e?.message || '' }));
     }
     setLoading(false);
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="链接导入">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('admin.import.title', '链接导入')}>
       <div className="space-y-4">
         <p className="text-xs text-dim">
-          粘贴链接自动解析，支持 {platforms || defaultPlatforms[type] || '各大平台'}
+          {t('admin.import.description', '粘贴链接自动解析，支持 {platforms}', { platforms: platforms || defaultPlatforms[type] || t('admin.import.platforms.all', '各大平台') })}
         </p>
         <Input
-          label="链接地址"
+          label={t('admin.import.urlLabel', '链接地址')}
           value={url}
           onChange={e => setUrl(e.target.value)}
           placeholder="https://..."
@@ -57,8 +59,8 @@ export function ImportUrlModal({ isOpen, onClose, onImport, type, platforms }: I
           autoFocus
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-          <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button onClick={handleImport} loading={loading}>解析导入</Button>
+          <Button variant="secondary" onClick={onClose}>{t('admin.common.cancel', '取消')}</Button>
+          <Button onClick={handleImport} loading={loading}>{t('admin.import.parseButton', '解析导入')}</Button>
         </div>
       </div>
     </Modal>
