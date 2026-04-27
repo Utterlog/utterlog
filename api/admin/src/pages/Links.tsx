@@ -138,11 +138,21 @@ export default function LinksPage() {
 
   // Extract unique groups
   const groups = ['all', ...Array.from(new Set(links.map((l: any) => l.group_name || 'default')))];
-  const filteredLinks = activeGroup === 'all' ? links : links.filter((l: any) => (l.group_name || 'default') === activeGroup);
+  const orderedLinks = [...links].sort((a: any, b: any) => {
+    const ao = Number(a.order_num) > 0 ? Number(a.order_num) : Number(a.id) || 0;
+    const bo = Number(b.order_num) > 0 ? Number(b.order_num) : Number(b.id) || 0;
+    if (ao !== bo) return ao - bo;
+    return (Number(a.id) || 0) - (Number(b.id) || 0);
+  });
+  const filteredLinks = activeGroup === 'all' ? orderedLinks : orderedLinks.filter((l: any) => (l.group_name || 'default') === activeGroup);
+  const nextOrderNum = () => orderedLinks.reduce((max: number, link: any) => {
+    const n = Number(link.order_num) > 0 ? Number(link.order_num) : Number(link.id) || 0;
+    return Math.max(max, n);
+  }, 0) + 1;
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ name: '', url: '', description: '', logo: '', rss_url: '', group_name: 'default', order_num: 0 });
+    setForm({ name: '', url: '', description: '', logo: '', rss_url: '', group_name: 'default', order_num: nextOrderNum() });
     setIsModalOpen(true);
   };
 
@@ -261,7 +271,7 @@ export default function LinksPage() {
                 const favicon = baseFavicon ? `${baseFavicon}${baseFavicon.includes('?') ? '&' : '?'}v=${iconBust}` : '';
                 return (
                   <tr key={link.id} className="hover:bg-soft" style={{ transition: 'background-color 0.1s' }}>
-                    <td className="text-dim" style={{ fontSize: '12px' }}>{i + 1}</td>
+                    <td className="text-dim" style={{ fontSize: '12px' }}>{Number(link.order_num) > 0 ? link.order_num : (link.id || i + 1)}</td>
                     <td>
                       <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--color-bg-soft)', overflow: 'hidden', position: 'relative' }}>
                         <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: 'var(--color-text-dim)' }}>{link.name?.[0] || '?'}</span>

@@ -5,7 +5,11 @@ import { createContext, useContext } from 'react';
 export interface MenuItem {
   href: string;
   label: string;
+  type?: 'custom' | 'page' | 'category';
+  category_id?: number;
+  slug?: string;
   icon?: string;
+  count?: number;
   target?: string;
   children?: MenuItem[];
 }

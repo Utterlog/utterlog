@@ -180,6 +180,9 @@ func main() {
 	api.GET("/posts", middleware.OptionalAuth(), handler.ListPosts)
 	api.GET("/posts/:id", middleware.OptionalAuth(), handler.GetPost)
 	api.GET("/posts/slug/:slug", middleware.OptionalAuth(), handler.GetPostBySlug)
+	// display_id 反查：permalink 模板里 %display_id% 走这条路。display_id
+	// 是「按发布顺序连续递增」的 public id，跟 db 主键 id 解耦。
+	api.GET("/posts/by-display-id/:display_id", middleware.OptionalAuth(), handler.GetPostByDisplayID)
 	api.GET("/posts/:id/navigation", handler.PostNavigation)
 
 	// Categories & Tags
@@ -503,7 +506,6 @@ func main() {
 		authed.POST("/telegram/test", handler.TelegramTest)
 		authed.POST("/telegram/get-chat-id", handler.TelegramGetChatID)
 		authed.POST("/telegram/setup-webhook", handler.TelegramSetupWebhook)
-
 
 		// Utterlog Network
 		authed.GET("/network/status", handler.GetNetworkStatus)

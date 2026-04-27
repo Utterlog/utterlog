@@ -346,6 +346,8 @@ export interface ExtensionManifest {
   builtin?: boolean;
   enabled: boolean;
   preview?: string;
+  menuPositions?: { key: string; label: string; description?: string }[];
+  menu_positions?: { key: string; label: string; description?: string }[];
 }
 
 export const themesApi = {

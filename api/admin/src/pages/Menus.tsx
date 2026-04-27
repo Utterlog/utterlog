@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { optionsApi, postsApi, categoriesApi } from '@/lib/api';
+import { optionsApi, postsApi, categoriesApi, themesApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui';
 
 interface MenuItem {
   href: string;
   label: string;
+  type?: 'custom' | 'page' | 'category';
+  category_id?: number;
+  slug?: string;
+  icon?: string;
+  count?: number;
   children?: MenuItem[];
 }
 
@@ -27,29 +32,6 @@ const BUILTIN_PAGES: { label: string; href: string }[] = [
 ];
 
 type Position = { key: string; label: string; hint: string };
-
-// Per-theme menu position map. Mirrors each theme.json's menuPositions
-// array so the admin shows ONLY the positions the active theme actually
-// renders — users don't get a 'sidebar' tab for a theme that has no
-// sidebar, etc. Falls back to FALLBACK_POSITIONS for themes that aren't
-// in this map (custom / uploaded themes).
-const THEME_POSITIONS: Record<string, Position[]> = {
-  Utterlog: [
-    { key: 'header', label: '顶部导航', hint: 'Header 主菜单；留空则用主题默认菜单（首页/关于/归档/说说/友链/订阅）' },
-  ],
-  Azure: [
-    { key: 'header', label: '顶部导航', hint: 'Header 主菜单；留空则用主题默认菜单（首页/关于/归档/说说/友链/订阅）' },
-    { key: 'sidebar', label: '首页 Hero 侧边栏', hint: '首页左侧大图旁的导航 tab；留空则自动列出全部分类' },
-  ],
-  Flux: [
-    { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
-    { key: 'footer', label: '页脚导航', hint: 'Footer 辅助链接' },
-  ],
-  Chred: [
-    { key: 'header', label: '顶部导航', hint: 'Header 主菜单' },
-    { key: 'sidebar', label: '侧栏导航', hint: '首页左侧分类' },
-  ],
-};
 
 const FALLBACK_POSITIONS: Position[] = [
   { key: 'header', label: '顶部导航', hint: '主题 Header 主菜单' },
@@ -84,7 +66,7 @@ export default function MenusPage() {
   const [activeTheme, setActiveTheme] = useState('');
   const [activePos, setActivePos] = useState('header');
   const [customPages, setCustomPages] = useState<{ id: number; title: string; slug: string }[]>([]);
-  const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string; slug: string; icon?: string; count?: number }[]>([]);
   const [pickerOpen, setPickerOpen] = useState<null | { target: 'root' | number }>(null);
   const pickerRef = useRef<HTMLDivElement | null>(null);
 
@@ -110,17 +92,25 @@ export default function MenusPage() {
     try {
       const r: any = await categoriesApi.list();
       const list = r.data?.categories || r.data || [];
-      setCategories(list.map((c: any) => ({ id: c.id, name: c.name, slug: c.slug })));
+      setCategories(list.map((c: any) => ({ id: c.id, name: c.name, slug: c.slug, icon: c.icon || '', count: c.count || 0 })));
     } catch { /* silent */ }
   };
 
   const fetchMenus = async () => {
     setLoading(true);
     try {
-      const r: any = await optionsApi.list();
-      const opts = r.data || r || {};
+      const [optRes, themeRes]: any[] = await Promise.all([
+        optionsApi.list(),
+        themesApi.list().catch(() => null),
+      ]);
+      const opts = optRes.data || optRes || {};
       const theme = (opts.active_theme || 'Utterlog').toString();
-      const pos = THEME_POSITIONS[theme] || FALLBACK_POSITIONS;
+      const themeData = themeRes?.data || themeRes || {};
+      const activeManifest = (themeData.themes || []).find((t: any) => t.id === theme || t.enabled);
+      const manifestPositions = activeManifest?.menuPositions || activeManifest?.menu_positions || [];
+      const pos: Position[] = manifestPositions.length
+        ? manifestPositions.map((p: any) => ({ key: p.key, label: p.label, hint: p.description || `${p.label} 菜单位置` }))
+        : FALLBACK_POSITIONS;
       setActiveTheme(theme);
       setPositions(pos);
       // Keep the active tab pointing at something valid for this theme
@@ -156,14 +146,14 @@ export default function MenusPage() {
 
   // Add a picked page/category as either a new top-level item
   // (target === 'root') or as a child of the given parent index.
-  const addPick = (label: string, href: string) => {
+  const addPick = (item: MenuItem) => {
     if (!pickerOpen) return;
     const items = [...(menus[activePos] || [])];
     if (pickerOpen.target === 'root') {
-      items.push({ href, label });
+      items.push(item);
     } else {
       const parent = { ...items[pickerOpen.target] };
-      parent.children = [...(parent.children || []), { href, label }];
+      parent.children = [...(parent.children || []), item];
       items[pickerOpen.target] = parent;
     }
     updateItems(items);
@@ -377,7 +367,7 @@ export default function MenusPage() {
               {BUILTIN_PAGES.map(p => (
                 <button
                   key={p.href}
-                  onClick={() => addPick(p.label, p.href)}
+                  onClick={() => addPick({ label: p.label, href: p.href, type: 'page' })}
                   style={{ display: 'flex', width: '100%', padding: '8px 12px', fontSize: '13px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'space-between' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-soft)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -395,7 +385,7 @@ export default function MenusPage() {
                   {customPages.map(p => (
                     <button
                       key={p.id}
-                      onClick={() => addPick(p.title, `/${p.slug}`)}
+                      onClick={() => addPick({ label: p.title, href: `/${p.slug}`, type: 'page' })}
                       style={{ display: 'flex', width: '100%', padding: '8px 12px', fontSize: '13px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'space-between' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-soft)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -415,12 +405,16 @@ export default function MenusPage() {
                   {categories.map(c => (
                     <button
                       key={c.id}
-                      onClick={() => addPick(c.name, `/category/${c.slug}`)}
+                      onClick={() => addPick({ label: c.name, href: `/category/${c.slug}`, type: 'category', category_id: c.id, slug: c.slug, icon: c.icon, count: c.count })}
                       style={{ display: 'flex', width: '100%', padding: '8px 12px', fontSize: '13px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'space-between' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-soft)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                     >
-                      <span className="text-main">{c.name}</span>
+                      <span className="text-main" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <i className={c.icon || 'fa-sharp fa-light fa-folder'} style={{ fontSize: 13, color: 'var(--color-text-dim)' }} />
+                        {c.name}
+                        <span className="text-dim" style={{ fontSize: 11 }}>({c.count || 0})</span>
+                      </span>
                       <code style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>/category/{c.slug}</code>
                     </button>
                   ))}

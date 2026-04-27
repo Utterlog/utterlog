@@ -10,12 +10,16 @@ import { usePostsToolbar } from '@/layouts/PostsLayout';
 // Mirrors web/lib/permalink.ts. Kept inline so the admin SPA can
 // render a preview without reaching into the web/ tree.
 const PERMALINK_PRESETS: { key: string; label: string; template: string; example: string }[] = [
-  { key: 'default',  label: '保留 /posts 前缀',   template: '/posts/%postname%',                  example: '/posts/my-article' },
-  { key: 'plain',    label: '纯 slug（无前缀）',  template: '/%postname%',                        example: '/my-article' },
-  { key: 'date',     label: '年 / 月 / slug',      template: '/%year%/%month%/%postname%',         example: '/2026/04/my-article' },
-  { key: 'date_day', label: '年 / 月 / 日 / slug', template: '/%year%/%month%/%day%/%postname%',   example: '/2026/04/24/my-article' },
-  { key: 'category', label: '分类 / slug',         template: '/%category%/%postname%',             example: '/tech/my-article' },
-  { key: 'id',       label: 'archives / 序号',     template: '/archives/%post_id%',                example: '/archives/42' },
+  { key: 'default',     label: '保留 /posts 前缀',      template: '/posts/%postname%',                  example: '/posts/my-article' },
+  { key: 'plain',       label: '纯 slug（无前缀）',     template: '/%postname%',                        example: '/my-article' },
+  { key: 'date',        label: '年 / 月 / slug',         template: '/%year%/%month%/%postname%',         example: '/2026/04/my-article' },
+  { key: 'date_day',    label: '年 / 月 / 日 / slug',    template: '/%year%/%month%/%day%/%postname%',   example: '/2026/04/24/my-article' },
+  { key: 'category',    label: '分类 / slug',            template: '/%category%/%postname%',             example: '/tech/my-article' },
+  // %display_id% 是「按发布顺序连续递增的序号」—— 草稿删了 / 失败插入跳号
+  // 都不会让序号断。推荐用这个做 /archives/29 这种链接。
+  { key: 'display_id',  label: 'archives / 连续序号',    template: '/archives/%display_id%',             example: '/archives/29' },
+  // %post_id% 是 db 主键 raw —— 兼容老链接，可能有 gap。
+  { key: 'id',          label: 'archives / 数据库 id',   template: '/archives/%post_id%',                example: '/archives/42' },
 ];
 
 const statusMap: Record<string, { label: string; variant: 'default' | 'success' | 'warning' }> = {
@@ -67,8 +71,9 @@ export default function PostsPage() {
   };
 
   const saveSettings = async () => {
-    if (!permalinkStructure.includes('%postname%') && !permalinkStructure.includes('%post_id%')) {
-      toast.error('固定连接必须包含 %postname% 或 %post_id%，否则无法定位文章');
+    const hasPostLocator = ['%postname%', '%display_id%', '%post_id%'].some(token => permalinkStructure.includes(token));
+    if (!hasPostLocator) {
+      toast.error('固定连接必须包含 %postname%、%display_id% 或 %post_id%，否则无法定位文章');
       return;
     }
     setSettingsSaving(true);
@@ -145,8 +150,14 @@ export default function PostsPage() {
     ), width: '40px', render: (row: any) => (
       <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
     )},
-    { key: 'id', title: '#', width: '64px', render: (row: any) => (
-      <span className="text-dim" style={{ fontSize: '11px' }}>{row.id}</span>
+    { key: 'display_id', title: '编号', width: '72px', render: (row: any) => (
+      <span
+        className="text-dim"
+        title={`内部 ID: ${row.id}`}
+        style={{ fontSize: '11px' }}
+      >
+        {row.status === 'publish' && row.display_id > 0 ? row.display_id : '-'}
+      </span>
     )},
     { key: 'title', title: (
       <span onClick={() => setOrderDir(d => d === 'desc' ? 'asc' : 'desc')} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', userSelect: 'none' }}>
@@ -357,7 +368,7 @@ export default function PostsPage() {
                     style={{ width: '100%', fontFamily: 'monospace', fontSize: '12px' }}
                   />
                   <p className="text-dim" style={{ fontSize: '11px', marginTop: '4px' }}>
-                    可用占位符：<code>%postname%</code>（slug）、<code>%post_id%</code>（序号）、<code>%year%</code>、<code>%month%</code>、<code>%day%</code>、<code>%category%</code>
+                    可用占位符：<code>%postname%</code>（slug）、<code>%display_id%</code>（发布序号，推荐）、<code>%post_id%</code>（数据库 ID）、<code>%year%</code>、<code>%month%</code>、<code>%day%</code>、<code>%category%</code>
                   </p>
                 </div>
               </label>

@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import Pagination from './Pagination';
 import FadeCover from '@/components/blog/FadeCover';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { getCategoryIcon } from './constants';
 import { useThemeContext } from '@/lib/theme-context';
@@ -164,6 +165,24 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   // 文章列表始终显示全部（分类标签只影响 hero 轮播）
 
   const heroSrc = heroPost?.cover_url || (heroPost ? randomCoverUrl(heroPost.id, options) : '');
+  const categoryFromMenuItem = (item: any) => {
+    if (!item) return null;
+    const rawSlug = item.slug || String(item.href || '').match(/^\/category\/([^/?#]+)/)?.[1] || '';
+    const slug = rawSlug ? decodeURIComponent(rawSlug) : '';
+    const id = Number(item.category_id || 0);
+    const found = categories.find((cat: any) => (id > 0 && Number(cat.id) === id) || (slug && cat.slug === slug));
+    if (found) return found;
+    if (item.type === 'category') {
+      return {
+        id: item.category_id || item.href || item.label,
+        name: item.label,
+        slug,
+        icon: item.icon,
+        count: item.count || 0,
+      };
+    }
+    return null;
+  };
 
   // ── Hero 切换过渡 ──
   // 之前点分类 tab → heroSrc 直接换 → <img src> 立刻替换，浏览器加载完
@@ -208,66 +227,76 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   // for sites with very few categories), we still anchor on 56 so
   // each row stays visually consistent.
   const heroTitleH = tabCount > 0 ? heroHeight / tabCount : 56;
+  const heroVars = {
+    '--azure-hero-height': `${heroHeight}px`,
+    '--azure-hero-title-height': `${heroTitleH}px`,
+  } as CSSProperties;
+  const heroModeStyle = {
+    '--azure-hero-mode-color': MODES[modeIdx].color,
+  } as CSSProperties;
 
   return (
-    <div>
+    <div className="azure-home">
       {/* ===== Hero area: tabs + image — single unit, scrolls together ===== */}
       {(
-        <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)' }} className="lg:grid">
+        <div className="azure-grid azure-hero-grid" style={heroVars}>
           {/* Left: sidebar — admin-configured menu if set, otherwise
               auto-generated category filter tabs. */}
-          <div style={{ borderRight: '1px solid #e5e5e5' }} className="hidden lg:block">
-            <div style={{ height: heroHeight, display: 'flex', flexDirection: 'column' }}>
+          <aside className="azure-hero-tabs">
+            <div className="azure-hero-tabs-inner">
               {useCustomSidebar ? (
-                sidebarMenu.map((item: any, i: number) => (
-                  <Link key={i} href={item.href || '#'} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    width: '100%', flex: 1, padding: '0 16px', fontSize: '14px',
-                    color: '#555', textDecoration: 'none',
-                    borderBottom: i < sidebarMenu.length - 1 ? '1px solid #e5e5e5' : 'none',
-                    transition: 'all 0.15s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#555'; }}
-                  >
-                    <span>{item.label}</span>
-                    <i className={item.icon || 'fa-sharp fa-light fa-circle-arrow-right'} style={{ fontSize: '22px', opacity: 0.6, transition: 'all 0.15s' }} />
-                  </Link>
-                ))
+                sidebarMenu.map((item: any, i: number) => {
+                  const cat = categoryFromMenuItem(item);
+                  if (cat) {
+                    const catIdx = categories.findIndex((c: any) => c.slug === cat.slug || Number(c.id) === Number(cat.id));
+                    const tabIdx = catIdx >= 0 ? catIdx + 1 : -1;
+                    const active = activeCatIdx === tabIdx;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => { if (tabIdx >= 0) handleTabClick(tabIdx); }}
+                        className={`azure-hero-tab${active ? ' active' : ''}`}
+                        disabled={tabIdx < 0}
+                      >
+                        <span className="azure-hero-tab-label">
+                          {cat.name} <span className="azure-hero-tab-count">({cat.count || 0})</span>
+                        </span>
+                        <i className={`${getCategoryIcon(cat)} azure-hero-tab-icon`} aria-hidden="true" />
+                      </button>
+                    );
+                  }
+                  return (
+                    <Link key={i} href={item.href || '#'} className="azure-hero-tab link">
+                      <span className="azure-hero-tab-label">{item.label}</span>
+                      <i className={`${item.icon || 'fa-sharp fa-light fa-circle-arrow-right'} azure-hero-tab-icon`} aria-hidden="true" />
+                    </Link>
+                  );
+                })
               ) : (
                 <>
-                  <button onClick={() => handleTabClick(0)} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    width: '100%', flex: 1, padding: '0 16px', fontSize: '14px',
-                    color: activeCatIdx === 0 ? '#fff' : '#555',
-                    background: activeCatIdx === 0 ? ACCENT : 'transparent',
-                    border: 'none', borderBottom: '1px solid #e5e5e5', cursor: 'pointer',
-                    textAlign: 'left', transition: 'all 0.15s',
-                  }}>
-                    <span>全部 ({totalPostCount})</span>
-                    <i className="fa-sharp fa-light fa-grid-2" style={{ fontSize: activeCatIdx === 0 ? '26px' : '22px', opacity: activeCatIdx === 0 ? 1 : 0.6, color: activeCatIdx === 0 ? '#fff' : undefined, transition: 'all 0.15s' }} />
+                  <button type="button" onClick={() => handleTabClick(0)} className={`azure-hero-tab${activeCatIdx === 0 ? ' active' : ''}`}>
+                    <span className="azure-hero-tab-label">
+                      全部 <span className="azure-hero-tab-count">({totalPostCount})</span>
+                    </span>
+                    <i className="fa-sharp fa-light fa-grid-2 azure-hero-tab-icon" aria-hidden="true" />
                   </button>
                   {categories.map((cat, i) => (
-                    <button key={cat.id} onClick={() => handleTabClick(i + 1)} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      width: '100%', flex: 1, padding: '0 16px', fontSize: '14px',
-                      color: activeCatIdx === i + 1 ? '#fff' : '#555',
-                      background: activeCatIdx === i + 1 ? ACCENT : 'transparent',
-                      border: 'none', borderBottom: i < categories.length - 1 ? '1px solid #e5e5e5' : 'none', cursor: 'pointer',
-                      textAlign: 'left', transition: 'all 0.15s',
-                    }}>
-                      <span>{cat.name} ({cat.count || 0})</span>
-                      <i className={getCategoryIcon(cat)} style={{ fontSize: activeCatIdx === i + 1 ? '26px' : '22px', opacity: activeCatIdx === i + 1 ? 1 : 0.6, color: activeCatIdx === i + 1 ? '#fff' : undefined, transition: 'all 0.15s' }} />
+                    <button key={cat.id} type="button" onClick={() => handleTabClick(i + 1)} className={`azure-hero-tab${activeCatIdx === i + 1 ? ' active' : ''}`}>
+                      <span className="azure-hero-tab-label">
+                        {cat.name} <span className="azure-hero-tab-count">({cat.count || 0})</span>
+                      </span>
+                      <i className={`${getCategoryIcon(cat)} azure-hero-tab-icon`} aria-hidden="true" />
                     </button>
                   ))}
                 </>
               )}
             </div>
-          </div>
+          </aside>
           {/* Right: Hero image — overlaps border line */}
-          <div style={{ minWidth: 0, position: 'relative', zIndex: 1, marginLeft: '-1px' }}>
+          <section className="azure-hero-panel">
             {heroPost && (
-              <div style={{ position: 'relative', overflow: 'hidden' }}
+              <div className="azure-hero"
                 onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
                 {/* Hero deliberately drops .cover-zoom — the giant
                     banner doesn't need the scale(1.04) hover; loading
@@ -279,24 +308,16 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                     [data-blog-image] 元素重新进入 data-loaded="0" → "1"
                     的状态机，触发现有的淡入动画。配合上面的 displaySrc
                     延迟切换，得到「loading 圈展示一会儿 → 新图淡入」效果。 */}
-                <PostLink post={heroPost} style={{ display: 'block', textDecoration: 'none' }}>
-                  <FadeCover key={displaySrc} src={displaySrc} alt={heroPost.title} style={{ width: '100%', height: heroHeight }} />
+                <PostLink post={heroPost} className="azure-hero-link">
+                  <FadeCover key={displaySrc} src={displaySrc} alt={heroPost.title} className="azure-hero-cover" />
                   {/* Loading overlay —— 切分类时盖在旧图上，模糊 + 半透黑底
                       + 中央旋转圆圈。淡出由 transition 0.4s 控制，跟新图
                       淡入并行，整体过渡总长 ≈ 700ms（最短展示）+ 0.4s（淡出）。 */}
                   <div
                     aria-hidden={!heroLoading}
-                    style={{
-                      position: 'absolute', inset: 0, zIndex: 3,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'rgba(0, 0, 0, 0.32)',
-                      backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-                      opacity: heroLoading ? 1 : 0,
-                      pointerEvents: heroLoading ? 'auto' : 'none',
-                      transition: 'opacity 0.4s ease',
-                    }}
+                    className={`azure-hero-loading${heroLoading ? ' active' : ''}`}
                   >
-                    <i className="fa-solid fa-spinner fa-spin" style={{ color: '#fff', fontSize: 28, opacity: 0.92 }} />
+                    <i className="fa-solid fa-spinner fa-spin" aria-hidden="true" />
                   </div>
                   {/* Title strip: same height as one left-sidebar tab
                       so the baseline lines up with the last tab. No
@@ -304,35 +325,16 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                       from text-shadow, two layers stacked so white
                       text stays legible over both dark and bright
                       covers without dimming the image itself. */}
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0, left: 0, right: 0,
-                    height: heroTitleH,
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '0 24px',
-                    pointerEvents: 'none',
-                  }}>
-                    <h2 style={{
-                      margin: 0,
-                      fontSize: '20px',
-                      fontWeight: 700,
-                      color: '#fff',
-                      lineHeight: 1.3,
-                      letterSpacing: '0.01em',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      textShadow: '0 2px 6px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.8)',
-                    }}>{heroPost.title}</h2>
+                  <div className="azure-hero-titlebar">
+                    <h2 className="azure-hero-title">{heroPost.title}</h2>
                   </div>
                 </PostLink>
-                <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 2, background: MODES[modeIdx].color, color: '#fff', fontSize: '12px', fontWeight: 600, padding: '8px 6px', writingMode: 'vertical-rl' as const, letterSpacing: '0.1em', transition: 'background 0.3s' }}>
+                <div className="azure-hero-mode" style={heroModeStyle}>
                   {MODES[modeIdx].label}
                 </div>
               </div>
             )}
-          </div>
+          </section>
         </div>
       )}
 
@@ -341,10 +343,10 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
           实际使用率很低，改为博主社交链接，更贴合首页气氛。
           自动轮播的「悬停暂停」逻辑保留在 hero 区块自己的 onMouseEnter 里。 */}
       {(
-        <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)' }} className="lg:grid">
+        <div className="azure-grid azure-strip">
           {/* Left: Social links — admin 配置的项才会显示，全空时整格为空。 */}
-          <div style={{ borderRight: '1px solid #e5e5e5' }} className="hidden lg:block">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', height: '38px', borderTop: '1px solid #e5e5e5', borderBottom: '1px solid #e5e5e5', background: '#fafafa' }}>
+          <aside className="azure-social-cell">
+            <div className="azure-social-links">
               {(() => {
                 const items: Array<{ key: string; href: string; icon: string; hover: string; title: string; mail?: boolean }> = [];
                 if (options.social_github) items.push({ key: 'github', href: options.social_github, icon: 'fa-brands fa-github', hover: '#333', title: 'GitHub' });
@@ -363,57 +365,56 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                     target={it.mail ? undefined : '_blank'}
                     rel={it.mail ? undefined : 'noopener noreferrer'}
                     title={it.title}
-                    style={{ color: '#666', textDecoration: 'none', fontSize: '14px', transition: 'color 0.15s', display: 'inline-flex', alignItems: 'center' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = it.hover; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#666'; }}
+                    className="azure-social-link"
+                    style={{ '--azure-social-hover': it.hover } as CSSProperties}
                   >
-                    <i className={it.icon} />
+                    <i className={it.icon} aria-hidden="true" />
                   </a>
                 ));
               })()}
             </div>
-          </div>
+          </aside>
           {/* Right: Moment ticker */}
-          <div style={{ minWidth: 0 }}>
+          <section className="azure-moment-cell">
             {latestMoment && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '38px', padding: '0 20px', borderTop: '1px solid #e5e5e5', borderBottom: '1px solid #e5e5e5', fontSize: '13px', background: '#fafafa' }}>
-                <i className="fa-brands fa-twitter" style={{ color: '#1da1f2', flexShrink: 0 }} />
-                <a href="/moments" style={{ flex: 1, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, textDecoration: 'none' }}>{latestMoment.content}</a>
-                <span style={{ fontSize: '11px', color: '#bbb', flexShrink: 0 }}>
+              <div className="azure-moment-ticker">
+                <i className="fa-brands fa-twitter" aria-hidden="true" />
+                <a href="/moments" className="azure-moment-text">{latestMoment.content}</a>
+                <span className="azure-moment-time">
                   {(() => { const diff = (Date.now() - (typeof latestMoment.created_at === 'number' ? latestMoment.created_at * 1000 : new Date(latestMoment.created_at).getTime())) / 1000; if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前'; if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前'; return Math.floor(diff / 86400) + ' 天前'; })()}
                 </span>
               </div>
             )}
-          </div>
+          </section>
         </div>
       )}
 
       {/* ===== Content area: sidebar sticky + posts list ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)' }} className="lg:grid">
-        <div style={{ borderRight: '1px solid #e5e5e5' }} className="hidden lg:block">
-          <div style={{ position: 'sticky', top: 0 }}>
+      <div className="azure-grid azure-content-grid">
+        <aside className="azure-sidebar-cell">
+          <div className="azure-sidebar-sticky">
             <Sidebar />
           </div>
-        </div>
+        </aside>
         {/* Right: Post list */}
-        <div style={{ minWidth: 0 }}>
+        <section className="azure-post-list">
           {pageLoading ? (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: '#999', fontSize: '14px' }}>
-              <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 8 }} />加载中...
+            <div className="azure-loading">
+              <i className="fa-solid fa-spinner fa-spin" aria-hidden="true" />加载中...
             </div>
           ) : currentPosts.length > 0 ? (
             currentPosts.map((post, idx) => (
-              <div key={post.id} style={{ borderBottom: '1px solid #e5e5e5' }}>
+              <div key={post.id} className="azure-post-list-item">
                 <PostCard post={post} isNewest={currentPage === 1 && idx === 0} priority={currentPage === 1 && idx === 0} />
               </div>
             ))
           ) : (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: '#999', fontSize: '14px' }}>暂无文章</div>
+            <div className="azure-empty">暂无文章</div>
           )}
-          <div style={{ height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
+          <div className="azure-pagination-wrap">
             <Pagination currentPage={currentPage} totalPages={currentTotalPages} onPageChange={handlePageChange} />
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

@@ -24,39 +24,31 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
 
   return (
-    <div style={{ padding: '0' }}>
+    <div className="azure-post-page">
       {/* Featured image */}
-      <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
-        <FadeCover src={coverUrl} alt={post.title}
-          style={{ width: '100%', height: '400px' }} />
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',
-          padding: '60px 32px 24px',
-        }}>
+      <div className="azure-post-hero">
+        <FadeCover src={coverUrl} alt={post.title} className="azure-post-hero-cover" />
+        <div className="azure-post-hero-overlay">
           {/* Breadcrumb */}
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Link href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>首页</Link>
+          <div className="azure-breadcrumb">
+            <Link href="/">首页</Link>
             <span>/</span>
             {catName && (
               <>
-                <Link href={`/categories/${post.categories[0].slug}`} style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>{catName}</Link>
+                <Link href={`/categories/${post.categories[0].slug}`}>{catName}</Link>
                 <span>/</span>
               </>
             )}
           </div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', lineHeight: 1.3, letterSpacing: '-0.02em' }}>
+          <h1 className="azure-post-title">
             {post.title}
           </h1>
         </div>
       </div>
 
       {/* Meta bar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 32px',
-        fontSize: '13px', color: '#999', borderBottom: '1px solid #eee',
-      }}>
-        <span><i className="fa-regular fa-calendar" style={{ marginRight: '4px' }} />{formatDate(post.created_at)}</span>
+      <div className="azure-post-meta">
+        <span className="azure-post-meta-item"><i className="fa-regular fa-calendar" aria-hidden="true" />{formatDate(post.created_at)}</span>
         {/* view_count 显示 = DB 真实值 + 1（cosmetic）。
             后端 /track 已经移除了 isFirstPostViewToday 守门 ——「访客
             点击就 +1，刷新一次再 +1」是用户明确的预期。所以 cosmetic +1
@@ -66,71 +58,64 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
               · 用户回到首页刷新 → 首页读 raw DB=150 ✓ 跟文章页对上
               · 再点进同一篇 → SSR 拿到 DB=150 → 页面 151 (150+1)
               · /track 跑完 → DB=151 → 首页刷新看到 151 ✓ */}
-        <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#0052D9' }} />{(post.view_count || 0) + 1} 阅读</span>
-        <span><i className="fa-regular fa-comment" style={{ marginRight: '4px' }} /><CommentCount initial={post.comment_count || 0} /></span>
+        <span className="azure-post-meta-item"><i className="fa-solid fa-fire hot" aria-hidden="true" />{(post.view_count || 0) + 1} 阅读</span>
+        <span className="azure-post-meta-item"><i className="fa-regular fa-comment" aria-hidden="true" /><CommentCount initial={post.comment_count || 0} /></span>
         {(post.word_count || 0) > 0 && (
-          <span><i className="fa-regular fa-font" style={{ marginRight: '4px' }} />{post.word_count.toLocaleString()} 字</span>
+          <span className="azure-post-meta-item"><i className="fa-regular fa-font" aria-hidden="true" />{post.word_count.toLocaleString()} 字</span>
         )}
-        <span><i className="fa-regular fa-clock" style={{ marginRight: '4px' }} />{Math.max(1, Math.ceil((post.word_count || 0) / 400))} 分钟</span>
+        <span className="azure-post-meta-item"><i className="fa-regular fa-clock" aria-hidden="true" />{Math.max(1, Math.ceil((post.word_count || 0) / 400))} 分钟</span>
         {catName && (
-          <Link href={`/categories/${post.categories[0].slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#0052D9', textDecoration: 'none', marginLeft: 'auto' }}>
-            <i className={catIcon} /> {catName}
+          <Link href={`/categories/${post.categories[0].slug}`} className="azure-post-meta-category">
+            <i className={catIcon} aria-hidden="true" /> {catName}
           </Link>
         )}
       </div>
 
       {/* Content */}
-      <div style={{ padding: '32px' }}>
+      <div className="azure-post-content-wrap">
         <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
 
-        <div style={{ position: 'relative' }}>
+        <div className="azure-post-content-shell">
           <article>
             <PostContent content={post.content || ''} postId={post.id} />
           </article>
+          <TableOfContents content={post.content || ''} variant="mobile" />
           <div className="blog-toc-outer hidden xl:block">
             <TableOfContents content={post.content || ''} />
           </div>
         </div>
-
       </div>
 
       {/* 版权 + 标签 */}
-      <div style={{
-        padding: '12px 32px',
-        borderTop: '1px solid #eee', borderBottom: '1px solid #eee',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px',
-      }}>
-        <div style={{ fontSize: '13px', color: '#999', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+      <div className="azure-post-license">
+        <div className="azure-post-license-author">
           <span>作者</span>
           <img
             src={post.author?.avatar || 'https://gravatar.bluecdn.com/avatar/0?s=40&d=mp'}
             alt=""
             referrerPolicy="no-referrer"
-            style={{ width: '20px', height: '20px', objectFit: 'cover', clipPath: 'url(#squircle)', background: '#f0f0f0' }}
+            className="azure-post-author-avatar"
           />
-          <Link href="/" style={{ color: '#0052D9', textDecoration: 'none', fontWeight: 600 }}>{post.author?.nickname || post.author?.username || '匿名'}</Link>
+          <Link href="/" className="azure-post-author-link">{post.author?.nickname || post.author?.username || '匿名'}</Link>
           <span>本文采用</span>
-          <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer" style={{ color: '#999', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <i className="fa-brands fa-creative-commons" />
+          <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer" className="azure-post-license-link">
+            <i className="fa-brands fa-creative-commons" aria-hidden="true" />
             <span>CC BY-NC-SA 4.0</span>
           </a>
           <span>许可协议，转载请注明来源。</span>
         </div>
         {post.tags?.length > 0 && (
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'baseline' }}>
+          <div className="azure-post-tags">
             {post.tags.map((tag: any, idx: number) => (
-              <span key={tag.id} style={{ display: 'inline-flex', alignItems: 'baseline' }}>
-                <Link href={`/tags/${tag.slug}`} style={{
-                  fontSize: '13px', textDecoration: 'none',
-                  display: 'inline-flex', alignItems: 'baseline',
-                }}>
-                  <span style={{ color: '#0052D9', fontWeight: 500 }}>#</span>
-                  <span style={{ color: 'var(--color-text-main, #333)' }}>{tag.name}</span>
+              <span key={tag.id} className="azure-post-tag-wrap">
+                <Link href={`/tags/${tag.slug}`} className="azure-post-tag">
+                  <span className="azure-post-tag-hash">#</span>
+                  <span className="azure-post-tag-name">{tag.name}</span>
                   {tag.count > 0 && (
-                    <sup style={{ fontSize: '10px', color: 'var(--color-text-dim, #999)', fontWeight: 400, marginLeft: '1px' }}>{tag.count}</sup>
+                    <sup>{tag.count}</sup>
                   )}
                 </Link>
-                {idx < post.tags.length - 1 && <span style={{ color: '#ccc', marginLeft: '2px' }}>,</span>}
+                {idx < post.tags.length - 1 && <span className="azure-post-tag-comma">,</span>}
               </span>
             ))}
           </div>

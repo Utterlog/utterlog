@@ -1,7 +1,1153 @@
 /* Azure Theme Styles */
 
 /* Navigation dropdown */
-.nav-dropdown-wrap:hover .nav-dropdown { display: block !important; }
+[data-theme="Azure"] .nav-dropdown-wrap:hover .nav-dropdown { display: block; }
+
+/* ========================================
+   Theme chrome + responsive layout
+   ======================================== */
+[data-theme="Azure"] .azure-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f5f5;
+  color: #1a1a1a;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+}
+[data-theme="Azure"] .azure-main {
+  flex: 1;
+  overflow-y: auto;
+}
+[data-theme="Azure"] .azure-frame {
+  width: 100%;
+  max-width: 1400px;
+  min-height: calc(100vh - 60px);
+  margin: 0 auto;
+  background: #fff;
+  border-left: 1px solid #d9d9d9;
+  border-right: 1px solid #d9d9d9;
+}
+[data-theme="Azure"] .azure-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.97);
+  border-bottom: 1px solid #e5e5e5;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+[data-theme="Azure"] .azure-header-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  max-width: 1400px;
+  height: 56px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+[data-theme="Azure"] .azure-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #1a1a1a;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+[data-theme="Azure"] .azure-brand-img {
+  display: block;
+  max-width: 180px;
+  height: 28px;
+  object-fit: contain;
+}
+[data-theme="Azure"] .azure-brand-mark {
+  display: block;
+  flex-shrink: 0;
+}
+[data-theme="Azure"] .azure-brand-title {
+  max-width: 220px;
+  overflow: hidden;
+  color: #1a1a1a;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-theme="Azure"] .azure-desktop-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+}
+[data-theme="Azure"] .azure-nav-parent {
+  position: relative;
+}
+[data-theme="Azure"] .azure-nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 56px;
+  padding: 0 14px;
+  color: #555;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+[data-theme="Azure"] .azure-nav-item:hover,
+[data-theme="Azure"] .azure-nav-item.active,
+[data-theme="Azure"] .azure-nav-parent.active .azure-nav-trigger {
+  color: var(--color-primary);
+}
+[data-theme="Azure"] .azure-nav-item.active,
+[data-theme="Azure"] .azure-nav-parent.active .azure-nav-trigger {
+  font-weight: 600;
+}
+[data-theme="Azure"] .azure-nav-trigger {
+  cursor: default;
+}
+[data-theme="Azure"] .azure-nav-trigger i {
+  font-size: 9px;
+  opacity: 0.5;
+}
+[data-theme="Azure"] .azure-nav-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  z-index: 100;
+  display: none;
+  min-width: 120px;
+  padding: 6px 0;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transform: translateX(-50%);
+}
+[data-theme="Azure"] .azure-nav-dropdown-link {
+  display: block;
+  padding: 8px 20px;
+  color: #555;
+  font-size: 13px;
+  font-weight: 400;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.15s;
+}
+[data-theme="Azure"] .azure-nav-dropdown-link:hover {
+  background: #f5f5f5;
+}
+[data-theme="Azure"] .azure-nav-dropdown-link.active {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+[data-theme="Azure"] .azure-search-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+[data-theme="Azure"] .azure-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+[data-theme="Azure"] .azure-search-icon {
+  position: absolute;
+  left: 10px;
+  stroke: #999;
+  pointer-events: none;
+}
+[data-theme="Azure"] .azure-search-input {
+  width: 180px;
+  padding: 7px 36px 7px 32px;
+  color: #333;
+  font-size: 13px;
+  background: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  outline: none;
+  transition: border-color 0.15s, width 0.2s;
+}
+[data-theme="Azure"] .azure-search-input:focus {
+  width: 220px;
+  border-color: var(--color-primary);
+}
+[data-theme="Azure"] .azure-search-kbd {
+  position: absolute;
+  right: 8px;
+  padding: 1px 5px;
+  color: #aaa;
+  font-size: 10px;
+  line-height: 16px;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+[data-theme="Azure"] .azure-header-loading {
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  width: 20px;
+  height: 20px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+[data-theme="Azure"] .azure-mobile-actions {
+  display: none;
+}
+[data-theme="Azure"] .azure-mobile-bar-button {
+  display: none;
+}
+[data-theme="Azure"] .azure-mobile-toc-layer {
+  display: none;
+}
+[data-theme="Azure"] .azure-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: #111;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+[data-theme="Azure"] .azure-menu-toggle svg {
+  stroke: currentColor;
+}
+[data-theme="Azure"] .azure-mobile-menu {
+  display: none;
+}
+
+/* Home */
+[data-theme="Azure"] .azure-home {
+  background: #fff;
+}
+[data-theme="Azure"] .azure-grid {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+[data-theme="Azure"] .azure-hero-tabs,
+[data-theme="Azure"] .azure-social-cell,
+[data-theme="Azure"] .azure-sidebar-cell {
+  border-right: 1px solid #e5e5e5;
+}
+[data-theme="Azure"] .azure-hero-tabs-inner {
+  display: flex;
+  flex-direction: column;
+  height: var(--azure-hero-height, 280px);
+}
+[data-theme="Azure"] .azure-hero-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  flex: 1;
+  min-height: 44px;
+  padding: 0 16px;
+  color: #555;
+  font-size: 14px;
+  line-height: 1.2;
+  text-align: left;
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #e5e5e5;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+[data-theme="Azure"] .azure-hero-tab:last-child {
+  border-bottom: 0;
+}
+[data-theme="Azure"] .azure-hero-tab:hover {
+  color: var(--color-primary);
+  background: #f8fbff;
+}
+[data-theme="Azure"] .azure-hero-tab.active {
+  color: #fff;
+  background: var(--color-primary);
+}
+[data-theme="Azure"] .azure-hero-tab.active:hover {
+  color: #fff;
+  background: var(--color-primary);
+}
+[data-theme="Azure"] .azure-hero-tab:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+[data-theme="Azure"] .azure-hero-tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-theme="Azure"] .azure-hero-tab-count {
+  color: inherit;
+  opacity: 0.72;
+}
+[data-theme="Azure"] .azure-hero-tab-icon {
+  flex-shrink: 0;
+  margin-left: 12px;
+  font-size: 22px;
+  opacity: 0.6;
+  transition: font-size 0.15s, opacity 0.15s, color 0.15s;
+}
+[data-theme="Azure"] .azure-hero-tab.active .azure-hero-tab-icon {
+  color: #fff;
+  font-size: 26px;
+  opacity: 1;
+}
+[data-theme="Azure"] .azure-hero-panel {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  margin-left: -1px;
+}
+[data-theme="Azure"] .azure-hero {
+  position: relative;
+  overflow: hidden;
+}
+[data-theme="Azure"] .azure-hero-link {
+  position: relative;
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+[data-theme="Azure"] .azure-hero-cover {
+  width: 100%;
+  height: var(--azure-hero-height, 280px);
+}
+[data-theme="Azure"] .azure-hero-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.32);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+[data-theme="Azure"] .azure-hero-loading.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+[data-theme="Azure"] .azure-hero-loading i {
+  color: #fff;
+  font-size: 28px;
+  opacity: 0.92;
+}
+[data-theme="Azure"] .azure-hero-titlebar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  height: var(--azure-hero-title-height, 56px);
+  padding: 0 24px;
+  pointer-events: none;
+}
+[data-theme="Azure"] .azure-hero-title {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+[data-theme="Azure"] .azure-hero-mode {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  padding: 8px 6px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  background: var(--azure-hero-mode-color, var(--color-primary));
+  transition: background 0.3s;
+  writing-mode: vertical-rl;
+}
+[data-theme="Azure"] .azure-social-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  height: 38px;
+  background: #fafafa;
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+}
+[data-theme="Azure"] .azure-social-link {
+  display: inline-flex;
+  align-items: center;
+  color: #666;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+[data-theme="Azure"] .azure-social-link:hover {
+  color: var(--azure-social-hover, var(--color-primary));
+}
+[data-theme="Azure"] .azure-moment-cell,
+[data-theme="Azure"] .azure-post-list {
+  min-width: 0;
+}
+[data-theme="Azure"] .azure-moment-ticker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 20px;
+  font-size: 13px;
+  background: #fafafa;
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+}
+[data-theme="Azure"] .azure-moment-ticker > i {
+  flex-shrink: 0;
+  color: #1da1f2;
+}
+[data-theme="Azure"] .azure-moment-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #555;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-theme="Azure"] .azure-moment-time {
+  flex-shrink: 0;
+  color: #bbb;
+  font-size: 11px;
+}
+[data-theme="Azure"] .azure-sidebar-sticky {
+  position: sticky;
+  top: 0;
+}
+[data-theme="Azure"] .azure-post-list-item {
+  border-bottom: 1px solid #e5e5e5;
+}
+[data-theme="Azure"] .azure-loading,
+[data-theme="Azure"] .azure-empty {
+  padding: 80px 0;
+  color: #999;
+  font-size: 14px;
+  text-align: center;
+}
+[data-theme="Azure"] .azure-loading i {
+  margin-right: 8px;
+}
+[data-theme="Azure"] .azure-pagination-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+  padding: 0 20px;
+}
+
+/* Post list cards */
+[data-theme="Azure"] .azure-post-card {
+  position: relative;
+  background: #fff;
+}
+[data-theme="Azure"] .azure-post-card-title-row {
+  display: flex;
+  align-items: stretch;
+  height: 50px;
+}
+[data-theme="Azure"] .azure-post-date-badge {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  color: #fff;
+  line-height: 1;
+  background: var(--color-primary);
+  cursor: default;
+}
+[data-theme="Azure"] .azure-post-date-month {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+[data-theme="Azure"] .azure-post-date-day {
+  font-size: 22px;
+  font-weight: 400;
+}
+[data-theme="Azure"] .azure-post-date-tooltip {
+  position: absolute;
+  bottom: -24px;
+  left: 0;
+  z-index: 10;
+  padding: 4px 6px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--color-primary);
+  opacity: 0;
+  pointer-events: none;
+}
+[data-theme="Azure"] .azure-post-card:hover .azure-post-date-tooltip {
+  opacity: 1;
+}
+[data-theme="Azure"] .azure-post-card-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 0 20px;
+}
+[data-theme="Azure"] .azure-post-card-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+}
+[data-theme="Azure"] .azure-post-card-title {
+  margin: 0;
+  overflow: hidden;
+  color: #1a1a1a;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.22;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+[data-theme="Azure"] .azure-post-card:hover .azure-post-card-title,
+[data-theme="Azure"] .azure-post-card-link:focus-visible .azure-post-card-title {
+  color: var(--color-primary);
+}
+[data-theme="Azure"] .azure-new-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  color: #f57c00;
+  font-size: 10px;
+  font-weight: 600;
+  background: #fff3e0;
+  border: 1px solid #ffe0b2;
+}
+[data-theme="Azure"] .azure-post-card-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  color: var(--color-primary);
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+[data-theme="Azure"] .azure-post-card:hover .azure-post-card-stats,
+[data-theme="Azure"] .azure-post-card:focus-within .azure-post-card-stats {
+  opacity: 1;
+}
+[data-theme="Azure"] .azure-post-card-stats span,
+[data-theme="Azure"] .azure-post-card-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+[data-theme="Azure"] .azure-post-card-stats i {
+  font-size: 12px;
+}
+[data-theme="Azure"] .azure-post-card-category {
+  flex-shrink: 0;
+  gap: 5px;
+  color: var(--color-primary);
+  font-size: 13px;
+  text-decoration: none;
+}
+[data-theme="Azure"] .azure-post-card-cover {
+  position: relative;
+  display: block;
+  height: 320px;
+  overflow: hidden;
+  background: var(--color-bg-soft);
+}
+[data-theme="Azure"] .azure-post-card-excerpt {
+  padding: 12px 20px;
+}
+[data-theme="Azure"] .azure-post-card-excerpt p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: #555;
+  font-size: 14px;
+  line-height: 1.8;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* Post detail */
+[data-theme="Azure"] .azure-post-page {
+  padding: 0;
+}
+[data-theme="Azure"] .azure-post-hero {
+  position: relative;
+  border-bottom: 1px solid #e5e5e5;
+}
+[data-theme="Azure"] .azure-post-hero-cover {
+  width: 100%;
+  height: 400px;
+}
+[data-theme="Azure"] .azure-post-hero-overlay {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 60px 32px 24px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
+}
+[data-theme="Azure"] .azure-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+[data-theme="Azure"] .azure-breadcrumb a {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+}
+[data-theme="Azure"] .azure-post-title {
+  margin: 0;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+[data-theme="Azure"] .azure-post-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 32px;
+  color: #999;
+  font-size: 13px;
+  border-bottom: 1px solid #eee;
+}
+[data-theme="Azure"] .azure-post-meta-item,
+[data-theme="Azure"] .azure-post-meta-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+[data-theme="Azure"] .azure-post-meta-item i.hot {
+  color: var(--color-primary);
+}
+[data-theme="Azure"] .azure-post-meta-category {
+  gap: 4px;
+  margin-left: auto;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+[data-theme="Azure"] .azure-post-content-wrap {
+  padding: 32px;
+}
+[data-theme="Azure"] .azure-post-content-shell {
+  position: relative;
+}
+[data-theme="Azure"] .azure-post-license {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 32px;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+}
+[data-theme="Azure"] .azure-post-license-author {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: #999;
+  font-size: 13px;
+}
+[data-theme="Azure"] .azure-post-author-avatar {
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  background: #f0f0f0;
+  clip-path: url(#squircle);
+}
+[data-theme="Azure"] .azure-post-author-link {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+[data-theme="Azure"] .azure-post-license-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #999;
+  text-decoration: none;
+}
+[data-theme="Azure"] .azure-post-tags {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+[data-theme="Azure"] .azure-post-tag-wrap {
+  display: inline-flex;
+  align-items: baseline;
+}
+[data-theme="Azure"] .azure-post-tag {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: 13px;
+  text-decoration: none;
+}
+[data-theme="Azure"] .azure-post-tag-hash {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+[data-theme="Azure"] .azure-post-tag-name {
+  color: var(--color-text-main, #333);
+}
+[data-theme="Azure"] .azure-post-tag sup {
+  margin-left: 1px;
+  color: var(--color-text-dim, #999);
+  font-size: 10px;
+  font-weight: 400;
+}
+[data-theme="Azure"] .azure-post-tag-comma {
+  margin-left: 2px;
+  color: #ccc;
+}
+
+@media (max-width: 1023px) {
+  [data-theme="Azure"] .azure-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-theme="Azure"] .azure-hero-tabs,
+  [data-theme="Azure"] .azure-social-cell,
+  [data-theme="Azure"] .azure-sidebar-cell {
+    display: none;
+  }
+  [data-theme="Azure"] .azure-hero-panel {
+    margin-left: 0;
+  }
+  [data-theme="Azure"] .azure-hero-cover {
+    height: clamp(220px, 58vw, 320px);
+  }
+  [data-theme="Azure"] .azure-hero-titlebar {
+    height: auto;
+    min-height: 58px;
+    padding: 26px 16px 14px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.46));
+  }
+  [data-theme="Azure"] .azure-hero-title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 19px;
+    line-height: 1.35;
+    text-overflow: unset;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  [data-theme="Azure"] .azure-hero-mode {
+    top: 12px;
+    right: 12px;
+    padding: 5px 8px;
+    font-size: 11px;
+    letter-spacing: 0;
+    writing-mode: horizontal-tb;
+  }
+  [data-theme="Azure"] .azure-moment-ticker {
+    height: 40px;
+    padding: 0 14px;
+    border-top: 0;
+  }
+  [data-theme="Azure"] .azure-pagination-wrap {
+    height: 56px;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-theme="Azure"] .azure-shell {
+    background: #fff;
+  }
+  [data-theme="Azure"] .azure-frame {
+    min-height: calc(100vh - 52px);
+    border-right: 0;
+    border-left: 0;
+  }
+  [data-theme="Azure"] .azure-header-inner {
+    height: 52px;
+    gap: 10px;
+    padding: 0 14px;
+  }
+  [data-theme="Azure"] .azure-brand {
+    max-width: calc(100% - 54px);
+  }
+  [data-theme="Azure"] .azure-brand-img {
+    max-width: 150px;
+    height: 26px;
+  }
+  [data-theme="Azure"] .azure-brand-title {
+    max-width: 190px;
+    font-size: 17px;
+  }
+  [data-theme="Azure"] .azure-desktop-nav,
+  [data-theme="Azure"] .azure-search-area {
+    display: none;
+  }
+  [data-theme="Azure"] .azure-header-loading {
+    right: 102px;
+  }
+  [data-theme="Azure"] .azure-mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  [data-theme="Azure"] .azure-mobile-bar-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 40px;
+    padding: 0 8px;
+    color: #333;
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  [data-theme="Azure"] .azure-mobile-bar-button i {
+    color: var(--color-primary);
+    font-size: 15px;
+  }
+  [data-theme="Azure"] .azure-mobile-bar-button.active {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+  [data-theme="Azure"] .azure-menu-toggle {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+  [data-theme="Azure"] .azure-mobile-menu {
+    display: block;
+    max-height: calc(100vh - 52px);
+    overflow-y: auto;
+    padding: 6px 16px 12px;
+    background: #fff;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  [data-theme="Azure"] .azure-mobile-menu-heading,
+  [data-theme="Azure"] .azure-mobile-menu-link {
+    display: block;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  [data-theme="Azure"] .azure-mobile-menu-heading {
+    padding: 11px 0 8px;
+    color: #999;
+    font-size: 13px;
+  }
+  [data-theme="Azure"] .azure-mobile-menu-link {
+    padding: 12px 0;
+    color: #333;
+    font-size: 15px;
+    text-decoration: none;
+  }
+  [data-theme="Azure"] .azure-mobile-menu-link.child {
+    padding-left: 18px;
+    font-size: 14px;
+  }
+  [data-theme="Azure"] .azure-mobile-menu-link.active {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+  [data-theme="Azure"] .azure-mobile-toc-layer {
+    position: fixed;
+    inset: 52px 0 0;
+    z-index: 49;
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+  [data-theme="Azure"] .azure-mobile-toc-layer.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  [data-theme="Azure"] .azure-mobile-toc-backdrop {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.18);
+    border: 0;
+    cursor: pointer;
+  }
+  [data-theme="Azure"] .azure-mobile-toc-panel {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: min(320px, calc(100vw - 20px));
+    max-height: min(520px, calc(100vh - 76px));
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.16);
+    transform: translateY(-6px);
+    transition: transform 0.18s ease;
+  }
+  [data-theme="Azure"] .azure-mobile-toc-layer.open .azure-mobile-toc-panel {
+    transform: translateY(0);
+  }
+  [data-theme="Azure"] .azure-mobile-toc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding: 0 10px 0 14px;
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid #eee;
+  }
+  [data-theme="Azure"] .azure-mobile-toc-header span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  [data-theme="Azure"] .azure-mobile-toc-header i {
+    color: var(--color-primary);
+  }
+  [data-theme="Azure"] .azure-mobile-toc-header button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    color: #777;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  [data-theme="Azure"] .azure-mobile-toc-list {
+    max-height: calc(min(520px, calc(100vh - 76px)) - 44px);
+    margin: 0;
+    padding: 6px 0;
+    overflow-y: auto;
+    list-style: none;
+  }
+  [data-theme="Azure"] .azure-mobile-toc-item {
+    display: block;
+    padding: 9px 14px;
+    overflow: hidden;
+    color: #555;
+    font-size: 13px;
+    line-height: 1.4;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-left: 3px solid transparent;
+  }
+  [data-theme="Azure"] .azure-mobile-toc-item.active {
+    color: var(--color-primary);
+    font-weight: 600;
+    background: #f5f8ff;
+    border-left-color: var(--color-primary);
+  }
+  [data-theme="Azure"].azure-mobile-toc-open .blog-main {
+    overflow-y: hidden !important;
+  }
+  [data-theme="Azure"] .azure-hero-cover {
+    height: clamp(210px, 62vw, 280px);
+  }
+  [data-theme="Azure"] .azure-moment-ticker {
+    gap: 8px;
+    height: 38px;
+    padding: 0 12px;
+    font-size: 12.5px;
+  }
+  [data-theme="Azure"] .azure-moment-time {
+    font-size: 10.5px;
+  }
+  [data-theme="Azure"] .azure-post-card-title-row {
+    height: auto;
+    min-height: 62px;
+  }
+  [data-theme="Azure"] .azure-post-date-badge {
+    width: 52px;
+  }
+  [data-theme="Azure"] .azure-post-date-tooltip {
+    display: none;
+  }
+  [data-theme="Azure"] .azure-post-card-main {
+    align-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding: 8px 12px;
+  }
+  [data-theme="Azure"] .azure-post-card-link {
+    width: 100%;
+    flex-basis: 100%;
+  }
+  [data-theme="Azure"] .azure-post-card-title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 20px;
+    line-height: 1.28;
+    text-overflow: unset;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  [data-theme="Azure"] .azure-post-card-stats {
+    gap: 8px;
+    font-size: 12px;
+    opacity: 1;
+  }
+  [data-theme="Azure"] .azure-post-card-category {
+    margin-left: auto;
+    font-size: 12px;
+  }
+  [data-theme="Azure"] .azure-post-card-cover {
+    height: clamp(180px, 58vw, 260px);
+  }
+  [data-theme="Azure"] .azure-post-card-excerpt {
+    padding: 10px 14px;
+  }
+  [data-theme="Azure"] .azure-post-card-excerpt p {
+    font-size: 13.5px;
+    line-height: 1.65;
+    -webkit-line-clamp: 2;
+  }
+  [data-theme="Azure"] .azure-post-hero-cover {
+    height: clamp(240px, 64vw, 360px);
+  }
+  [data-theme="Azure"] .azure-post-hero-overlay {
+    padding: 56px 18px 18px;
+  }
+  [data-theme="Azure"] .azure-breadcrumb {
+    flex-wrap: wrap;
+    gap: 5px;
+    font-size: 11px;
+  }
+  [data-theme="Azure"] .azure-post-title {
+    font-size: 22px;
+    line-height: 1.32;
+  }
+  [data-theme="Azure"] .azure-post-meta {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 9px 14px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+  }
+  [data-theme="Azure"] .azure-post-meta-category {
+    margin-left: 0;
+  }
+  [data-theme="Azure"] .azure-post-content-wrap {
+    padding: 18px 16px;
+  }
+  [data-theme="Azure"] .azure-post-license {
+    align-items: flex-start;
+    padding: 12px 14px;
+  }
+  [data-theme="Azure"] .azure-post-license-author,
+  [data-theme="Azure"] .azure-post-tags {
+    width: 100%;
+  }
+  [data-theme="Azure"] .blog-prose {
+    font-size: 1rem;
+    line-height: 1.78;
+  }
+  [data-theme="Azure"] .blog-prose h1 {
+    font-size: 1.6rem;
+  }
+  [data-theme="Azure"] .blog-prose h2 {
+    font-size: 1.22rem;
+    padding-left: 0.625rem;
+  }
+  [data-theme="Azure"] .blog-prose h2::before {
+    left: -16px;
+  }
+}
+
+@media (max-width: 360px) {
+  [data-theme="Azure"] .azure-brand-title {
+    max-width: 140px;
+  }
+  [data-theme="Azure"] .azure-mobile-actions {
+    gap: 2px;
+  }
+  [data-theme="Azure"] .azure-mobile-bar-button {
+    width: 38px;
+    padding: 0;
+  }
+  [data-theme="Azure"] .azure-mobile-bar-button span {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  [data-theme="Azure"] .post-related-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  [data-theme="Azure"] .post-prev-next {
+    grid-template-columns: 1fr;
+  }
+  [data-theme="Azure"] .post-prev-next-link {
+    min-height: 72px;
+  }
+  [data-theme="Azure"] .post-prev-next-text {
+    padding: 14px 16px;
+  }
+  [data-theme="Azure"] .post-related-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  [data-theme="Azure"] .post-related-card-bottom {
+    transform: translateY(0);
+  }
+  [data-theme="Azure"] .post-related-card-stats {
+    opacity: 1;
+  }
+}
 
 [data-theme="Azure"] .blog-prose {
   color: var(--color-text-main);
@@ -14,7 +1160,7 @@
 [data-theme="Azure"] .blog-prose h1, [data-theme="Azure"] .blog-prose h2, [data-theme="Azure"] .blog-prose h3, [data-theme="Azure"] .blog-prose h4 {
   font-family: var(--font-serif);
   color: var(--color-text-main);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 [data-theme="Azure"] .blog-prose h1 { font-size: 1.875rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.5rem; }
 

@@ -58,7 +58,11 @@ func GenericList(table string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 		perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "20"))
-		items, total, _ := model.GenericList(table, page, perPage, "")
+		orderBy := ""
+		if table == "links" {
+			orderBy = "CASE WHEN order_num > 0 THEN order_num ELSE id END ASC, id ASC"
+		}
+		items, total, _ := model.GenericList(table, page, perPage, orderBy)
 		if _, ok := htmlUnescapeTables[table]; ok {
 			for _, row := range items {
 				unescapeRow(table, row)
@@ -73,7 +77,10 @@ func GenericGet(table string) gin.HandlerFunc {
 		id := c.Param("id")
 		row := make(map[string]interface{})
 		err := config.DB.QueryRowx(fmt.Sprintf("SELECT * FROM %s WHERE id = $1", config.T(table)), id).MapScan(row)
-		if err != nil { util.NotFound(c, table); return }
+		if err != nil {
+			util.NotFound(c, table)
+			return
+		}
 		util.Success(c, row)
 	}
 }
@@ -92,7 +99,9 @@ func ListOptions(c *gin.Context) {
 	var opts []model.Option
 	config.DB.Select(&opts, "SELECT * FROM "+t+" ORDER BY name ASC")
 	result := make(map[string]string)
-	for _, o := range opts { result[o.Name] = o.Value }
+	for _, o := range opts {
+		result[o.Name] = o.Value
+	}
 	util.Success(c, result)
 }
 
@@ -189,7 +198,9 @@ func TestEmail(c *gin.Context) {
 	c.ShouldBindJSON(&req)
 
 	provider := model.GetOption("email_provider")
-	if provider == "" { provider = "smtp" }
+	if provider == "" {
+		provider = "smtp"
+	}
 
 	cfg := util.EmailConfig{
 		Provider:        provider,
@@ -207,11 +218,20 @@ func TestEmail(c *gin.Context) {
 	// Validate provider config
 	switch provider {
 	case "smtp":
-		if cfg.Host == "" { util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 SMTP 服务"); return }
+		if cfg.Host == "" {
+			util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 SMTP 服务")
+			return
+		}
 	case "resend":
-		if cfg.ResendAPIKey == "" { util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 Resend API Key"); return }
+		if cfg.ResendAPIKey == "" {
+			util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 Resend API Key")
+			return
+		}
 	case "sendflare":
-		if cfg.SendflareAPIKey == "" { util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 Sendflare API Key"); return }
+		if cfg.SendflareAPIKey == "" {
+			util.Error(c, 400, "EMAIL_NOT_CONFIGURED", "请先配置 Sendflare API Key")
+			return
+		}
 	}
 
 	// Determine recipient
@@ -219,12 +239,17 @@ func TestEmail(c *gin.Context) {
 	if toAddr == "" {
 		userID := middleware.GetUserID(c)
 		u, _ := model.UserByID(userID)
-		if u == nil { util.Error(c, 404, "NOT_FOUND", "用户不存在"); return }
+		if u == nil {
+			util.Error(c, 404, "NOT_FOUND", "用户不存在")
+			return
+		}
 		toAddr = u.Email
 	}
 
 	siteName := model.GetOption("site_title")
-	if siteName == "" { siteName = "Utterlog" }
+	if siteName == "" {
+		siteName = "Utterlog"
+	}
 
 	body := fmt.Sprintf(`<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px;">
 		<h2>%s</h2>
@@ -273,14 +298,14 @@ func SystemStatus(c *gin.Context) {
 	memUsed, memTotal, memPct := sysMem.used, sysMem.total, sysMem.percent
 
 	util.Success(c, gin.H{
-		"status":     "ok",
-		"time":       time.Now().Format("2006-01-02 15:04:05"),
+		"status": "ok",
+		"time":   time.Now().Format("2006-01-02 15:04:05"),
 		"server": gin.H{
-			"runtime":    "Go " + runtime.Version(),
-			"os":         getOSInfo(),
-			"cpus":       runtime.NumCPU(),
-			"goroutines": runtime.NumGoroutine(),
-			"uptime":     uptime,
+			"runtime":      "Go " + runtime.Version(),
+			"os":           getOSInfo(),
+			"cpus":         runtime.NumCPU(),
+			"goroutines":   runtime.NumGoroutine(),
+			"uptime":       uptime,
 			"hostname":     getHostname(),
 			"ip":           getLocalIP(),
 			"country_code": getServerCountry(),
@@ -383,41 +408,55 @@ func getCPUPercent() int {
 func measureCPU() int {
 	if runtime.GOOS == "linux" {
 		out1, err := exec.Command("sh", "-c", "head -1 /proc/stat").Output()
-		if err != nil { return 0 }
+		if err != nil {
+			return 0
+		}
 		time.Sleep(1 * time.Second)
 		out2, _ := exec.Command("sh", "-c", "head -1 /proc/stat").Output()
 
 		parse := func(line string) (idle, total int64) {
 			fields := strings.Fields(line)
-			if len(fields) < 5 { return 0, 1 }
+			if len(fields) < 5 {
+				return 0, 1
+			}
 			var sum int64
 			for i := 1; i < len(fields); i++ {
 				v, _ := strconv.ParseInt(fields[i], 10, 64)
 				sum += v
-				if i == 4 { idle = v }
+				if i == 4 {
+					idle = v
+				}
 			}
 			return idle, sum
 		}
 
 		idle1, total1 := parse(strings.TrimSpace(string(out1)))
 		idle2, total2 := parse(strings.TrimSpace(string(out2)))
-		if total2-total1 == 0 { return 0 }
+		if total2-total1 == 0 {
+			return 0
+		}
 		return int(100 * (1.0 - float64(idle2-idle1)/float64(total2-total1)))
 	}
 
 	// macOS
 	out, err := exec.Command("sh", "-c", "ps -A -o %cpu | awk '{s+=$1} END {printf \"%.0f\", s}'").Output()
-	if err != nil { return 0 }
+	if err != nil {
+		return 0
+	}
 	v, _ := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
 	// Normalize by CPU count
 	cores := runtime.NumCPU()
-	if cores > 0 { v = v / float64(cores) }
+	if cores > 0 {
+		v = v / float64(cores)
+	}
 	return int(v)
 }
 
 func getLoadAvg() string {
 	out, err := exec.Command("sh", "-c", "uptime | sed 's/.*load average[s]*: *//'").Output()
-	if err != nil { return "0 0 0" }
+	if err != nil {
+		return "0 0 0"
+	}
 	// Normalize: remove commas, ensure space-separated
 	s := strings.TrimSpace(string(out))
 	s = strings.ReplaceAll(s, ",", "")
@@ -432,7 +471,9 @@ func getSystemMemory() sysMemInfo {
 	if runtime.GOOS == "darwin" {
 		// macOS: use sysctl for total, vm_stat for used
 		out, err := exec.Command("sysctl", "-n", "hw.memsize").Output()
-		if err != nil { return sysMemInfo{} }
+		if err != nil {
+			return sysMemInfo{}
+		}
 		totalBytes, _ := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
 		totalGB := totalBytes / 1024 / 1024 / 1024
 
@@ -441,14 +482,20 @@ func getSystemMemory() sysMemInfo {
 		usedGB := activePages * 16384 / 1024 / 1024 / 1024 // 16KB pages on ARM
 
 		pct := 0.0
-		if totalGB > 0 { pct = usedGB / totalGB * 100 }
+		if totalGB > 0 {
+			pct = usedGB / totalGB * 100
+		}
 		return sysMemInfo{usedGB, totalGB, pct}
 	}
 	// Linux: use /proc/meminfo
 	out, err := exec.Command("sh", "-c", "free -b | awk '/Mem:/ {printf \"%.1f %.1f %.0f\", $3/1073741824, $2/1073741824, $3/$2*100}'").Output()
-	if err != nil { return sysMemInfo{} }
+	if err != nil {
+		return sysMemInfo{}
+	}
 	parts := strings.Fields(strings.TrimSpace(string(out)))
-	if len(parts) < 3 { return sysMemInfo{} }
+	if len(parts) < 3 {
+		return sysMemInfo{}
+	}
 	used, _ := strconv.ParseFloat(parts[0], 64)
 	total, _ := strconv.ParseFloat(parts[1], 64)
 	pct, _ := strconv.ParseFloat(parts[2], 64)
@@ -458,11 +505,15 @@ func getSystemMemory() sysMemInfo {
 func getPGVersion() string {
 	var ver string
 	err := config.DB.Get(&ver, "SHOW server_version")
-	if err != nil { return "-" }
+	if err != nil {
+		return "-"
+	}
 	// e.g. "17.4" or "16.2 (Ubuntu 16.2-1.pgdg22.04+1)"
 	parts := strings.Fields(ver)
 	v := parts[0]
-	if !strings.Contains(v, ".") { v += ".0" }
+	if !strings.Contains(v, ".") {
+		v += ".0"
+	}
 	return v
 }
 
@@ -571,14 +622,21 @@ func getServerCountry() string {
 		return cachedCountry
 	}
 	countryOnce.Do(func() {
-		if cachedCountry != "" { return }
+		if cachedCountry != "" {
+			return
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 		defer cancel()
 		req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.ipx.ee/ip", nil)
 		resp, err := http.DefaultClient.Do(req)
-		if err != nil { cachedCountry = ""; return }
+		if err != nil {
+			cachedCountry = ""
+			return
+		}
 		defer resp.Body.Close()
-		var geo struct { CountryCode string `json:"country_code"` }
+		var geo struct {
+			CountryCode string `json:"country_code"`
+		}
 		json.NewDecoder(resp.Body).Decode(&geo)
 		cachedCountry = strings.ToLower(geo.CountryCode)
 	})
@@ -681,14 +739,19 @@ func inDocker() bool {
 	return false
 }
 
-
 func getDiskUsage() (string, string, string) {
 	out, err := exec.Command("df", "-h", "/").Output()
-	if err != nil { return "-", "-", "0" }
+	if err != nil {
+		return "-", "-", "0"
+	}
 	lines := strings.Split(string(out), "\n")
-	if len(lines) < 2 { return "-", "-", "0" }
+	if len(lines) < 2 {
+		return "-", "-", "0"
+	}
 	fields := strings.Fields(lines[1])
-	if len(fields) < 5 { return "-", "-", "0" }
+	if len(fields) < 5 {
+		return "-", "-", "0"
+	}
 	return fields[1], fields[2], strings.TrimSuffix(fields[4], "%")
 }
 
@@ -733,12 +796,20 @@ func ListNotifications(c *gin.Context) {
 func PostsFeed(c *gin.Context) {
 	t := config.T("posts")
 	siteTitle := model.GetOption("site_title")
-	if siteTitle == "" { siteTitle = "Utterlog" }
+	if siteTitle == "" {
+		siteTitle = "Utterlog"
+	}
 	siteDesc := model.GetOption("site_description")
 	siteURL := strings.TrimRight(config.PublicBaseURL(), "/")
 
+	// 用户可能改了固定链接结构（比如 /archives/%display_id%），RSS 输出
+	// 必须跟着 admin 配置走，不然订阅源里的 link 还是老的 /posts/<slug>
+	// 点进去 404。读 permalink_structure option 走 BuildPostPermalink
+	// 渲染，跟前端 web/lib/permalink.ts:buildPermalink 完全对齐。
+	permalinkTpl := model.GetOption("permalink_structure")
+
 	var posts []model.Post
-	config.DB.Select(&posts, fmt.Sprintf("SELECT id, title, slug, excerpt, content, created_at, updated_at FROM %s WHERE status='publish' AND type='post' ORDER BY created_at DESC LIMIT 20", t))
+	config.DB.Select(&posts, fmt.Sprintf("SELECT id, title, slug, excerpt, content, display_id, created_at, updated_at, published_at FROM %s WHERE status='publish' AND type='post' ORDER BY created_at DESC LIMIT 20", t))
 
 	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.Header("Cache-Control", "public, max-age=3600")
@@ -748,10 +819,18 @@ func PostsFeed(c *gin.Context) {
 		xmlEscape(siteTitle), xmlEscape(siteURL), xmlEscape(siteDesc))
 	xml += fmt.Sprintf(`<atom:link href="%s/api/v1/feed" rel="self" type="application/rss+xml"/>`+"\n", xmlEscape(siteURL))
 	for _, p := range posts {
-		content := ""; if p.Content != nil { content = *p.Content }
-		excerpt := ""; if p.Excerpt != nil { excerpt = *p.Excerpt }
-		if excerpt == "" && len(content) > 300 { excerpt = content[:300] }
-		link := fmt.Sprintf("%s/posts/%s", siteURL, p.Slug)
+		content := ""
+		if p.Content != nil {
+			content = *p.Content
+		}
+		excerpt := ""
+		if p.Excerpt != nil {
+			excerpt = *p.Excerpt
+		}
+		if excerpt == "" && len(content) > 300 {
+			excerpt = content[:300]
+		}
+		link := siteURL + BuildPostPermalink(&p, permalinkTpl)
 		pubDate := time.Unix(p.CreatedAt, 0).UTC().Format(time.RFC1123Z)
 		xml += fmt.Sprintf("<item><title>%s</title><link>%s</link><guid isPermaLink=\"true\">%s</guid><pubDate>%s</pubDate><description><![CDATA[%s]]></description></item>\n",
 			xmlEscape(p.Title), xmlEscape(link), xmlEscape(link), pubDate, cdataSafe(excerpt))

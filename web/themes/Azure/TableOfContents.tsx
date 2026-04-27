@@ -11,11 +11,13 @@ interface TocItem {
 
 interface TableOfContentsProps {
   content: string;
+  variant?: 'desktop' | 'mobile';
 }
 
-export default function TableOfContents({ content }: TableOfContentsProps) {
+export default function TableOfContents({ content, variant = 'desktop' }: TableOfContentsProps) {
   const [headings, setHeadings] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState('');
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Read headings from rendered DOM — guarantees id match with rehype-slug
   useEffect(() => {
@@ -87,6 +89,40 @@ export default function TableOfContents({ content }: TableOfContentsProps) {
     }
   }, [getScrollContainer]);
 
+  useEffect(() => {
+    if (variant !== 'mobile') return;
+    const available = headings.length >= 2;
+    document.documentElement.dataset.azureTocAvailable = available ? 'true' : 'false';
+    window.dispatchEvent(new CustomEvent('azure:toc-availability', { detail: { available } }));
+    return () => {
+      delete document.documentElement.dataset.azureTocAvailable;
+      window.dispatchEvent(new CustomEvent('azure:toc-availability', { detail: { available: false } }));
+    };
+  }, [headings.length, variant]);
+
+  useEffect(() => {
+    if (variant !== 'mobile') return;
+    const toggle = () => setMobileOpen(open => !open);
+    const close = () => setMobileOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('azure:toggle-toc', toggle);
+    window.addEventListener('azure:close-toc', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('azure:toggle-toc', toggle);
+      window.removeEventListener('azure:close-toc', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [variant]);
+
+  useEffect(() => {
+    if (variant !== 'mobile') return;
+    document.documentElement.classList.toggle('azure-mobile-toc-open', mobileOpen);
+    return () => document.documentElement.classList.remove('azure-mobile-toc-open');
+  }, [mobileOpen, variant]);
+
   // 滚动 20% 显示，滚到评论区消失
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -115,6 +151,43 @@ export default function TableOfContents({ content }: TableOfContentsProps) {
   }, [getScrollContainer]);
 
   if (headings.length < 2) return null;
+
+  if (variant === 'mobile') {
+    return (
+      <div className={`azure-mobile-toc-layer${mobileOpen ? ' open' : ''}`} aria-hidden={!mobileOpen}>
+        <button type="button" className="azure-mobile-toc-backdrop" aria-label="关闭目录" onClick={() => setMobileOpen(false)} />
+        <nav className="azure-mobile-toc-panel" aria-label="文章目录">
+          <div className="azure-mobile-toc-header">
+            <span>
+              <i className="fa-sharp fa-light fa-list-tree" aria-hidden="true" />
+              目录
+            </span>
+            <button type="button" aria-label="关闭目录" onClick={() => setMobileOpen(false)}>
+              <i className="fa-regular fa-xmark" aria-hidden="true" />
+            </button>
+          </div>
+          <ul className="azure-mobile-toc-list">
+            {headings.map((item) => (
+              <li key={item.id}>
+                <a
+                  href={`#${item.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    scrollTo(item.id);
+                    setMobileOpen(false);
+                  }}
+                  className={`azure-mobile-toc-item${activeId === item.id ? ' active' : ''}`}
+                  style={{ paddingLeft: `${10 + (item.level - 1) * 14}px` }}
+                >
+                  {item.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    );
+  }
 
   return (
     <nav className="blog-toc" style={{ position: 'sticky', top: '2.5rem', opacity: visible ? 1 : 0, pointerEvents: visible ? 'auto' : 'none', transition: 'opacity 0.3s' }}>

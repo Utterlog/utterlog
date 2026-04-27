@@ -62,7 +62,8 @@ func ContentCreate(table string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req map[string]interface{}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			util.BadRequest(c, "无效的请求数据"); return
+			util.BadRequest(c, "无效的请求数据")
+			return
 		}
 
 		req["author_id"] = middleware.GetUserID(c)
@@ -90,7 +91,8 @@ func ContentCreate(table string) gin.HandlerFunc {
 		), vals...).Scan(&id)
 
 		if err != nil {
-			util.Error(c, 500, "CREATE_ERROR", err.Error()); return
+			util.Error(c, 500, "CREATE_ERROR", err.Error())
+			return
 		}
 
 		// Async: sync external cover image to media library
@@ -107,7 +109,8 @@ func ContentUpdate(table string) gin.HandlerFunc {
 		id := c.Param("id")
 		var req map[string]interface{}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			util.BadRequest(c, "无效的请求数据"); return
+			util.BadRequest(c, "无效的请求数据")
+			return
 		}
 
 		req["updated_at"] = time.Now().Unix()
@@ -133,7 +136,8 @@ func ContentUpdate(table string) gin.HandlerFunc {
 		), vals...)
 
 		if err != nil {
-			util.Error(c, 500, "UPDATE_ERROR", err.Error()); return
+			util.Error(c, 500, "UPDATE_ERROR", err.Error())
+			return
 		}
 
 		// Async: sync external cover image if changed
@@ -163,10 +167,12 @@ func CreateComment(c *gin.Context) {
 		CaptchaCode      string `json:"captcha_code"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "必填字段不能为空"); return
+		util.BadRequest(c, "必填字段不能为空")
+		return
 	}
 	if len([]rune(strings.TrimSpace(req.Content))) < 5 {
-		util.BadRequest(c, "评论内容至少 5 个字"); return
+		util.BadRequest(c, "评论内容至少 5 个字")
+		return
 	}
 
 	t := config.T("comments")
@@ -201,11 +207,13 @@ func CreateComment(c *gin.Context) {
 		switch mode {
 		case "pow":
 			if !verifyCaptcha(req.CaptchaChallenge, req.CaptchaNonce) {
-				util.Error(c, 400, "CAPTCHA_FAILED", "人机验证失败，请重试"); return
+				util.Error(c, 400, "CAPTCHA_FAILED", "人机验证失败，请重试")
+				return
 			}
 		case "image":
 			if !verifyImageCaptcha(req.CaptchaID, req.CaptchaCode) {
-				util.Error(c, 400, "CAPTCHA_FAILED", "验证码错误，请重试"); return
+				util.Error(c, 400, "CAPTCHA_FAILED", "验证码错误，请重试")
+				return
 			}
 		}
 	}
@@ -295,7 +303,9 @@ func isSpamComment(content, email, url, ip string) bool {
 
 	// 1. Excessive links (>2 URLs in content)
 	linkCount := strings.Count(lower, "http://") + strings.Count(lower, "https://")
-	if linkCount > 2 { return true }
+	if linkCount > 2 {
+		return true
+	}
 
 	// 2. Spam keywords
 	spamWords := []string{
@@ -305,14 +315,18 @@ func isSpamComment(content, email, url, ip string) bool {
 		"刷单", "兼职日赚", "加微信", "加QQ", "代孕",
 	}
 	for _, w := range spamWords {
-		if strings.Contains(lower, w) { return true }
+		if strings.Contains(lower, w) {
+			return true
+		}
 	}
 
 	// 3. Suspicious email patterns
 	emailLower := strings.ToLower(email)
 	spamEmailDomains := []string{"tempmail.", "guerrillamail.", "throwaway.", "yopmail.", "sharklasers."}
 	for _, d := range spamEmailDomains {
-		if strings.Contains(emailLower, d) { return true }
+		if strings.Contains(emailLower, d) {
+			return true
+		}
 	}
 
 	// 4. Too many repeated characters (e.g., "aaaaaaa")
@@ -320,9 +334,14 @@ func isSpamComment(content, email, url, ip string) bool {
 		if len(content) > i+10 {
 			allSame := true
 			for j := i + 1; j < i+10; j++ {
-				if content[j] != content[i] { allSame = false; break }
+				if content[j] != content[i] {
+					allSame = false
+					break
+				}
 			}
-			if allSame { return true }
+			if allSame {
+				return true
+			}
 		}
 	}
 
@@ -331,7 +350,9 @@ func isSpamComment(content, email, url, ip string) bool {
 	config.DB.Get(&recentCount, fmt.Sprintf(
 		"SELECT COUNT(*) FROM %s WHERE author_ip = $1 AND created_at > $2",
 		config.T("comments")), ip, time.Now().Unix()-600)
-	if recentCount >= 5 { return true }
+	if recentCount >= 5 {
+		return true
+	}
 
 	return false
 }
@@ -343,18 +364,25 @@ func ReplyComment(c *gin.Context) {
 		Content string `json:"content" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "回复内容不能为空"); return
+		util.BadRequest(c, "回复内容不能为空")
+		return
 	}
 
 	// Get original comment's post_id
 	var postID int
 	config.DB.Get(&postID, "SELECT post_id FROM "+config.T("comments")+" WHERE id = $1", commentID)
-	if postID == 0 { util.NotFound(c, "评论"); return }
+	if postID == 0 {
+		util.NotFound(c, "评论")
+		return
+	}
 
 	// Get admin user info
 	userID := middleware.GetUserID(c)
 	user, _ := model.UserByID(userID)
-	if user == nil { util.Error(c, 403, "FORBIDDEN", "未授权"); return }
+	if user == nil {
+		util.Error(c, 403, "FORBIDDEN", "未授权")
+		return
+	}
 
 	now := time.Now().Unix()
 	var id int
@@ -390,7 +418,9 @@ func PendingCommentCount(c *gin.Context) {
 // notification path dead weight in those deployments.
 func sendCommentNotifications(postID int, parentID *int, commenterName, content string, commentID int) {
 	provider := model.GetOption("email_provider")
-	if provider == "" { provider = "smtp" }
+	if provider == "" {
+		provider = "smtp"
+	}
 
 	cfg := util.EmailConfig{
 		Provider:        provider,
@@ -426,18 +456,29 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 	}
 
 	siteName := model.GetOption("site_title")
-	if siteName == "" { siteName = "Utterlog" }
+	if siteName == "" {
+		siteName = "Utterlog"
+	}
 	siteURL := model.GetOption("site_url")
-	if siteURL == "" { siteURL = config.C.AppURL }
+	if siteURL == "" {
+		siteURL = config.C.AppURL
+	}
 
 	// Get post info
 	post, err := model.PostByID(postID)
-	if err != nil { return }
-	postURL := fmt.Sprintf("%s/posts/%s", siteURL, post.Slug)
+	if err != nil {
+		return
+	}
+	// 评论邮件通知里的「点击查看」链接也要跟随 admin 配置的固定链接结构。
+	// 不然评论邮件里给的链接是旧的 /posts/<slug>，admin 改了 permalink
+	// 后这些链接全都点进去 404。
+	postURL := strings.TrimRight(siteURL, "/") + BuildPostPermalink(post, model.GetOption("permalink_structure"))
 
 	// Truncate content for email
 	preview := content
-	if len([]rune(preview)) > 200 { preview = string([]rune(preview)[:200]) + "..." }
+	if len([]rune(preview)) > 200 {
+		preview = string([]rune(preview)[:200]) + "..."
+	}
 
 	// 1. Notify site admin — gated by comment_notify_admin (default on;
 	// option absent means the user hasn't touched it → we assume yes).
@@ -571,6 +612,15 @@ func ApproveComment(c *gin.Context) {
 }
 
 // Links full CRUD
+func nextLinkOrderNum(table string) int {
+	var n int
+	err := config.DB.Get(&n, fmt.Sprintf("SELECT COALESCE(MAX(order_num), 0) + 1 FROM %s", table))
+	if err != nil || n < 1 {
+		return 1
+	}
+	return n
+}
+
 func CreateLink(c *gin.Context) {
 	var req struct {
 		Name        string `json:"name" binding:"required"`
@@ -582,15 +632,22 @@ func CreateLink(c *gin.Context) {
 		OrderNum    int    `json:"order_num"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "名称和链接不能为空"); return
+		util.BadRequest(c, "名称和链接不能为空")
+		return
 	}
-	if req.GroupName == "" { req.GroupName = "default" }
+	if req.GroupName == "" {
+		req.GroupName = "default"
+	}
 	now := time.Now().Unix()
 	t := config.T("links")
+	orderNum := req.OrderNum
+	if orderNum <= 0 {
+		orderNum = nextLinkOrderNum(t)
+	}
 	var id int
 	config.DB.QueryRow(fmt.Sprintf(
 		"INSERT INTO %s (name, url, description, logo, rss_url, group_name, order_num, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id", t),
-		req.Name, req.URL, req.Description, req.Logo, req.RssURL, req.GroupName, req.OrderNum, 1, now, now,
+		req.Name, req.URL, req.Description, req.Logo, req.RssURL, req.GroupName, orderNum, 1, now, now,
 	).Scan(&id)
 	util.Success(c, gin.H{"id": id})
 }
@@ -608,8 +665,12 @@ func UpdateLink(c *gin.Context) {
 		Status      int    `json:"status"`
 	}
 	c.ShouldBindJSON(&req)
-	if req.GroupName == "" { req.GroupName = "default" }
-	if req.Status == 0 { req.Status = 1 }
+	if req.GroupName == "" {
+		req.GroupName = "default"
+	}
+	if req.Status == 0 {
+		req.Status = 1
+	}
 	now := time.Now().Unix()
 	t := config.T("links")
 	config.DB.Exec(fmt.Sprintf(
@@ -629,7 +690,8 @@ func ApplyLink(c *gin.Context) {
 		Email       string `json:"email"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "站点名称和地址不能为空"); return
+		util.BadRequest(c, "站点名称和地址不能为空")
+		return
 	}
 	now := time.Now().Unix()
 	t := config.T("links")
@@ -638,7 +700,8 @@ func ApplyLink(c *gin.Context) {
 	var exists int
 	config.DB.Get(&exists, fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE url = $1", t), req.URL)
 	if exists > 0 {
-		util.Error(c, 409, "DUPLICATE", "该站点已存在"); return
+		util.Error(c, 409, "DUPLICATE", "该站点已存在")
+		return
 	}
 
 	var id int
@@ -647,7 +710,8 @@ func ApplyLink(c *gin.Context) {
 		req.Name, req.URL, req.Description, req.Logo, 0, "pending", "申请中", now, now,
 	).Scan(&id)
 	if err != nil {
-		util.Error(c, 500, "CREATE_ERROR", err.Error()); return
+		util.Error(c, 500, "CREATE_ERROR", err.Error())
+		return
 	}
 	util.Success(c, gin.H{"id": id})
 }
@@ -686,20 +750,23 @@ func ChangePassword(c *gin.Context) {
 		VerifyCode      string `json:"verify_code" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "当前密码、新密码和验证码不能为空"); return
+		util.BadRequest(c, "当前密码、新密码和验证码不能为空")
+		return
 	}
 
 	userID := middleware.GetUserID(c)
 
 	if !checkVerifyCode(userID, req.VerifyCode) {
-		util.Error(c, 400, "INVALID_CODE", "验证码错误或已过期"); return
+		util.Error(c, 400, "INVALID_CODE", "验证码错误或已过期")
+		return
 	}
 
 	var hash string
 	config.DB.Get(&hash, "SELECT password FROM "+config.T("users")+" WHERE id = $1", userID)
 
 	if !util.CheckPassword(req.CurrentPassword, hash) {
-		util.Error(c, 400, "WRONG_PASSWORD", "当前密码错误"); return
+		util.Error(c, 400, "WRONG_PASSWORD", "当前密码错误")
+		return
 	}
 
 	newHash, _ := util.HashPassword(req.NewPassword)
@@ -753,10 +820,22 @@ func GetSiteOwner(c *gin.Context) {
 func GetProfile(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	u, err := model.UserByID(userID)
-	if err != nil { util.Error(c, 404, "NOT_FOUND", "用户不存在"); return }
-	url := ""; if u.URL != nil { url = *u.URL }
-	bio := ""; if u.Bio != nil { bio = *u.Bio }
-	avatar := ""; if u.Avatar != nil { avatar = *u.Avatar }
+	if err != nil {
+		util.Error(c, 404, "NOT_FOUND", "用户不存在")
+		return
+	}
+	url := ""
+	if u.URL != nil {
+		url = *u.URL
+	}
+	bio := ""
+	if u.Bio != nil {
+		bio = *u.Bio
+	}
+	avatar := ""
+	if u.Avatar != nil {
+		avatar = *u.Avatar
+	}
 	emailHash := fmt.Sprintf("%x", md5.Sum([]byte(strings.TrimSpace(strings.ToLower(u.Email)))))
 	gravatarURL := fmt.Sprintf("https://gravatar.bluecdn.com/avatar/%s?s=128&d=mp", emailHash)
 
@@ -778,7 +857,7 @@ func GetProfile(c *gin.Context) {
 		"id": u.ID, "username": u.Username, "email": u.Email,
 		"nickname": u.NicknameStr(), "avatar": avatar, "gravatar_url": gravatarURL, "url": url, "bio": bio,
 		"totp_enabled": u.TOTPEnabled,
-		"utterlog_id": utterlogID, "utterlog_avatar": utterlogAvatar,
+		"utterlog_id":  utterlogID, "utterlog_avatar": utterlogAvatar,
 		"avatar_source": avatarSource,
 	})
 }
@@ -1004,7 +1083,9 @@ func PlaylistSongs(c *gin.Context) {
 			songs = append(songs, row)
 		}
 	}
-	if songs == nil { songs = []map[string]interface{}{} }
+	if songs == nil {
+		songs = []map[string]interface{}{}
+	}
 
 	// Get playlist info
 	var playlist map[string]interface{}
@@ -1017,8 +1098,13 @@ func PlaylistSongs(c *gin.Context) {
 
 func AddSongToPlaylist(c *gin.Context) {
 	playlistID, _ := strconv.Atoi(c.Param("id"))
-	var req struct { MusicID int `json:"music_id" binding:"required"` }
-	if err := c.ShouldBindJSON(&req); err != nil { util.BadRequest(c, "music_id 不能为空"); return }
+	var req struct {
+		MusicID int `json:"music_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.BadRequest(c, "music_id 不能为空")
+		return
+	}
 	t := config.T("playlist_songs")
 	now := time.Now().Unix()
 	config.DB.Exec(fmt.Sprintf("INSERT INTO %s (playlist_id, music_id, created_at) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING", t), playlistID, req.MusicID, now)
@@ -1028,7 +1114,9 @@ func AddSongToPlaylist(c *gin.Context) {
 
 func RemoveSongFromPlaylist(c *gin.Context) {
 	playlistID, _ := strconv.Atoi(c.Param("id"))
-	var req struct { MusicID int `json:"music_id" binding:"required"` }
+	var req struct {
+		MusicID int `json:"music_id" binding:"required"`
+	}
 	c.ShouldBindJSON(&req)
 	t := config.T("playlist_songs")
 	config.DB.Exec(fmt.Sprintf("DELETE FROM %s WHERE playlist_id = $1 AND music_id = $2", t), playlistID, req.MusicID)
@@ -1039,7 +1127,9 @@ func RemoveSongFromPlaylist(c *gin.Context) {
 // Social / Federation (basic)
 func FederationMetadata(c *gin.Context) {
 	siteTitle := model.GetOption("site_title")
-	if siteTitle == "" { siteTitle = "Utterlog!" }
+	if siteTitle == "" {
+		siteTitle = "Utterlog!"
+	}
 	siteDesc := model.GetOption("site_description")
 	siteLogo := model.GetOption("site_logo")
 	siteLogoDark := model.GetOption("site_logo_dark")
@@ -1075,7 +1165,10 @@ func ImportTypecho(c *gin.Context) {
 // RSS parse proxy
 func ParseRSS(c *gin.Context) {
 	url := c.Query("url")
-	if url == "" { util.BadRequest(c, "url 参数不能为空"); return }
+	if url == "" {
+		util.BadRequest(c, "url 参数不能为空")
+		return
+	}
 	// TODO: fetch and parse RSS
 	util.Success(c, gin.H{"url": url, "items": []interface{}{}})
 }
@@ -1083,7 +1176,9 @@ func ParseRSS(c *gin.Context) {
 func join(s []string, sep string) string {
 	result := ""
 	for i, v := range s {
-		if i > 0 { result += sep }
+		if i > 0 {
+			result += sep
+		}
 		result += v
 	}
 	return result
@@ -1097,22 +1192,29 @@ func EditComment(c *gin.Context) {
 		VisitorID string `json:"visitor_id" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "参数错误"); return
+		util.BadRequest(c, "参数错误")
+		return
 	}
 	if len([]rune(strings.TrimSpace(req.Content))) < 5 {
-		util.BadRequest(c, "评论内容至少 5 个字"); return
+		util.BadRequest(c, "评论内容至少 5 个字")
+		return
 	}
 
 	t := config.T("comments")
 	var visitorID string
 	var createdAt int64
 	err := config.DB.QueryRow(fmt.Sprintf("SELECT COALESCE(visitor_id,''), created_at FROM %s WHERE id = $1", t), id).Scan(&visitorID, &createdAt)
-	if err != nil { util.Error(c, 404, "NOT_FOUND", "评论不存在"); return }
+	if err != nil {
+		util.Error(c, 404, "NOT_FOUND", "评论不存在")
+		return
+	}
 	if visitorID == "" || visitorID != req.VisitorID {
-		util.Error(c, 403, "FORBIDDEN", "无权编辑此评论"); return
+		util.Error(c, 403, "FORBIDDEN", "无权编辑此评论")
+		return
 	}
 	if time.Now().Unix()-createdAt > 60 {
-		util.Error(c, 403, "EXPIRED", "编辑时间已过期"); return
+		util.Error(c, 403, "EXPIRED", "编辑时间已过期")
+		return
 	}
 
 	config.DB.Exec(fmt.Sprintf("UPDATE %s SET content = $1 WHERE id = $2", t), strings.TrimSpace(req.Content), id)
@@ -1127,10 +1229,14 @@ func getCaptchaMode() string {
 	if mode == "" {
 		var enabled string
 		config.DB.Get(&enabled, "SELECT COALESCE(value,'1') FROM "+config.T("options")+" WHERE name='comment_captcha_enabled'")
-		if enabled == "0" || enabled == "false" { return "off" }
+		if enabled == "0" || enabled == "false" {
+			return "off"
+		}
 		return "pow"
 	}
-	if mode != "pow" && mode != "image" && mode != "off" { return "pow" }
+	if mode != "pow" && mode != "image" && mode != "off" {
+		return "pow"
+	}
 	return mode
 }
 
@@ -1138,18 +1244,24 @@ func getCaptchaMode() string {
 func CaptchaChallenge(c *gin.Context) {
 	mode := getCaptchaMode()
 	if mode == "off" {
-		util.Success(c, gin.H{"enabled": false, "mode": "off"}); return
+		util.Success(c, gin.H{"enabled": false, "mode": "off"})
+		return
 	}
 	if mode == "image" {
-		util.Success(c, gin.H{"enabled": true, "mode": "image"}); return
+		util.Success(c, gin.H{"enabled": true, "mode": "image"})
+		return
 	}
 
 	// PoW mode
 	var diffStr string
 	config.DB.Get(&diffStr, "SELECT COALESCE(value,'4') FROM "+config.T("options")+" WHERE name='comment_captcha_difficulty'")
 	difficulty, _ := strconv.Atoi(diffStr)
-	if difficulty < 1 { difficulty = 4 }
-	if difficulty > 6 { difficulty = 6 }
+	if difficulty < 1 {
+		difficulty = 4
+	}
+	if difficulty > 6 {
+		difficulty = 6
+	}
 
 	challenge := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%d-%s", time.Now().UnixNano(), c.ClientIP()))))
 	expires := time.Now().Add(2 * time.Minute).Unix()
@@ -1168,13 +1280,16 @@ func CaptchaChallenge(c *gin.Context) {
 func ImageCaptchaChallenge(c *gin.Context) {
 	mode := getCaptchaMode()
 	if mode != "image" {
-		util.Error(c, 400, "WRONG_MODE", "图片验证码未启用"); return
+		util.Error(c, 400, "WRONG_MODE", "图片验证码未启用")
+		return
 	}
 
 	// Generate 4-char code (digits + uppercase letters, exclude confusing chars)
 	chars := "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 	code := make([]byte, 4)
-	for i := range code { code[i] = chars[rand.Intn(len(chars))] }
+	for i := range code {
+		code[i] = chars[rand.Intn(len(chars))]
+	}
 	codeStr := string(code)
 
 	// Store in Redis
@@ -1199,11 +1314,19 @@ func ImageCaptchaChallenge(c *gin.Context) {
 		x1, y1, x2, y2 := rand.Intn(120), rand.Intn(40), rand.Intn(120), rand.Intn(40)
 		lineColor := color.RGBA{uint8(150 + rand.Intn(80)), uint8(150 + rand.Intn(80)), uint8(150 + rand.Intn(80)), 255}
 		dx, dy := x2-x1, y2-y1
-		steps := abs(dx); if abs(dy) > steps { steps = abs(dy) }
-		if steps == 0 { steps = 1 }
+		steps := abs(dx)
+		if abs(dy) > steps {
+			steps = abs(dy)
+		}
+		if steps == 0 {
+			steps = 1
+		}
 		for s := 0; s <= steps; s++ {
-			px := x1 + s*dx/steps; py := y1 + s*dy/steps
-			if px >= 0 && px < 120 && py >= 0 && py < 40 { img.Set(px, py, lineColor) }
+			px := x1 + s*dx/steps
+			py := y1 + s*dy/steps
+			if px >= 0 && px < 120 && py >= 0 && py < 40 {
+				img.Set(px, py, lineColor)
+			}
 		}
 	}
 	// Draw text with the larger TTF face so letters fill more of the
@@ -1228,17 +1351,30 @@ func ImageCaptchaChallenge(c *gin.Context) {
 	})
 }
 
-func abs(x int) int { if x < 0 { return -x }; return x }
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
 
 // verifyImageCaptcha checks the image captcha code
 func verifyImageCaptcha(id, code string) bool {
-	if id == "" || code == "" { return false }
-	if config.RDB == nil { return true }
+	if id == "" || code == "" {
+		return false
+	}
+	if config.RDB == nil {
+		return true
+	}
 
 	val, err := config.RDB.Get(config.Ctx, "captcha:img:"+id).Result()
-	if err != nil { return false }
+	if err != nil {
+		return false
+	}
 
-	if strings.ToLower(strings.TrimSpace(code)) != val { return false }
+	if strings.ToLower(strings.TrimSpace(code)) != val {
+		return false
+	}
 
 	config.RDB.Del(config.Ctx, "captcha:img:"+id)
 	return true
@@ -1246,22 +1382,34 @@ func verifyImageCaptcha(id, code string) bool {
 
 // verifyCaptcha checks the PoW solution
 func verifyCaptcha(challenge, nonce string) bool {
-	if challenge == "" || nonce == "" { return false }
-	if config.RDB == nil { return true }
+	if challenge == "" || nonce == "" {
+		return false
+	}
+	if config.RDB == nil {
+		return true
+	}
 
 	val, err := config.RDB.Get(config.Ctx, "captcha:"+challenge).Result()
-	if err != nil { return false }
+	if err != nil {
+		return false
+	}
 
 	parts := strings.Split(val, ":")
-	if len(parts) != 2 { return false }
+	if len(parts) != 2 {
+		return false
+	}
 	difficulty, _ := strconv.Atoi(parts[0])
 	expires, _ := strconv.ParseInt(parts[1], 10, 64)
-	if time.Now().Unix() > expires { return false }
+	if time.Now().Unix() > expires {
+		return false
+	}
 
 	h := sha256.Sum256([]byte(challenge + nonce))
 	hexHash := fmt.Sprintf("%x", h)
 	prefix := strings.Repeat("0", difficulty)
-	if !strings.HasPrefix(hexHash, prefix) { return false }
+	if !strings.HasPrefix(hexHash, prefix) {
+		return false
+	}
 
 	config.RDB.Del(config.Ctx, "captcha:"+challenge)
 	return true

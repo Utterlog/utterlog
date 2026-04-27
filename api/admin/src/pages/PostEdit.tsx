@@ -103,7 +103,7 @@ export default function EditPostPage() {
     setSubmitting(true);
     try {
       const tagNames = tagInput.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
-      await postsApi.update(postId, {
+      const response: any = await postsApi.update(postId, {
         title, content,
         slug: slug || undefined,
         cover_url: coverUrl || undefined,
@@ -119,6 +119,10 @@ export default function EditPostPage() {
         published_at: publishAt,
       });
       toast.success('文章更新成功');
+      const nextId = response?.data?.id || response?.id;
+      if (nextId && nextId !== postId) {
+        navigate(`/posts/edit/${nextId}`, { replace: true });
+      }
     } catch {
       toast.error('更新失败');
     } finally {

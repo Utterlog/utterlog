@@ -55,6 +55,12 @@ export async function getPost(id: number) {
   return fetchAPI<any>(`/posts/${id}`);
 }
 
+// 按 display_id 获取文章 —— 配合 permalink 模板里的 %display_id% token。
+// display_id 是「按发布顺序连续递增的序号」，跟 db 主键 id 解耦。
+export async function getPostByDisplayID(displayID: number) {
+  return fetchAPI<any>(`/posts/by-display-id/${displayID}`);
+}
+
 // 文章评论
 export async function getPostComments(postId: number) {
   return fetchAPI<any>(`/posts/${postId}/comments`);

@@ -28,23 +28,31 @@ const (
 
 // Extension describes a single theme or plugin discovered on disk.
 type Extension struct {
-	ID          string `json:"id"`          // slug / dir name
-	Name        string `json:"name"`
-	Version     string `json:"version"`
-	Author      string `json:"author,omitempty"`
+	ID            string         `json:"id"` // slug / dir name
+	Name          string         `json:"name"`
+	Version       string         `json:"version"`
+	Author        string         `json:"author,omitempty"`
+	Description   string         `json:"description,omitempty"`
+	Homepage      string         `json:"homepage,omitempty"`
+	Kind          string         `json:"kind"`    // "theme" | "plugin"
+	Builtin       bool           `json:"builtin"` // shipped with binary
+	Enabled       bool           `json:"enabled"` // currently active
+	Preview       string         `json:"preview,omitempty"`
+	Path          string         `json:"-"` // filesystem path, not returned to client
+	MenuPositions []MenuPosition `json:"menuPositions,omitempty"`
+}
+
+type MenuPosition struct {
+	Key         string `json:"key"`
+	Label       string `json:"label"`
 	Description string `json:"description,omitempty"`
-	Homepage    string `json:"homepage,omitempty"`
-	Kind        string `json:"kind"`        // "theme" | "plugin"
-	Builtin     bool   `json:"builtin"`     // shipped with binary
-	Enabled     bool   `json:"enabled"`     // currently active
-	Preview     string `json:"preview,omitempty"`
-	Path        string `json:"-"`           // filesystem path, not returned to client
 }
 
 // directory layout:
-//   ./themes/<id>/manifest.json       — user-installed
-//   ./themes-builtin/<id>/...         — shipped with binary (reserved for future)
-//   ./plugins/<id>/manifest.json
+//
+//	./themes/<id>/manifest.json       — user-installed
+//	./themes-builtin/<id>/...         — shipped with binary (reserved for future)
+//	./plugins/<id>/manifest.json
 func extensionsDir(kind ExtensionKind) string {
 	switch kind {
 	case KindTheme:
@@ -82,6 +90,9 @@ var builtInThemes = []Extension{
 		Kind:        "theme",
 		Builtin:     true,
 		Preview:     "/themes/Utterlog/screenshot.svg",
+		MenuPositions: []MenuPosition{
+			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
+		},
 	},
 	{
 		ID: "Azure", Name: "Azure", Version: "1.0.0",
@@ -90,6 +101,10 @@ var builtInThemes = []Extension{
 		Kind:        "theme",
 		Builtin:     true,
 		Preview:     "/themes/Azure/screenshot.svg",
+		MenuPositions: []MenuPosition{
+			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
+			{Key: "sidebar", Label: "侧栏导航", Description: "首页左侧分类标签导航"},
+		},
 	},
 	{
 		ID: "Flux", Name: "Flux", Version: "1.0.0",
@@ -98,6 +113,10 @@ var builtInThemes = []Extension{
 		Kind:        "theme",
 		Builtin:     true,
 		Preview:     "/themes/Flux/screenshot.svg",
+		MenuPositions: []MenuPosition{
+			{Key: "header", Label: "顶部导航", Description: "顶部 Header 的导航链接"},
+			{Key: "footer", Label: "底部导航", Description: "Footer 的辅助链接"},
+		},
 	},
 	{
 		ID: "Chred", Name: "Chred", Version: "1.0.0",
@@ -106,6 +125,10 @@ var builtInThemes = []Extension{
 		Kind:        "theme",
 		Builtin:     true,
 		Preview:     "/themes/Chred/screenshot.svg",
+		MenuPositions: []MenuPosition{
+			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
+			{Key: "sidebar", Label: "侧栏导航", Description: "首页左侧分类标签导航"},
+		},
 	},
 }
 

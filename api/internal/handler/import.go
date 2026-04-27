@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	"utterlog-go/config"
+	"utterlog-go/internal/model"
 	"utterlog-go/internal/util"
 
 	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
@@ -294,16 +295,24 @@ func ImportWordPressHandler(c *gin.Context) {
 		// it NULL produced jarring gaps in the UI for every WP-XML
 		// imported post.
 		publishedAtTS := time.Unix(createdAt, 0).UTC()
-		var newID int
-		err := config.DB.QueryRow(fmt.Sprintf(
-			"INSERT INTO %s (title, slug, content, excerpt, type, status, author_id, allow_comment, pinned, view_count, comment_count, created_at, updated_at, published_at) VALUES ($1,$2,$3,$4,'post',$5,1,$6,false,$7,0,$8,$9,$10) RETURNING id",
-			config.T("posts")),
-			p.Title, slug, nilIfEmpty(contentMD), nilIfEmpty(excerpt),
-			status, allowComment, viewCount, createdAt, updatedAt, publishedAtTS,
-		).Scan(&newID)
+		newID, err := model.CreatePost(&model.Post{
+			Title:        p.Title,
+			Slug:         slug,
+			Content:      nilIfEmpty(contentMD),
+			Excerpt:      nilIfEmpty(excerpt),
+			Type:         "post",
+			Status:       status,
+			AuthorID:     1,
+			AllowComment: &allowComment,
+			Pinned:       boolPtr(false),
+			CreatedAt:    createdAt,
+			UpdatedAt:    updatedAt,
+			PublishedAt:  &publishedAtTS,
+		})
 		if err != nil {
 			continue
 		}
+		config.DB.Exec("UPDATE "+config.T("posts")+" SET view_count = $1 WHERE id = $2", viewCount, newID)
 		wpIDToNewID[p.PostID] = newID
 		postCount++
 
@@ -423,6 +432,10 @@ func nilIfEmpty(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
 
 // Parse PHP serialized _comment_info to extract browser and OS

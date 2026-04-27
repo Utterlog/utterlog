@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"utterlog-go/config"
+	"utterlog-go/internal/model"
 )
 
 // excerptStripRE drops HTML tags, markdown code fences, shortcodes, and
@@ -177,31 +178,42 @@ func importPostsOrPages(jobID, siteUUID, postType string, items []map[string]int
 		publishedAtTS := time.Unix(publishedAtUnix, 0).UTC()
 
 		var id int
-		err := config.DB.QueryRow(fmt.Sprintf(`
-			INSERT INTO %s (title, slug, content, excerpt, author_id, status, password,
-			                type, template, cover_url, allow_comment, pinned, view_count,
-			                published_at, created_at, updated_at,
-			                source_type, source_id, source_site_uuid)
-			VALUES ($1, $2, $3, $4, $5, $6, $7,
-			        $8, $9, $10, $11, $12, $13,
-			        $14, $15, $16,
-			        'wordpress', $17, $18)
-			ON CONFLICT (source_site_uuid, source_type, source_id) WHERE source_site_uuid != ''
-			DO UPDATE SET title = EXCLUDED.title, slug = EXCLUDED.slug, content = EXCLUDED.content,
-			              excerpt = EXCLUDED.excerpt, status = EXCLUDED.status,
-			              cover_url = EXCLUDED.cover_url, template = EXCLUDED.template,
-			              allow_comment = EXCLUDED.allow_comment, pinned = EXCLUDED.pinned,
-			              view_count = EXCLUDED.view_count, updated_at = EXCLUDED.updated_at,
-			              published_at = EXCLUDED.published_at
-			RETURNING id
-		`, t),
-			title, slug, content, excerpt, adminID, status, password,
-			postType, template, coverURL, allowComment, pinned, viewCount,
-			publishedAtTS, publishedAtUnix, updatedAtUnix,
-			srcID, siteUUID).Scan(&id)
+		err := config.DB.Get(&id, fmt.Sprintf(
+			"SELECT id FROM %s WHERE source_site_uuid = $1 AND source_type = 'wordpress' AND source_id = $2",
+			t), siteUUID, srcID)
+		post := &model.Post{
+			Title:        title,
+			Slug:         slug,
+			Content:      nilIfEmpty(content),
+			Excerpt:      nilIfEmpty(excerpt),
+			Type:         postType,
+			Status:       status,
+			AuthorID:     adminID,
+			Password:     nilIfEmpty(password),
+			CoverURL:     nilIfEmpty(coverURL),
+			AllowComment: &allowComment,
+			Pinned:       &pinned,
+			ViewCount:    viewCount,
+			CreatedAt:    publishedAtUnix,
+			UpdatedAt:    updatedAtUnix,
+			PublishedAt:  &publishedAtTS,
+		}
+		if err == nil && id != 0 {
+			if existing, err := model.PostByID(id); err == nil {
+				post.CreatedAt = existing.CreatedAt
+			}
+			id, err = model.UpdatePost(id, post)
+		} else {
+			id, err = model.CreatePost(post)
+		}
 		if err != nil {
 			continue
 		}
+		config.DB.Exec(fmt.Sprintf(`
+				UPDATE %s SET template = $1, view_count = $2,
+				              source_type = 'wordpress', source_id = $3, source_site_uuid = $4
+				WHERE id = $5
+			`, t), template, viewCount, srcID, siteUUID, id)
 		syncMapSet(jobID, "post", srcID, id)
 
 		// Write term relationships from categories + tags slugs.

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getPost, getPostBySlug, getActiveTheme, getOptions } from '@/lib/blog-api';
+import { getPost, getPostBySlug, getPostByDisplayID, getActiveTheme, getOptions } from '@/lib/blog-api';
 import { getThemeComponents } from '@/lib/theme';
 import { parsePermalink, DEFAULT_PERMALINK } from '@/lib/permalink';
 
@@ -31,6 +31,12 @@ async function resolvePost(segments: string[]): Promise<any | null> {
   if (!hit) return null;
 
   try {
+    // display_id 优先 —— /archives/%display_id% 是新推荐的 URL 形态，
+    // 序号严格按发布顺序递增，跟 db 主键 id 解耦。
+    if (hit.display_id != null) {
+      const r: any = await getPostByDisplayID(hit.display_id);
+      return r?.data ?? null;
+    }
     if (hit.id != null) {
       const r: any = await getPost(hit.id);
       return r?.data ?? null;

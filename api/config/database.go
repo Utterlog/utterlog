@@ -61,6 +61,37 @@ func InitDB() error {
 		"UPDATE %s SET word_count = CHAR_LENGTH(content) WHERE word_count = 0 AND content IS NOT NULL AND content != ''",
 		T("posts")))
 
+	// display_id 索引 + 回填 ——「按发布顺序的连续序号」字段。配合
+	// permalink 模板 /archives/%display_id% 给读者看连续递增的 URL，
+	// 跟 db pk id（会因草稿删除/事务回滚跳号）解耦。
+	//
+	// 索引覆盖 (type, display_id) —— 按 type 维度独立分配序号
+	// （post / page / moments 等各自一套），permalink 反向查找时
+	// 按 type='post' 过滤。partial 索引去掉 display_id=0 的记录
+	// 减少索引大小。
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_posts_display_id ON %s (type, display_id) WHERE display_id > 0", T("posts")))
+	DB.Exec(fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_display_id_unique ON %s (type, display_id) WHERE display_id > 0", T("posts")))
+	// 一次性回填 display_id=0 的旧 post，按 created_at ASC 升序分配。
+	// 详见 model/post.go:BackfillDisplayIDs。幂等，每次启动都跑没事，
+	// 但只对 display_id=0 且已发布的行有影响；草稿不占编号。
+	{
+		q := fmt.Sprintf(`
+			WITH ranked AS (
+				SELECT id, type,
+					ROW_NUMBER() OVER (PARTITION BY type ORDER BY created_at ASC, id ASC) AS rn
+				FROM %s
+				WHERE display_id = 0 AND status = 'publish'
+			),
+			base AS (
+				SELECT type, COALESCE(MAX(display_id), 0) AS max_id FROM %s GROUP BY type
+			)
+			UPDATE %s p SET display_id = ranked.rn + COALESCE(base.max_id, 0)
+			FROM ranked LEFT JOIN base ON base.type = ranked.type
+			WHERE p.id = ranked.id
+		`, T("posts"), T("posts"), T("posts"))
+		DB.Exec(q)
+	}
+
 	// Access logs: duration + visitor fingerprint fields
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS duration INTEGER DEFAULT 0", T("access_logs")))
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS visitor_id VARCHAR(64) DEFAULT ''", T("access_logs")))

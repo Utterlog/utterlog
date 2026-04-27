@@ -1,19 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { getCategoryIcon } from './constants';
 import { coverProps, randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';
 import PostLink from '@/components/blog/PostLink';
-
-const ACCENT = '#0052D9';
 
 function formatDate(ts: string | number) {
   const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
   const mon = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'Asia/Shanghai' });
   const day = Number(d.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'Asia/Shanghai' }));
   return { mon, day };
+}
+
+function formatFullDate(ts: string | number) {
+  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
+  return d.toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace('-', '/').replace('-', '/').slice(0, 16);
 }
 
 export default function PostCard({ post, isNewest, priority }: { post: any; isNewest?: boolean; priority?: boolean }) {
@@ -24,84 +26,52 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
   const isNew = isNewest === true;
   const { options } = useThemeContext();
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
-  const [hovered, setHovered] = useState(false);
 
   return (
-    <article
-      style={{ position: 'relative' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <article className="azure-post-card">
       {/* Title row */}
-      <div style={{ display: 'flex', alignItems: 'stretch', gap: '0', height: '50px' }}>
+      <div className="azure-post-card-title-row">
         {/* Date badge — full height, hover shows full date */}
-        <div style={{
-          width: '56px', flexShrink: 0, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', position: 'relative',
-          background: ACCENT, color: '#fff', lineHeight: 1, cursor: 'default',
-        }}>
-          <div style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase' }}>{mon}</div>
-          <div style={{ fontSize: '22px', fontWeight: 400 }}>{day}</div>
-          {hovered && (
-            <div style={{
-              position: 'absolute', bottom: '-24px', left: '0', zIndex: 10,
-              background: ACCENT, color: '#fff', fontSize: '10px', fontWeight: 500,
-              padding: '4px 6px', whiteSpace: 'nowrap',
-            }}>
-              {(() => {
-                const d = typeof post.created_at === 'number' ? new Date(post.created_at * 1000) : new Date(post.created_at);
-                return d.toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace('-', '/').replace('-', '/').slice(0, 16);
-              })()}
-            </div>
-          )}
+        <div className="azure-post-date-badge">
+          <div className="azure-post-date-month">{mon}</div>
+          <div className="azure-post-date-day">{day}</div>
+          <div className="azure-post-date-tooltip">{formatFullDate(post.created_at)}</div>
         </div>
 
         {/* Title + meta */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '0 20px' }}>
-        <PostLink post={post} style={{ textDecoration: 'none', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <h2 style={{
-            fontSize: '28px', fontWeight: 400, color: hovered ? ACCENT : '#1a1a1a', lineHeight: 1.22, letterSpacing: '-0.01em',
-            transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {post.title}
-          </h2>
-          {isNew && <span className="new-badge-pulse" style={{ padding: '1px 6px', fontSize: '10px', fontWeight: 600, background: '#fff3e0', color: '#f57c00', border: '1px solid #ffe0b2', flexShrink: 0 }}>NEW</span>}
-        </PostLink>
+        <div className="azure-post-card-main">
+          <PostLink post={post} className="azure-post-card-link">
+            <h2 className="azure-post-card-title">{post.title}</h2>
+            {isNew && <span className="new-badge-pulse azure-new-badge">NEW</span>}
+          </PostLink>
 
-        {/* Stats — only on hover */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: ACCENT, flexShrink: 0,
-          opacity: hovered ? 1 : 0, transition: 'opacity 0.2s',
-        }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <i className="fa-solid fa-fire" style={{ fontSize: '12px' }} /> {post.view_count || 0}
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <i className="fa-regular fa-comment" style={{ fontSize: '12px' }} /> {post.comment_count || 0}
-          </span>
-        </div>
+          {/* Stats — desktop hover, mobile visible */}
+          <div className="azure-post-card-stats">
+            <span>
+              <i className="fa-solid fa-fire" aria-hidden="true" /> {post.view_count || 0}
+            </span>
+            <span>
+              <i className="fa-regular fa-comment" aria-hidden="true" /> {post.comment_count || 0}
+            </span>
+          </div>
 
-        {/* Category */}
-        {catName && (
-          <Link href={`/categories/${post.categories[0].slug}`} style={{
-            display: 'inline-flex', alignItems: 'center', gap: '5px',
-            fontSize: '13px', color: ACCENT, textDecoration: 'none', flexShrink: 0,
-          }}>
-            <i className={catIcon} /> {catName}
-          </Link>
-        )}
+          {/* Category */}
+          {catName && (
+            <Link href={`/categories/${post.categories[0].slug}`} className="azure-post-card-category">
+              <i className={catIcon} aria-hidden="true" /> {catName}
+            </Link>
+          )}
         </div>
       </div>
 
       {/* Cover image */}
-      <PostLink post={post} className="cover-zoom" style={{ display: 'block', position: 'relative', overflow: 'hidden', height: '320px' }}>
+      <PostLink post={post} className="cover-zoom azure-post-card-cover">
         {coverUrl && (
           <img
             {...coverProps({
               src: coverUrl,
               alt: post.title,
               priority,
-              style: { height: '320px' },
             })}
           />
         )}
@@ -111,11 +81,8 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
           excerpt or a derived slice of content. If the admin clears the
           AI summary the card silently reverts to the excerpt. */}
       {(post.ai_summary || post.excerpt || post.content) && (
-        <div style={{ padding: '12px 20px' }}>
-          <p style={{
-            fontSize: '14px', lineHeight: 1.8, color: '#555', margin: 0,
-            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
-          }}>
+        <div className="azure-post-card-excerpt">
+          <p>
             {post.ai_summary || post.excerpt || post.content?.replace(/[#*`>\-\[\]()!~|]/g, '').replace(/\n+/g, ' ').trim().slice(0, 300)}
           </p>
         </div>

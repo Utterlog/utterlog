@@ -53,7 +53,8 @@ func AccessLogger() gin.HandlerFunc {
 		path := c.Request.URL.Path
 		for _, p := range skipLogPrefix {
 			if strings.HasPrefix(path, p) {
-				c.Next(); return
+				c.Next()
+				return
 			}
 		}
 		// Skip anything with a file extension — all real pages are
@@ -61,11 +62,13 @@ func AccessLogger() gin.HandlerFunc {
 		// like /wp-login.php, /.env.bak, /config.json out.
 		if i := strings.LastIndex(path, "."); i > 0 {
 			if ext := strings.ToLower(path[i:]); assetExt[ext] {
-				c.Next(); return
+				c.Next()
+				return
 			}
 			// Unknown extension (.php, .asp, .env, etc.) — treat as
 			// scanner noise, skip.
-			c.Next(); return
+			c.Next()
+			return
 		}
 
 		c.Next()
@@ -104,7 +107,9 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 	}
 
 	// Priority: CF-Connecting-IP > X-Real-IP > X-Forwarded-For > RemoteAddr
-	if xff != "" { ip = strings.TrimSpace(strings.Split(xff, ",")[0]) }
+	if xff != "" {
+		ip = strings.TrimSpace(strings.Split(xff, ",")[0])
+	}
 
 	// Session dedup: if this visitor_id (or IP when vid is empty) has
 	// already been recorded on this exact path in the last 30 seconds,
@@ -113,7 +118,9 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 	// inflate "最近访客" with identical rows on every F5.
 	now := time.Now().Unix()
 	dedupKey := visitorID
-	if dedupKey == "" { dedupKey = ip }
+	if dedupKey == "" {
+		dedupKey = ip
+	}
 	if dedupKey != "" {
 		var existing int
 		config.DB.Get(&existing, fmt.Sprintf(
@@ -144,13 +151,17 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 	refHost := ""
 	if referer != "" {
 		parts := strings.SplitN(referer, "//", 2)
-		if len(parts) > 1 { refHost = strings.Split(parts[1], "/")[0] }
+		if len(parts) > 1 {
+			refHost = strings.Split(parts[1], "/")[0]
+		}
 	}
 
 	// Mask IP
 	ipParts := strings.Split(ip, ".")
 	ipMasked := ip
-	if len(ipParts) == 4 { ipMasked = ipParts[0] + "." + ipParts[1] + ".*.*" }
+	if len(ipParts) == 4 {
+		ipMasked = ipParts[0] + "." + ipParts[1] + ".*.*"
+	}
 
 	t := config.T("access_logs")
 	var logID int
@@ -167,18 +178,22 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 func enrichAccessGeo(logID int, ip string) {
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get("https://api.ipx.ee/ip/" + ip)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	defer resp.Body.Close()
 
 	var raw struct {
-		CountryCode string `json:"country_code"`
-		Country     string `json:"country"`
-		Province    string `json:"province"`
-		City        string `json:"city"`
+		CountryCode string  `json:"country_code"`
+		Country     string  `json:"country"`
+		Province    string  `json:"province"`
+		City        string  `json:"city"`
 		Latitude    float64 `json:"latitude"`
 		Longitude   float64 `json:"longitude"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil || raw.CountryCode == "" { return }
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil || raw.CountryCode == "" {
+		return
+	}
 
 	config.DB.Exec(fmt.Sprintf(
 		"UPDATE %s SET country=$1, country_name=$2, region=$3, city=$4, latitude=$5, longitude=$6 WHERE id=$7",
@@ -190,28 +205,59 @@ func enrichAccessGeo(logID int, ip string) {
 func parseUserAgent(ua string) (device, browser, browserVer, os, osVer string) {
 	ua = strings.ToLower(ua)
 	// Device
-	if strings.Contains(ua, "mobile") || strings.Contains(ua, "android") { device = "Mobile" } else
-	if strings.Contains(ua, "tablet") || strings.Contains(ua, "ipad") { device = "Tablet" } else { device = "Desktop" }
+	if strings.Contains(ua, "mobile") || strings.Contains(ua, "android") {
+		device = "Mobile"
+	} else if strings.Contains(ua, "tablet") || strings.Contains(ua, "ipad") {
+		device = "Tablet"
+	} else {
+		device = "Desktop"
+	}
 
 	// Browser
-	if m := regexp.MustCompile(`edg[e/](\d+[\.\d]*)`).FindStringSubmatch(ua); len(m) > 1 { browser = "Edge"; browserVer = m[1] } else
-	if m := regexp.MustCompile(`chrome/(\d+[\.\d]*)`).FindStringSubmatch(ua); len(m) > 1 { browser = "Chrome"; browserVer = m[1] } else
-	if m := regexp.MustCompile(`firefox/(\d+[\.\d]*)`).FindStringSubmatch(ua); len(m) > 1 { browser = "Firefox"; browserVer = m[1] } else
-	if m := regexp.MustCompile(`safari/(\d+[\.\d]*)`).FindStringSubmatch(ua); len(m) > 1 && strings.Contains(ua, "version/") {
-		browser = "Safari"; if vm := regexp.MustCompile(`version/(\d+[\.\d]*)`).FindStringSubmatch(ua); len(vm) > 1 { browserVer = vm[1] }
-	} else { browser = "Other" }
+	if m := regexp.MustCompile(`edg[e/](\d+[\.\d]*)`).FindStringSubmatch(ua); len(m) > 1 {
+		browser = "Edge"
+		browserVer = m[1]
+	} else if m := regexp.MustCompile(`chrome/(\d+[\.\d]*)`).FindStringSubmatch(ua); len(m) > 1 {
+		browser = "Chrome"
+		browserVer = m[1]
+	} else if m := regexp.MustCompile(`firefox/(\d+[\.\d]*)`).FindStringSubmatch(ua); len(m) > 1 {
+		browser = "Firefox"
+		browserVer = m[1]
+	} else if m := regexp.MustCompile(`safari/(\d+[\.\d]*)`).FindStringSubmatch(ua); len(m) > 1 && strings.Contains(ua, "version/") {
+		browser = "Safari"
+		if vm := regexp.MustCompile(`version/(\d+[\.\d]*)`).FindStringSubmatch(ua); len(vm) > 1 {
+			browserVer = vm[1]
+		}
+	} else {
+		browser = "Other"
+	}
 
 	// OS
-	if strings.Contains(ua, "windows") { os = "Windows"
-		if m := regexp.MustCompile(`windows nt (\d+\.\d+)`).FindStringSubmatch(ua); len(m) > 1 { osVer = m[1] }
-	} else if strings.Contains(ua, "mac os") { os = "macOS"
-		if m := regexp.MustCompile(`mac os x (\d+[_.\d]*)`).FindStringSubmatch(ua); len(m) > 1 { osVer = strings.ReplaceAll(m[1], "_", ".") }
-	} else if strings.Contains(ua, "linux") { os = "Linux"
-	} else if strings.Contains(ua, "iphone") || strings.Contains(ua, "ipad") { os = "iOS"
-		if m := regexp.MustCompile(`os (\d+[_.\d]*)`).FindStringSubmatch(ua); len(m) > 1 { osVer = strings.ReplaceAll(m[1], "_", ".") }
-	} else if strings.Contains(ua, "android") { os = "Android"
-		if m := regexp.MustCompile(`android (\d+[\.\d]*)`).FindStringSubmatch(ua); len(m) > 1 { osVer = m[1] }
-	} else { os = "Other" }
+	if strings.Contains(ua, "windows") {
+		os = "Windows"
+		if m := regexp.MustCompile(`windows nt (\d+\.\d+)`).FindStringSubmatch(ua); len(m) > 1 {
+			osVer = m[1]
+		}
+	} else if strings.Contains(ua, "mac os") {
+		os = "macOS"
+		if m := regexp.MustCompile(`mac os x (\d+[_.\d]*)`).FindStringSubmatch(ua); len(m) > 1 {
+			osVer = strings.ReplaceAll(m[1], "_", ".")
+		}
+	} else if strings.Contains(ua, "linux") {
+		os = "Linux"
+	} else if strings.Contains(ua, "iphone") || strings.Contains(ua, "ipad") {
+		os = "iOS"
+		if m := regexp.MustCompile(`os (\d+[_.\d]*)`).FindStringSubmatch(ua); len(m) > 1 {
+			osVer = strings.ReplaceAll(m[1], "_", ".")
+		}
+	} else if strings.Contains(ua, "android") {
+		os = "Android"
+		if m := regexp.MustCompile(`android (\d+[\.\d]*)`).FindStringSubmatch(ua); len(m) > 1 {
+			osVer = m[1]
+		}
+	} else {
+		os = "Other"
+	}
 
 	return
 }
@@ -223,14 +269,20 @@ func AnalyticsOverview(c *gin.Context) {
 
 	var since int64
 	switch period {
-	case "24h": since = time.Now().Add(-24 * time.Hour).Unix()
-	case "7d": since = time.Now().Add(-7 * 24 * time.Hour).Unix()
-	case "30d": since = time.Now().Add(-30 * 24 * time.Hour).Unix()
-	default: since = 0
+	case "24h":
+		since = time.Now().Add(-24 * time.Hour).Unix()
+	case "7d":
+		since = time.Now().Add(-7 * 24 * time.Hour).Unix()
+	case "30d":
+		since = time.Now().Add(-30 * 24 * time.Hour).Unix()
+	default:
+		since = 0
 	}
 
 	where := ""
-	if since > 0 { where = fmt.Sprintf("WHERE created_at >= %d", since) }
+	if since > 0 {
+		where = fmt.Sprintf("WHERE created_at >= %d", since)
+	}
 
 	// Summary stats — "unique visitors" prefers the browser-issued
 	// visitor_id over IP so multiple users behind the same NAT don't
@@ -337,10 +389,15 @@ func AnalyticsOverview(c *gin.Context) {
 // GeoIP lookup for a single IP
 func GeoIPLookup(c *gin.Context) {
 	ip := c.Query("ip")
-	if ip == "" { ip = c.ClientIP() }
+	if ip == "" {
+		ip = c.ClientIP()
+	}
 
 	resp, err := http.Get("https://api.ipx.ee/ip/" + ip)
-	if err != nil { util.Error(c, 502, "GEOIP_ERROR", err.Error()); return }
+	if err != nil {
+		util.Error(c, 502, "GEOIP_ERROR", err.Error())
+		return
+	}
 	defer resp.Body.Close()
 
 	var result map[string]interface{}
@@ -359,7 +416,9 @@ func EnrichGeoIP(c *gin.Context) {
 	enriched := 0
 	for _, item := range ips {
 		resp, err := http.Get("https://api.ipx.ee/ip/" + item.IP)
-		if err != nil { continue }
+		if err != nil {
+			continue
+		}
 		var geo struct {
 			CountryCode string  `json:"country_code"`
 			Country     string  `json:"country"`
@@ -392,7 +451,8 @@ func TrackPageView(c *gin.Context) {
 		Fingerprint string `json:"fingerprint"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "path is required"); return
+		util.BadRequest(c, "path is required")
+		return
 	}
 
 	ua := c.Request.UserAgent()
@@ -406,8 +466,12 @@ func TrackPageView(c *gin.Context) {
 
 	// Get real IP
 	realIP := c.Request.Header.Get("CF-Connecting-IP")
-	if realIP == "" { realIP = c.Request.Header.Get("X-Real-IP") }
-	if realIP == "" { realIP = c.ClientIP() }
+	if realIP == "" {
+		realIP = c.Request.Header.Get("X-Real-IP")
+	}
+	if realIP == "" {
+		realIP = c.ClientIP()
+	}
 
 	// Async: log access + increment counters via Redis
 	go func() {
@@ -431,7 +495,7 @@ func TrackPageView(c *gin.Context) {
 		// cosmetic，因为 /track 必然增量，cosmetic 永远跟 DB 对齐。
 		//
 		// Path 反向解析按 admin 配的 permalink_structure 模板走，而不是
-		// 硬编码 /posts/<slug>。否则 admin 用 /archives/%post_id% 等
+		// 硬编码 /posts/<slug>。否则 admin 用 /archives/%display_id% 等
 		// 模板后 view_count 一直 +0。
 		if id, slug := parsePostFromPath(req.Path); id > 0 || slug != "" {
 			var postID int
@@ -459,20 +523,22 @@ var permalinkRegexCache sync.Map // template (string) → *permalinkMatcher
 
 type permalinkMatcher struct {
 	re     *regexp.Regexp
-	tokens []string // token names in capture-group order: postname / post_id / year / month / day / category
+	tokens []string // token names in capture-group order: postname / post_id / display_id / year / month / day / category
 }
 
 // parsePostFromPath: 把请求 URL path 按 admin 配置的 permalink_structure
 // 模板反向解析出 (post_id, slug)，两者只有一个非零（id 优先）。
-// 镜像 web/lib/permalink.ts 的 parsePermalink 实现，但只关心 id/slug。
+// 镜像 web/lib/permalink.ts 的 parsePermalink 实现，但只关心真实 db id/slug。
 //
 // 模板支持的占位符（来自 frontend lib）:
-//   %postname%   — post slug
-//   %post_id%    — post numeric id
-//   %year%       — 4-digit year
-//   %month%      — 2-digit month
-//   %day%        — 2-digit day
-//   %category%   — first-category slug
+//
+//	%postname%   — post slug
+//	%post_id%    — db primary key
+//	%display_id% — public sequential article id
+//	%year%       — 4-digit year
+//	%month%      — 2-digit month
+//	%day%        — 2-digit day
+//	%category%   — first-category slug
 //
 // 默认模板 /posts/%postname%（向后兼容，admin 没设过 option 时也能 work）。
 func parsePostFromPath(path string) (postID int, slug string) {
@@ -506,6 +572,19 @@ func parsePostFromPath(path string) (postID int, slug string) {
 			if id, err := strconv.Atoi(val); err == nil && id > 0 {
 				return id, ""
 			}
+		case "display_id":
+			// display_id 是「按发布顺序连续递增」的对外编号，跟 db 主键
+			// 解耦。/track 拿到 path 上的 display_id 后回查 posts 表
+			// 拿真实 db id 用于 IncrPostViews。
+			if d, err := strconv.Atoi(val); err == nil && d > 0 {
+				var realID int
+				config.DB.Get(&realID, fmt.Sprintf(
+					"SELECT id FROM %s WHERE display_id = $1 AND type = 'post' AND status = 'publish'",
+					config.T("posts")), d)
+				if realID > 0 {
+					return realID, ""
+				}
+			}
 		case "postname":
 			if val != "" {
 				slug = val
@@ -523,7 +602,7 @@ func getOrCompilePermalinkMatcher(template string) *permalinkMatcher {
 	}
 
 	tpl := strings.TrimRight(template, "/")
-	tokenRe := regexp.MustCompile(`%(postname|post_id|year|month|day|category)%`)
+	tokenRe := regexp.MustCompile(`%(postname|post_id|display_id|year|month|day|category)%`)
 
 	var tokens []string
 	var sb strings.Builder
@@ -537,7 +616,7 @@ func getOrCompilePermalinkMatcher(template string) *permalinkMatcher {
 		switch tok {
 		case "postname":
 			sb.WriteString(`([^/]+)`)
-		case "post_id":
+		case "post_id", "display_id":
 			sb.WriteString(`(\d+)`)
 		case "year":
 			sb.WriteString(`(\d{4})`)
@@ -571,20 +650,22 @@ func getOrCompilePermalinkMatcher(template string) *permalinkMatcher {
 // OnlineUsers returns currently active visitors with comment author matching
 func OnlineUsers(c *gin.Context) {
 	online := GetOnlineUsers()
-	if online == nil { online = []map[string]string{} }
+	if online == nil {
+		online = []map[string]string{}
+	}
 
 	t := config.T
 
 	type OnlineUser struct {
-		VisitorID string `json:"visitor_id"`
-		IP        string `json:"ip"`
-		Path      string `json:"path"`
-		Ts        string `json:"ts"`
-		Name      string `json:"name,omitempty"`
-		Avatar    string `json:"avatar,omitempty"`
-		Country   string `json:"country,omitempty"`
+		VisitorID   string `json:"visitor_id"`
+		IP          string `json:"ip"`
+		Path        string `json:"path"`
+		Ts          string `json:"ts"`
+		Name        string `json:"name,omitempty"`
+		Avatar      string `json:"avatar,omitempty"`
+		Country     string `json:"country,omitempty"`
 		CountryCode string `json:"country_code,omitempty"`
-		City      string `json:"city,omitempty"`
+		City        string `json:"city,omitempty"`
 	}
 
 	result := make([]OnlineUser, 0, len(online))
@@ -605,7 +686,9 @@ func OnlineUsers(c *gin.Context) {
 			err := config.DB.QueryRow(fmt.Sprintf(
 				"SELECT author_name, COALESCE(author_email,'') FROM %s WHERE visitor_id = $1 AND visitor_id != '' ORDER BY created_at DESC LIMIT 1",
 				t("comments")), vid).Scan(&name, &email)
-			if err == nil && name != "" { matched = true }
+			if err == nil && name != "" {
+				matched = true
+			}
 		}
 		if !matched && ip != "" {
 			config.DB.QueryRow(fmt.Sprintf(
@@ -638,7 +721,9 @@ func OnlineUsers(c *gin.Context) {
 // OnlineCount returns public online visitor count + basic info (no sensitive data)
 func OnlineCount(c *gin.Context) {
 	online := GetOnlineUsers()
-	if online == nil { online = []map[string]string{} }
+	if online == nil {
+		online = []map[string]string{}
+	}
 
 	// Check if frontend display is enabled
 	var showOnline string
@@ -671,7 +756,11 @@ func OnlineCount(c *gin.Context) {
 			u.IPMasked = parts[0] + "." + parts[1] + ".*.*"
 		} else if strings.Contains(ip, ":") {
 			segs := strings.Split(ip, ":")
-			if len(segs) > 2 { u.IPMasked = segs[0] + ":" + segs[1] + "::*" } else { u.IPMasked = ip }
+			if len(segs) > 2 {
+				u.IPMasked = segs[0] + ":" + segs[1] + "::*"
+			} else {
+				u.IPMasked = ip
+			}
 		}
 
 		// Match name + email for avatar
@@ -720,7 +809,9 @@ func AccessLogs(c *gin.Context) {
 			logs = append(logs, row)
 		}
 	}
-	if logs == nil { logs = []map[string]interface{}{} }
+	if logs == nil {
+		logs = []map[string]interface{}{}
+	}
 	util.Paginate(c, logs, total, page, perPage)
 }
 
@@ -728,25 +819,27 @@ func AccessLogs(c *gin.Context) {
 func RecentVisitors(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10"))
-	if perPage <= 0 || perPage > 100 { perPage = 10 }
+	if perPage <= 0 || perPage > 100 {
+		perPage = 10
+	}
 	offset := (page - 1) * perPage
 	t := config.T
 
 	type Visitor struct {
-		ID         int    `db:"id" json:"id"`
-		IP         string `db:"ip" json:"ip"`
-		IPMasked   string `db:"ip_masked" json:"ip_masked"`
-		Path       string `db:"path" json:"path"`
-		Referer    string `db:"referer_host" json:"referer"`
-		Browser    string `db:"browser" json:"browser"`
-		BrowserVer string `db:"browser_version" json:"browser_version"`
-		OS         string `db:"os" json:"os"`
-		OSVer      string `db:"os_version" json:"os_version"`
-		Device     string `db:"device_type" json:"device"`
-		Country    string `db:"country_name" json:"country"`
+		ID          int    `db:"id" json:"id"`
+		IP          string `db:"ip" json:"ip"`
+		IPMasked    string `db:"ip_masked" json:"ip_masked"`
+		Path        string `db:"path" json:"path"`
+		Referer     string `db:"referer_host" json:"referer"`
+		Browser     string `db:"browser" json:"browser"`
+		BrowserVer  string `db:"browser_version" json:"browser_version"`
+		OS          string `db:"os" json:"os"`
+		OSVer       string `db:"os_version" json:"os_version"`
+		Device      string `db:"device_type" json:"device"`
+		Country     string `db:"country_name" json:"country"`
 		CountryCode string `db:"country" json:"country_code"`
-		Region     string `db:"region" json:"region"`
-		City       string `db:"city" json:"city"`
+		Region      string `db:"region" json:"region"`
+		City        string `db:"city" json:"city"`
 		Duration    int    `db:"duration" json:"duration"`
 		VisitorID   string `db:"visitor_id" json:"visitor_id"`
 		Fingerprint string `db:"fingerprint" json:"fingerprint"`
@@ -784,7 +877,9 @@ func RecentVisitors(c *gin.Context) {
 	findAuthor := func(vid, ip string) *authorInfo {
 		// Priority 1: visitor_id match
 		if vid != "" {
-			if a, ok := cache["vid:"+vid]; ok { return a }
+			if a, ok := cache["vid:"+vid]; ok {
+				return a
+			}
 			var name, email string
 			err := config.DB.QueryRow(fmt.Sprintf(
 				"SELECT author_name, COALESCE(author_email,'') FROM %s WHERE visitor_id = $1 AND visitor_id != '' ORDER BY created_at DESC LIMIT 1",
@@ -797,7 +892,9 @@ func RecentVisitors(c *gin.Context) {
 			cache["vid:"+vid] = nil
 		}
 		// Priority 2: IP match
-		if a, ok := cache["ip:"+ip]; ok { return a }
+		if a, ok := cache["ip:"+ip]; ok {
+			return a
+		}
 		var name, email string
 		err := config.DB.QueryRow(fmt.Sprintf(
 			"SELECT author_name, COALESCE(author_email,'') FROM %s WHERE author_ip = $1 ORDER BY created_at DESC LIMIT 1",
@@ -831,12 +928,17 @@ func TrackDuration(c *gin.Context) {
 		Duration int    `json:"duration" binding:"required"` // seconds
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "path and duration required"); return
+		util.BadRequest(c, "path and duration required")
+		return
 	}
 
 	ip := c.Request.Header.Get("CF-Connecting-IP")
-	if ip == "" { ip = c.Request.Header.Get("X-Real-IP") }
-	if ip == "" { ip = c.ClientIP() }
+	if ip == "" {
+		ip = c.Request.Header.Get("X-Real-IP")
+	}
+	if ip == "" {
+		ip = c.ClientIP()
+	}
 
 	// Update the most recent access log for this IP + path
 	config.DB.Exec(fmt.Sprintf(
@@ -877,7 +979,9 @@ func DashboardStats(c *gin.Context) {
 		config.DB.Get(&sinceTime, "SELECT COALESCE(MIN(created_at),0) FROM "+t("posts")+" WHERE status='publish'")
 	}
 	days := 0
-	if sinceTime > 0 { days = int((time.Now().Unix()-sinceTime)/86400) + 1 }
+	if sinceTime > 0 {
+		days = int((time.Now().Unix()-sinceTime)/86400) + 1
+	}
 
 	// 30-day trend — visits (PV, total requests) and visitors (UV, distinct IPs)
 	type dayCount struct {
@@ -1015,7 +1119,7 @@ func CleanupBotLogsPreview(c *gin.Context) {
 //
 //  1. Bot-UA hits (BotSQLPattern — Mozilla/5.0 too short, "bot/crawler/spider"
 //     anywhere in UA, social fetcher, AI scraper, headless framework, etc.)
-//  2. SSR double-count (visitor_id='' AND fingerprint='' on real-browser UA —
+//  2. SSR double-count (visitor_id=” AND fingerprint=” on real-browser UA —
 //     the old middleware writes pre-fix where the same visit was counted twice
 //     because the /track POST also wrote a row with the real visitor_id).
 //

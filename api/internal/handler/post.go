@@ -55,9 +55,13 @@ func ListPosts(c *gin.Context) {
 func GetPost(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	p, err := model.PostByID(id)
-	if err != nil { util.NotFound(c, "文章"); return }
+	if err != nil {
+		util.NotFound(c, "文章")
+		return
+	}
 	if p.Status != "publish" && middleware.GetUserID(c) == 0 {
-		util.NotFound(c, "文章"); return
+		util.NotFound(c, "文章")
+		return
 	}
 	util.Success(c, model.FormatPost(p, true))
 }
@@ -65,9 +69,31 @@ func GetPost(c *gin.Context) {
 func GetPostBySlug(c *gin.Context) {
 	slug := c.Param("slug")
 	p, err := model.PostBySlug(slug)
-	if err != nil { util.NotFound(c, "文章"); return }
+	if err != nil {
+		util.NotFound(c, "文章")
+		return
+	}
 	if p.Status != "publish" && middleware.GetUserID(c) == 0 {
-		util.NotFound(c, "文章"); return
+		util.NotFound(c, "文章")
+		return
+	}
+	util.Success(c, model.FormatPost(p, true))
+}
+
+// GetPostByDisplayID —— 配合 permalink 模板里的 %display_id% token。
+// 前端 SSR 在 /[...permalink]/page.tsx 里 parsePermalink 拿到 display_id
+// 后调用本接口拿真实 post。display_id 跟 db 主键 id 解耦，作者删过
+// 草稿 / 失败插入造成 id 跳号时 display_id 仍然连续。
+func GetPostByDisplayID(c *gin.Context) {
+	d, _ := strconv.Atoi(c.Param("display_id"))
+	p, err := model.PostByDisplayID(d)
+	if err != nil {
+		util.NotFound(c, "文章")
+		return
+	}
+	if p.Status != "publish" && middleware.GetUserID(c) == 0 {
+		util.NotFound(c, "文章")
+		return
 	}
 	util.Success(c, model.FormatPost(p, true))
 }
@@ -88,13 +114,28 @@ func CreatePost(c *gin.Context) {
 		TagNames     []string `json:"tag_names"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "标题不能为空"); return
+		util.BadRequest(c, "标题不能为空")
+		return
 	}
 
 	now := time.Now().Unix()
-	typ := req.Type; if typ == "" { typ = "post" }
-	status := req.Status; if status == "" { status = "draft" }
-	slug := req.Slug; if slug == "" { slug = strconv.FormatInt(now, 36) }
+	typ := req.Type
+	if typ == "" {
+		typ = "post"
+	}
+	status := req.Status
+	if status == "" {
+		status = "draft"
+	}
+	slug := req.Slug
+	if slug == "" {
+		slug = strconv.FormatInt(now, 36)
+	}
+	var publishedAt *time.Time
+	if status == "publish" {
+		t := time.Now()
+		publishedAt = &t
+	}
 
 	// Auto-extract excerpt from content if not provided
 	excerpt := req.Excerpt
@@ -104,30 +145,44 @@ func CreatePost(c *gin.Context) {
 
 	p := &model.Post{
 		Title: req.Title, Slug: slug, Type: typ, Status: status,
-		AuthorID: middleware.GetUserID(c), CreatedAt: now, UpdatedAt: now,
+		AuthorID: middleware.GetUserID(c), CreatedAt: now, UpdatedAt: now, PublishedAt: publishedAt,
 	}
 	if req.Content != "" {
 		p.Content = &req.Content
 		p.WordCount = countWords(req.Content)
 	}
-	if excerpt != "" { p.Excerpt = &excerpt }
+	if excerpt != "" {
+		p.Excerpt = &excerpt
+	}
 	// Admin-provided summary is authoritative — mirror it into
 	// ai_summary so the post page renders it instead of waiting for
 	// the BG auto-generator (which only fills ai_summary when empty).
-	if req.Excerpt != "" { p.AISummary = &req.Excerpt }
-	if req.CoverURL != "" { p.CoverURL = &req.CoverURL }
-	if req.Password != "" { p.Password = &req.Password }
+	if req.Excerpt != "" {
+		p.AISummary = &req.Excerpt
+	}
+	if req.CoverURL != "" {
+		p.CoverURL = &req.CoverURL
+	}
+	if req.Password != "" {
+		p.Password = &req.Password
+	}
 	p.AllowComment = req.AllowComment
 	p.Pinned = req.Pinned
 
 	id, err := model.CreatePost(p)
-	if err != nil { util.Error(c, 500, "CREATE_ERROR", err.Error()); return }
+	if err != nil {
+		util.Error(c, 500, "CREATE_ERROR", err.Error())
+		return
+	}
 
 	// Save category and tag relationships
 	syncRelationships(id, req.CategoryIDs, req.TagNames, now)
 
 	// Notify followers if published
 	if status == "publish" {
+		// CreatePost gives published posts their official public ID directly:
+		// ul_posts.id == display_id == /archives/<id>. Drafts use a separate
+		// temporary ID and never consume this public series.
 		go notifyFollowersNewContent(req.Title, typ, id)
 		go embedPost(id)
 		go generateAIQuestions(id)
@@ -140,7 +195,10 @@ func CreatePost(c *gin.Context) {
 func UpdatePost(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	existing, err := model.PostByID(id)
-	if err != nil { util.NotFound(c, "文章"); return }
+	if err != nil {
+		util.NotFound(c, "文章")
+		return
+	}
 
 	var req struct {
 		Title        string   `json:"title"`
@@ -157,23 +215,37 @@ func UpdatePost(c *gin.Context) {
 		// RFC3339 / ISO8601 string or empty. Admin edit page sends the
 		// datetime-local value here so authors can backdate or reschedule.
 		// Empty string clears it back to NULL.
-		PublishedAt  *string  `json:"published_at"`
+		PublishedAt *string `json:"published_at"`
 	}
 	c.ShouldBindJSON(&req)
 
 	wasDraft := existing.Status == "draft"
 
-	if req.Title != "" { existing.Title = req.Title }
-	if req.Slug != "" { existing.Slug = req.Slug }
+	if req.Title != "" {
+		existing.Title = req.Title
+	}
+	if req.Slug != "" {
+		existing.Slug = req.Slug
+	}
 	if req.Content != "" {
 		existing.Content = &req.Content
 		existing.WordCount = countWords(req.Content)
 	}
-	if req.Status != "" { existing.Status = req.Status }
-	if req.CoverURL != "" { existing.CoverURL = &req.CoverURL }
-	if req.Password != "" { existing.Password = &req.Password }
-	if req.AllowComment != nil { existing.AllowComment = req.AllowComment }
-	if req.Pinned != nil { existing.Pinned = req.Pinned }
+	if req.Status != "" {
+		existing.Status = req.Status
+	}
+	if req.CoverURL != "" {
+		existing.CoverURL = &req.CoverURL
+	}
+	if req.Password != "" {
+		existing.Password = &req.Password
+	}
+	if req.AllowComment != nil {
+		existing.AllowComment = req.AllowComment
+	}
+	if req.Pinned != nil {
+		existing.Pinned = req.Pinned
+	}
 
 	// Explicit published_at from the client wins. Empty string clears.
 	if req.PublishedAt != nil {
@@ -212,12 +284,19 @@ func UpdatePost(c *gin.Context) {
 		existing.AISummary = &req.Excerpt
 	} else if req.Content != "" && (existing.Excerpt == nil || *existing.Excerpt == "") {
 		exc := extractExcerpt(req.Content, 200)
-		if exc != "" { existing.Excerpt = &exc }
+		if exc != "" {
+			existing.Excerpt = &exc
+		}
 	}
 
 	existing.UpdatedAt = time.Now().Unix()
 
-	model.UpdatePost(id, existing)
+	finalID, err := model.UpdatePost(id, existing)
+	if err != nil {
+		util.Error(c, 500, "UPDATE_ERROR", err.Error())
+		return
+	}
+	id = finalID
 
 	// Sync category and tag relationships
 	now := time.Now().Unix()
@@ -225,6 +304,7 @@ func UpdatePost(c *gin.Context) {
 
 	// Update embedding and AI questions if published
 	if existing.Status == "publish" {
+		// 草稿 → 发布时 UpdatePost 会创建正式文章 ID，并删除原草稿 ID。
 		go embedPost(id)
 		go generateAIQuestions(id)
 		go generateAISummary(id)
@@ -249,7 +329,8 @@ func DeletePostHandler(c *gin.Context) {
 
 	// Delete the post
 	if err := model.DeletePost(id); err != nil {
-		util.Error(c, 500, "DELETE_ERROR", err.Error()); return
+		util.Error(c, 500, "DELETE_ERROR", err.Error())
+		return
 	}
 
 	// Recalculate category/tag counts
@@ -269,11 +350,15 @@ func getDefaultCategoryID() int {
 	config.DB.Get(&slug, "SELECT COALESCE(value,'') FROM "+t("options")+" WHERE name = 'default_category'")
 	if slug != "" {
 		config.DB.Get(&catID, "SELECT id FROM "+t("metas")+" WHERE slug = $1 AND type = 'category'", slug)
-		if catID > 0 { return catID }
+		if catID > 0 {
+			return catID
+		}
 	}
 	// Fallback: first category by ID
 	config.DB.Get(&catID, "SELECT id FROM "+t("metas")+" WHERE type = 'category' ORDER BY id LIMIT 1")
-	if catID > 0 { return catID }
+	if catID > 0 {
+		return catID
+	}
 	// No categories exist: create "日常"
 	config.DB.QueryRow(fmt.Sprintf(
 		"INSERT INTO %s (name, slug, type, count, created_at, updated_at) VALUES ('日常','life','category',0,$1,$2) RETURNING id",
@@ -305,7 +390,9 @@ func syncRelationships(postID int, categoryIDs []int, tagNames []string, now int
 	// Insert tag relationships (create tags if they don't exist)
 	for _, name := range tagNames {
 		name = strings.TrimSpace(name)
-		if name == "" { continue }
+		if name == "" {
+			continue
+		}
 		slug := name
 		var tagID int
 		err := config.DB.Get(&tagID, "SELECT id FROM "+t("metas")+" WHERE slug = $1 AND type = 'tag'", slug)
@@ -333,9 +420,14 @@ func extractExcerpt(content string, maxLen int) string {
 	// Remove fenced code blocks
 	for {
 		start := strings.Index(text, "```")
-		if start == -1 { break }
+		if start == -1 {
+			break
+		}
 		end := strings.Index(text[start+3:], "```")
-		if end == -1 { text = text[:start]; break }
+		if end == -1 {
+			text = text[:start]
+			break
+		}
 		text = text[:start] + text[start+3+end+3:]
 	}
 	text = strings.NewReplacer("**", "", "*", "", "~~", "", "`", "").Replace(text)
@@ -343,7 +435,9 @@ func extractExcerpt(content string, maxLen int) string {
 	for strings.Contains(text, "![") {
 		s := strings.Index(text, "![")
 		e := strings.Index(text[s:], ")")
-		if e == -1 { break }
+		if e == -1 {
+			break
+		}
 		text = text[:s] + text[s+e+1:]
 	}
 	// Remove headers, blockquotes, horizontal rules
@@ -351,7 +445,9 @@ func extractExcerpt(content string, maxLen int) string {
 	var clean []string
 	for _, l := range lines {
 		l = strings.TrimSpace(l)
-		if l == "" || strings.HasPrefix(l, "#") || strings.HasPrefix(l, "---") || strings.HasPrefix(l, ">") { continue }
+		if l == "" || strings.HasPrefix(l, "#") || strings.HasPrefix(l, "---") || strings.HasPrefix(l, ">") {
+			continue
+		}
 		clean = append(clean, l)
 	}
 	text = strings.Join(clean, " ")
@@ -369,9 +465,14 @@ func countWords(content string) int {
 	// Remove fenced code blocks
 	for {
 		start := strings.Index(text, "```")
-		if start == -1 { break }
+		if start == -1 {
+			break
+		}
 		end := strings.Index(text[start+3:], "```")
-		if end == -1 { text = text[:start]; break }
+		if end == -1 {
+			text = text[:start]
+			break
+		}
 		text = text[:start] + text[start+3+end+3:]
 	}
 	// Remove markdown formatting
@@ -380,15 +481,21 @@ func countWords(content string) int {
 	for strings.Contains(text, "![") {
 		s := strings.Index(text, "![")
 		e := strings.Index(text[s:], ")")
-		if e == -1 { break }
+		if e == -1 {
+			break
+		}
 		text = text[:s] + text[s+e+1:]
 	}
 	// Remove links: [text](url) → text
 	for strings.Contains(text, "](") {
 		s := strings.LastIndex(text[:strings.Index(text, "](")], "[")
-		if s == -1 { break }
+		if s == -1 {
+			break
+		}
 		e := strings.Index(text[s:], ")")
-		if e == -1 { break }
+		if e == -1 {
+			break
+		}
 		linkText := text[s+1 : strings.Index(text[s:], "](")+s]
 		text = text[:s] + linkText + text[s+e+1:]
 	}
@@ -397,7 +504,9 @@ func countWords(content string) int {
 	var clean []string
 	for _, l := range lines {
 		l = strings.TrimSpace(l)
-		if l == "" || strings.HasPrefix(l, "---") { continue }
+		if l == "" || strings.HasPrefix(l, "---") {
+			continue
+		}
 		l = strings.TrimLeft(l, "#> ")
 		clean = append(clean, l)
 	}
@@ -417,16 +526,20 @@ func notifyFollowersNewContent(title, contentType string, contentID int) {
 		"SELECT source_site FROM %s WHERE following_id = 1 AND source_site != ''", t("followers")))
 
 	siteTitle := model.GetOption("site_title")
-	if siteTitle == "" { siteTitle = "Utterlog!" }
+	if siteTitle == "" {
+		siteTitle = "Utterlog!"
+	}
 
 	for _, f := range followers {
-		if f.SourceSite == "" { continue }
+		if f.SourceSite == "" {
+			continue
+		}
 		// Send webhook to follower's site
 		payload, _ := json.Marshal(map[string]interface{}{
-			"type":    "new_content",
-			"site":    config.C.AppURL,
-			"name":    siteTitle,
-			"title":   title,
+			"type":         "new_content",
+			"site":         config.C.AppURL,
+			"name":         siteTitle,
+			"title":        title,
 			"content_type": contentType,
 		})
 		http.Post(f.SourceSite+"/api/v1/federation/webhook",
@@ -451,7 +564,9 @@ func ReceiveWebhook(c *gin.Context) {
 	switch req.Type {
 	case "new_content":
 		typeName := "文章"
-		if req.ContentType == "moment" { typeName = "说说" }
+		if req.ContentType == "moment" {
+			typeName = "说说"
+		}
 		config.DB.Exec(fmt.Sprintf(
 			"INSERT INTO %s (user_id, type, title, content, created_at) VALUES (1,'feed',$1,$2,$3)",
 			t("notifications")),
@@ -487,7 +602,7 @@ func ArchiveStats(c *gin.Context) {
 	}
 	days := 0
 	if sinceTime > 0 {
-		days = int((time.Now().Unix() - sinceTime) / 86400) + 1
+		days = int((time.Now().Unix()-sinceTime)/86400) + 1
 	}
 
 	// Daily post counts for heatmap (last 365 days)
@@ -545,13 +660,13 @@ func PostNavigation(c *gin.Context) {
 	}
 
 	type navPost struct {
-		ID           int              `db:"id" json:"id"`
-		Title        string           `db:"title" json:"title"`
-		Slug         string           `db:"slug" json:"slug"`
-		CoverURL     *string          `db:"cover_url" json:"cover_url"`
-		CreatedAt    int64            `db:"created_at" json:"created_at"`
-		ViewCount    int              `db:"view_count" json:"view_count"`
-		CommentCount int              `db:"comment_count" json:"comment_count"`
+		ID           int               `db:"id" json:"id"`
+		Title        string            `db:"title" json:"title"`
+		Slug         string            `db:"slug" json:"slug"`
+		CoverURL     *string           `db:"cover_url" json:"cover_url"`
+		CreatedAt    int64             `db:"created_at" json:"created_at"`
+		ViewCount    int               `db:"view_count" json:"view_count"`
+		CommentCount int               `db:"comment_count" json:"comment_count"`
 		Categories   []model.MetaBrief `db:"-" json:"categories"`
 	}
 
@@ -590,7 +705,9 @@ func PostNavigation(c *gin.Context) {
 		// Find posts sharing the most tags with current post
 		tagIDStr := ""
 		for i, tid := range tagIDs {
-			if i > 0 { tagIDStr += "," }
+			if i > 0 {
+				tagIDStr += ","
+			}
 			tagIDStr += strconv.Itoa(tid)
 		}
 		config.DB.Select(&related, fmt.Sprintf(
@@ -606,7 +723,9 @@ func PostNavigation(c *gin.Context) {
 		}
 		catIDStr := ""
 		for i, cid := range categoryIDs {
-			if i > 0 { catIDStr += "," }
+			if i > 0 {
+				catIDStr += ","
+			}
 			catIDStr += strconv.Itoa(cid)
 		}
 		var catRelated []navPost
@@ -617,7 +736,7 @@ func PostNavigation(c *gin.Context) {
 		// swallowed the error and the fallback silently disappeared.
 		config.DB.Select(&catRelated, fmt.Sprintf(
 			"SELECT %s FROM %s p JOIN %s r ON p.id = r.post_id WHERE r.meta_id IN (%s) AND p.id NOT IN (%s) AND p.status = 'publish' AND p.type = 'post' GROUP BY p.id, p.title, p.slug, p.cover_url, p.created_at, p.view_count, p.comment_count ORDER BY p.created_at DESC LIMIT %d",
-			pCols, t("posts"), t("relationships"), catIDStr, excludeIDs, 20-len(related)), )
+			pCols, t("posts"), t("relationships"), catIDStr, excludeIDs, 20-len(related)))
 		related = append(related, catRelated...)
 	}
 
@@ -684,8 +803,12 @@ func PostNavigation(c *gin.Context) {
 	random = enrichNav(random)
 	popular = enrichNav(popular)
 	categoryPosts = enrichNav(categoryPosts)
-	if prev != nil { prev.Categories = model.PostCategories(prev.ID) }
-	if next != nil { next.Categories = model.PostCategories(next.ID) }
+	if prev != nil {
+		prev.Categories = model.PostCategories(prev.ID)
+	}
+	if next != nil {
+		next.Categories = model.PostCategories(next.ID)
+	}
 
 	// 友链最新更新（feed_items from rss_subscriptions）
 	type feedItem struct {
@@ -702,7 +825,9 @@ func PostNavigation(c *gin.Context) {
 	config.DB.Select(&feedItems, fmt.Sprintf(
 		"SELECT fi.title, fi.link, rs.site_name, rs.site_url, fi.pub_date FROM %s fi JOIN %s rs ON fi.subscription_id = rs.id ORDER BY fi.pub_date DESC LIMIT 20",
 		t("feed_items"), t("rss_subscriptions")))
-	if feedItems == nil { feedItems = []feedItem{} }
+	if feedItems == nil {
+		feedItems = []feedItem{}
+	}
 
 	util.Success(c, gin.H{
 		"prev":     prev,
