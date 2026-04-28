@@ -11,6 +11,7 @@ import { getCategoryIcon } from './constants';
 import { useThemeContext } from '@/lib/theme-context';
 import { randomCoverUrl } from '@/lib/blog-image';
 import PostLink from '@/components/blog/PostLink';
+import LoadingSpinner from '@/components/blog/LoadingSpinner';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 const ACCENT = '#0052D9';
@@ -323,13 +324,23 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                 <PostLink post={heroPost} className="azure-hero-link">
                   <FadeCover key={displaySrc} src={displaySrc} alt={heroPost.title} className="azure-hero-cover" />
                   {/* Loading overlay —— 切分类时盖在旧图上，模糊 + 半透黑底
-                      + 中央旋转圆圈。淡出由 transition 0.4s 控制，跟新图
+                      + 中央三点 loading。淡出由 transition 0.4s 控制，跟新图
                       淡入并行，整体过渡总长 ≈ 700ms（最短展示）+ 0.4s（淡出）。 */}
                   <div
                     aria-hidden={!heroLoading}
                     className={`azure-hero-loading${heroLoading ? ' active' : ''}`}
                   >
-                    <i className="fa-solid fa-spinner fa-spin" aria-hidden="true" />
+                    <svg className="azure-hero-loading-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <circle cx="4" cy="12" r="3" opacity="1">
+                        <animate id="spinner_qYjJ" begin="0;spinner_t4KZ.end-0.25s" attributeName="opacity" dur="0.75s" values="1;.2" fill="freeze" />
+                      </circle>
+                      <circle cx="12" cy="12" r="3" opacity=".4">
+                        <animate begin="spinner_qYjJ.begin+0.15s" attributeName="opacity" dur="0.75s" values="1;.2" fill="freeze" />
+                      </circle>
+                      <circle cx="20" cy="12" r="3" opacity=".3">
+                        <animate id="spinner_t4KZ" begin="spinner_qYjJ.begin+0.3s" attributeName="opacity" dur="0.75s" values="1;.2" fill="freeze" />
+                      </circle>
+                    </svg>
                   </div>
                   {/* Title strip: same height as one left-sidebar tab
                       so the baseline lines up with the last tab. No
@@ -412,7 +423,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
         <section className="azure-post-list">
           {pageLoading ? (
             <div className="azure-loading">
-              <i className="fa-solid fa-spinner fa-spin" aria-hidden="true" />加载中...
+              <LoadingSpinner size={18} />加载中...
             </div>
           ) : currentPosts.length > 0 ? (
             currentPosts.map((post, idx) => (

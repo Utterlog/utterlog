@@ -1,11 +1,13 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { getCategoryIcon } from './constants';
 import { coverProps, randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone, formatDateTimeInTimeZone } from '@/lib/timezone';
 import PostLink from '@/components/blog/PostLink';
+import LoadingSpinner from '@/components/blog/LoadingSpinner';
 
 function formatDate(ts: string | number, timeZone: string) {
   const mon = formatDateInTimeZone(ts, 'en-US', { month: 'short' }, timeZone);
@@ -22,12 +24,23 @@ function formatFullDate(ts: string | number, timeZone: string) {
 
 export default function PostCard({ post, isNewest, priority }: { post: any; isNewest?: boolean; priority?: boolean }) {
   const { options, timeZone } = useThemeContext();
+  const coverRef = useRef<HTMLImageElement>(null);
+  const [coverLoaded, setCoverLoaded] = useState(false);
   const { mon, day } = formatDate(post.created_at, timeZone);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
   const isNew = isNewest === true;
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
+
+  useEffect(() => {
+    setCoverLoaded(false);
+    const img = coverRef.current;
+    if (img?.complete && img.naturalWidth > 0) {
+      img.dataset.loaded = '1';
+      setCoverLoaded(true);
+    }
+  }, [coverUrl]);
 
   return (
     <article className="azure-post-card">
@@ -69,13 +82,23 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
       {/* Cover image */}
       <PostLink post={post} className="cover-zoom azure-post-card-cover">
         {coverUrl && (
-          <img
-            {...coverProps({
-              src: coverUrl,
-              alt: post.title,
-              priority,
-            })}
-          />
+          <>
+            <img
+              ref={coverRef}
+              {...coverProps({
+                src: coverUrl,
+                alt: post.title,
+                priority,
+              })}
+              onLoad={(e) => {
+                e.currentTarget.dataset.loaded = '1';
+                setCoverLoaded(true);
+              }}
+            />
+            <span className={`azure-post-card-cover-loader${coverLoaded ? ' loaded' : ''}`} aria-hidden="true">
+              <LoadingSpinner size={28} />
+            </span>
+          </>
         )}
       </PostLink>
 

@@ -68,6 +68,7 @@ const Pages = lazy(() => import('@/pages/Pages'));
 const PageCreate = lazy(() => import('@/pages/PageCreate'));
 const PageEdit = lazy(() => import('@/pages/PageEdit'));
 const Moments = lazy(() => import('@/pages/Moments'));
+const Footprints = lazy(() => import('@/pages/Footprints'));
 const Comments = lazy(() => import('@/pages/Comments'));
 const CommentsByStatus = lazy(() => import('@/pages/CommentsByStatus'));
 const AICommentsQueue = lazy(() => import('@/pages/AICommentsQueue'));
@@ -177,6 +178,7 @@ export default function App() {
         <Route path="/pages/edit/:id" element={<PageEdit />} />
 
         <Route path="/moments" element={<Moments />} />
+        <Route path="/footprints" element={<Footprints />} />
         <Route path="/comments" element={<Comments />} />
         <Route path="/comments/annotations" element={<Annotations />} />
         <Route path="/comments/ai" element={<AICommentsQueue />} />

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useThemeContext } from '@/lib/theme-context';
 import { useReaderChatStore } from '@/lib/store';
+import LoadingSpinner from '@/components/blog/LoadingSpinner';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -304,7 +305,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
           <>
             {loadingQuestions && (
               <p style={{ fontSize: 12, color: '#999', textAlign: 'center', padding: '16px 0' }}>
-                <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 6 }} />正在生成推荐问题...
+                <LoadingSpinner size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />正在生成推荐问题...
               </p>
             )}
             {questions.length > 0 && (

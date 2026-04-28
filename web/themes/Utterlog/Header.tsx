@@ -49,7 +49,7 @@ export default function Header() {
             showLogo 和 showText 均为 false 的极端情况理论不会出现
             （mode 解析层已经保底 'text'），但 fallback 渲染 siteName
             纯文字以防万一。 */}
-        <Link href="/" className="site-title" style={{
+        <Link href="/" className="site-title utterlog-brand" style={{
           textDecoration: 'none', fontSize: '22px', fontWeight: 700,
           color: '#202020', letterSpacing: '-0.02em',
           display: 'flex', alignItems: 'center', gap: '10px',

@@ -380,7 +380,7 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
                 <span style={{ fontWeight: 600, fontSize: '13px' }} className="text-main">{row.author}</span>
               )}
               {row.geo?.country_code && (
-                <img src={`https://flagcdn.io/${row.geo.country_code}.svg`} alt="" title={row.geo ? [row.geo.country, row.geo.province, row.geo.city].filter(Boolean).join(' · ') : ''} style={{ width: '14px', height: '10px', objectFit: 'cover', borderRadius: '1px' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <img src={`https://flagcdn.io/flags/1x1/${row.geo.country_code.toLowerCase()}.svg`} alt="" title={row.geo ? [row.geo.country, row.geo.province, row.geo.city].filter(Boolean).join(' · ') : ''} style={{ width: '14px', height: '14px', objectFit: 'cover', borderRadius: '50%' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               )}
               {row.ip && <span className="text-dim" style={{ fontSize: '11px' }}>{formatIP(row.ip)}</span>}
             </div>

@@ -151,6 +151,10 @@ func ContentUpdate(table string) gin.HandlerFunc {
 }
 
 // Comments full CRUD
+func commentModerationRequired() bool {
+	return model.GetOption("comment_moderation") == "true"
+}
+
 func CreateComment(c *gin.Context) {
 	var req struct {
 		PostID           int    `json:"post_id" binding:"required"`
@@ -179,6 +183,25 @@ func CreateComment(c *gin.Context) {
 	now := time.Now().Unix()
 	ip := c.ClientIP()
 	ua := c.Request.UserAgent()
+
+	if req.ParentID != nil {
+		if *req.ParentID <= 0 {
+			req.ParentID = nil
+		} else {
+			var parentPostID int
+			config.DB.Get(&parentPostID, fmt.Sprintf(
+				"SELECT post_id FROM %s WHERE id = $1 AND status = 'approved'",
+				t), *req.ParentID)
+			if parentPostID == 0 {
+				util.BadRequest(c, "回复的评论不存在或未通过审核")
+				return
+			}
+			if parentPostID != req.PostID {
+				util.BadRequest(c, "回复的评论不属于当前文章")
+				return
+			}
+		}
+	}
 
 	// Determine status: admin auto-approved, passport auto-approved, spam check, otherwise pending
 	status := "pending"
@@ -229,9 +252,10 @@ func CreateComment(c *gin.Context) {
 	// 决定：reject(默认) → spam / pending → 待人工 / ignore → 不变。
 	// 审核结果在异步 reply 阶段写入队列条目，方便管理员复盘。
 	var auditResult *auditCommentResult
-	if status == "pending" && status != "spam" && shouldAuditComments() {
+	auditHeld := false
+	if status == "pending" && shouldAuditComments() {
 		var newStatus string
-		newStatus, auditResult = processCommentAudit(req.Content, status)
+		newStatus, auditResult, auditHeld = processCommentAudit(req.Content, status)
 		status = newStatus
 	}
 
@@ -239,7 +263,7 @@ func CreateComment(c *gin.Context) {
 	// Gated by `comment_trust_returning` option — default ON (option absent means ""),
 	// admins can disable via Settings → 评论设置. Toggle stores "true"/"false" via
 	// UpdateOptions' fmt.Sprintf("%v", bool), so we treat anything except "false" as on.
-	if status == "pending" && model.GetOption("comment_trust_returning") != "false" {
+	if status == "pending" && !auditHeld && model.GetOption("comment_trust_returning") != "false" {
 		var prevApproved int
 		config.DB.Get(&prevApproved, fmt.Sprintf(
 			"SELECT COUNT(*) FROM %s WHERE status = 'approved' AND (author_email = $1 OR (visitor_id = $2 AND visitor_id != '')) LIMIT 1", t),
@@ -247,6 +271,12 @@ func CreateComment(c *gin.Context) {
 		if prevApproved > 0 {
 			status = "approved"
 		}
+	}
+
+	// If normal comment moderation is disabled, publish immediately
+	// unless AI explicitly held/rejected this comment.
+	if status == "pending" && !auditHeld && !commentModerationRequired() {
+		status = "approved"
 	}
 
 	var id int

@@ -4,6 +4,7 @@ import TableOfContents from './TableOfContents';
 import AISummary from './AISummary';
 import PostNavigation from './PostNavigation';
 import FadeCover from '@/components/blog/FadeCover';
+import FootprintFlags from '@/components/blog/FootprintFlags';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 import { getCategoryIcon } from './constants';
@@ -29,6 +30,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
       {/* Featured image */}
       <div className="azure-post-hero">
         <FadeCover src={coverUrl} alt={post.title} className="azure-post-hero-cover" />
+        <FootprintFlags countries={post.footprint_countries} />
         <div className="azure-post-hero-overlay">
           {/* Breadcrumb */}
           <div className="azure-breadcrumb">

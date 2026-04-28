@@ -9,6 +9,7 @@ import { ImportUrlModal } from '@/components/ui/import-url-modal';
 import { useI18n } from '@/lib/i18n';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
+import FootprintEditor, { type FootprintFormValue, normalizeFootprintsForPayload } from '@/components/FootprintEditor';
 
 // Convert a backend date (RFC3339 string, unix int seconds, or ISO-ish)
 // into the "YYYY-MM-DDTHH:mm" shape that <input type="datetime-local">
@@ -23,6 +24,10 @@ function toLocalDatetime(val: string | number | null | undefined): string {
   if (isNaN(d.getTime())) return '';
   const pad = (v: number) => String(v).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function toLocalDate(val: string | number | null | undefined): string {
+  return toLocalDatetime(val).slice(0, 10);
 }
 
 export default function EditPostPage() {
@@ -49,6 +54,8 @@ export default function EditPostPage() {
   const [allowComment, setAllowComment] = useState(true);
   const [allowRss, setAllowRss] = useState(true);
   const [pinned, setPinned] = useState(false);
+  const [footprintsEnabled, setFootprintsEnabled] = useState(false);
+  const [footprints, setFootprints] = useState<FootprintFormValue[]>([]);
   const [coverUploading, setCoverUploading] = useState(false);
   const [slugLoading, setSlugLoading] = useState(false);
   const [excerptLoading, setExcerptLoading] = useState(false);
@@ -93,6 +100,25 @@ export default function EditPostPage() {
       setPublishAt(toLocalDatetime(post.published_at) || toLocalDatetime(post.created_at));
       if (post.categories?.length) setCategoryId(post.categories[0].id);
       if (post.tags?.length) setTagInput(post.tags.map((t: any) => t.name).join(', '));
+      const nextFootprints = Array.isArray(post.footprints)
+        ? post.footprints.map((fp: any) => ({
+            place_id: fp.place_id || fp.place?.id || 0,
+            country_name: fp.place?.country_name || '',
+            country_code: fp.place?.country_code || '',
+            city_name: fp.place?.city_name || '',
+            latitude: fp.place?.latitude ?? '',
+            longitude: fp.place?.longitude ?? '',
+            cover_url: fp.place?.cover_url || '',
+            route_id: fp.route_id || fp.route?.id || 0,
+            route_name: fp.route?.name || '',
+            visited_at: toLocalDate(fp.visited_at),
+            route_order: fp.route_order || '',
+            keywords: fp.keywords || '',
+            note: fp.note || '',
+          }))
+        : [];
+      setFootprints(nextFootprints);
+      setFootprintsEnabled(nextFootprints.length > 0);
     } catch {
       toast.error(t('admin.postEditor.toast.fetchFailed', '获取文章失败'));
     } finally {
@@ -119,6 +145,7 @@ export default function EditPostPage() {
         // Pass empty string to clear, omit to leave untouched — backend
         // only looks at this when the key is present.
         published_at: publishAt,
+        footprints: footprintsEnabled ? normalizeFootprintsForPayload(footprints, coverUrl, publishAt) : [],
       });
       toast.success(t('admin.postEditor.toast.updated', '文章更新成功'));
       const nextId = response?.data?.id || response?.id;
@@ -345,6 +372,15 @@ export default function EditPostPage() {
                 <label style={labelStyle}>{t('admin.postEditor.publishTime', '发布时间')}</label>
                 <input type="datetime-local" value={publishAt} onChange={(e) => setPublishAt(e.target.value)} className="input" style={{ fontSize: '12px', padding: '6px 10px' }} />
               </div>
+
+              <FootprintEditor
+                enabled={footprintsEnabled}
+                onEnabledChange={setFootprintsEnabled}
+                value={footprints}
+                onChange={setFootprints}
+                defaultDate={publishAt}
+                fallbackCoverUrl={coverUrl}
+              />
             </div>
           </div>
 

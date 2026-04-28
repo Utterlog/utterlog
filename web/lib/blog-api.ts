@@ -99,6 +99,16 @@ export async function getOptions() {
   return fetchAPI<any>('/options', { next: { tags: ['options'], revalidate: 600 } });
 }
 
+export async function getFootprints(params?: { city?: string; country?: string; route?: string; keyword?: string }) {
+  const sp = new URLSearchParams();
+  if (params?.city) sp.set('city', params.city);
+  if (params?.country) sp.set('country', params.country);
+  if (params?.route) sp.set('route', params.route);
+  if (params?.keyword) sp.set('keyword', params.keyword);
+  const q = sp.toString();
+  return fetchAPI<any>(`/footprints${q ? `?${q}` : ''}`);
+}
+
 // 说说
 export async function getMoments(params?: { page?: number; per_page?: number }) {
   const sp = new URLSearchParams();

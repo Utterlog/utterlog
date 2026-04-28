@@ -1,7 +1,8 @@
 /**
  * Shared site URL helpers for admin pages.
  *
- * Problem: admin SPA is served at :8080 (Go) but the blog frontend runs at :3000
+ * Problem: admin SPA can be served from a different local port than the
+ * blog frontend, which defaults to :9260 in Utterlog development.
  * (Next.js) in dev, or a different domain in prod. Hard-coding relative paths like
  * `/posts/my-slug` resolves against the admin's own host → wrong port.
  *
@@ -54,7 +55,7 @@ export function getSiteTitle(): string {
  *
  * Priority:
  *   1. If `site_url` is configured → use it (production/prod domain)
- *   2. If running on localhost at :8080 (admin) → default to :3000 (Next.js dev)
+ *   2. If running on localhost from another port → default to :9260
  *   3. Otherwise fall back to same origin
  */
 export function siteUrlOf(path = '/'): string {
@@ -65,9 +66,9 @@ export function siteUrlOf(path = '/'): string {
 
   if (typeof window !== 'undefined') {
     const { protocol, hostname, port } = window.location;
-    // Dev heuristic: admin on :8080 → blog on :3000
-    if (hostname === 'localhost' && port === '8080') {
-      return `${protocol}//${hostname}:3000${clean}`;
+    // Dev heuristic: local admin from another port → default front site :9260
+    if ((hostname === 'localhost' || hostname === '127.0.0.1') && port && port !== '9260') {
+      return `${protocol}//${hostname}:9260${clean}`;
     }
     return window.location.origin + clean;
   }

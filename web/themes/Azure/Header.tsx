@@ -2,15 +2,32 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
+import toast from 'react-hot-toast';
 import { useThemeContext } from '@/lib/theme-context';
+import { buildPermalink } from '@/lib/permalink';
+import LoadingSpinner from '@/components/blog/LoadingSpinner';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+
+interface HeaderButton {
+  icon: string;
+  label: string;
+  href?: string;
+  copy?: string;
+}
 
 export default function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [headerSearchOpen, setHeaderSearchOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
   const [tocAvailable, setTocAvailable] = useState(false);
+  const modalSearchRef = useRef<HTMLInputElement>(null);
+  const headerSearchRef = useRef<HTMLInputElement>(null);
+  const headerActionsRef = useRef<HTMLDivElement>(null);
   const { menus, site, options } = useThemeContext();
 
   useEffect(() => { setNavigating(false); }, [pathname]);
@@ -37,6 +54,41 @@ export default function Header() {
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, [pathname]);
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setMenuOpen(false);
+        setHeaderSearchOpen(false);
+        setSearchOpen(true);
+      } else if (e.key === 'Escape') {
+        setHeaderSearchOpen(false);
+        setSearchOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+  useEffect(() => {
+    if (!searchOpen) return;
+    const id = window.requestAnimationFrame(() => modalSearchRef.current?.focus());
+    return () => window.cancelAnimationFrame(id);
+  }, [searchOpen]);
+  useEffect(() => {
+    if (!headerSearchOpen) return;
+    const id = window.requestAnimationFrame(() => headerSearchRef.current?.focus());
+    return () => window.cancelAnimationFrame(id);
+  }, [headerSearchOpen]);
+  useEffect(() => {
+    if (!headerSearchOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!headerActionsRef.current?.contains(e.target as Node)) {
+        setHeaderSearchOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [headerSearchOpen]);
 
   // Header nav is admin-driven only — no hardcoded fallback. Users
   // who haven't configured 主题 → 菜单 → 顶部导航 see a bare header
@@ -57,20 +109,135 @@ export default function Header() {
   // showMark — 显示 logo 图片，没上传时退回 Azure 默认蓝色 SVG mark
   const showMark = mode === 'logo' || mode === 'text_logo';
   const showText = mode === 'text' || mode === 'text_logo';
+  const headerButtons: HeaderButton[] = (() => {
+    const raw = options?.theme_header_buttons;
+    if (!raw) return [];
+    try {
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map((item: any) => ({
+          icon: String(item?.icon || '').trim(),
+          label: String(item?.label || '').trim(),
+          href: item?.href ? String(item.href).trim() : '',
+          copy: item?.copy ? String(item.copy).trim() : '',
+        }))
+        .filter((item: HeaderButton) => item.icon && item.label);
+    } catch {
+      return [];
+    }
+  })();
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
 
-  const submitSearch = () => {
-    const q = searchQuery.trim();
-    if (q) window.location.href = `/search?q=${encodeURIComponent(q)}`;
+  const submitSearch = (value = searchQuery) => {
+    const q = value.trim();
+    if (q) {
+      setHeaderSearchOpen(false);
+      setSearchOpen(false);
+      setNavigating(true);
+      window.location.href = `/search?q=${encodeURIComponent(q)}`;
+    }
   };
 
   const toggleToc = () => {
     setMenuOpen(false);
     window.dispatchEvent(new Event('azure:toggle-toc'));
+  };
+
+  const visitRandomPost = async () => {
+    setMenuOpen(false);
+    setHeaderSearchOpen(false);
+    setSearchOpen(false);
+    setNavigating(true);
+    try {
+      const resp = await fetch(`${API_BASE}/posts?type=post&status=publish&per_page=1&order_by=random&_t=${Date.now()}`);
+      if (!resp.ok) throw new Error('random post request failed');
+      const json = await resp.json();
+      const posts = Array.isArray(json?.data) ? json.data : [];
+      const post = posts[0];
+      if (!post) {
+        toast.error('暂无可访问文章');
+        setNavigating(false);
+        return;
+      }
+      window.location.href = buildPermalink(post, options?.permalink_structure);
+    } catch {
+      toast.error('随机访问失败');
+      setNavigating(false);
+    }
+  };
+
+  const renderActionIcon = (icon: string) => {
+    if (!icon) return null;
+    if (icon.trim().startsWith('<svg')) {
+      return <span className="azure-header-action-custom-icon" dangerouslySetInnerHTML={{ __html: icon }} />;
+    }
+    if (icon.startsWith('http://') || icon.startsWith('https://') || icon.startsWith('/uploads/')) {
+      return <img src={icon} alt="" className="azure-header-action-img" />;
+    }
+    return <i className={icon} aria-hidden="true" />;
+  };
+
+  const handleActionClick = async (item: HeaderButton, e: ReactMouseEvent<HTMLElement>) => {
+    if (!item.copy) return;
+    e.preventDefault();
+    try {
+      await navigator.clipboard.writeText(item.copy);
+      toast.success(`${item.label} 已复制`);
+    } catch {
+      toast.error('复制失败，请手动复制');
+    }
+  };
+
+  const renderHeaderButton = (item: HeaderButton, index: number) => {
+    const title = item.copy ? `${item.label}（点击复制）` : item.label;
+    const className = "azure-header-button azure-header-custom-button";
+    if (item.copy) {
+      return (
+        <button
+          key={`${item.label}-${index}`}
+          type="button"
+          className={className}
+          title={title}
+          aria-label={item.label}
+          onClick={(e) => handleActionClick(item, e)}
+        >
+          {renderActionIcon(item.icon)}
+        </button>
+      );
+    }
+    const href = item.href || '#';
+    const isExternal = /^(https?:|mailto:|tel:)/.test(href);
+    if (isExternal) {
+      return (
+        <a
+          key={`${item.label}-${index}`}
+          href={href}
+          className={className}
+          title={item.label}
+          aria-label={item.label}
+          target={href.startsWith('http') ? '_blank' : undefined}
+          rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+        >
+          {renderActionIcon(item.icon)}
+        </a>
+      );
+    }
+    return (
+      <Link
+        key={`${item.label}-${index}`}
+        href={href}
+        className={className}
+        title={item.label}
+        aria-label={item.label}
+      >
+        {renderActionIcon(item.icon)}
+      </Link>
+    );
   };
 
   return (
@@ -134,33 +301,57 @@ export default function Header() {
           })}
         </nav>
 
-        {/* Search + Loading */}
-        <div className="azure-search-area">
-          <div className="azure-search">
-            <svg className="azure-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" strokeWidth="2" aria-hidden="true">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') submitSearch(); }}
-              placeholder="搜索文章..."
-              className="azure-search-input"
-            />
-            <kbd className="azure-search-kbd">⌘K</kbd>
-          </div>
-        </div>
+        <div className="azure-desktop-actions" ref={headerActionsRef}>
+          {headerButtons.map(renderHeaderButton)}
 
-        {/* Loading — header 最右侧固定占位 */}
-        <div className="azure-header-loading">
-          {navigating && (
-            <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#0052D9" aria-label="加载中">
-              <path d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z" opacity=".25"/>
-              <path d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z">
-                <animateTransform attributeName="transform" type="rotate" dur="0.75s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
-              </path>
-            </svg>
-          )}
+          <button
+            type="button"
+            className="azure-header-button azure-random-button"
+            title="随机文章"
+            aria-label="随机访问一篇文章"
+            onClick={visitRandomPost}
+            disabled={navigating}
+          >
+            <i className="fa-sharp fa-light fa-shuffle" aria-hidden="true" />
+          </button>
+
+          {/* Search */}
+          <div className={`azure-search${headerSearchOpen ? ' open' : ''}`}>
+            <button
+              type="button"
+              className="azure-header-button azure-search-button"
+              aria-label="搜索"
+              aria-expanded={headerSearchOpen}
+              title="搜索"
+              onClick={() => {
+                setMenuOpen(false);
+                setHeaderSearchOpen(prev => !prev);
+              }}
+            >
+              <i className="fa-sharp fa-light fa-magnifying-glass" aria-hidden="true" />
+            </button>
+            {headerSearchOpen && (
+              <form
+                className="azure-search-popover"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  submitSearch();
+                }}
+              >
+                <svg className="azure-search-popover-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="2" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                  ref={headerSearchRef}
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="搜索文章..."
+                  className="azure-search-input"
+                />
+                <kbd className="azure-search-kbd">Enter</kbd>
+              </form>
+            )}
+          </div>
         </div>
 
         <div className="azure-mobile-actions">
@@ -199,7 +390,52 @@ export default function Header() {
             </svg>
           </button>
         </div>
+
       </div>
+
+      {/* Loading — viewport top-right, outside the header content width. */}
+      {navigating && (
+        <div className="azure-header-loading">
+          <LoadingSpinner size={20} title="加载中" />
+        </div>
+      )}
+
+      {searchOpen && (
+        <div className="azure-search-modal" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            className="azure-search-modal-backdrop"
+            aria-label="关闭搜索"
+            onClick={() => setSearchOpen(false)}
+          />
+          <form
+            className="azure-search-modal-panel"
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitSearch();
+            }}
+          >
+            <svg className="azure-search-modal-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              ref={modalSearchRef}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="搜索文章..."
+              className="azure-search-modal-input"
+            />
+            <button
+              type="button"
+              className="azure-search-modal-close"
+              aria-label="关闭搜索"
+              onClick={() => setSearchOpen(false)}
+            >
+              <i className="fa-regular fa-xmark" aria-hidden="true" />
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Mobile menu */}
       {menuOpen && (

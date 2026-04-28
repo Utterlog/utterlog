@@ -8,6 +8,32 @@
 
 ## [Unreleased]
 
+## [1.5.6] - 2026-04-28
+
+### Added
+
+- 新增「足迹」完整功能：文章可加入足迹页，后台提供足迹管理、地点配置、Mapbox token 设置和地理编码；前台新增 `/footprints` 地图与时间线，支持国家高亮、城市/国家搜索、国旗展示和同地点文章关联悬浮线。
+- 新增系统语言基础设施：后台可选择站点语言，语言包独立到标准翻译文件，内置简体中文、英语、俄语，并允许后续扩展自定义翻译。
+- 新增站点时区设置：系统时间显示按后台时区配置统一处理，未设置时自动使用本地时区。
+
+### Changed
+
+- Azure 主题移动端、Header、搜索、全局 loading、灯箱、hero loading、Logo 悬浮和菜单悬浮状态重构，保持桌面端宽度与内容区域对齐。
+- 后台主题菜单管理重构：主题可声明菜单位置，Azure Hero 固定分类 tab 保持写死样式，支持从内置页面添加足迹页。
+- 文章编号改为只按发布成功文章计数，草稿使用独立临时编号，发布后再分配公开文章编号。
+- 统一文章字数统计：文章页、首页汇总和归档页使用同一套字数口径。
+- 评论邮件、评论徽标和 AI 评论审核/回复逻辑调整，管理员回复只通知被回复评论者。
+
+### Fixed
+
+- 修复友情链接新增时 ID 总是 `1` 的排序问题。
+- 修复固定链接变更后 RSS feed 仍输出旧默认地址的问题。
+- 修复站点域名/site_url 变更后部分附件与品牌资源写死绝对地址导致迁移失效的问题。
+- 修复关键词页有关键词但文章数为 0、相关文章与分类文章来源混淆的问题。
+- 修复后台首页访问按钮在本地端口测试时使用写死站点地址的问题。
+- 修复生产 Docker 构建复制 `api/public/uploads` 开发 symlink 后生成断链，导致 runtime stage 无法创建 uploads 目录的问题。
+- 修复默认 CC 频率限制误启用，新安装默认关闭。
+
 ## [1.5.2] - 2026-04-26
 
 ### Changed
@@ -218,7 +244,8 @@
 - 6 项 AI 提示词全部可在后台编辑：摘要 / Slug / 关键词 / 排版 / 推荐问题 / 封面图；每项中文默认值，textarea 留空 + 保存自动恢复默认
 - AI 模型分发改为按用途路由：把原先 8 个 `ai_purpose_*_provider` 收成 2 个槽位（content + chat）；DB 自动清理 7 条遗留 option
 
-[Unreleased]: https://github.com/utterlog/utterlog/compare/v1.4.2...HEAD
+[Unreleased]: https://github.com/utterlog/utterlog/compare/v1.5.6...HEAD
+[1.5.6]: https://github.com/utterlog/utterlog/compare/v1.5.5...v1.5.6
 [1.4.2]: https://github.com/utterlog/utterlog/releases/tag/v1.4.2
 [1.4.1]: https://github.com/utterlog/utterlog/releases/tag/v1.4.1
 [1.4.0]: https://github.com/utterlog/utterlog/releases/tag/v1.4.0

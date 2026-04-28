@@ -102,18 +102,19 @@ func GetPostByDisplayID(c *gin.Context) {
 
 func CreatePost(c *gin.Context) {
 	var req struct {
-		Title        string   `json:"title" binding:"required"`
-		Slug         string   `json:"slug"`
-		Content      string   `json:"content"`
-		Excerpt      string   `json:"excerpt"`
-		Type         string   `json:"type"`
-		Status       string   `json:"status"`
-		CoverURL     string   `json:"cover_url"`
-		Password     string   `json:"password"`
-		AllowComment *bool    `json:"allow_comment"`
-		Pinned       *bool    `json:"pinned"`
-		CategoryIDs  []int    `json:"category_ids"`
-		TagNames     []string `json:"tag_names"`
+		Title        string             `json:"title" binding:"required"`
+		Slug         string             `json:"slug"`
+		Content      string             `json:"content"`
+		Excerpt      string             `json:"excerpt"`
+		Type         string             `json:"type"`
+		Status       string             `json:"status"`
+		CoverURL     string             `json:"cover_url"`
+		Password     string             `json:"password"`
+		AllowComment *bool              `json:"allow_comment"`
+		Pinned       *bool              `json:"pinned"`
+		CategoryIDs  []int              `json:"category_ids"`
+		TagNames     []string           `json:"tag_names"`
+		Footprints   []FootprintPayload `json:"footprints"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		util.BadRequest(c, "标题不能为空")
@@ -179,6 +180,10 @@ func CreatePost(c *gin.Context) {
 
 	// Save category and tag relationships
 	syncRelationships(id, req.CategoryIDs, req.TagNames, now)
+	if err := model.SyncPostFootprints(id, normalizeFootprintPayloads(req.Footprints)); err != nil {
+		util.Error(c, 500, "FOOTPRINT_ERROR", err.Error())
+		return
+	}
 
 	// Notify followers if published
 	if status == "publish" {
@@ -203,17 +208,18 @@ func UpdatePost(c *gin.Context) {
 	}
 
 	var req struct {
-		Title        string   `json:"title"`
-		Slug         string   `json:"slug"`
-		Content      *string  `json:"content"`
-		Excerpt      string   `json:"excerpt"`
-		Status       string   `json:"status"`
-		CoverURL     string   `json:"cover_url"`
-		Password     string   `json:"password"`
-		AllowComment *bool    `json:"allow_comment"`
-		Pinned       *bool    `json:"pinned"`
-		CategoryIDs  []int    `json:"category_ids"`
-		TagNames     []string `json:"tag_names"`
+		Title        string              `json:"title"`
+		Slug         string              `json:"slug"`
+		Content      *string             `json:"content"`
+		Excerpt      string              `json:"excerpt"`
+		Status       string              `json:"status"`
+		CoverURL     string              `json:"cover_url"`
+		Password     string              `json:"password"`
+		AllowComment *bool               `json:"allow_comment"`
+		Pinned       *bool               `json:"pinned"`
+		CategoryIDs  []int               `json:"category_ids"`
+		TagNames     []string            `json:"tag_names"`
+		Footprints   *[]FootprintPayload `json:"footprints"`
 		// RFC3339 / ISO8601 string or empty. Admin edit page sends the
 		// datetime-local value here so authors can backdate or reschedule.
 		// Empty string clears it back to NULL.
@@ -303,6 +309,12 @@ func UpdatePost(c *gin.Context) {
 	// Sync category and tag relationships
 	now := time.Now().Unix()
 	syncRelationships(id, req.CategoryIDs, req.TagNames, now)
+	if req.Footprints != nil {
+		if err := model.SyncPostFootprints(id, normalizeFootprintPayloads(*req.Footprints)); err != nil {
+			util.Error(c, 500, "FOOTPRINT_ERROR", err.Error())
+			return
+		}
+	}
 
 	// Update embedding and AI questions if published
 	if existing.Status == "publish" {
@@ -590,6 +602,29 @@ func ArchiveStats(c *gin.Context) {
 	})
 }
 
+func splitNavigationKeywords(input string) []string {
+	seen := map[string]bool{}
+	terms := []string{}
+	for _, term := range strings.FieldsFunc(input, func(r rune) bool {
+		return r == ',' || r == '，' || r == ';' || r == '；' || r == '、' || r == '\n' || r == '\t' || r == ' '
+	}) {
+		term = strings.TrimSpace(term)
+		if term == "" {
+			continue
+		}
+		key := strings.ToLower(term)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		terms = append(terms, term)
+		if len(terms) >= 12 {
+			break
+		}
+	}
+	return terms
+}
+
 // PostNavigation returns prev/next post and related/random/popular/category posts
 func PostNavigation(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
@@ -648,7 +683,9 @@ func PostNavigation(c *gin.Context) {
 		next = &n
 	}
 
-	// Related posts — by shared tags (most tag overlap first), fallback to full-text similarity
+	// Related posts: keyword/tag matches plus category matches. Tags are
+	// treated as stronger keyword signals, categories as a weaker topic
+	// signal. The category tab below stays a pure same-category list.
 	var related []navPost
 	// Get all tag IDs for current post
 	var tagIDs []int
@@ -656,61 +693,66 @@ func PostNavigation(c *gin.Context) {
 		"SELECT r.meta_id FROM %s r JOIN %s m ON r.meta_id = m.id WHERE r.post_id = $1 AND m.type = 'tag'",
 		t("relationships"), t("metas")), id)
 
-	if len(tagIDs) > 0 {
-		// Find posts sharing the most tags with current post
-		tagIDStr := ""
-		for i, tid := range tagIDs {
-			if i > 0 {
-				tagIDStr += ","
-			}
-			tagIDStr += strconv.Itoa(tid)
+	tagIDStr := ""
+	for _, tid := range tagIDs {
+		if tagIDStr != "" {
+			tagIDStr += ","
 		}
-		config.DB.Select(&related, fmt.Sprintf(
-			"SELECT %s FROM %s p JOIN %s r ON p.id = r.post_id WHERE r.meta_id IN (%s) AND p.id != $1 AND p.status = 'publish' AND p.type = 'post' GROUP BY p.id, p.title, p.slug, p.cover_url, p.created_at, p.view_count, p.comment_count ORDER BY COUNT(*) DESC, p.created_at DESC LIMIT 20",
-			pCols, t("posts"), t("relationships"), tagIDStr), id)
+		tagIDStr += strconv.Itoa(tid)
+	}
+	catIDStr := ""
+	for _, cid := range categoryIDs {
+		if catIDStr != "" {
+			catIDStr += ","
+		}
+		catIDStr += strconv.Itoa(cid)
 	}
 
-	// Fallback 1: same category posts if not enough from tags
-	if len(related) < 20 && len(categoryIDs) > 0 {
+	if tagIDStr != "" {
+		categoryJoin := ""
+		categoryScore := "0"
+		if catIDStr != "" {
+			categoryJoin = fmt.Sprintf(" LEFT JOIN %s cr ON cr.post_id = p.id AND cr.meta_id IN (%s)", t("relationships"), catIDStr)
+			categoryScore = "COUNT(DISTINCT cr.meta_id)"
+		}
+		config.DB.Select(&related, fmt.Sprintf(
+			"SELECT %s FROM %s p JOIN %s tr ON p.id = tr.post_id%s WHERE tr.meta_id IN (%s) AND p.id != $1 AND p.status = 'publish' AND p.type = 'post' GROUP BY p.id, p.title, p.slug, p.cover_url, p.created_at, p.view_count, p.comment_count ORDER BY (COUNT(DISTINCT tr.meta_id) * 5 + %s) DESC, p.view_count DESC, p.created_at DESC LIMIT 20",
+			pCols, t("posts"), t("relationships"), categoryJoin, tagIDStr, categoryScore), id)
+	}
+
+	// Fallback: use explicit keyword text from the post and its metas.
+	if len(related) < 20 {
 		excludeIDs := strconv.Itoa(id)
 		for _, r := range related {
 			excludeIDs += "," + strconv.Itoa(r.ID)
 		}
-		catIDStr := ""
-		for i, cid := range categoryIDs {
-			if i > 0 {
-				catIDStr += ","
+		var keywordText string
+		config.DB.Get(&keywordText, fmt.Sprintf(
+			"SELECT TRIM(CONCAT_WS(' ', COALESCE(p.seo_keywords, ''), COALESCE(string_agg(DISTINCT m.name, ' '), ''), COALESCE(string_agg(DISTINCT m.seo_keywords, ' '), ''))) FROM %s p LEFT JOIN %s r ON r.post_id = p.id LEFT JOIN %s m ON m.id = r.meta_id AND m.type IN ('tag', 'category') WHERE p.id = $1 GROUP BY p.seo_keywords",
+			t("posts"), t("relationships"), t("metas")), id)
+		keywordTerms := splitNavigationKeywords(keywordText)
+		if len(keywordTerms) > 0 {
+			categoryJoin := ""
+			categoryOrder := "p.view_count"
+			if catIDStr != "" {
+				categoryJoin = fmt.Sprintf(" LEFT JOIN %s cr ON cr.post_id = p.id AND cr.meta_id IN (%s)", t("relationships"), catIDStr)
+				categoryOrder = "COUNT(DISTINCT cr.meta_id)"
 			}
-			catIDStr += strconv.Itoa(cid)
-		}
-		var catRelated []navPost
-		// LIMIT 20-len(related) keeps the fill consistent with the
-		// outer `len(related) < 20` cap. The previous 5-len(related)
-		// went negative once tag-based hits returned 6+ rows, which
-		// Postgres rejects ('LIMIT must not be negative') — sqlx
-		// swallowed the error and the fallback silently disappeared.
-		config.DB.Select(&catRelated, fmt.Sprintf(
-			"SELECT %s FROM %s p JOIN %s r ON p.id = r.post_id WHERE r.meta_id IN (%s) AND p.id NOT IN (%s) AND p.status = 'publish' AND p.type = 'post' GROUP BY p.id, p.title, p.slug, p.cover_url, p.created_at, p.view_count, p.comment_count ORDER BY p.created_at DESC LIMIT %d",
-			pCols, t("posts"), t("relationships"), catIDStr, excludeIDs, 20-len(related)))
-		related = append(related, catRelated...)
-	}
-
-	// Fallback 2: full-text similarity if still not enough
-	if len(related) < 20 {
-		var title string
-		config.DB.Get(&title, "SELECT title FROM "+t("posts")+" WHERE id = $1", id)
-		if title != "" {
-			excludeIDs := strconv.Itoa(id)
-			for _, r := range related {
-				excludeIDs += "," + strconv.Itoa(r.ID)
+			whereParts := make([]string, 0, len(keywordTerms))
+			scoreParts := make([]string, 0, len(keywordTerms))
+			args := make([]interface{}, 0, len(keywordTerms))
+			for i, term := range keywordTerms {
+				param := i + 1
+				args = append(args, "%"+term+"%")
+				whereParts = append(whereParts, fmt.Sprintf("(p.title ILIKE $%d OR COALESCE(p.content, '') ILIKE $%d OR COALESCE(p.seo_keywords, '') ILIKE $%d)", param, param, param))
+				scoreParts = append(scoreParts, fmt.Sprintf("(CASE WHEN p.title ILIKE $%d THEN 3 ELSE 0 END + CASE WHEN COALESCE(p.seo_keywords, '') ILIKE $%d THEN 2 ELSE 0 END + CASE WHEN COALESCE(p.content, '') ILIKE $%d THEN 1 ELSE 0 END)", param, param, param))
 			}
 			var ftsRelated []navPost
-			// Same 20-len(related) fix as the category fallback —
-			// negative LIMITs were dropping FTS suggestions whenever
-			// tags+category had already filled 5+ rows.
+			// Keep the fill capped at the same 20-item budget used by
+			// relationship-based suggestions.
 			config.DB.Select(&ftsRelated, fmt.Sprintf(
-				"SELECT %s FROM %s WHERE status = 'publish' AND type = 'post' AND id NOT IN (%s) AND to_tsvector('simple', title || ' ' || COALESCE(content, '')) @@ plainto_tsquery('simple', $1) ORDER BY view_count DESC LIMIT %d",
-				cols, t("posts"), excludeIDs, 20-len(related)), title)
+				"SELECT %s FROM %s p%s WHERE p.status = 'publish' AND p.type = 'post' AND p.id NOT IN (%s) AND (%s) GROUP BY p.id, p.title, p.slug, p.cover_url, p.created_at, p.view_count, p.comment_count ORDER BY (%s) DESC, %s DESC, p.view_count DESC, p.created_at DESC LIMIT %d",
+				pCols, t("posts"), categoryJoin, excludeIDs, strings.Join(whereParts, " OR "), strings.Join(scoreParts, " + "), categoryOrder, 20-len(related)), args...)
 			related = append(related, ftsRelated...)
 		}
 	}

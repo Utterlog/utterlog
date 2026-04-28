@@ -38,9 +38,11 @@ type Post struct {
 
 type PostWithRelations struct {
 	Post
-	Author     *UserBrief  `json:"author"`
-	Categories []MetaBrief `json:"categories"`
-	Tags       []MetaBrief `json:"tags"`
+	Author             *UserBrief         `json:"author"`
+	Categories         []MetaBrief        `json:"categories"`
+	Tags               []MetaBrief        `json:"tags"`
+	Footprints         []PostFootprint    `json:"footprints,omitempty"`
+	FootprintCountries []FootprintCountry `json:"footprint_countries,omitempty"`
 }
 
 type UserBrief struct {
@@ -337,6 +339,10 @@ func FormatPost(p *Post, detail bool) PostWithRelations {
 	pr.Author = PostAuthor(p.AuthorID)
 	pr.Categories = PostCategories(p.ID)
 	pr.Tags = PostTags(p.ID)
+	if detail {
+		pr.Footprints = PostFootprints(p.ID)
+		pr.FootprintCountries = FootprintCountriesFrom(pr.Footprints)
+	}
 	return pr
 }
 

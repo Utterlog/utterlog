@@ -185,7 +185,11 @@ function Lightbox({ list, index: startIndex, onClose }: LightboxProps) {
     >
       <div className={`vi-stage${imgOut ? ' vi-img-out' : ''}`}>
         <div className="vi-backstop" />
-        {loading && <div className="vi-loading" aria-hidden="true" />}
+        {loading && (
+          <svg className="vi-loading" fill="currentColor" viewBox="0 0 40 4" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect className="vi-loading-react" width="40" height="4" fill="currentColor" />
+          </svg>
+        )}
         <img
           key={current.src}
           className="vi-img"

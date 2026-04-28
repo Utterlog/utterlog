@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { optionsApi, mediaApi } from '@/lib/api';
 
@@ -9,11 +9,36 @@ interface FooterIcon {
   copy?: string;  // when set, click copies this text instead of navigating
 }
 
-const OPTION_KEY = 'theme_footer_icons';
+const DEFAULT_OPTION_KEY = 'theme_footer_icons';
 
-const emptyRow: FooterIcon = { icon: 'fa-light fa-rss', label: 'RSS', copy: '' };
+const defaultEmptyRow: FooterIcon = { icon: 'fa-light fa-rss', label: 'RSS', copy: '' };
+const actionButtonStyle = {
+  width: 28,
+  minWidth: 28,
+  height: 28,
+  padding: 0,
+  flex: '0 0 28px',
+  fontSize: 12,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
 
-export default function FooterIconsEditor() {
+interface FooterIconsEditorProps {
+  optionKey?: string;
+  title?: string;
+  description?: ReactNode;
+  emptyText?: string;
+  emptyRow?: FooterIcon;
+}
+
+export default function FooterIconsEditor({
+  optionKey = DEFAULT_OPTION_KEY,
+  title = '页脚图标按钮',
+  description,
+  emptyText = '尚未配置，点击"添加"开始。留空则显示默认的 RSS 按钮。',
+  emptyRow = defaultEmptyRow,
+}: FooterIconsEditorProps) {
   const [items, setItems] = useState<FooterIcon[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -22,11 +47,13 @@ export default function FooterIconsEditor() {
   const activeRowRef = useRef<number | null>(null);
 
   useEffect(() => {
+    setLoading(true);
+    setItems([]);
     (async () => {
       try {
         const r: any = await optionsApi.list();
         const data = r.data || r;
-        const raw = data[OPTION_KEY];
+        const raw = data[optionKey];
         if (raw) {
           try {
             const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -36,7 +63,7 @@ export default function FooterIconsEditor() {
       } catch { toast.error('加载配置失败'); }
       finally { setLoading(false); }
     })();
-  }, []);
+  }, [optionKey]);
 
   const addRow = () => setItems([...items, { ...emptyRow }]);
   const removeRow = (i: number) => setItems(items.filter((_, idx) => idx !== i));
@@ -60,7 +87,7 @@ export default function FooterIconsEditor() {
         if (r.copy && r.copy.trim()) out.copy = r.copy.trim();
         return out;
       }).filter(r => r.icon && r.label);
-      await optionsApi.updateMany({ [OPTION_KEY]: JSON.stringify(clean) });
+      await optionsApi.updateMany({ [optionKey]: JSON.stringify(clean) });
       toast.success('已保存');
     } catch {
       toast.error('保存失败');
@@ -105,19 +132,23 @@ export default function FooterIconsEditor() {
   return (
     <div className="card" style={{ padding: 20, marginTop: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <h3 className="text-main" style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>页脚图标按钮</h3>
+        <h3 className="text-main" style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</h3>
         <button className="btn btn-secondary" onClick={addRow} style={{ fontSize: 12 }}>
           <i className="fa-regular fa-plus" style={{ fontSize: 11 }} /> 添加
         </button>
       </div>
       <p className="text-dim" style={{ fontSize: 12, lineHeight: 1.6, marginBottom: 16 }}>
-        显示在博客页脚右侧的图标按钮。图标支持 FontAwesome 类名（如 <code>fa-light fa-rss</code>）、
-        图片 URL、内联 SVG、或上传图片。链接留空将作为纯文本标签显示；「复制文本」填写后点击时复制该内容到剪贴板。
+        {description || (
+          <>
+            显示在博客页脚右侧的图标按钮。图标支持 FontAwesome 类名（如 <code>fa-light fa-rss</code>）、
+            图片 URL、内联 SVG、或上传图片。链接留空将作为纯文本标签显示；「复制文本」填写后点击时复制该内容到剪贴板。
+          </>
+        )}
       </p>
 
       {items.length === 0 ? (
         <div className="text-dim" style={{ textAlign: 'center', padding: '32px 0', fontSize: 13, border: '1px dashed var(--color-border)' }}>
-          尚未配置，点击"添加"开始。留空则显示默认的 RSS 按钮。
+          {emptyText}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -173,19 +204,19 @@ export default function FooterIconsEditor() {
               <div style={{ display: 'flex', gap: 4 }}>
                 <button className="btn btn-secondary" onClick={() => handleUploadClick(i)}
                   disabled={uploadingIdx === i} title="上传图片作为图标"
-                  style={{ width: 28, height: 28, padding: 0, fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={actionButtonStyle}>
                   <i className={uploadingIdx === i ? 'fa-regular fa-spinner fa-spin' : 'fa-regular fa-upload'} />
                 </button>
                 <button className="btn btn-secondary" onClick={() => moveRow(i, -1)} disabled={i === 0} title="上移"
-                  style={{ width: 28, height: 28, padding: 0, fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={actionButtonStyle}>
                   <i className="fa-regular fa-chevron-up" />
                 </button>
                 <button className="btn btn-secondary" onClick={() => moveRow(i, 1)} disabled={i === items.length - 1} title="下移"
-                  style={{ width: 28, height: 28, padding: 0, fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={actionButtonStyle}>
                   <i className="fa-regular fa-chevron-down" />
                 </button>
                 <button className="btn btn-secondary" onClick={() => removeRow(i)} title="删除"
-                  style={{ width: 28, height: 28, padding: 0, fontSize: 12, color: '#dc2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={{ ...actionButtonStyle, color: '#dc2626' }}>
                   <i className="fa-regular fa-trash" />
                 </button>
               </div>

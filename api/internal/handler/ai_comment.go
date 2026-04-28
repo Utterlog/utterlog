@@ -4,12 +4,12 @@
 //   - auditComment(text)             → AI 审核单条评论，返回结构化结果
 //   - generateAICommentReply(...)    → AI 生成回复文本
 //   - processCommentAudit(...)       → 同步 hook：CreateComment 评论为 pending 时调，
-//                                      返回最终 status（可能从 pending 降级为 spam）
+//     返回最终 status（可能从 pending 降级为 spam）
 //   - processCommentReply(...)       → 异步 hook：approved 后 goroutine 触发，
-//                                      生成 reply 写入 ul_ai_comment_queue，
-//                                      auto 模式下立刻发布为博主回复评论
+//     生成 reply 写入 ul_ai_comment_queue，
+//     auto 模式下立刻发布为博主回复评论
 //   - AICommentQueueList / Approve / Reject / Regenerate / Delete
-//                                    → admin 后台队列 CRUD endpoints
+//     → admin 后台队列 CRUD endpoints
 //
 // 复用现有 ai_providers + callAIWithPurpose dispatch；admin 在
 // 「常规设置 → AI → 用途路由」可把 'comment-audit' 和 'comment-reply'
@@ -100,46 +100,51 @@ func truncateUTF8(s string, n int) string {
 	return string(r[:n]) + "..."
 }
 
-// processCommentAudit is called synchronously from CreateComment when
-// the admin enabled AI 审核. Returns the (possibly downgraded) final
-// status. Does NOT write to the AI queue — the queue is reserved for
-// reply generation; audit results decorate the queue row created when
-// a reply gets generated later.
-//
-// fail_action mapping:
-//
-//	reject (default) → spam
-//	pending          → pending
-//	ignore           → keep currentStatus unchanged
-func processCommentAudit(content, currentStatus string) (string, *auditCommentResult) {
-	res, err := auditComment(content)
-	if err != nil {
-		fmt.Printf("[ai-comment] audit error: %s\n", err)
-		// Fail-open: if AI itself errored, don't downgrade — let the
-		// regular spam heuristics + admin review handle it.
-		return currentStatus, nil
-	}
-
+func commentAuditThreshold() float64 {
 	threshold := 0.8
 	if v := model.GetOption("ai_comment_audit_threshold"); v != "" {
 		if f, perr := strconv.ParseFloat(v, 64); perr == nil {
 			threshold = f
 		}
 	}
+	return threshold
+}
 
-	if res.Passed && res.Confidence >= threshold {
-		return currentStatus, res
+// processCommentAudit is called synchronously from CreateComment when
+// the admin enabled AI 审核. Returns the (possibly downgraded) final
+// status and whether AI explicitly held/rejected the comment, so later
+// normal auto-approval rules do not undo the audit result. Does NOT
+// write to the AI queue — the queue is reserved for reply generation;
+// audit results decorate the queue row created when a reply gets
+// generated later.
+//
+// fail_action mapping:
+//
+//	reject (default) → spam
+//	pending          → pending
+//	ignore           → keep currentStatus unchanged
+func processCommentAudit(content, currentStatus string) (string, *auditCommentResult, bool) {
+	res, err := auditComment(content)
+	if err != nil {
+		fmt.Printf("[ai-comment] audit error: %s\n", err)
+		// Fail-open: if AI itself errored, don't downgrade — let the
+		// regular spam heuristics + admin review handle it.
+		return currentStatus, nil, false
+	}
+
+	if res.Passed && res.Confidence >= commentAuditThreshold() {
+		return currentStatus, res, false
 	}
 
 	switch model.GetOption("ai_comment_audit_fail_action") {
 	case "ignore":
-		return currentStatus, res
+		return currentStatus, res, false
 	case "pending":
-		return "pending", res
+		return "pending", res, true
 	case "reject", "":
 		fallthrough
 	default:
-		return "spam", res
+		return "spam", res, true
 	}
 }
 
@@ -203,7 +208,6 @@ func generateAICommentReply(commentText, contextBlock string) (string, error) {
 //   - Skip if a queue entry for this comment already exists
 //     (idempotent under accidental double-approve clicks).
 //   - Skip admin's own comments (would self-reply).
-//   - Skip non-'comment' types (trackback / pingback).
 //   - Skip if `ai_comment_reply_only_first` is on AND there's already
 //     an approved comment on this post predating the current one.
 //   - Honour hourly rate limit (`ai_comment_reply_rate_limit`).
@@ -226,21 +230,17 @@ func processCommentReply(commentID int, audit *auditCommentResult, adminUserID i
 		Content  string `db:"content"`
 		PostID   int    `db:"post_id"`
 		AuthorID int    `db:"user_id"`
-		Type     string `db:"type"`
 	}
 	err := config.DB.Get(&ci, fmt.Sprintf(
-		"SELECT content, post_id, COALESCE(user_id,0) AS user_id, COALESCE(type,'comment') AS type FROM %s WHERE id = $1",
+		"SELECT content, post_id, COALESCE(user_id,0) AS user_id FROM %s WHERE id = $1",
 		config.T("comments")), commentID)
 	if err != nil {
+		fmt.Printf("[ai-comment] comment lookup failed cid=%d: %s\n", commentID, err)
 		return
 	}
 
 	// Skip admin's own comments
 	if ci.AuthorID > 0 && ci.AuthorID == adminUserID {
-		return
-	}
-	// Skip trackback / pingback
-	if ci.Type != "" && ci.Type != "comment" {
 		return
 	}
 

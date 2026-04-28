@@ -178,6 +178,50 @@ func InitDB() error {
 	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_annotations_post ON %s (post_id)", T("annotations")))
 	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_annotations_block ON %s (post_id, block_id)", T("annotations")))
 
+	// Footprints: country/city level travel records linked to posts.
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id SERIAL PRIMARY KEY,
+		country_name VARCHAR(128) NOT NULL DEFAULT '',
+		country_code VARCHAR(8) NOT NULL DEFAULT '',
+		city_name VARCHAR(128) NOT NULL DEFAULT '',
+		latitude DOUBLE PRECISION,
+		longitude DOUBLE PRECISION,
+		cover_url TEXT NOT NULL DEFAULT '',
+		visit_count INTEGER NOT NULL DEFAULT 0,
+		created_at BIGINT NOT NULL DEFAULT 0,
+		updated_at BIGINT NOT NULL DEFAULT 0
+	)`, T("footprint_places")))
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(160) NOT NULL DEFAULT '',
+		slug VARCHAR(180) NOT NULL DEFAULT '',
+		description TEXT NOT NULL DEFAULT '',
+		sort_order INTEGER NOT NULL DEFAULT 0,
+		created_at BIGINT NOT NULL DEFAULT 0,
+		updated_at BIGINT NOT NULL DEFAULT 0
+	)`, T("footprint_routes")))
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id SERIAL PRIMARY KEY,
+		post_id INTEGER NOT NULL REFERENCES %s(id) ON DELETE CASCADE,
+		place_id INTEGER NOT NULL REFERENCES %s(id) ON DELETE CASCADE,
+		route_id INTEGER NOT NULL DEFAULT 0,
+		visited_at BIGINT NOT NULL DEFAULT 0,
+		route_order INTEGER NOT NULL DEFAULT 0,
+		keywords TEXT NOT NULL DEFAULT '',
+		note TEXT NOT NULL DEFAULT '',
+		created_at BIGINT NOT NULL DEFAULT 0,
+		updated_at BIGINT NOT NULL DEFAULT 0
+	)`, T("post_footprints"), T("posts"), T("footprint_places")))
+	// A post can be marked for the footprint page before its city/country is
+	// configured in the dedicated admin screen.
+	DB.Exec(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN place_id DROP NOT NULL", T("post_footprints")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_footprint_places_country_city ON %s (LOWER(country_code), LOWER(city_name), LOWER(country_name))", T("footprint_places")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_footprint_places_visit ON %s (visit_count DESC, updated_at DESC)", T("footprint_places")))
+	DB.Exec(fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS idx_footprint_routes_name ON %s (LOWER(name)) WHERE name != ''", T("footprint_routes")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_post_footprints_post ON %s (post_id)", T("post_footprints")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_post_footprints_place ON %s (place_id)", T("post_footprints")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_post_footprints_route ON %s (route_id, route_order)", T("post_footprints")))
+
 	// Utterlog ID on users
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS utterlog_id VARCHAR(100) DEFAULT ''", T("users")))
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS utterlog_avatar VARCHAR(500) DEFAULT ''", T("users")))

@@ -36,7 +36,7 @@ export default function DefaultTagPage({ tag, posts, timeZone = 'UTC' }: Default
     <div>
       <PageTitle
         title={tag.name}
-        icon="fa-solid fa-tag"
+        icon="fa-sharp fa-solid fa-hashtag"
         meta={<><strong>{posts.length}</strong> 篇文章</>}
       />
 

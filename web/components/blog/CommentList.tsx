@@ -400,7 +400,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
                 {comment.geo?.country_code && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#aaa' }}>
                     <img
-                      src={`https://flagcdn.io/flags/1x1/${comment.geo.country_code}.svg`}
+                      src={`https://flagcdn.io/flags/1x1/${comment.geo.country_code.toLowerCase()}.svg`}
                       alt="" style={{ width: '14px', height: '14px', objectFit: 'cover' }}
                       onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />

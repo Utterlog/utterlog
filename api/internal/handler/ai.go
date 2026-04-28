@@ -1094,6 +1094,16 @@ var AIPurposes = []AIPurpose{
 		Label: "聊天",
 		Hint:  "后台 AI 助手 + 前台读者陪读 + Telegram /ai 命令统一走这一个",
 	},
+	{
+		Key:   "comment-audit",
+		Label: "评论审核",
+		Hint:  "访客评论提交后的 AI 合规判断，可单独使用低成本文本模型",
+	},
+	{
+		Key:   "comment-reply",
+		Label: "评论回复",
+		Hint:  "AI 智能回复评论，可单独使用更自然的对话模型",
+	},
 }
 
 // pickAIProvider returns the provider explicitly assigned to a purpose,

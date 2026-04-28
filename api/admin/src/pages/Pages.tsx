@@ -22,7 +22,19 @@ const builtinPages = [
   { key: 'page_feeds', label: '订阅', slug: '/feeds', icon: 'fa-regular fa-rss' },
   { key: 'page_links', label: '友链', slug: '/links', icon: 'fa-regular fa-link' },
   { key: 'page_albums', label: '相册', slug: '/albums', icon: 'fa-regular fa-images' },
-] satisfies { key: string; label: string; slug: string; icon: string; contentKey?: string }[];
+  { key: 'page_footprints', label: '足迹', slug: '/footprints', icon: 'fa-regular fa-map-location-dot' },
+] satisfies { key: string; label: string; slug: string; icon: string; contentKey?: string; optionKey?: string; strictTrue?: boolean }[];
+
+const builtinPageOptions: Record<string, { optionKey: string; strictTrue?: boolean }> = {
+  page_footprints: { optionKey: 'footprint_enabled', strictTrue: true },
+};
+
+function isBuiltinEnabled(page: (typeof builtinPages)[number], opts: Record<string, any>) {
+  const option = builtinPageOptions[page.key];
+  const value = opts[option?.optionKey || page.key];
+  if (option?.strictTrue) return value === true || value === 'true';
+  return value !== 'false';
+}
 
 export default function PagesPage() {
   const { t } = useI18n();
@@ -68,7 +80,7 @@ export default function PagesPage() {
       const opts = r.data || r || {};
       const status: Record<string, boolean> = {};
       builtinPages.forEach(p => {
-        status[p.key] = opts[p.key] !== 'false';
+        status[p.key] = isBuiltinEnabled(p, opts);
       });
       setBuiltinStatus(status);
     } catch {}
@@ -76,9 +88,10 @@ export default function PagesPage() {
 
   const toggleBuiltin = async (key: string) => {
     const next = !builtinStatus[key];
+    const optionKey = builtinPageOptions[key]?.optionKey || key;
     setBuiltinStatus(prev => ({ ...prev, [key]: next }));
     try {
-      await optionsApi.updateMany({ [key]: String(next) });
+      await optionsApi.updateMany({ [optionKey]: String(next) });
       toast.success(next ? t('admin.pages.toast.enabled', '已启用') : t('admin.pages.toast.disabled', '已关闭'));
     } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
   };

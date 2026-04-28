@@ -237,6 +237,9 @@ func main() {
 	// Archive stats
 	api.GET("/archive/stats", handler.ArchiveStats)
 
+	// Footprints (public timeline/map data)
+	api.GET("/footprints", handler.ListFootprints)
+
 	// Page view tracking (public)
 	api.POST("/track", handler.TrackPageView)
 	api.POST("/track/duration", handler.TrackDuration)
@@ -333,6 +336,12 @@ func main() {
 		authed.POST("/admin/ai-comments/:id/reject", handler.AICommentReject)
 		authed.POST("/admin/ai-comments/:id/regenerate", handler.AICommentRegenerate)
 		authed.DELETE("/admin/ai-comments/:id", handler.AICommentDelete)
+
+		// Footprints: article-side location tagging and temporary geocode proxy.
+		authed.GET("/admin/footprints", handler.AdminListFootprints)
+		authed.PUT("/admin/footprints/:id", handler.AdminUpdateFootprint)
+		authed.GET("/admin/footprints/places", handler.AdminListFootprintPlaces)
+		authed.POST("/admin/footprints/geocode", handler.AdminFootprintGeocode)
 
 		// 数据统计 access_log 清理：把已记录的爬虫 UA + 旧版 SSR
 		// middleware 双计的 visitor_id 空记录从 ul_access_logs 删除。

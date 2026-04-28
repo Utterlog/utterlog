@@ -58,7 +58,7 @@ export default function Header() {
         padding: '0 24px',
       }}>
         {/* Logo / Brand lockup — site_brand_mode 控制 */}
-        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Link href="/" className="chred-brand" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
           {showMark && (
             site.logo ? (
               <img

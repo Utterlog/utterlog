@@ -4,6 +4,7 @@ import TableOfContents from './TableOfContents';
 import AISummary from './AISummary';
 import PostNavigation from './PostNavigation';
 import FadeCover from '@/components/blog/FadeCover';
+import FootprintFlags from '@/components/blog/FootprintFlags';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 import { getCategoryIcon } from './constants';
@@ -30,6 +31,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
       <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
         <FadeCover src={coverUrl} alt={post.title}
           style={{ width: '100%', height: '400px' }} />
+        <FootprintFlags countries={post.footprint_countries} />
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',

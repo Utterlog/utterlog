@@ -25,6 +25,7 @@ const menuItems: MenuItem[] = [
   },
   { to: '/pages', icon: 'fa-regular fa-file-lines', label: '页面', sub: 'Pages' },
   { to: '/moments', icon: 'fa-solid fa-comment-dots', label: '说说', sub: 'Moments' },
+  { to: '/footprints', icon: 'fa-regular fa-map-location-dot', label: '足迹', sub: 'Footprints' },
   {
     to: '/music', icon: 'fa-solid fa-clapperboard', label: '娱乐', key: 'admin.nav.entertainment', sub: 'Entertainment',
     children: [
@@ -72,6 +73,7 @@ const navKeys: Record<string, string> = {
   '/posts/tags': 'admin.nav.tags',
   '/pages': 'admin.nav.pages',
   '/moments': 'admin.nav.moments',
+  '/footprints': 'admin.nav.footprints',
   '/music': 'admin.nav.music',
   '/movies': 'admin.nav.movies',
   '/videos': 'admin.nav.videos',

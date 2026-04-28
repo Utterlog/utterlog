@@ -19,6 +19,7 @@
   overflow-y: auto;
 }
 [data-theme="Azure"] .azure-frame {
+  box-sizing: border-box;
   width: 100%;
   max-width: 1400px;
   min-height: calc(100vh - 60px);
@@ -84,6 +85,8 @@
   position: sticky;
   top: 0;
   z-index: 50;
+  box-sizing: border-box;
+  padding-right: 10px;
   background: rgba(255, 255, 255, 0.97);
   border-bottom: 1px solid #e5e5e5;
   backdrop-filter: blur(12px);
@@ -95,19 +98,26 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
+  box-sizing: border-box;
   max-width: 1400px;
   height: 56px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0;
 }
 [data-theme="Azure"] .azure-brand {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  color: #1a1a1a;
+  color: var(--color-primary, #0052D9);
   text-decoration: none;
   flex-shrink: 0;
+  transform-origin: center;
+  transition: transform 0.216s ease;
+  will-change: transform;
+}
+[data-theme="Azure"] .azure-brand:hover {
+  transform: scale(1.1);
 }
 [data-theme="Azure"] .azure-brand-img {
   display: block;
@@ -122,7 +132,7 @@
 [data-theme="Azure"] .azure-brand-title {
   max-width: 220px;
   overflow: hidden;
-  color: #1a1a1a;
+  color: var(--color-primary, #0052D9);
   font-size: 20px;
   font-weight: 700;
   line-height: 1.2;
@@ -141,6 +151,7 @@
   position: relative;
 }
 [data-theme="Azure"] .azure-nav-item {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -154,14 +165,32 @@
   white-space: nowrap;
   transition: color 0.15s;
 }
+[data-theme="Azure"] .azure-nav-item::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 0;
+  height: 2px;
+  background: var(--color-primary);
+  transform: translateX(-50%);
+  transition: width 0.22s ease;
+}
 [data-theme="Azure"] .azure-nav-item:hover,
 [data-theme="Azure"] .azure-nav-item.active,
+[data-theme="Azure"] .azure-nav-parent:hover .azure-nav-trigger,
 [data-theme="Azure"] .azure-nav-parent.active .azure-nav-trigger {
   color: var(--color-primary);
 }
 [data-theme="Azure"] .azure-nav-item.active,
 [data-theme="Azure"] .azure-nav-parent.active .azure-nav-trigger {
-  font-weight: 600;
+  font-weight: 700;
+}
+[data-theme="Azure"] .azure-nav-item:hover::after,
+[data-theme="Azure"] .azure-nav-item.active::after,
+[data-theme="Azure"] .azure-nav-parent:hover .azure-nav-trigger::after,
+[data-theme="Azure"] .azure-nav-parent.active .azure-nav-trigger::after {
+  width: calc(100% - 28px);
 }
 [data-theme="Azure"] .azure-nav-trigger {
   cursor: default;
@@ -200,40 +229,97 @@
   color: var(--color-primary);
   font-weight: 600;
 }
-[data-theme="Azure"] .azure-search-area {
+[data-theme="Azure"] .azure-desktop-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 6px;
   flex-shrink: 0;
+}
+[data-theme="Azure"] .azure-header-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: #999;
+  background: #fff;
+  border: 1px solid #ddd;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+[data-theme="Azure"] .azure-header-button:hover,
+[data-theme="Azure"] .azure-header-button:focus-visible,
+[data-theme="Azure"] .azure-search.open .azure-search-button {
+  color: var(--color-primary);
+  background: #fff;
+  border-color: var(--color-primary);
+  outline: none;
+}
+[data-theme="Azure"] .azure-header-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+[data-theme="Azure"] .azure-header-button i {
+  font-size: 15px;
+  line-height: 1;
+}
+[data-theme="Azure"] .azure-header-action-custom-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+[data-theme="Azure"] .azure-header-action-custom-icon svg {
+  width: 16px;
+  height: 16px;
+}
+[data-theme="Azure"] .azure-header-action-img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 [data-theme="Azure"] .azure-search {
   position: relative;
+  flex-shrink: 0;
+}
+[data-theme="Azure"] .azure-search-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 80;
   display: flex;
   align-items: center;
+  width: 320px;
+  height: 42px;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.12);
 }
-[data-theme="Azure"] .azure-search-icon {
-  position: absolute;
-  left: 10px;
+[data-theme="Azure"] .azure-search-popover-icon {
+  flex-shrink: 0;
+  margin-left: 13px;
   stroke: #999;
-  pointer-events: none;
 }
 [data-theme="Azure"] .azure-search-input {
-  width: 180px;
-  padding: 7px 36px 7px 32px;
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 10px;
   color: #333;
   font-size: 13px;
-  background: #f8f8f8;
-  border: 1px solid #e0e0e0;
+  background: transparent;
+  border: 0;
   outline: none;
-  transition: border-color 0.15s, width 0.2s;
-}
-[data-theme="Azure"] .azure-search-input:focus {
-  width: 220px;
-  border-color: var(--color-primary);
 }
 [data-theme="Azure"] .azure-search-kbd {
-  position: absolute;
-  right: 8px;
+  flex-shrink: 0;
+  margin-right: 9px;
   padding: 1px 5px;
   color: #aaa;
   font-size: 10px;
@@ -242,13 +328,77 @@
   border: 1px solid #ddd;
 }
 [data-theme="Azure"] .azure-header-loading {
-  position: absolute;
-  top: 50%;
-  right: 24px;
-  width: 20px;
-  height: 20px;
-  transform: translateY(-50%);
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   pointer-events: none;
+}
+[data-theme="Azure"] .azure-search-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000001;
+}
+[data-theme="Azure"] .azure-search-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.72);
+  border: 0;
+  cursor: default;
+}
+[data-theme="Azure"] .azure-search-modal-panel {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  width: min(560px, calc(100vw - 32px));
+  height: 56px;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.14);
+  transform: translateX(-50%);
+}
+[data-theme="Azure"] .azure-search-modal-icon {
+  flex-shrink: 0;
+  margin-left: 18px;
+  stroke: #999;
+}
+[data-theme="Azure"] .azure-search-modal-input {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 14px;
+  color: #1a1a1a;
+  font-size: 18px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+[data-theme="Azure"] .azure-search-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin-right: 6px;
+  color: #999;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+[data-theme="Azure"] .azure-search-modal-close:hover {
+  color: #333;
+  background: #f5f5f5;
 }
 [data-theme="Azure"] .azure-mobile-actions {
   display: none;
@@ -394,10 +544,11 @@
   opacity: 1;
   pointer-events: auto;
 }
-[data-theme="Azure"] .azure-hero-loading i {
-  color: #fff;
-  font-size: 28px;
-  opacity: 0.92;
+[data-theme="Azure"] .azure-hero-loading-icon {
+  width: 44px;
+  height: 44px;
+  color: rgba(255, 255, 255, 0.92);
+  opacity: 0.95;
 }
 [data-theme="Azure"] .azure-hero-titlebar {
   position: absolute;
@@ -505,8 +656,10 @@
   font-size: 14px;
   text-align: center;
 }
-[data-theme="Azure"] .azure-loading i {
+[data-theme="Azure"] .azure-loading i,
+[data-theme="Azure"] .azure-loading svg {
   margin-right: 8px;
+  vertical-align: middle;
 }
 [data-theme="Azure"] .azure-pagination-wrap {
   display: flex;
@@ -642,6 +795,23 @@
   height: 320px;
   overflow: hidden;
   background: var(--color-bg-soft);
+}
+[data-theme="Azure"] .azure-post-card-cover-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary, #0052D9);
+  background: color-mix(in srgb, var(--color-bg-soft) 72%, transparent);
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+[data-theme="Azure"] .azure-post-card-cover-loader.loaded,
+[data-theme="Azure"] .azure-post-card-cover img[data-loaded="1"] + .azure-post-card-cover-loader {
+  opacity: 0;
 }
 [data-theme="Azure"] .azure-post-card-excerpt {
   padding: 12px 20px;
@@ -813,11 +983,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
   [data-theme="Azure"] .azure-desktop-nav,
-  [data-theme="Azure"] .azure-search-area {
+  [data-theme="Azure"] .azure-desktop-actions {
     display: none;
-  }
-  [data-theme="Azure"] .azure-header-loading {
-    right: 102px;
   }
   [data-theme="Azure"] .azure-mobile-actions {
     display: flex;
@@ -825,6 +992,7 @@
     gap: 4px;
     flex-shrink: 0;
     margin-left: auto;
+    margin-right: 16px;
   }
   [data-theme="Azure"] .azure-mobile-bar-button {
     display: inline-flex;
@@ -1052,6 +1220,9 @@
   [data-theme="Azure"] .azure-shell {
     background: #fff;
   }
+  [data-theme="Azure"] .azure-header {
+    padding-right: 0;
+  }
   [data-theme="Azure"] .azure-frame {
     min-height: calc(100vh - 52px);
     border-right: 0;
@@ -1060,10 +1231,26 @@
   [data-theme="Azure"] .azure-header-inner {
     height: 52px;
     gap: 10px;
-    padding: 0 14px;
+    padding: 0;
   }
   [data-theme="Azure"] .azure-brand {
+    margin-left: 14px;
     max-width: calc(100% - 54px);
+  }
+  [data-theme="Azure"] .azure-mobile-actions {
+    margin-right: 14px;
+  }
+  [data-theme="Azure"] .azure-header-loading {
+    top: 12px;
+    right: 14px;
+  }
+  [data-theme="Azure"] .azure-search-modal-panel {
+    top: 64px;
+    width: calc(100vw - 24px);
+    height: 52px;
+  }
+  [data-theme="Azure"] .azure-search-modal-input {
+    font-size: 16px;
   }
   [data-theme="Azure"] .azure-brand-img {
     max-width: 150px;
@@ -1245,6 +1432,7 @@
 
 [data-theme="Azure"] .blog-prose {
   color: var(--color-text-main);
+  font-family: "PingFang SC", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   font-size: 1.0625rem;
   line-height: 1.9;
   word-break: break-word;
@@ -1252,7 +1440,7 @@
 
 /* Headings — no links, clean typography */
 [data-theme="Azure"] .blog-prose h1, [data-theme="Azure"] .blog-prose h2, [data-theme="Azure"] .blog-prose h3, [data-theme="Azure"] .blog-prose h4 {
-  font-family: var(--font-serif);
+  font-family: "PingFang SC", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   color: var(--color-text-main);
   letter-spacing: 0;
 }

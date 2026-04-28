@@ -6,7 +6,7 @@ import FooterIconsEditor from '@/components/FooterIconsEditor';
 import MenusPage from './Menus';
 
 export default function Themes() {
-  const [tab, setTab] = useState<'themes' | 'menus' | 'footer'>('themes');
+  const [tab, setTab] = useState<'themes' | 'menus' | 'header' | 'footer'>('themes');
   const [themes, setThemes] = useState<ExtensionManifest[]>([]);
   const [active, setActive] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -95,6 +95,7 @@ export default function Themes() {
   const tabs: { key: typeof tab; label: string; icon: string }[] = [
     { key: 'themes', label: '主题', icon: 'fa-regular fa-palette' },
     { key: 'menus', label: '菜单', icon: 'fa-regular fa-list' },
+    { key: 'header', label: '头部按钮', icon: 'fa-regular fa-window-maximize' },
     { key: 'footer', label: '页脚图标', icon: 'fa-regular fa-share-nodes' },
   ];
 
@@ -118,6 +119,20 @@ export default function Themes() {
       </div>
 
       {tab === 'menus' && <MenusPage />}
+      {tab === 'header' && (
+        <FooterIconsEditor
+          optionKey="theme_header_buttons"
+          title="头部图标按钮"
+          emptyText="尚未配置，点击“添加”开始。留空则 Azure 头部只显示搜索按钮。"
+          emptyRow={{ icon: 'fa-light fa-link', label: '按钮', href: '/' }}
+          description={
+            <>
+              显示在 Azure 主题头部右侧、搜索按钮旁边的正方形图标按钮。图标支持 FontAwesome 类名（如 <code>fa-light fa-link</code>）、
+              图片 URL、内联 SVG、或上传图片。填写「复制文本」后点击按钮会复制内容，优先于链接。
+            </>
+          }
+        />
+      )}
       {tab === 'footer' && <FooterIconsEditor />}
       {tab === 'themes' && <>
       {/* Toolbar */}

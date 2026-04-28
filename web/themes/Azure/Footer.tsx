@@ -400,7 +400,7 @@ export default function Footer() {
                                 {u.name || u.ip_masked || '匿名'}
                               </span>
                               {u.country_code && (
-                                <img src={`https://flagcdn.io/${u.country_code.toLowerCase()}.svg`} alt="" style={{ width: '14px', height: '10px', objectFit: 'cover', flexShrink: 0 }} />
+                                <img src={`https://flagcdn.io/flags/4x3/${u.country_code.toLowerCase()}.svg`} alt="" style={{ width: '14px', height: '10px', objectFit: 'cover', flexShrink: 0 }} />
                               )}
                             </div>
                             <div style={{ fontSize: '11px', color: '#999' }}>
@@ -421,7 +421,7 @@ export default function Footer() {
             <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               最近访客来自{' '}
               <img
-                src={`https://flagcdn.io/${visitor.code}.svg`}
+                src={`https://flagcdn.io/flags/4x3/${visitor.code.toLowerCase()}.svg`}
                 alt={visitor.code}
                 style={{ width: '16px', height: '12px', objectFit: 'cover', verticalAlign: 'middle' }}
               />

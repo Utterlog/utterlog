@@ -38,7 +38,7 @@ function CountryRow({ data }: { data: any[] }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
       {data.slice(0, 10).map((d, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '4px 0' }}>
-          {d.code && <img src={`https://flagcdn.io/${d.code.toLowerCase()}.svg`} alt="" style={{ width: '16px', height: '12px' }} />}
+          {d.code && <img src={`https://flagcdn.io/flags/4x3/${d.code.toLowerCase()}.svg`} alt="" style={{ width: '16px', height: '12px' }} />}
           <span style={{ flex: 1 }}>{d.country || d.code || '-'}</span>
           <span className="text-dim">{d.count}</span>
         </div>
@@ -169,7 +169,7 @@ export default function AnalyticsPage() {
                           </div>
                         </div>
                         {u.country_code && (
-                          <img src={`https://flagcdn.io/${u.country_code.toLowerCase()}.svg`} alt="" style={{ width: '14px', height: '10px', flexShrink: 0 }} />
+                          <img src={`https://flagcdn.io/flags/4x3/${u.country_code.toLowerCase()}.svg`} alt="" style={{ width: '14px', height: '10px', flexShrink: 0 }} />
                         )}
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
                       </div>
@@ -489,7 +489,7 @@ function RecentVisitorsPanel() {
                 <td>
                   {v.country_code && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <img src={`https://flagcdn.io/${v.country_code.toLowerCase()}.svg`} alt="" style={{ width: '14px', height: '10px' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      <img src={`https://flagcdn.io/flags/4x3/${v.country_code.toLowerCase()}.svg`} alt="" style={{ width: '14px', height: '10px' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       <span className="text-dim">{v.city || v.country || '-'}</span>
                     </span>
                   )}

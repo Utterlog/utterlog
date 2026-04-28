@@ -117,7 +117,7 @@ export default function SystemStatusPanel({ isOpen }: { isOpen: boolean }) {
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', borderBottom: '1px solid var(--color-divider)' }}>
                 <span className="text-dim">{item.k}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {item.flag && <img src={`https://flagcdn.io/${item.flag.toLowerCase()}.svg`} alt="" style={{ width: '14px', height: '10px' }} />}
+                  {item.flag && <img src={`https://flagcdn.io/flags/4x3/${item.flag.toLowerCase()}.svg`} alt="" style={{ width: '14px', height: '10px' }} />}
                   {item.v}
                 </span>
               </div>

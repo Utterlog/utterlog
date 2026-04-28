@@ -1,4 +1,13 @@
 /* Utterlog Theme Styles */
+[data-theme="Utterlog"] .utterlog-brand {
+  transform-origin: center;
+  transition: transform 0.216s ease;
+  will-change: transform;
+}
+[data-theme="Utterlog"] .utterlog-brand:hover {
+  transform: scale(1.1);
+}
+
 [data-theme="Utterlog"] .blog-prose {
   color: var(--color-text-main);
   font-size: 1.0625rem;

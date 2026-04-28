@@ -139,8 +139,9 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
       setContent('');
       const newId = res?.data?.id || res?.id;
       onSuccess?.(newId);
-    } catch {
-      toast.error('评论提交失败');
+    } catch (err: any) {
+      const message = err?.response?.data?.error?.message || err?.response?.data?.message || '评论提交失败';
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -229,12 +230,17 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
             placeholder="写下你的回复..." rows={3}
             style={{ width: '100%', padding: '10px', fontSize: '13px', lineHeight: 1.6, border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', outline: 'none', resize: 'vertical', color: 'var(--color-text-main)', fontFamily: 'inherit', borderRadius: 0 }} />
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
-            {onCancel && <button onClick={onCancel} style={{ padding: '6px 14px', fontSize: '12px', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-sub)', cursor: 'pointer' }}>取消</button>}
-            <button onClick={handleSubmit} disabled={submitting}
-              style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: submitting ? 'wait' : 'pointer', opacity: submitting ? 0.6 : 1 }}>
-              {submitting ? '...' : '回复'}
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+            {!isAdmin && (
+              <CommentCaptcha onVerified={setCaptchaResult} onReset={() => setCaptchaResult(null)} />
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginLeft: 'auto' }}>
+              {onCancel && <button onClick={onCancel} style={{ padding: '6px 14px', fontSize: '12px', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-sub)', cursor: 'pointer' }}>取消</button>}
+              <button onClick={handleSubmit} disabled={submitting}
+                style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: submitting ? 'wait' : 'pointer', opacity: submitting ? 0.6 : 1 }}>
+                {submitting ? '...' : '回复'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

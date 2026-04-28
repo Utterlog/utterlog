@@ -19,6 +19,7 @@ const pageTitleMap: Record<string, PageMeta> = {
   '/pages':          { label: '页面管理',      en: 'Pages',           icon: 'fa-regular fa-file-lines' },
   '/pages/create':   { label: '新建页面',      en: 'New Page',        icon: 'fa-regular fa-file-plus' },
   '/moments':        { label: '说说管理',      en: 'Moments',         icon: 'fa-solid fa-comment-dots' },
+  '/footprints':     { label: '足迹管理',      en: 'Footprints',      icon: 'fa-regular fa-map-location-dot' },
   '/comments':       { label: '评论管理',      en: 'Comments',        icon: 'fa-regular fa-comments' },
   '/comments/ai':    { label: 'AI 评论队列',    en: 'AI Comment Queue', icon: 'fa-regular fa-robot' },
   '/follows':        { label: '关注管理',      en: 'Follows',         icon: 'fa-solid fa-user-group' },
@@ -48,6 +49,33 @@ const pageTitleMap: Record<string, PageMeta> = {
 };
 
 const EMPTY: PageMeta = { label: '', en: '', icon: '' };
+
+function isLoopbackHost(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]';
+}
+
+function hostForUrl(hostname: string): string {
+  return hostname.includes(':') && !hostname.startsWith('[') ? `[${hostname}]` : hostname;
+}
+
+function resolveVisitSiteUrl(configuredSiteUrl?: string): string {
+  const configured = (configuredSiteUrl || '').trim().replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname, port, origin } = window.location;
+
+    // Header "visit site" should preview the current local instance during
+    // development, even if the database carries a production site_url.
+    if (isLoopbackHost(hostname)) {
+      if (port && port !== '9260') return `${protocol}//${hostForUrl(hostname)}:9260/`;
+      return `${origin}/`;
+    }
+
+    if (!configured) return `${origin}/`;
+  }
+
+  return configured ? `${configured}/` : '/';
+}
 
 function pageKey(meta: PageMeta): string {
   if (!meta.en) return '';
@@ -84,7 +112,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, logout } = useAuthStore();
   const { locale, t } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
-  const [siteUrl, setSiteUrl] = useState('/');
+  const [siteUrl, setSiteUrl] = useState(() => resolveVisitSiteUrl());
   const [siteTitle, setSiteTitle] = useState('Utterlog');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -97,10 +125,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     optionsApi.list().then((r: any) => {
       const opts = r.data || r || {};
-      if (opts.site_url) setSiteUrl(opts.site_url);
+      setSiteUrl(resolveVisitSiteUrl(opts.site_url));
       if (opts.site_title) setSiteTitle(opts.site_title);
       setAdminTimeZone(opts.site_timezone, opts.site_timezone_effective);
-    }).catch(() => {});
+    }).catch(() => {
+      setSiteUrl(resolveVisitSiteUrl());
+    });
   }, []);
 
   // Sync browser tab title: "页面标题 - 站点名称 | Utterlog"
@@ -164,6 +194,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     pathname.startsWith('/posts/categories') ||
     pathname.startsWith('/posts/tags') ||
     pathname === '/pages' ||
+    pathname === '/footprints' ||
     pathname === '/comments' ||
     pathname.startsWith('/comments/');
 

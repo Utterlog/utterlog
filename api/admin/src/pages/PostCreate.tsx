@@ -8,6 +8,7 @@ import api from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
+import FootprintEditor, { type FootprintFormValue, normalizeFootprintsForPayload } from '@/components/FootprintEditor';
 
 export default function CreatePostPage() {
   const { t } = useI18n();
@@ -29,6 +30,8 @@ export default function CreatePostPage() {
   const [allowComment, setAllowComment] = useState(true);
   const [allowRss, setAllowRss] = useState(true);
   const [pinned, setPinned] = useState(false);
+  const [footprintsEnabled, setFootprintsEnabled] = useState(false);
+  const [footprints, setFootprints] = useState<FootprintFormValue[]>([]);
   const [coverUploading, setCoverUploading] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiProcessing, setAiProcessing] = useState(false);
@@ -59,6 +62,8 @@ export default function CreatePostPage() {
         if (d.categoryId) setCategoryId(d.categoryId);
         if (d.tagInput) setTagInput(d.tagInput);
         if (d.excerpt) setExcerpt(d.excerpt);
+        if (Array.isArray(d.footprints)) setFootprints(d.footprints);
+        if (d.footprintsEnabled) setFootprintsEnabled(true);
       } catch {}
     }
     categoriesApi.list().then((r: any) => setCategories(r.data || [])).catch(() => {});
@@ -75,11 +80,11 @@ export default function CreatePostPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (title || content) {
-        localStorage.setItem('draft_post', JSON.stringify({ title, content, slug, coverUrl, categoryId, tagInput, excerpt }));
+        localStorage.setItem('draft_post', JSON.stringify({ title, content, slug, coverUrl, categoryId, tagInput, excerpt, footprintsEnabled, footprints }));
       }
     }, 1000); // debounce 1s
     return () => clearTimeout(timer);
-  }, [title, content, slug, coverUrl, categoryId, tagInput, excerpt]);
+  }, [title, content, slug, coverUrl, categoryId, tagInput, excerpt, footprintsEnabled, footprints]);
 
   const handleSave = async (saveStatus?: string) => {
     if (!title.trim()) { toast.error(t('admin.postEditor.toast.titleRequired', '标题不能为空')); return; }
@@ -97,6 +102,7 @@ export default function CreatePostPage() {
         password: password || undefined,
         allow_comment: allowComment,
         pinned,
+        footprints: footprintsEnabled ? normalizeFootprintsForPayload(footprints, coverUrl, publishAt) : [],
       });
       localStorage.removeItem('draft_post');
       toast.success(t('admin.postEditor.toast.created', '文章创建成功'));
@@ -360,6 +366,15 @@ export default function CreatePostPage() {
                 <label style={labelStyle}>{t('admin.postEditor.publishTime', '发布时间')}</label>
                 <input type="datetime-local" value={publishAt} onChange={(e) => setPublishAt(e.target.value)} className="input" style={{ fontSize: '12px', padding: '6px 10px' }} />
               </div>
+
+              <FootprintEditor
+                enabled={footprintsEnabled}
+                onEnabledChange={setFootprintsEnabled}
+                value={footprints}
+                onChange={setFootprints}
+                defaultDate={publishAt}
+                fallbackCoverUrl={coverUrl}
+              />
             </div>
           </div>
 

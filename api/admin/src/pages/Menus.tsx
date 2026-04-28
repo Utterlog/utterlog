@@ -22,6 +22,7 @@ const BUILTIN_PAGES: { key: string; label: string; href: string }[] = [
   { key: 'home', label: '首页',   href: '/' },
   { key: 'about', label: '关于',   href: '/about' },
   { key: 'archives', label: '归档',   href: '/archives' },
+  { key: 'footprints', label: '足迹', href: '/footprints' },
   { key: 'moments', label: '说说',   href: '/moments' },
   { key: 'albums', label: '相册',   href: '/albums' },
   { key: 'music', label: '音乐',   href: '/music' },
@@ -249,6 +250,7 @@ export default function MenusPage() {
   const items = menus[activePos] || [];
   const posDef = positions.find(p => p.key === activePos);
   const isAzureSidebar = activeTheme === 'Azure' && activePos === 'sidebar';
+  const menuTextButtonStyle = { padding: '0 26px', minWidth: 'auto' };
 
   return (
     <div>
@@ -257,8 +259,8 @@ export default function MenusPage() {
           {t('admin.menus.themePositionSummary', '当前主题 {theme} 声明了 {count} 个菜单位置', { theme: activeTheme || '—', count: positions.length })}
         </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" onClick={resetToDefault}>
-            <i className="fa-regular fa-rotate-left" style={{ fontSize: '13px' }} /> {t('admin.menus.resetDefault', '重置默认')}
+          <Button variant="secondary" onClick={resetToDefault} style={menuTextButtonStyle}>
+            <span>{t('admin.menus.resetDefault', '重置默认')}</span>
           </Button>
           <Button onClick={onSave} loading={saving}>
             {t('admin.common.save', '保存')}
@@ -393,11 +395,11 @@ export default function MenusPage() {
         ))}
 
         <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-start', position: 'relative' }}>
-          <Button variant="secondary" onClick={addItem}>
-            <i className="fa-regular fa-plus" style={{ fontSize: '13px' }} /> {t('admin.menus.addItem', '添加菜单项')}
+          <Button variant="secondary" onClick={addItem} style={menuTextButtonStyle}>
+            <span>{t('admin.menus.addItem', '添加菜单项')}</span>
           </Button>
-          <Button variant="secondary" onClick={() => setPickerOpen({ target: 'root' })}>
-            <i className="fa-regular fa-file-lines" style={{ fontSize: '13px' }} /> {t('admin.menus.addFromExisting', '从已有页面添加')}
+          <Button variant="secondary" onClick={() => setPickerOpen({ target: 'root' })} style={menuTextButtonStyle}>
+            <span>{t('admin.menus.addFromExisting', '从已有页面添加')}</span>
           </Button>
 
           {pickerOpen && (
@@ -405,7 +407,7 @@ export default function MenusPage() {
               ref={pickerRef}
               style={{
                 position: 'absolute', top: '100%', left: 0, marginTop: '6px',
-                width: '320px', maxHeight: '420px', overflowY: 'auto',
+                width: '320px', maxHeight: 'min(620px, 70vh)', overflowY: 'auto',
                 background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.08)', zIndex: 10,
               }}

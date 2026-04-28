@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "mapbox-gl/dist/mapbox-gl.css";
 
 /* Scrollbar: reserve space, track matches background, thumb hidden until scroll */
 /* ===== Scrollbar: prevent layout shift ===== */
@@ -845,7 +846,7 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   bottom: 0;
   right: 0;
   margin-bottom: 4px;
-  z-index: 3;
+  z-index: 5;
   padding: 8px;
   font-size: 13px;
   color: #fff;
@@ -1024,8 +1025,9 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
 .vi-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
-  padding: 1rem;
+  /* Above AI reader / floating previews, which use 9999-99999 inline z-index. */
+  z-index: 1000000;
+  padding: 5vh 1rem;
   display: flex;
   flex-direction: column;
   /* Solid-ish dark backdrop instead of `backdrop-filter: blur()`.
@@ -1082,31 +1084,35 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   z-index: 0;
 }
 
-/* Thin sliding loading bar — shows while the next image is decoding
-   during prev/next navigation. 8rem wide strip that slides across. */
+/* Lightbox loading bar — compact SVG strip shown while the next image
+   is decoding during prev/next navigation. */
 .vi-loading {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 8rem;
-  height: 3px;
-  margin: -1.5px -4rem;
-  background: rgba(255, 255, 255, 0.12);
-  overflow: hidden;
+  width: 40px;
+  height: 4px;
+  margin: -2px -20px;
+  color: rgba(255, 255, 255, 0.88);
+  overflow: visible;
   z-index: 1;
   pointer-events: none;
 }
-.vi-loading::after {
-  content: '';
-  position: absolute;
-  top: 0; bottom: 0; left: 0;
-  width: 40%;
-  background: rgba(255, 255, 255, 0.55);
-  animation: vi-loading 900ms infinite ease-in-out;
+.vi-loading-react {
+  animation: vi-loading-moving 1s ease-in-out infinite;
 }
-@keyframes vi-loading {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(350%); }
+@keyframes vi-loading-moving {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 100%;
+    transform: translate(0%, 0);
+  }
+  100% {
+    width: 0;
+    transform: translate(100%, 0);
+  }
 }
 
 /* Bottom toolbar — floats over the stage bottom so the image zone
@@ -1114,7 +1120,7 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
    within the viewport. */
 .vi-tools {
   position: absolute;
-  bottom: calc(1rem + env(safe-area-inset-bottom));
+  bottom: calc(clamp(48px, 10vh, 120px) + env(safe-area-inset-bottom));
   left: 1rem;
   right: 1rem;
   max-width: 600px;
@@ -1123,12 +1129,19 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
+  background: rgba(0, 0, 0, 0.26);
+  color: rgba(255, 255, 255, 0.72);
   border-radius: 0;
   /* No backdrop-filter here either — matches .vi-overlay removal;
      keeps a single cheap compositing layer for the whole overlay. */
   z-index: 2;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+.vi-tools:hover,
+.vi-tools:focus-within {
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
 }
 .vi-count {
   min-width: 60px;
@@ -1148,12 +1161,20 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   justify-content: center;
   cursor: pointer;
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
   border: none;
-  color: #fff;
-  transition: background 0.15s;
+  color: rgba(255, 255, 255, 0.68);
+  transition: background 0.15s ease, color 0.15s ease;
 }
-.vi-btn:hover { background: rgba(255, 255, 255, 0.4); }
+.vi-tools:hover .vi-btn,
+.vi-tools:focus-within .vi-btn {
+  color: rgba(255, 255, 255, 0.9);
+}
+.vi-btn:hover,
+.vi-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
 .vi-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ========================================
@@ -1494,6 +1515,435 @@ html[data-img-effect="none"] :where([data-blog-image] img, img[data-blog-image])
     transform: none !important;
     filter: none !important;
     clip-path: none !important;
+  }
+}
+
+.post-hero-footprint-flags {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.post-hero-footprint-flag {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  transform-origin: center;
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+}
+
+.post-hero-footprint-flag:hover {
+  transform: scale(1.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+}
+
+.post-hero-footprint-more {
+  min-width: 28px;
+  height: 21px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+@media (max-width: 640px) {
+  .post-hero-footprint-flags {
+    right: 12px;
+    bottom: 12px;
+  }
+  .post-hero-footprint-flag {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+.footprint-page {
+  background: var(--color-bg-card, #fff);
+}
+
+.footprint-page-body {
+  padding: 0 32px 32px;
+}
+
+.footprint-page .blog-page-title-side {
+  width: min(420px, 42vw);
+  max-width: 100%;
+}
+
+.footprint-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(420px, 100%);
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border, #ddd);
+  background: var(--color-bg-soft, #fafafa);
+}
+
+.footprint-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-main, #111);
+  font-size: 14px;
+}
+
+.footprint-search button {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--color-primary, #0052d9);
+  color: #fff;
+  background: var(--color-primary, #0052d9);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.footprint-disabled,
+.footprint-empty,
+.footprint-map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 120px;
+  margin-bottom: 20px;
+  border: 1px dashed var(--color-border, #ddd);
+  color: var(--color-text-dim, #888);
+  background: var(--color-bg-soft, #fafafa);
+  font-size: 13px;
+}
+
+.footprint-map {
+  width: 100%;
+  height: min(56vh, 520px);
+  min-height: 320px;
+  margin-bottom: 24px;
+  border: 1px solid var(--color-border, #ddd);
+}
+
+.footprint-map-marker {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary, #0052d9);
+  border: 3px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #0052d9) 28%, transparent), 0 8px 24px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.footprint-mapbox-popup {
+  max-width: min(360px, calc(100vw - 36px));
+}
+
+.footprint-mapbox-popup .mapboxgl-popup-content {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-border, #ddd) 78%, #fff);
+  border-radius: 4px;
+  color: var(--color-text-main, #111);
+  background: var(--color-bg-card, #fff);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16);
+}
+
+.footprint-mapbox-popup .mapboxgl-popup-close-button {
+  right: 8px;
+  top: 7px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  color: var(--color-text-dim, #888);
+  font-size: 18px;
+  line-height: 20px;
+}
+
+.footprint-mapbox-popup .mapboxgl-popup-close-button:hover {
+  color: var(--color-text-main, #111);
+  background: var(--color-bg-soft, #f5f5f5);
+}
+
+.footprint-map-popup {
+  min-width: 260px;
+}
+
+.footprint-map-popup-card {
+  display: block;
+  min-width: 0;
+  padding: 16px 18px 14px;
+  color: inherit;
+  text-decoration: none;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-card, #fff);
+}
+
+.footprint-map-popup-card:first-child {
+  border-top: 0;
+}
+
+.footprint-map-popup-card:hover {
+  background: color-mix(in srgb, var(--color-primary, #0052d9) 5%, var(--color-bg-card, #fff));
+}
+
+.footprint-map-popup-title {
+  display: block;
+  overflow: hidden;
+  padding-right: 22px;
+  color: var(--color-text-main, #111);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footprint-map-popup-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  margin-top: 9px;
+  color: var(--color-text-sub, #666);
+  font-size: 13px;
+}
+
+.footprint-map-popup-location {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.footprint-map-popup-location img {
+  width: 24px;
+  height: 16px;
+  object-fit: cover;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.footprint-map-popup-location span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footprint-map-popup-meta time {
+  flex: 0 0 auto;
+  color: var(--color-text-dim, #9ca3af);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.footprint-timeline-wrap {
+  position: relative;
+}
+
+.footprint-link-lines {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  color: var(--color-primary, #0052d9);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.footprint-link-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+  stroke-linecap: round;
+  opacity: 0.82;
+}
+
+.footprint-timeline {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.footprint-card {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--color-border, #ddd);
+  background: var(--color-bg-card, #fff);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.footprint-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.footprint-card.is-linkable {
+  cursor: pointer;
+}
+
+.footprint-card.is-active {
+  z-index: 4;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+}
+
+.footprint-card-pulse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 6;
+  width: 58px;
+  height: 58px;
+  color: var(--color-primary, #0052d9);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.footprint-card-pulse svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  filter: drop-shadow(0 2px 8px rgba(0, 82, 217, 0.2));
+}
+
+.footprint-card-cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--color-bg-soft, #f5f5f5);
+}
+
+.footprint-card-cover img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.footprint-card-order {
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.footprint-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+
+.footprint-card-body strong {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text-main, #111);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footprint-card-title {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+}
+
+.footprint-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.footprint-card-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-sub, #666);
+  font-size: 12px;
+  text-align: left;
+}
+
+.footprint-card-location span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footprint-card-location img {
+  width: 22px;
+  height: 15px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.footprint-card-location i {
+  color: var(--color-primary, #0052d9);
+  font-size: 11px;
+  flex: 0 0 auto;
+}
+
+.footprint-card-meta time {
+  flex: 0 0 auto;
+  color: var(--color-text-dim, #999);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+@media (max-width: 720px) {
+  .footprint-page-body {
+    padding: 0 18px 18px;
+  }
+  .footprint-page .blog-page-title-side {
+    width: 100%;
+  }
+  .footprint-map {
+    height: 360px;
   }
 }
 

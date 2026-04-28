@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import PostLink from '@/components/blog/PostLink';
 import SharedFadeCover from '@/components/blog/FadeCover';
+import LoadingSpinner from '@/components/blog/LoadingSpinner';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone } from '@/lib/timezone';
@@ -58,12 +59,7 @@ function LazyCardImage({ src, alt }: { src: string; alt: string }) {
       )}
       {(!inView || !loaded) && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-soft)' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--color-text-dim)">
-            <path d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z" opacity=".25"/>
-            <path d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z">
-              <animateTransform attributeName="transform" type="rotate" dur="0.75s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
-            </path>
-          </svg>
+          <LoadingSpinner size={20} />
         </div>
       )}
     </div>
