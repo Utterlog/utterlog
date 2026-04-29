@@ -276,7 +276,7 @@ export function FormRowTextareaC({
 
 // Select variant — table-style
 export function FormRowSelectC({
-  label, hint, value, onChange, register, options, last,
+  label, hint, value, onChange, register, options, last, controlAlign = 'left', controlWidth,
 }: {
   label: string;
   hint?: string;
@@ -285,6 +285,8 @@ export function FormRowSelectC({
   register?: any;
   options: { value: string; label: string }[];
   last?: boolean;
+  controlAlign?: 'left' | 'right';
+  controlWidth?: string;
 }) {
   return (
     <div style={{
@@ -301,11 +303,19 @@ export function FormRowSelectC({
         {hint && <div className="text-dim" style={{ fontSize: 11, marginTop: 2 }}>{hint}</div>}
       </div>
 
-      <div style={{ padding: '6px 14px', background: RIGHT_BG, display: 'flex', alignItems: 'center' }}>
+      <div style={{
+        padding: '6px 14px',
+        background: RIGHT_BG,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: controlAlign === 'right' ? 'flex-end' : 'flex-start',
+      }}>
         <select
           {...(register || {})}
           {...(register ? {} : { value: value ?? '', onChange: (e) => onChange?.(e.target.value) })}
           style={{
+            width: controlWidth,
+            maxWidth: '100%',
             height: 40, padding: '0 12px', fontSize: 13,
             background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
             color: 'var(--color-text-main)', outline: 'none', cursor: 'pointer',

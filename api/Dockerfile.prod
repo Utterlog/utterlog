@@ -33,7 +33,7 @@ COPY --from=admin-builder /app/admin/dist ./admin/dist
 # Build: stripped (-s -w), no symbols, static CGO disabled where possible.
 # (webp needs CGO so we keep it on but strip.) Inject version + build time
 # into the handler package so /api/v1/admin/system/version can surface them.
-ARG VERSION=v2.0.0
+ARG VERSION=v2.0.1
 ARG BUILD_COMMIT=unknown
 ARG BUILD_TIME=unknown
 RUN CGO_ENABLED=1 go build \
@@ -65,7 +65,9 @@ COPY public ./public
 # Ensure uploads directory exists and is writable. In the source tree
 # public/uploads can be a dev symlink to ../../uploads; remove that
 # symlink in the runtime image and create the real mount point.
-RUN rm -rf public/uploads && mkdir -p public/uploads && chown -R utterlog:utterlog /app
+RUN rm -rf public/uploads \
+    && mkdir -p public/uploads content/themes content/plugins \
+    && chown -R utterlog:utterlog /app
 
 # Run as root so the mounted docker.sock (root:docker on most hosts)
 # is accessible to the one-click update feature without GID juggling.

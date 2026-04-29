@@ -130,7 +130,10 @@ export default function AlbumsPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <p className="text-dim" style={{ fontSize: '13px' }}>管理照片相册，公开相册将在前端展示</p>
-        <Button onClick={() => { setShowCreate(true); setForm({ title: '', slug: '', description: '', status: 'private' }); }}>
+        <Button
+          style={{ minWidth: '136px', padding: '0 24px', whiteSpace: 'nowrap' }}
+          onClick={() => { setShowCreate(true); setForm({ title: '', slug: '', description: '', status: 'private' }); }}
+        >
           <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} /> 新建相册
         </Button>
       </div>
@@ -141,7 +144,12 @@ export default function AlbumsPage() {
         <div className="card" style={{ padding: '60px 20px', textAlign: 'center' }}>
           <i className="fa-regular fa-image" style={{ fontSize: '40px', color: 'var(--color-text-dim)', margin: '0 auto 16px', display: 'block' }} />
           <p className="text-dim" style={{ fontSize: '14px', marginBottom: '16px' }}>暂无相册</p>
-          <Button onClick={() => setShowCreate(true)}><i className="fa-regular fa-plus" style={{ fontSize: '14px' }} /> 创建第一个相册</Button>
+          <Button
+            style={{ minWidth: '180px', padding: '0 28px', whiteSpace: 'nowrap' }}
+            onClick={() => setShowCreate(true)}
+          >
+            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} /> 创建第一个相册
+          </Button>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>

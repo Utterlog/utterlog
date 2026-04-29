@@ -126,7 +126,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
               // Match the NavLink padding below so rows with an expand
               // chevron render at the same height as plain rows.
               display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-              padding: '8px 14px', fontSize: 13, background: 'none', border: 'none',
+              height: 40, padding: '0 14px', fontSize: 13, background: 'none', border: 'none',
               borderLeft: '2px solid transparent',
               color: 'var(--color-text-sub)', cursor: 'pointer',
             }}
@@ -148,7 +148,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
               to={child.to}
               style={({ isActive }) => ({
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 14px 8px 40px', fontSize: 12,
+                height: 38, padding: '0 14px 0 40px', fontSize: 12,
                 color: isActive ? 'var(--color-primary)' : 'var(--color-text-sub)',
                 background: isActive ? 'var(--color-bg-soft)' : 'transparent',
                 textDecoration: 'none',
@@ -169,7 +169,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
         end={item.to === '/'}
         style={({ isActive }) => ({
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '8px 14px', fontSize: 13,
+          height: 40, padding: '0 14px', fontSize: 13,
           color: isActive ? 'var(--color-primary)' : 'var(--color-text-sub)',
           background: isActive ? 'var(--color-bg-soft)' : 'transparent',
           borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
@@ -258,7 +258,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           to="/utterlog"
           style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: 10,
-            padding: '9px 12px', fontSize: 13,
+            height: 40, padding: '0 12px', fontSize: 13,
             color: isActive ? 'var(--color-primary)' : 'var(--color-text-sub)',
             background: isActive ? 'var(--color-bg-soft)' : 'transparent',
             borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',

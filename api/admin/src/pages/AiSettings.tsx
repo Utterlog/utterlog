@@ -539,6 +539,8 @@ export default function AiSettingsPage() {
                         label: `${p.name} · ${p.model}`,
                       })),
                     ]}
+                    controlAlign="right"
+                    controlWidth="min(100%, 420px)"
                     last={idx === purposes.length - 1}
                   />
                 );

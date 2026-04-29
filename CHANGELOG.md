@@ -9,15 +9,42 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 ### 新增
 
-- 暂无。
+暂无。
 
 ### 改进
 
-- 暂无。
+暂无。
 
 ### 修复
 
-- 暂无。
+暂无。
+
+## [2.0.1] - 2026-04-29
+
+### 新增
+
+- 新增 `content/` 运行时内容目录，后台上传主题统一保存到 `content/themes/`，插件统一保存到 `content/plugins/`。
+
+### 改进
+
+- 优化最近访客统计口径，同一访客会话只显示入站页面，并将会话内后续页面停留时间合并为总时长。
+- 优化相册管理页「新建相册」和空状态「创建第一个相册」按钮宽度与水平留白。
+- 优化 Utterlog 网络状态卡片的手动推送按钮宽度和水平留白，避免长文字贴近按钮边缘。
+- 移除安全设置中的 IP 信誉功能，后台不再显示 IP 信誉 tab，后端不再记录本地风险评分或按评分自动封禁。
+- 安全设置防御配置重构为统一表单行样式，访问控制、CC 防御和 GeoIP 封锁统一由底部「保存设置」提交，并补充个人博客使用提示。
+- 安全设置的防御设置保存按钮文案统一为「保存设置」。
+- 主题和插件管理改为优先读取 `content/` 目录，同时兼容旧版根目录 `themes/`、`plugins/`，避免升级后隐藏已有扩展。
+- `/themes/*` 资源路由改为先读取用户上传主题资源，再回退到内置主题资源，内置主题源码继续保留在 `web/themes/` 参与前端构建。
+- Docker 开发与生产编排新增 `content` 持久化挂载，系统备份与恢复同步覆盖 `content/` 运行时扩展目录。
+- 移除 API 侧重复的内置主题截图文件，内置主题静态资源统一由 web 侧构建产物提供。
+
+### 修复
+
+- 修复统计页面选择「全部」时间范围时国家/地区和来源聚合 SQL 条件拼接错误，导致已有国家数据也显示为空的问题。
+- 修复数据统计访客地图在低缩放级别关闭世界复制时横向边界被夹住，导致只能上下拖动不能左右拖动的问题。
+- 修复前台访问统计组件在部分运行时拿不到 zustand persist hydration API 时导致页面崩溃的问题。
+- 修复 `/themes/*` 的 `HEAD` 请求可能落到 Next.js 回退路由并返回异常的问题。
+- 修复主题静态资源路由可能暴露点文件的问题。
 
 ## [2.0.0] - 2026-04-29
 
@@ -102,6 +129,7 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 - 修复连续图片自动网格预处理吞掉图片组后的空行，导致紧跟的 Markdown `> ` 引用块被当作普通 `&gt;` 文本输出的问题。
 - 修复后台通知铃铛待审核评论入口仍跳转旧 `/dashboard/comments/pending` 的问题，并统一后台相关回跳到 `/admin` 路径。
 
-[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/utterlog/utterlog/releases/tag/v2.0.1
 [2.0.0]: https://github.com/utterlog/utterlog/releases/tag/v2.0.0
 [1.0.0]: https://github.com/utterlog/utterlog/releases/tag/v1.0.0

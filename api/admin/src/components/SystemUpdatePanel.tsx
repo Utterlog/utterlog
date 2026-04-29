@@ -431,7 +431,7 @@ export default function SystemUpdatePanel() {
         <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}>
           <li>数据库 (<code>pgdata/</code>) — 永不触碰</li>
           <li>配置文件 (<code>.env</code>) — 保持不变</li>
-          <li>上传文件和用户自定义主题 (<code>uploads/</code>) — 完整保留</li>
+          <li>上传文件 (<code>uploads/</code>) 和用户扩展 (<code>content/</code>) — 完整保留</li>
           <li>系统内置主题和代码 — 自动更新到最新版</li>
         </ul>
       </div>

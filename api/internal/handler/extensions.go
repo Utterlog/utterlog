@@ -48,17 +48,63 @@ type MenuPosition struct {
 	Description string `json:"description,omitempty"`
 }
 
-// directory layout:
+// Runtime extension layout:
 //
-//	./themes/<id>/manifest.json       — user-installed
-//	./themes-builtin/<id>/...         — shipped with binary (reserved for future)
-//	./plugins/<id>/manifest.json
-func extensionsDir(kind ExtensionKind) string {
+//	./content/themes/<id>/manifest.json   — user-installed themes
+//	./content/plugins/<id>/manifest.json  — user-installed plugins
+//
+// Legacy installs may still have ./themes or ./plugins at repo root. We keep
+// those paths readable so upgrades do not hide existing extensions, but all new
+// installs write into ./content.
+func primaryExtensionsDir(kind ExtensionKind) string {
+	switch kind {
+	case KindTheme:
+		return filepath.Join("content", "themes")
+	case KindPlugin:
+		return filepath.Join("content", "plugins")
+	}
+	return ""
+}
+
+func legacyExtensionsDir(kind ExtensionKind) string {
 	switch kind {
 	case KindTheme:
 		return "themes"
 	case KindPlugin:
 		return "plugins"
+	}
+	return ""
+}
+
+func extensionDirs(kind ExtensionKind) []string {
+	dirs := []string{}
+	if primary := primaryExtensionsDir(kind); primary != "" {
+		dirs = append(dirs, primary)
+	}
+	if legacy := legacyExtensionsDir(kind); legacy != "" {
+		dirs = append(dirs, legacy)
+	}
+	return dirs
+}
+
+func isBuiltInTheme(id string) bool {
+	for _, t := range builtInThemes {
+		if t.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+func themePreviewURL(themeID, fileName string) string {
+	return "/themes/" + themeID + "/" + fileName
+}
+
+func findThemePreviewURL(themeDir, themeID string) string {
+	for _, name := range []string{"screenshot.svg", "screenshot.png", "preview.png", "preview.jpg", "preview.jpeg", "preview.webp"} {
+		if st, err := os.Stat(filepath.Join(themeDir, name)); err == nil && !st.IsDir() {
+			return themePreviewURL(themeID, name)
+		}
 	}
 	return ""
 }
@@ -84,7 +130,7 @@ func enabledOptionKey(kind ExtensionKind) string {
 // through to Utterlog via the default fallback in listExtensions.
 var builtInThemes = []Extension{
 	{
-		ID: "Utterlog", Name: "Utterlog", Version: "2.0.0",
+		ID: "Utterlog", Name: "Utterlog", Version: "2.0.1",
 		Author:      "Utterlog Team",
 		Description: "Utterlog 官方默认主题 — 优雅功能丰富的博客主题",
 		Kind:        "theme",
@@ -95,7 +141,7 @@ var builtInThemes = []Extension{
 		},
 	},
 	{
-		ID: "Azure", Name: "Azure", Version: "2.0.0",
+		ID: "Azure", Name: "Azure", Version: "2.0.1",
 		Author:      "Utterlog Team",
 		Description: "蔚蓝极简内容优先主题 — 直角设计，蓝色配色",
 		Kind:        "theme",
@@ -107,7 +153,7 @@ var builtInThemes = []Extension{
 		},
 	},
 	{
-		ID: "Flux", Name: "Flux", Version: "2.0.0",
+		ID: "Flux", Name: "Flux", Version: "2.0.1",
 		Author:      "Utterlog Team",
 		Description: "极简金融科技风 · 单一绿色强调 · 大量留白 · 受 Stripe Link 启发",
 		Kind:        "theme",
@@ -119,7 +165,7 @@ var builtInThemes = []Extension{
 		},
 	},
 	{
-		ID: "Chred", Name: "Chred", Version: "2.0.0",
+		ID: "Chred", Name: "Chred", Version: "2.0.1",
 		Author:      "Utterlog Team",
 		Description: "红色商务主题 — 卡片式布局，高对比度",
 		Kind:        "theme",
@@ -135,8 +181,8 @@ var builtInThemes = []Extension{
 // listExtensions scans directories and returns metadata.
 // For themes, built-in themes from the Next.js bundle are included as well.
 func listExtensions(kind ExtensionKind) []Extension {
-	dir := extensionsDir(kind)
-	os.MkdirAll(dir, 0755)
+	primaryDir := primaryExtensionsDir(kind)
+	os.MkdirAll(primaryDir, 0755)
 
 	activeTheme := ""
 	activePlugins := map[string]bool{}
@@ -157,6 +203,7 @@ func listExtensions(kind ExtensionKind) []Extension {
 	}
 
 	out := []Extension{}
+	seen := map[string]bool{}
 
 	// 1. Built-in themes (compiled into Next.js)
 	if kind == KindTheme {
@@ -164,43 +211,48 @@ func listExtensions(kind ExtensionKind) []Extension {
 			tt := t
 			tt.Enabled = activeTheme == tt.ID
 			out = append(out, tt)
+			seen[tt.ID] = true
 		}
 	}
 
 	// 2. User-uploaded themes / plugins from disk
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return out
-	}
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		manifestPath := filepath.Join(dir, e.Name(), "manifest.json")
-		data, err := os.ReadFile(manifestPath)
+	for _, dir := range extensionDirs(kind) {
+		entries, err := os.ReadDir(dir)
 		if err != nil {
 			continue
 		}
-		var m Extension
-		if err := json.Unmarshal(data, &m); err != nil {
-			continue
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			manifestPath := filepath.Join(dir, e.Name(), "manifest.json")
+			data, err := os.ReadFile(manifestPath)
+			if err != nil {
+				continue
+			}
+			var m Extension
+			if err := json.Unmarshal(data, &m); err != nil {
+				continue
+			}
+			if m.ID == "" {
+				m.ID = e.Name()
+			}
+			if seen[m.ID] {
+				continue
+			}
+			m.Kind = string(kind)
+			m.Path = filepath.Join(dir, e.Name())
+			if kind == KindTheme {
+				m.Enabled = activeTheme == m.ID
+				if preview := findThemePreviewURL(m.Path, e.Name()); preview != "" {
+					m.Preview = preview
+				}
+			} else {
+				m.Enabled = activePlugins[m.ID]
+			}
+			out = append(out, m)
+			seen[m.ID] = true
 		}
-		if m.ID == "" {
-			m.ID = e.Name()
-		}
-		m.Kind = string(kind)
-		m.Path = filepath.Join(dir, e.Name())
-		if kind == KindTheme {
-			m.Enabled = activeTheme == m.ID
-		} else {
-			m.Enabled = activePlugins[m.ID]
-		}
-		// Preview asset path (if present)
-		previewRel := filepath.Join(dir, e.Name(), "preview.png")
-		if _, err := os.Stat(previewRel); err == nil {
-			m.Preview = "/" + previewRel
-		}
-		out = append(out, m)
 	}
 	return out
 }
@@ -313,7 +365,7 @@ func UploadExtension(kind ExtensionKind) gin.HandlerFunc {
 			return
 		}
 
-		baseDir := extensionsDir(kind)
+		baseDir := primaryExtensionsDir(kind)
 		os.MkdirAll(baseDir, 0755)
 
 		// Save to temp
@@ -372,6 +424,10 @@ func UploadExtension(kind ExtensionKind) gin.HandlerFunc {
 		// Sanitize ID
 		if strings.ContainsAny(m.ID, "/\\.") {
 			util.BadRequest(c, "无效的扩展 ID")
+			return
+		}
+		if kind == KindTheme && isBuiltInTheme(m.ID) {
+			util.BadRequest(c, "不能覆盖内置主题，请更换 manifest.json 里的 id")
 			return
 		}
 
@@ -455,10 +511,12 @@ func DeleteExtension(kind ExtensionKind) gin.HandlerFunc {
 			}
 		}
 
-		dir := filepath.Join(extensionsDir(kind), id)
-		if err := os.RemoveAll(dir); err != nil {
-			util.Error(c, 500, "DELETE_FAILED", err.Error())
-			return
+		for _, baseDir := range extensionDirs(kind) {
+			dir := filepath.Join(baseDir, id)
+			if err := os.RemoveAll(dir); err != nil {
+				util.Error(c, 500, "DELETE_FAILED", err.Error())
+				return
+			}
 		}
 		util.Success(c, gin.H{"id": id, "deleted": true})
 	}

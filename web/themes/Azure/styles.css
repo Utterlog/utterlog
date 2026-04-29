@@ -621,6 +621,58 @@
 [data-theme="Azure"] .azure-social-link:hover {
   color: var(--azure-social-hover, var(--color-primary));
 }
+[data-theme="Azure"] .azure-weather-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  min-width: 0;
+  padding: 0 16px;
+  color: #555;
+  font-size: 13px;
+  background: #fff;
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+}
+[data-theme="Azure"] .azure-weather-strip > i {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  font-size: 14px;
+}
+[data-theme="Azure"] .azure-weather-city,
+[data-theme="Azure"] .azure-weather-condition,
+[data-theme="Azure"] .azure-weather-muted {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-theme="Azure"] .azure-weather-city {
+  flex: 1;
+}
+[data-theme="Azure"] .azure-weather-temp {
+  flex-shrink: 0;
+  color: #222;
+  font-weight: 700;
+}
+[data-theme="Azure"] .azure-weather-condition,
+[data-theme="Azure"] .azure-weather-muted {
+  flex-shrink: 0;
+  color: #999;
+  font-size: 12px;
+}
+[data-theme="Azure"] .azure-weather-loading {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 82, 217, 0.18);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: azure-weather-spin 0.75s linear infinite;
+}
+@keyframes azure-weather-spin {
+  to { transform: rotate(360deg); }
+}
 [data-theme="Azure"] .azure-moment-cell,
 [data-theme="Azure"] .azure-post-list {
   min-width: 0;

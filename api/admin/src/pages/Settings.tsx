@@ -18,7 +18,7 @@ const subTitleRow = { display: 'flex', justifyContent: 'space-between', alignIte
 
 // Tab IDs recognized on #hash so deep links like /settings#update land
 // directly on the right pane. Keep in sync with `tabs` below.
-const VALID_TABS = new Set(['general', 'seo', 'email', 'telegram', 'comment', 'media', 'image', 'update']);
+const VALID_TABS = new Set(['general', 'seo', 'email', 'telegram', 'comment', 'media', 'image', 'services', 'update']);
 const COMMON_TIME_ZONES = [
   'Asia/Shanghai',
   'Asia/Tashkent',
@@ -277,6 +277,11 @@ export default function SettingsPage() {
         image_lightbox: s.image_lightbox ?? true,
         image_display_effect: s.image_display_effect || 'fade',
         image_display_duration: s.image_display_duration || 300,
+        // 第三方服务
+        mapbox_access_token: s.mapbox_access_token || s.footprint_mapbox_token || '',
+        mapbox_api_url: s.mapbox_api_url || 'https://api.mapbox.com',
+        google_maps_api_key: s.google_maps_api_key || '',
+        tinypng_api_key: s.tinypng_api_key || '',
         // S3/R2
         s3_endpoint: s.s3_endpoint || '',
         s3_region: s.s3_region || '',
@@ -357,11 +362,9 @@ export default function SettingsPage() {
     media: ['media_driver', 's3_endpoint', 's3_region', 's3_bucket', 's3_access_key', 's3_secret_key', 's3_custom_domain', 'storage_limit_gb', 'max_upload_size', 'allowed_extensions', 'folder_driver_covers', 'folder_driver_books', 'folder_driver_movies', 'folder_driver_music', 'folder_driver_links', 'folder_driver_moments', 'folder_driver_albums', 'folder_driver_avatars'],
     image: [
       'image_convert_format', 'image_quality', 'image_max_width', 'image_strip_exif',
-      // tinypng_enabled / tinypng_api_key removed: no Go handler ever
-      // called the TinyPNG API. The form fields claimed to compress
-      // uploads via tinypng.com but uploads went straight through the
-      // local webp/jpg/avif encoder instead. Cleaned up by the
-      // migration in api/config/database.go on next boot.
+      // tinypng_enabled was removed from image handling: no Go handler
+      // ever called TinyPNG during uploads. tinypng_api_key now lives in
+      // the centralized third-party services tab for future integration.
       'random_image_enabled', 'random_image_api',
       // Display effect + lazy/lightbox toggles. Earlier rev had two
       // dead multi-selects here ('image_lazy_load_placeholder' and
@@ -372,6 +375,7 @@ export default function SettingsPage() {
       'image_display_effect', 'image_display_duration',
       'image_lazy_load', 'image_lightbox',
     ],
+    services: ['mapbox_access_token', 'mapbox_api_url', 'google_maps_api_key', 'tinypng_api_key'],
   };
 
   const onSubmit = async (data: any) => {
@@ -382,6 +386,12 @@ export default function SettingsPage() {
         const filtered: Record<string, any> = {};
         for (const key of fields) {
           if (key in data) filtered[key] = data[key];
+        }
+        // Backward compatibility: existing footprint pages still read
+        // footprint_mapbox_token in older builds. Keep it mirrored while
+        // mapbox_access_token becomes the canonical site-wide key.
+        if (activeTab === 'services' && 'mapbox_access_token' in filtered) {
+          filtered.footprint_mapbox_token = filtered.mapbox_access_token;
         }
         await optionsApi.updateMany(filtered);
       } else {
@@ -485,6 +495,7 @@ export default function SettingsPage() {
     { id: 'comment', label: t('admin.settings.tabs.comment', '评论设置'), icon: 'fa-regular fa-comments' },
     { id: 'media', label: t('admin.settings.tabs.media', '存储设置'), icon: 'fa-regular fa-database' },
     { id: 'image', label: t('admin.settings.tabs.image', '图片处理'), icon: 'fa-regular fa-image' },
+    { id: 'services', label: t('admin.settings.tabs.services', '第三方服务'), icon: 'fa-regular fa-key' },
     { id: 'update', label: t('admin.settings.tabs.update', '系统更新'), icon: 'fa-solid fa-cloud-arrow-down' },
   ];
 
@@ -1424,6 +1435,60 @@ export default function SettingsPage() {
 
               <FormSectionC title={t('admin.settings.image.lightbox.section', '图片灯箱')} icon="fa-regular fa-expand" description={t('admin.settings.image.lightbox.description', '点击文章图片时全屏预览，支持缩放、拖拽、键盘导航、图片组切换。关闭后点击图片不响应（图片若包在链接里则跟随链接跳转）')}>
                 <FormRowToggleC label={t('admin.settings.image.lightbox.enable', '启用灯箱')} register={register('image_lightbox')} last />
+              </FormSectionC>
+            </>
+          )}
+
+          {/* ==================== 第三方服务 ==================== */}
+          {activeTab === 'services' && (
+            <>
+              <FormSectionC
+                title={t('admin.settings.services.mapbox.section', 'Mapbox')}
+                icon="fa-regular fa-map"
+                description={t('admin.settings.services.mapbox.description', '全站统一 Mapbox 配置。数据统计访客地图和前台足迹地图都会从这里读取。')}
+                footerHint={t('admin.settings.services.mapbox.footer', 'Mapbox public token 通常以 pk. 开头，可在 account.mapbox.com 创建。旧版足迹设置里的 token 会自动兼容并同步到这里。')}
+              >
+                <FormRowInputC
+                  label={t('admin.settings.services.mapbox.token', 'Mapbox Token')}
+                  type="password"
+                  register={register('mapbox_access_token')}
+                  placeholder="pk.eyJ1..."
+                />
+                <FormRowInputC
+                  label={t('admin.settings.services.mapbox.apiUrl', 'Mapbox API 地址')}
+                  register={register('mapbox_api_url')}
+                  placeholder="https://api.mapbox.com"
+                  hint={t('admin.settings.services.mapbox.apiUrlHint', '一般保持默认。只有自建代理或特殊网络环境才需要修改。')}
+                  last
+                />
+              </FormSectionC>
+
+              <FormSectionC
+                title={t('admin.settings.services.google.section', 'Google Maps')}
+                icon="fa-brands fa-google"
+                description={t('admin.settings.services.google.description', '预留给后续地理编码、地图或地址服务使用。当前足迹地理编码仍使用足迹页配置的临时服务。')}
+              >
+                <FormRowInputC
+                  label={t('admin.settings.services.google.apiKey', 'Google Maps API Key')}
+                  type="password"
+                  register={register('google_maps_api_key')}
+                  placeholder="AIza..."
+                  last
+                />
+              </FormSectionC>
+
+              <FormSectionC
+                title={t('admin.settings.services.tinypng.section', 'TinyPNG')}
+                icon="fa-regular fa-compress"
+                description={t('admin.settings.services.tinypng.description', '集中保存 TinyPNG Key。当前上传压缩仍走系统内置编码器，TinyPNG 在线压缩接入后会直接读取这里。')}
+              >
+                <FormRowInputC
+                  label={t('admin.settings.services.tinypng.apiKey', 'TinyPNG API Key')}
+                  type="password"
+                  register={register('tinypng_api_key')}
+                  placeholder="TinyPNG API Key"
+                  last
+                />
               </FormSectionC>
             </>
           )}

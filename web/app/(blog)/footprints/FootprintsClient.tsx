@@ -101,7 +101,7 @@ export default function FootprintsClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const enabled = options.footprint_enabled === 'true' || (options.footprint_enabled as any) === true;
-  const token = (options.footprint_mapbox_token || '').trim();
+  const token = (options.mapbox_access_token || options.footprint_mapbox_token || '').trim();
   const center = parseCenter(options.footprint_default_center);
   const zoom = Number(options.footprint_default_zoom || 3);
   const timelineItems = useMemo(() => buildTimelineItems(rows, options), [rows, options]);

@@ -2,28 +2,27 @@
 import { useEffect, useState } from 'react';
 import api, { optionsApi } from '@/lib/api';
 import { Button, Input } from '@/components/ui';
+import { FormSectionC, FormRowInputC, FormRowSelectC, FormRowToggleC } from '@/components/form/FormC';
 import toast from 'react-hot-toast';
 import { useI18n } from '@/lib/i18n';
 
 const tabs = [
   { id: '概览',     label: '概览',     key: 'admin.security.tabs.overview', icon: 'fa-regular fa-chart-pie' },
   { id: '封禁管理', label: '封禁管理', key: 'admin.security.tabs.bans', icon: 'fa-regular fa-ban' },
-  { id: 'IP 信誉',  label: 'IP 信誉',  key: 'admin.security.tabs.reputation', icon: 'fa-regular fa-shield-halved' },
   { id: '安全事件', label: '安全事件', key: 'admin.security.tabs.events', icon: 'fa-regular fa-clock-rotate-left' },
   { id: '防御设置', label: '防御设置', key: 'admin.security.tabs.settings', icon: 'fa-regular fa-sliders' },
 ];
 
-// Match Settings page styling
-const cardStyle = { padding: '28px', marginBottom: '20px' } as const;
-const sectionTitleStyle = { fontSize: '15px', fontWeight: 600, marginBottom: '24px' } as const;
-const subTitleRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } as const;
+const toPositiveNumber = (value: string, fallback: number) => {
+  const next = Number.parseInt(value, 10);
+  return Number.isFinite(next) && next > 0 ? next : fallback;
+};
 
 export default function SecurityPage() {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('概览');
   const [overview, setOverview] = useState<any>(null);
   const [bans, setBans] = useState<any[]>([]);
-  const [reputation, setReputation] = useState<any[]>([]);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
   // Access control (merged from old /settings?tab=security)
@@ -34,12 +33,10 @@ export default function SecurityPage() {
   const [banReason, setBanReason] = useState('');
   const [banDuration, setBanDuration] = useState('60');
   const [saving, setSaving] = useState(false);
-  const [savingAccess, setSavingAccess] = useState(false);
 
   useEffect(() => {
     if (activeTab === '概览') api.get('/security/overview').then((r: any) => setOverview(r.data || r)).catch(() => {});
     if (activeTab === '封禁管理') api.get('/security/bans').then((r: any) => setBans(r.data || [])).catch(() => {});
-    if (activeTab === 'IP 信誉') api.get('/security/reputation').then((r: any) => setReputation(r.data || [])).catch(() => {});
     if (activeTab === '安全事件') api.get('/security/timeline').then((r: any) => setTimeline(r.data || [])).catch(() => {});
     if (activeTab === '防御设置') {
       api.get('/security/settings').then((r: any) => setSettings(r.data || r)).catch(() => {});
@@ -54,21 +51,6 @@ export default function SecurityPage() {
     }
   }, [activeTab]);
 
-  const saveAccessOpts = async () => {
-    setSavingAccess(true);
-    try {
-      await api.put('/options', {
-        require_login: accessOpts.require_login,
-        rate_limit: accessOpts.rate_limit,
-      });
-      toast.success(t('admin.security.toast.accessSaved', '访问控制已保存'));
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message || t('admin.settings.toast.saveFailed', '保存失败'));
-    } finally {
-      setSavingAccess(false);
-    }
-  };
-
   const handleBan = async () => {
     if (!banIP) return;
     try {
@@ -82,14 +64,20 @@ export default function SecurityPage() {
     try { await api.post('/security/unban', { ip }); toast.success(t('admin.security.toast.unbanned', '已解封')); setBans(bans.filter(b => b.ip !== ip)); } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
   };
 
-  const handleResetRep = async (ip: string) => {
-    try { await api.post('/security/reputation/reset', { ip }); toast.success(t('admin.security.toast.reset', '已重置')); } catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
-  };
-
   const saveSettings = async () => {
     setSaving(true);
-    try { await api.post('/security/settings', settings); toast.success(t('admin.settings.toast.saved', '设置已保存')); } catch { toast.error(t('admin.settings.toast.saveFailed', '保存失败')); }
-    setSaving(false);
+    try {
+      await api.put('/options', {
+        require_login: accessOpts.require_login,
+        rate_limit: accessOpts.rate_limit,
+      });
+      await api.post('/security/settings', settings);
+      toast.success(t('admin.settings.toast.saved', '设置已保存'));
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error?.message || t('admin.settings.toast.saveFailed', '保存失败'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const fmtTime = (ts: any) => {
@@ -129,7 +117,7 @@ export default function SecurityPage() {
             {[
               { label: t('admin.security.overview.activeBans', '活跃封禁'), value: overview.active_bans, color: '#dc2626' },
               { label: t('admin.security.overview.events24h', '24h 安全事件'), value: overview.events_24h, color: '#f59e0b' },
-              { label: t('admin.security.overview.riskyIps', '高风险 IP'), value: overview.risky_ips, color: '#8b5cf6' },
+              { label: t('admin.security.overview.totalEvents', '安全事件'), value: overview.total_events, color: '#8b5cf6' },
             ].map((s, i) => (
               <div key={i} className="card" style={{ padding: '20px' }}>
                 <p className="text-dim" style={{ fontSize: '12px' }}>{s.label}</p>
@@ -155,7 +143,6 @@ export default function SecurityPage() {
               <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>{t('admin.security.overview.stats', '统计')}</h3>
               <div style={{ fontSize: '13px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span>{t('admin.security.overview.totalBans', '累计封禁')}</span><span>{overview.total_bans}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span>{t('admin.security.overview.trackedIps', '追踪 IP')}</span><span>{overview.tracked_ips}</span></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span>{t('admin.security.overview.totalEvents', '安全事件')}</span><span>{overview.total_events}</span></div>
               </div>
             </div>
@@ -194,36 +181,11 @@ export default function SecurityPage() {
         </div>
       )}
 
-      {/* IP 信誉 */}
-      {activeTab === 'IP 信誉' && (
-        <div className="card" style={{ overflow: 'hidden' }}>
-          <table className="table" style={{ width: '100%', fontSize: '12px' }}>
-            <thead><tr><th style={{ padding: '8px 12px' }}>IP</th><th>{t('admin.security.reputation.score', '评分')}</th><th>{t('admin.security.reputation.risk', '风险')}</th><th>{t('admin.security.reputation.requests', '请求数')}</th><th>{t('admin.security.reputation.lastSeen', '最后活跃')}</th><th>{t('admin.common.actions', '操作')}</th></tr></thead>
-            <tbody>
-              {reputation.map((r: any, i: number) => (
-                <tr key={i}>
-                  <td style={{ padding: '6px 12px', fontWeight: 500 }}>{typeof r.ip === 'string' ? r.ip : ''}</td>
-                  <td style={{ fontWeight: 600, color: (r.score || 0) >= 35 ? '#dc2626' : (r.score || 0) >= 14 ? '#f59e0b' : '#16a34a' }}>{r.score || 0}</td>
-                  <td><span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '2px',
-                    background: r.risk_level === 'danger' ? '#fee2e2' : r.risk_level === 'warning' ? '#fef3c7' : '#dcfce7',
-                    color: r.risk_level === 'danger' ? '#991b1b' : r.risk_level === 'warning' ? '#92400e' : '#166534',
-                  }}>{r.risk_level === 'danger' ? t('admin.security.reputation.danger', '危险') : r.risk_level === 'warning' ? t('admin.security.reputation.warning', '警告') : t('admin.security.reputation.safe', '安全')}</span></td>
-                  <td className="text-dim">{r.request_count || 0}</td>
-                  <td className="text-dim">{fmtTime(r.last_seen)}</td>
-                  <td><button onClick={() => handleResetRep(r.ip)} className="text-dim" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px' }}>{t('admin.common.reset', '重置')}</button></td>
-                </tr>
-              ))}
-              {reputation.length === 0 && <tr><td colSpan={6} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>{t('admin.common.noData', '暂无数据')}</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      )}
-
       {/* 安全事件 */}
       {activeTab === '安全事件' && (
         <div className="card" style={{ overflow: 'hidden' }}>
           <table className="table" style={{ width: '100%', fontSize: '12px' }}>
-            <thead><tr><th style={{ padding: '8px 12px' }}>{t('admin.common.time', '时间')}</th><th>IP</th><th>{t('admin.security.events.event', '事件')}</th><th>{t('admin.security.events.detail', '详情')}</th><th>{t('admin.security.reputation.score', '评分')}</th></tr></thead>
+            <thead><tr><th style={{ padding: '8px 12px' }}>{t('admin.common.time', '时间')}</th><th>IP</th><th>{t('admin.security.events.event', '事件')}</th><th>{t('admin.security.events.detail', '详情')}</th></tr></thead>
             <tbody>
               {timeline.map((e: any, i: number) => (
                 <tr key={i}>
@@ -231,10 +193,9 @@ export default function SecurityPage() {
                   <td style={{ fontWeight: 500 }}>{typeof e.ip === 'string' ? e.ip : ''}</td>
                   <td><span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '2px', background: 'var(--color-bg-soft)' }}>{typeof e.event_type === 'string' ? e.event_type : ''}</span></td>
                   <td className="text-dim" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{typeof e.detail === 'string' ? e.detail : ''}</td>
-                  <td style={{ color: (e.score_delta || 0) > 0 ? '#dc2626' : 'var(--color-text-dim)' }}>{e.score_delta > 0 ? '+' + e.score_delta : e.score_delta || 0}</td>
                 </tr>
               ))}
-              {timeline.length === 0 && <tr><td colSpan={5} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>{t('admin.security.events.empty', '暂无事件')}</td></tr>}
+              {timeline.length === 0 && <tr><td colSpan={4} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>{t('admin.security.events.empty', '暂无事件')}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -242,95 +203,108 @@ export default function SecurityPage() {
 
       {/* 防御设置 */}
       {activeTab === '防御设置' && (
-        <div>
-          {/* 访问控制（来自原「系统设置 → 安全设置」）*/}
-          <div className="card" style={cardStyle}>
-            <div style={{ ...subTitleRow, marginBottom: '20px' }}>
-              <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>{t('admin.security.access.section', '访问控制')}</h3>
-              <Button onClick={saveAccessOpts} loading={savingAccess} size="sm">{t('admin.common.save', '保存')}</Button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={accessOpts.require_login}
-                  onChange={(e) => setAccessOpts({ ...accessOpts, require_login: e.target.checked })}
-                />
-                {t('admin.security.access.requireLogin', '需要登录才能访问前台')}
-              </label>
-              <div>
-                <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>
-                  {t('admin.security.access.apiRateLimit', 'API 限流')} <span className="text-dim" style={{ fontWeight: 400 }}>{t('admin.security.access.apiRateLimitHint', '（次/分钟，超出返回 429）')}</span>
-                </label>
-                <input
-                  className="input text-sm"
-                  type="number"
-                  value={accessOpts.rate_limit}
-                  onChange={(e) => setAccessOpts({ ...accessOpts, rate_limit: parseInt(e.target.value) || 60 })}
-                  style={{ maxWidth: 200 }}
-                />
-              </div>
-            </div>
-          </div>
+        <div style={{ maxWidth: 980 }}>
+          <p className="text-dim" style={{ fontSize: 12, lineHeight: 1.7, margin: '0 16px 22px' }}>
+            {t('admin.security.settings.personalBlogHint', '个人博客建议保持默认：CC 防御和地域封锁默认关闭，只有被刷、临时私密访问或需要限制地区访问时再开启。')}
+          </p>
 
-          <div className="card" style={cardStyle}>
-            <h3 style={sectionTitleStyle}>{t('admin.security.settings.ccTitle', 'CC 防御（频率限制）')}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={settings.cc_enabled ?? false} onChange={(e) => setSettings({ ...settings, cc_enabled: e.target.checked })} />
-                {t('admin.security.settings.enableCc', '启用 CC 防御')}
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.security.settings.ccLimit5s', '5 秒内最大请求')}</label>
-                  <input className="input text-sm" type="number" value={settings.cc_limit_5s || 30} onChange={(e) => setSettings({ ...settings, cc_limit_5s: parseInt(e.target.value) })} />
-                </div>
-                <div>
-                  <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.security.settings.ccLimit60s', '60 秒内最大请求')}</label>
-                  <input className="input text-sm" type="number" value={settings.cc_limit_60s || 120} onChange={(e) => setSettings({ ...settings, cc_limit_60s: parseInt(e.target.value) })} />
-                </div>
-              </div>
-            </div>
-          </div>
+          <FormSectionC
+            title={t('admin.security.access.section', '访问控制')}
+            icon="fa-regular fa-lock"
+            description={t('admin.security.access.description', '控制前台访问和基础 API 访问频率，适合私密博客或临时限流。')}
+          >
+            <FormRowToggleC
+              label={t('admin.security.access.requireLogin', '需要登录才能访问前台')}
+              hint={t('admin.security.access.requireLoginHint', '开启后，未登录访客不能直接访问前台页面。')}
+              checked={accessOpts.require_login}
+              onChange={(checked) => setAccessOpts({ ...accessOpts, require_login: checked })}
+            />
+            <FormRowInputC
+              label={t('admin.security.access.apiRateLimit', 'API 限流')}
+              hint={t('admin.security.access.apiRateLimitHint', '次/分钟，超出返回 429。')}
+              type="number"
+              value={String(accessOpts.rate_limit)}
+              onChange={(value) => setAccessOpts({ ...accessOpts, rate_limit: toPositiveNumber(value, 60) })}
+              last
+            />
+          </FormSectionC>
 
-          <div className="card" style={cardStyle}>
-            <h3 style={sectionTitleStyle}>{t('admin.security.settings.geoTitle', 'GeoIP 地域封锁')}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>
-                  {t('admin.security.settings.geoProvider', 'GeoIP 数据源')}
-                </label>
-                <select className="input text-sm" value={settings.ip_geo_provider || 'ipx'} onChange={(e) => setSettings({ ...settings, ip_geo_provider: e.target.value })}>
-                  <option value="ipx">{t('admin.security.settings.geoProviderIpx', 'api.ipx.ee（默认，基于 ip-api.com，国外更准确）')}</option>
-                  <option value="cnip">{t('admin.security.settings.geoProviderCnip', 'cnip.io（基于 ip2region，国内更准确）')}</option>
-                </select>
-                <p className="text-dim" style={{ fontSize: '12px', marginTop: '6px' }}>
-                  {t('admin.security.settings.geoProviderHint', '用于访客统计、评论归属地、GeoIP 封锁和服务器出口 IP 识别。')}
-                </p>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={settings.geo_enabled ?? false} onChange={(e) => setSettings({ ...settings, geo_enabled: e.target.checked })} />
-                {t('admin.security.settings.enableGeo', '启用地域封锁')}
-              </label>
-              <div>
-                <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.security.settings.geoMode', '模式')}</label>
-                <select className="input text-sm" value={settings.geo_mode || 'whitelist'} onChange={(e) => setSettings({ ...settings, geo_mode: e.target.value })}>
-                  <option value="whitelist">{t('admin.security.settings.geoWhitelist', '白名单（只允许列表中的国家）')}</option>
-                  <option value="blacklist">{t('admin.security.settings.geoBlacklist', '黑名单（封锁列表中的国家）')}</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>
-                  {t('admin.security.settings.countryCodes', '国家代码')} <span className="text-dim" style={{ fontWeight: 400 }}>{t('admin.security.settings.countryCodesHint', '（逗号分隔，如 CN,HK,TW）')}</span>
-                </label>
-                <input className="input text-sm" value={(settings.geo_countries || []).join(',')} onChange={(e) => setSettings({ ...settings, geo_countries: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) })} />
-              </div>
-            </div>
-          </div>
+          <FormSectionC
+            title={t('admin.security.settings.ccTitle', 'CC 防御（频率限制）')}
+            icon="fa-regular fa-shield-halved"
+            description={t('admin.security.settings.ccDescription', '用于拦截短时间高频访问。个人博客默认关闭即可，被刷时再启用。')}
+          >
+            <FormRowToggleC
+              label={t('admin.security.settings.enableCc', '启用 CC 防御')}
+              hint={t('admin.security.settings.enableCcHint', '开启后会按下面阈值拦截同一 IP 的高频请求。')}
+              checked={settings.cc_enabled ?? false}
+              onChange={(checked) => setSettings({ ...settings, cc_enabled: checked })}
+            />
+            <FormRowInputC
+              label={t('admin.security.settings.ccLimit5s', '5 秒内最大请求')}
+              hint={t('admin.security.settings.ccLimit5sHint', '用于拦截瞬时高频刷新。')}
+              type="number"
+              value={String(settings.cc_limit_5s ?? 30)}
+              onChange={(value) => setSettings({ ...settings, cc_limit_5s: toPositiveNumber(value, 30) })}
+            />
+            <FormRowInputC
+              label={t('admin.security.settings.ccLimit60s', '60 秒内最大请求')}
+              hint={t('admin.security.settings.ccLimit60sHint', '用于拦截持续高频请求。')}
+              type="number"
+              value={String(settings.cc_limit_60s ?? 120)}
+              onChange={(value) => setSettings({ ...settings, cc_limit_60s: toPositiveNumber(value, 120) })}
+              last
+            />
+          </FormSectionC>
+
+          <FormSectionC
+            title={t('admin.security.settings.geoTitle', 'GeoIP 地域封锁')}
+            icon="fa-regular fa-globe"
+            description={t('admin.security.settings.geoDescription', 'GeoIP 数据源会用于统计和归属地。地域封锁属于高级功能，开启前建议优先使用黑名单模式。')}
+          >
+            <FormRowSelectC
+              label={t('admin.security.settings.geoProvider', 'GeoIP 数据源')}
+              hint={t('admin.security.settings.geoProviderHint', '用于访客统计、评论归属地、GeoIP 封锁和服务器出口 IP 识别。')}
+              value={settings.ip_geo_provider || 'ipx'}
+              onChange={(value) => setSettings({ ...settings, ip_geo_provider: value })}
+              options={[
+                { value: 'ipx', label: t('admin.security.settings.geoProviderIpx', 'api.ipx.ee（默认，基于 ip-api.com，国外更准确）') },
+                { value: 'cnip', label: t('admin.security.settings.geoProviderCnip', 'cnip.io（基于 ip2region，国内更准确）') },
+              ]}
+              controlWidth="100%"
+            />
+            <FormRowToggleC
+              label={t('admin.security.settings.enableGeo', '启用地域封锁')}
+              hint={t('admin.security.settings.enableGeoHint', '只影响访问拦截，不影响 GeoIP 数据源用于统计。')}
+              checked={settings.geo_enabled ?? false}
+              onChange={(checked) => setSettings({ ...settings, geo_enabled: checked })}
+            />
+            <FormRowSelectC
+              label={t('admin.security.settings.geoMode', '模式')}
+              hint={t('admin.security.settings.geoModeHint', '个人博客通常建议使用黑名单，只封锁明确不希望访问的国家或地区。')}
+              value={settings.geo_mode || 'whitelist'}
+              onChange={(value) => setSettings({ ...settings, geo_mode: value })}
+              options={[
+                { value: 'whitelist', label: t('admin.security.settings.geoWhitelist', '白名单（只允许列表中的国家）') },
+                { value: 'blacklist', label: t('admin.security.settings.geoBlacklist', '黑名单（封锁列表中的国家）') },
+              ]}
+              controlWidth="100%"
+            />
+            <FormRowInputC
+              label={t('admin.security.settings.countryCodes', '国家代码')}
+              hint={t('admin.security.settings.countryCodesHint', '逗号分隔，如 CN,HK,TW。')}
+              value={(settings.geo_countries || []).join(',')}
+              onChange={(value) => setSettings({
+                ...settings,
+                geo_countries: value.split(',').map((s: string) => s.trim().toUpperCase()).filter(Boolean),
+              })}
+              last
+            />
+          </FormSectionC>
 
           <div style={{ paddingTop: '24px', borderTop: '1px solid var(--color-border)', marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={saveSettings} loading={saving}>
-              {t('admin.security.settings.saveCcGeo', '保存 CC / GeoIP 设置')}
+              {t('admin.security.settings.saveCcGeo', '保存设置')}
             </Button>
           </div>
         </div>

@@ -43,6 +43,12 @@ api/public/uploads
 api/public/uploads/
 !api/public/uploads/.gitkeep
 
+# Runtime extensions (user data)
+content/themes/*
+!content/themes/.gitkeep
+content/plugins/*
+!content/plugins/.gitkeep
+
 # Go binaries (compiled artifacts — built in CI / deploy)
 api/utterlog-go
 api/utterlog-api

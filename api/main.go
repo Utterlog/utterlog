@@ -82,10 +82,13 @@ func main() {
 	}
 
 	// ---- Full mode from here on ----
+	webProxy := webProxyHandler()
 
 	// Static files
 	r.Static("/uploads", "./public/uploads")
-	r.Static("/themes", "./public/themes") // theme preview assets (screenshot.svg etc.)
+	themeAssets := themeAssetHandler(webProxy) // content/themes first, then built-in assets
+	r.GET("/themes/*filepath", themeAssets)
+	r.HEAD("/themes/*filepath", themeAssets)
 
 	// Branding files at root: logo / dark-logo / favicon. UploadBranding
 	// (handler/media.go) saves uploads to public/uploads/branding/<purpose>.<ext>
@@ -140,7 +143,7 @@ func main() {
 
 	// Health
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.0.0-go"}})
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.0.1-go"}})
 	})
 
 	// ===================== Install Wizard (public, unauth) =====================
@@ -178,6 +181,7 @@ func main() {
 	// ===================== Public Routes =====================
 	// Posts
 	api.GET("/posts", middleware.OptionalAuth(), handler.ListPosts)
+	api.GET("/posts/:id/comments", middleware.OptionalAuth(), handler.ListPostComments)
 	api.GET("/posts/:id", middleware.OptionalAuth(), handler.GetPost)
 	api.GET("/posts/slug/:slug", middleware.OptionalAuth(), handler.GetPostBySlug)
 	// display_id 反查：permalink 模板里 %display_id% 走这条路。display_id
@@ -206,9 +210,10 @@ func main() {
 	api.GET("/captcha/image", handler.ImageCaptchaChallenge)
 
 	// Options
-	api.GET("/options", handler.ListOptions)
+	api.GET("/options", middleware.OptionalAuth(), handler.ListOptions)
 	api.GET("/i18n/locales", handler.ListLocales)
 	api.GET("/i18n/:locale", handler.GetLocale)
+	api.GET("/visitor/weather", handler.VisitorWeather)
 
 	// Content types (public read)
 	api.GET("/moments", handler.GenericList("moments"))
@@ -240,9 +245,10 @@ func main() {
 	// Footprints (public timeline/map data)
 	api.GET("/footprints", handler.ListFootprints)
 
-	// Page view tracking (public)
-	api.POST("/track", handler.TrackPageView)
-	api.POST("/track/duration", handler.TrackDuration)
+	// Page view tracking (public). OptionalAuth lets the tracker skip
+	// logged-in admins so owner browsing does not pollute visitor stats.
+	api.POST("/track", middleware.OptionalAuth(), handler.TrackPageView)
+	api.POST("/track/duration", middleware.OptionalAuth(), handler.TrackDuration)
 
 	// Online count (public, no user details)
 	api.GET("/online", handler.OnlineCount)
@@ -491,8 +497,6 @@ func main() {
 		authed.GET("/security/bans", handler.ListBans)
 		authed.POST("/security/ban", handler.BanIP)
 		authed.POST("/security/unban", handler.UnbanIP)
-		authed.GET("/security/reputation", handler.ListReputation)
-		authed.POST("/security/reputation/reset", handler.ResetReputation)
 		authed.GET("/security/timeline", handler.SecurityTimeline)
 
 		// Backup
@@ -575,9 +579,21 @@ func main() {
 	// Reverse-proxy fallback: anything not handled above (/, /posts/:slug, _next/*,
 	// RSC, static blog pages) is forwarded to the Next.js container. Enabled when
 	// WEB_PROXY_TARGET env is set (production single-entry-point mode).
-	if proxy := webProxyHandler(); proxy != nil {
+	if webProxy != nil {
 		log.Printf("Web proxy enabled → %s", os.Getenv("WEB_PROXY_TARGET"))
-		r.NoRoute(proxy)
+		r.NoRoute(func(c *gin.Context) {
+			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+				c.JSON(http.StatusNotFound, gin.H{
+					"success": false,
+					"error": gin.H{
+						"code":    "NOT_FOUND",
+						"message": "api route not found",
+					},
+				})
+				return
+			}
+			webProxy(c)
+		})
 	}
 
 	port := config.C.Port

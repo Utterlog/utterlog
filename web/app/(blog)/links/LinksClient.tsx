@@ -21,6 +21,7 @@ interface LinkGroupConfig {
   key: string;
   name: string;
   style: LinkGroupStyle;
+  icon?: string;
 }
 
 const DEFAULT_GROUP_KEY = 'default';
@@ -33,8 +34,15 @@ function normalizeGroupStyle(style: unknown): LinkGroupStyle {
   return style === 'compact' ? 'compact' : 'card';
 }
 
+function normalizeGroupIcon(value: unknown): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const match = raw.match(/class=["']([^"']+)["']/i);
+  return (match ? match[1] : raw).replace(/\s+/g, ' ').trim();
+}
+
 function parseLinkGroups(raw: unknown): LinkGroupConfig[] {
-  const fallback: LinkGroupConfig[] = [{ key: DEFAULT_GROUP_KEY, name: '默认', style: 'card' }];
+  const fallback: LinkGroupConfig[] = [{ key: DEFAULT_GROUP_KEY, name: '默认', style: 'card', icon: '' }];
   if (!raw) return fallback;
   try {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -49,6 +57,7 @@ function parseLinkGroups(raw: unknown): LinkGroupConfig[] {
         key,
         name: String(typeof item === 'string' ? (key === DEFAULT_GROUP_KEY ? '默认' : item) : item?.name ?? (key === DEFAULT_GROUP_KEY ? '默认' : item?.key) ?? key).trim() || key,
         style: normalizeGroupStyle(typeof item === 'string' ? 'card' : item?.style),
+        icon: normalizeGroupIcon(typeof item === 'string' ? '' : item?.icon),
       });
     });
     if (!seen.has(DEFAULT_GROUP_KEY)) groups.unshift(fallback[0]);
@@ -67,7 +76,7 @@ function getFavicon(url: string) {
 
 export default function LinksPage() {
   const [links, setLinks] = useState<Link[]>([]);
-  const [linkGroups, setLinkGroups] = useState<LinkGroupConfig[]>([{ key: DEFAULT_GROUP_KEY, name: '默认', style: 'card' }]);
+  const [linkGroups, setLinkGroups] = useState<LinkGroupConfig[]>([{ key: DEFAULT_GROUP_KEY, name: '默认', style: 'card', icon: '' }]);
   const [loading, setLoading] = useState(true);
   const [activeGroup, setActiveGroup] = useState('all');
   const [showApply, setShowApply] = useState(false);
@@ -110,6 +119,7 @@ export default function LinksPage() {
   const groups = ['all', ...visibleGroupKeys];
   const groupLabel = (key: string) => key === 'all' ? '全部' : groupMap.get(key)?.name || (key === DEFAULT_GROUP_KEY ? '默认' : key);
   const groupStyle = (key: string) => groupMap.get(key)?.style || 'card';
+  const groupIcon = (key: string) => groupMap.get(key)?.icon || 'fa-regular fa-folder';
   const filteredLinks = activeGroup === 'all' ? links : links.filter(l => normalizeGroupKey(l.group_name) === activeGroup);
 
   // Group links by group_name for display
@@ -199,7 +209,7 @@ export default function LinksPage() {
               {/* Group title — only show when viewing all */}
               {activeGroup === 'all' && groups.length > 2 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <i className="fa-regular fa-folder" style={{ color: 'var(--color-primary, #0052D9)', fontSize: '14px' }} />
+                  <i className={groupIcon(groupName)} style={{ color: 'var(--color-primary, #0052D9)', fontSize: '14px', width: '16px', textAlign: 'center' }} />
                   <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a1a' }}>{groupLabel(groupName)}</h2>
                   <span style={{ fontSize: '12px', color: '#999' }}>{groupLinks.length} 个</span>
                 </div>

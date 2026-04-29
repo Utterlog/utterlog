@@ -20,7 +20,7 @@ import (
 //	/admin/*     → embedded SPA (served by ServeAdmin)
 //	/api/*       → Go handlers
 //	/uploads/*   → local filesystem
-//	/themes/*    → theme preview assets
+//	/themes/*    → runtime theme assets, built-in theme assets, then web fallback
 //	/logo.*, /favicon.*  → branding files
 //	everything else (/, /posts/:slug, /tags, RSC, _next/*, static pages)
 //	                     → this proxy → Next.js on port 3000

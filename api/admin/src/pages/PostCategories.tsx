@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, type CSSProperties } from 'react';
 import { categoriesApi } from '@/lib/api';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -161,16 +161,37 @@ export default function CategoriesPage() {
     return <i className={`fa-sharp fa-light fa-${icon}`} style={{ fontSize: size, color: 'var(--color-primary)' }} />;
   };
 
+  const ellipsisStyle: CSSProperties = {
+    display: 'block',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
+
   const columns = [
-    { key: 'icon', title: '', width: '40px', render: (row: any) => renderIcon(row.icon) },
-    { key: 'name', title: t('admin.common.name', '名称'), width: '160px', render: (row: any) => (
-      <div>
-        <p style={{ fontWeight: 500, fontSize: '14px' }}>{row.name}</p>
-        <p className="text-dim" style={{ fontSize: '12px' }}>/{row.slug}</p>
+    { key: 'icon', title: t('admin.categories.columns.icon', '图标'), width: '64px', render: (row: any) => (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {renderIcon(row.icon)}
       </div>
     )},
-    { key: 'description', title: t('admin.common.description', '描述'), render: (row: any) => <span className="text-sub" style={{ fontSize: '13px' }}>{row.description || '—'}</span> },
-    { key: 'count', title: t('admin.categories.postCount', '文章数'), width: '90px' },
+    { key: 'name', title: t('admin.common.name', '名称'), width: '180px', render: (row: any) => (
+      <span style={{ ...ellipsisStyle, fontWeight: 600, fontSize: '14px', color: 'var(--color-text-main)' }} title={row.name}>
+        {row.name}
+      </span>
+    )},
+    { key: 'slug', title: 'Slug', width: '220px', render: (row: any) => (
+      <code className="text-dim" style={{ ...ellipsisStyle, fontSize: '12px', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }} title={`/${row.slug}`}>
+        /{row.slug}
+      </code>
+    )},
+    { key: 'description', title: t('admin.common.description', '描述'), render: (row: any) => (
+      <span className="text-sub" style={{ ...ellipsisStyle, fontSize: '13px' }} title={row.description || ''}>
+        {row.description || '—'}
+      </span>
+    )},
+    { key: 'count', title: t('admin.categories.postCount', '文章数'), width: '90px', render: (row: any) => (
+      <span className="text-sub" style={{ fontSize: '13px' }}>{row.count ?? 0}</span>
+    )},
     { key: 'actions', title: t('admin.posts.columns.actions', '操作'), width: '100px', render: (row: any) => (
       <div style={{ display: 'flex', gap: '4px' }}>
         <button onClick={() => openEdit(row)} className="action-btn primary"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>

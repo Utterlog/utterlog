@@ -11,6 +11,12 @@ type AzureProfileForm = {
   azure_sidebar_profile_tagline: string;
   azure_sidebar_profile_welcome: string;
   azure_sidebar_profile_bio: string;
+  azure_sidebar_weather_enabled: string;
+  azure_sidebar_weather_default_city: string;
+  azure_sidebar_weather_default_country: string;
+  azure_sidebar_weather_default_country_code: string;
+  azure_sidebar_weather_default_latitude: string;
+  azure_sidebar_weather_default_longitude: string;
 };
 
 const defaultForm: AzureProfileForm = {
@@ -21,6 +27,12 @@ const defaultForm: AzureProfileForm = {
   azure_sidebar_profile_tagline: '',
   azure_sidebar_profile_welcome: '',
   azure_sidebar_profile_bio: '',
+  azure_sidebar_weather_enabled: 'true',
+  azure_sidebar_weather_default_city: '塔什干',
+  azure_sidebar_weather_default_country: '乌兹别克斯坦',
+  azure_sidebar_weather_default_country_code: 'UZ',
+  azure_sidebar_weather_default_latitude: '41.2995',
+  azure_sidebar_weather_default_longitude: '69.2401',
 };
 
 const rowStyle = {
@@ -63,6 +75,12 @@ export default function AzureProfileSettings() {
           azure_sidebar_profile_tagline: String(options.azure_sidebar_profile_tagline || ''),
           azure_sidebar_profile_welcome: String(options.azure_sidebar_profile_welcome || ''),
           azure_sidebar_profile_bio: String(options.azure_sidebar_profile_bio || ''),
+          azure_sidebar_weather_enabled: String(options.azure_sidebar_weather_enabled || defaultForm.azure_sidebar_weather_enabled),
+          azure_sidebar_weather_default_city: String(options.azure_sidebar_weather_default_city || defaultForm.azure_sidebar_weather_default_city),
+          azure_sidebar_weather_default_country: String(options.azure_sidebar_weather_default_country || defaultForm.azure_sidebar_weather_default_country),
+          azure_sidebar_weather_default_country_code: String(options.azure_sidebar_weather_default_country_code || defaultForm.azure_sidebar_weather_default_country_code),
+          azure_sidebar_weather_default_latitude: String(options.azure_sidebar_weather_default_latitude || defaultForm.azure_sidebar_weather_default_latitude),
+          azure_sidebar_weather_default_longitude: String(options.azure_sidebar_weather_default_longitude || defaultForm.azure_sidebar_weather_default_longitude),
         });
       } catch {
         toast.error('加载资料卡配置失败');
@@ -227,6 +245,77 @@ export default function AzureProfileSettings() {
               placeholder="鼠标悬浮资料卡时显示；留空使用博主简介 / 站点描述"
               rows={4}
               style={{ resize: 'vertical', lineHeight: 1.7, paddingTop: 10 }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 20, marginTop: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 10 }}>
+          <div>
+            <h3 className="text-main" style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Azure 侧边栏访客天气</h3>
+            <p className="text-dim" style={{ fontSize: 12, lineHeight: 1.7, margin: '8px 0 0' }}>
+              显示在原社交链接条位置。优先按访客 IP 获取城市天气，失败时显示默认城市天气。
+            </p>
+          </div>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? '保存中...' : '保存'}
+          </button>
+        </div>
+
+        <div style={rowStyle}>
+          <div style={labelStyle}>显示天气条</div>
+          <div style={{ ...valueStyle, display: 'flex', alignItems: 'center' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={form.azure_sidebar_weather_enabled !== 'false'}
+                onChange={(e) => update('azure_sidebar_weather_enabled', e.target.checked ? 'true' : 'false')}
+              />
+              启用访客天气
+            </label>
+          </div>
+        </div>
+
+        <div style={rowStyle}>
+          <div style={labelStyle}>默认城市</div>
+          <div style={{ ...valueStyle, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 120px', gap: 10 }}>
+            <input
+              className="input"
+              value={form.azure_sidebar_weather_default_city}
+              onChange={(e) => update('azure_sidebar_weather_default_city', e.target.value)}
+              placeholder="塔什干"
+            />
+            <input
+              className="input"
+              value={form.azure_sidebar_weather_default_country}
+              onChange={(e) => update('azure_sidebar_weather_default_country', e.target.value)}
+              placeholder="乌兹别克斯坦"
+            />
+            <input
+              className="input"
+              value={form.azure_sidebar_weather_default_country_code}
+              onChange={(e) => update('azure_sidebar_weather_default_country_code', e.target.value.toUpperCase())}
+              placeholder="UZ"
+              maxLength={2}
+            />
+          </div>
+        </div>
+
+        <div style={{ ...rowStyle, borderBottom: 0 }}>
+          <div style={labelStyle}>默认坐标</div>
+          <div style={{ ...valueStyle, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10 }}>
+            <input
+              className="input"
+              value={form.azure_sidebar_weather_default_latitude}
+              onChange={(e) => update('azure_sidebar_weather_default_latitude', e.target.value)}
+              placeholder="41.2995"
+            />
+            <input
+              className="input"
+              value={form.azure_sidebar_weather_default_longitude}
+              onChange={(e) => update('azure_sidebar_weather_default_longitude', e.target.value)}
+              placeholder="69.2401"
             />
           </div>
         </div>

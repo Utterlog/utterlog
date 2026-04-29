@@ -10,6 +10,7 @@
 #                                    ├─→  /admin/*      (embedded SPA)
 #                                    ├─→  /api/*        (Go handlers)
 #                                    ├─→  /uploads/*    (local files)
+#                                    ├─→  /themes/*     (runtime + built-in theme assets)
 #                                    └─→  /*            (reverse proxy to web container)
 #
 # Start:  docker compose -f docker-compose.prod.yml up -d --build
@@ -87,6 +88,7 @@ services:
       - UTTERLOG_INSTALL_DIR=${UTTERLOG_INSTALL_DIR:-/opt/utterlog}
     volumes:
       - uploads:/app/public/uploads
+      - content:/app/content
       # Socket mount enables the admin "one-click update" feature. The API
       # shells out to `docker compose pull && up -d` via this socket, and
       # needs to see the same docker-compose.yml path that the host uses.
@@ -151,5 +153,6 @@ volumes:
   pgdata:
   redisdata:
   uploads:
+  content:
   caddy_data:
   caddy_config:

@@ -96,14 +96,10 @@ func CCProtection() gin.HandlerFunc {
 		rateMu.Unlock()
 
 		if b5.count > ccLimit5s || b60.count > ccLimit60s {
-			// Log event and increment reputation
-			go logSecurityEvent(ip, "cc_block", fmt.Sprintf("5s:%d/60s:%d", b5.count, b60.count), 5)
+			go logSecurityEvent(ip, "cc_block", fmt.Sprintf("5s:%d/60s:%d", b5.count, b60.count))
 			c.AbortWithStatusJSON(429, gin.H{"error": "Too many requests"})
 			return
 		}
-
-		// Update reputation request count
-		go updateReputation(ip, 0)
 
 		c.Next()
 	}
@@ -141,12 +137,12 @@ func GeoIPBlocking() gin.HandlerFunc {
 		}
 
 		if geoMode == "whitelist" && !allowed {
-			go logSecurityEvent(ip, "geoip_block", "country:"+country, 3)
+			go logSecurityEvent(ip, "geoip_block", "country:"+country)
 			c.AbortWithStatusJSON(403, gin.H{"error": "Access denied from your region"})
 			return
 		}
 		if geoMode == "blacklist" && allowed {
-			go logSecurityEvent(ip, "geoip_block", "country:"+country, 3)
+			go logSecurityEvent(ip, "geoip_block", "country:"+country)
 			c.AbortWithStatusJSON(403, gin.H{"error": "Access denied from your region"})
 			return
 		}
@@ -156,13 +152,6 @@ func GeoIPBlocking() gin.HandlerFunc {
 }
 
 func getIPCountry(ip string) string {
-	// Check cache in reputation table first
-	var country string
-	config.DB.Get(&country, "SELECT country FROM "+config.T("ip_reputation")+" WHERE ip = $1", ip)
-	if country != "" {
-		return country
-	}
-
 	geo, err := geoip.Lookup(ip)
 	if err != nil || geo == nil {
 		return ""
@@ -201,7 +190,7 @@ func BanIP(c *gin.Context) {
 		"INSERT INTO %s (ip, reason, ban_type, duration, expires_at, created_at) VALUES ($1,$2,'manual',$3,$4,$5) ON CONFLICT (ip) DO UPDATE SET reason=$2, duration=$3, expires_at=$4",
 		config.T("ip_bans")), req.IP, req.Reason, req.Duration, expiresAt, now)
 
-	go logSecurityEvent(req.IP, "manual_ban", req.Reason, 0)
+	go logSecurityEvent(req.IP, "manual_ban", req.Reason)
 	util.Success(c, gin.H{"banned": true})
 }
 
@@ -211,7 +200,7 @@ func UnbanIP(c *gin.Context) {
 	}
 	c.ShouldBindJSON(&req)
 	config.DB.Exec("DELETE FROM "+config.T("ip_bans")+" WHERE ip = $1", req.IP)
-	go logSecurityEvent(req.IP, "manual_unban", "", 0)
+	go logSecurityEvent(req.IP, "manual_unban", "")
 	util.Success(c, gin.H{"unbanned": true})
 }
 
@@ -237,76 +226,10 @@ func ListBans(c *gin.Context) {
 	util.Success(c, bans)
 }
 
-// ===================== IP Reputation =====================
-
-func updateReputation(ip string, scoreDelta int) {
-	t := config.T("ip_reputation")
-	now := time.Now().Unix()
-	config.DB.Exec(fmt.Sprintf(
-		"INSERT INTO %s (ip, score, request_count, last_seen, updated_at) VALUES ($1,$2,1,$3,$4) ON CONFLICT (ip) DO UPDATE SET score = %s.score + $2, request_count = %s.request_count + 1, last_seen = $3, updated_at = $4",
-		t, t, t), ip, scoreDelta, now, now)
-
-	// Update risk level
-	if scoreDelta > 0 {
-		var score int
-		config.DB.Get(&score, "SELECT score FROM "+t+" WHERE ip = $1", ip)
-		risk := "safe"
-		if score >= 35 {
-			risk = "danger"
-		} else if score >= 14 {
-			risk = "warning"
-		}
-		config.DB.Exec("UPDATE "+t+" SET risk_level = $1 WHERE ip = $2", risk, ip)
-
-		// Auto-ban at high score
-		if score >= 35 {
-			config.DB.Exec(fmt.Sprintf(
-				"INSERT INTO %s (ip, reason, ban_type, duration, expires_at, created_at) VALUES ($1,'auto:high_score','auto',60,$2,$3) ON CONFLICT (ip) DO NOTHING",
-				config.T("ip_bans")), ip, now+3600, now)
-		}
-	}
-}
-
-func logSecurityEvent(ip, eventType, detail string, scoreDelta int) {
+func logSecurityEvent(ip, eventType, detail string) {
 	config.DB.Exec(fmt.Sprintf(
 		"INSERT INTO %s (ip, event_type, detail, score_delta, created_at) VALUES ($1,$2,$3,$4,$5)",
-		config.T("security_events")), ip, eventType, detail, scoreDelta, time.Now().Unix())
-	if scoreDelta > 0 {
-		updateReputation(ip, scoreDelta)
-	}
-}
-
-func ListReputation(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	perPage := 30
-	t := config.T("ip_reputation")
-
-	var total int
-	config.DB.Get(&total, "SELECT COUNT(*) FROM "+t)
-
-	var reps []map[string]interface{}
-	rows, _ := config.DB.Queryx(fmt.Sprintf("SELECT * FROM %s ORDER BY score DESC LIMIT $1 OFFSET $2", t), perPage, (page-1)*perPage)
-	if rows != nil {
-		defer rows.Close()
-		for rows.Next() {
-			row := make(map[string]interface{})
-			rows.MapScan(row)
-			reps = append(reps, row)
-		}
-	}
-	if reps == nil {
-		reps = []map[string]interface{}{}
-	}
-	util.Paginate(c, reps, total, page, perPage)
-}
-
-func ResetReputation(c *gin.Context) {
-	var req struct {
-		IP string `json:"ip" binding:"required"`
-	}
-	c.ShouldBindJSON(&req)
-	config.DB.Exec("UPDATE "+config.T("ip_reputation")+" SET score = 0, risk_level = 'safe' WHERE ip = $1", req.IP)
-	util.Success(c, gin.H{"reset": true})
+		config.T("security_events")), ip, eventType, detail, 0, time.Now().Unix())
 }
 
 // ===================== Security Events Timeline =====================
@@ -418,21 +341,17 @@ func SecurityOverview(c *gin.Context) {
 	now := time.Now().Unix()
 	h24 := now - 86400
 
-	var totalBans, activeBans, totalEvents, events24h, totalIPs, riskyIPs int
+	var totalBans, activeBans, totalEvents, events24h int
 	config.DB.Get(&totalBans, "SELECT COUNT(*) FROM "+t("ip_bans"))
 	config.DB.Get(&activeBans, fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE expires_at = 0 OR expires_at > $1", t("ip_bans")), now)
 	config.DB.Get(&totalEvents, "SELECT COUNT(*) FROM "+t("security_events"))
 	config.DB.Get(&events24h, "SELECT COUNT(*) FROM "+t("security_events")+" WHERE created_at >= $1", h24)
-	config.DB.Get(&totalIPs, "SELECT COUNT(*) FROM "+t("ip_reputation"))
-	config.DB.Get(&riskyIPs, "SELECT COUNT(*) FROM "+t("ip_reputation")+" WHERE risk_level != 'safe'")
 
 	util.Success(c, gin.H{
 		"total_bans":   totalBans,
 		"active_bans":  activeBans,
 		"total_events": totalEvents,
 		"events_24h":   events24h,
-		"tracked_ips":  totalIPs,
-		"risky_ips":    riskyIPs,
 		"cc_enabled":   ccEnabled,
 		"geo_enabled":  geoEnabled,
 	})

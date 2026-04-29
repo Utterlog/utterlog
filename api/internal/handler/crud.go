@@ -99,11 +99,49 @@ func ListOptions(c *gin.Context) {
 	var opts []model.Option
 	config.DB.Select(&opts, "SELECT * FROM "+t+" ORDER BY name ASC")
 	result := make(map[string]string)
+	isAdmin := optionsRequestIsAdmin(c)
 	for _, o := range opts {
+		if !isAdmin && isSensitiveOption(o.Name) {
+			continue
+		}
 		result[o.Name] = o.Value
 	}
 	result["site_timezone_effective"] = siteclock.Name()
 	util.Success(c, result)
+}
+
+var publicOptionAllowlist = map[string]bool{
+	"mapbox_access_token":    true, // Mapbox public tokens are designed for browser usage.
+	"footprint_mapbox_token": true, // Backward compatibility for older footprint pages.
+	"mapbox_api_url":         true,
+}
+
+func isSensitiveOption(name string) bool {
+	key := strings.ToLower(strings.TrimSpace(name))
+	if key == "" || publicOptionAllowlist[key] {
+		return false
+	}
+	if key == "smtp_pass" || key == "s3_access_key" || key == "s3_secret_key" {
+		return true
+	}
+	for _, suffix := range []string{"_api_key", "_secret", "_token", "_pass", "_password", "_access_key", "_secret_key"} {
+		if strings.HasSuffix(key, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+func optionsRequestIsAdmin(c *gin.Context) bool {
+	userID := middleware.GetUserID(c)
+	if userID <= 0 {
+		return false
+	}
+	var role string
+	if err := config.DB.Get(&role, "SELECT role FROM "+config.T("users")+" WHERE id = $1", userID); err != nil {
+		return false
+	}
+	return strings.EqualFold(role, "admin")
 }
 
 func UpdateOptions(c *gin.Context) {
@@ -371,7 +409,7 @@ func SystemStatus(c *gin.Context) {
 			"comments": commentCount,
 			"links":    linkCount,
 		},
-		"version": "2.0.0",
+		"version": "2.0.1",
 	})
 }
 

@@ -14,18 +14,22 @@ interface MapPoint {
   count: number;
 }
 
-// Mapbox access token — set via NEXT_PUBLIC_MAPBOX_TOKEN in .env.
-// Fall back to empty string; the map will fail to load but the rest of the
-// dashboard won't crash. Get a free token at https://account.mapbox.com/
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
-(mapboxgl as any).config.API_URL = process.env.NEXT_PUBLIC_MAPBOX_API_URL || 'https://api.mapbox.com';
-
 export default function VisitorMap({ period }: { period: string }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapObjRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const [points, setPoints] = useState<MapPoint[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+  const [mapboxToken, setMapboxToken] = useState('');
+  const [mapboxApiUrl, setMapboxApiUrl] = useState('https://api.mapbox.com');
+
+  useEffect(() => {
+    api.get('/options').then((r: any) => {
+      const options = r.data || r || {};
+      setMapboxToken(String(options.mapbox_access_token || options.footprint_mapbox_token || '').trim());
+      setMapboxApiUrl(String(options.mapbox_api_url || '').trim() || 'https://api.mapbox.com');
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     api.get(`/analytics/map?period=${period}`).then((r: any) => {
@@ -43,6 +47,9 @@ export default function VisitorMap({ period }: { period: string }) {
   // 初始化地图
   useEffect(() => {
     if (!mapRef.current) return;
+    if (!mapboxToken) return;
+    mapboxgl.accessToken = mapboxToken;
+    (mapboxgl as any).config.API_URL = mapboxApiUrl || 'https://api.mapbox.com';
     // 清理旧实例（HMR 热更新时）
     if (mapObjRef.current) {
       mapObjRef.current.remove();
@@ -59,13 +66,19 @@ export default function VisitorMap({ period }: { period: string }) {
       attributionControl: false,
       logoPosition: 'bottom-left',
       projection: 'mercator',
-      renderWorldCopies: false,
+      renderWorldCopies: true,
+      dragPan: true,
+      scrollZoom: true,
+      touchZoomRotate: true,
     });
 
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+    map.dragPan.enable();
+    map.touchZoomRotate.enable();
     mapObjRef.current = map;
 
     map.on('load', () => {
+      map.resize();
       // 国家填充层（用 Mapbox 内置的 country boundaries）
       map.addSource('country-boundaries', {
         type: 'vector',
@@ -87,7 +100,7 @@ export default function VisitorMap({ period }: { period: string }) {
       map.remove();
       mapObjRef.current = null;
     };
-  }, []);
+  }, [mapboxToken, mapboxApiUrl]);
 
   // 数据变化时更新标记
   useEffect(() => {
@@ -144,10 +157,31 @@ export default function VisitorMap({ period }: { period: string }) {
     tryUpdate();
   }, [points, onlineUsers]);
 
+  if (!mapboxToken) {
+    return (
+      <div style={{
+        border: '1px solid var(--color-border)', marginBottom: '20px',
+        height: '480px', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '10px',
+        background: 'var(--color-bg-soft)', color: 'var(--color-text-sub)',
+        textAlign: 'center', padding: '24px',
+      }}>
+        <i className="fa-sharp fa-light fa-earth-asia" style={{ fontSize: '32px', color: 'var(--color-text-dim)' }} />
+        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text-main)' }}>访客地图未启用</div>
+        <div style={{ fontSize: '12px', lineHeight: 1.7, maxWidth: '420px' }}>
+          在系统设置 → 第三方服务填写 Mapbox Token 后即可显示地图。
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ border: '1px solid var(--color-border)', marginBottom: '20px', position: 'relative' }}>
-      <style>{`.mapboxgl-ctrl-logo { display: none !important; }`}</style>
-      <div ref={mapRef} style={{ width: '100%', height: '480px' }} />
+    <div className="analytics-visitor-map" style={{ border: '1px solid var(--color-border)', marginBottom: '20px', position: 'relative' }}>
+      <style>{`
+        .analytics-visitor-map .mapboxgl-ctrl-logo { display: none !important; }
+        .analytics-visitor-map .mapboxgl-canvas { touch-action: none; }
+      `}</style>
+      <div ref={mapRef} style={{ width: '100%', height: '480px', touchAction: 'none' }} />
     </div>
   );
 }

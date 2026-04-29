@@ -133,7 +133,7 @@ export default function UtterlogCenterPage() {
 
           {networkStatus.connected && (
             <div style={{ marginTop: '14px' }}>
-              <button type="button" className="btn btn-secondary" style={{ fontSize: '12px' }} onClick={async () => {
+              <button type="button" className="btn btn-secondary" style={{ fontSize: '12px', minWidth: '180px', padding: '0 28px', whiteSpace: 'nowrap' }} onClick={async () => {
                 try { await networkApi.pushInfo(); toast.success('站点信息已推送'); } catch { toast.error('推送失败'); }
               }}>
                 手动推送站点信息

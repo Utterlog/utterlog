@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -98,6 +99,50 @@ func GetPostByDisplayID(c *gin.Context) {
 		return
 	}
 	util.Success(c, model.FormatPost(p, true))
+}
+
+func ListPostComments(c *gin.Context) {
+	ref := strings.TrimSpace(c.Param("id"))
+	if decoded, err := url.PathUnescape(ref); err == nil {
+		ref = decoded
+	}
+
+	p, err := postByIDOrSlug(ref)
+	if err != nil {
+		util.NotFound(c, "文章")
+		return
+	}
+	if p.Status != "publish" && middleware.GetUserID(c) == 0 {
+		util.NotFound(c, "文章")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "500"))
+	order := c.DefaultQuery("order", "asc")
+	topLevel := c.Query("top_level") == "true"
+	excludeAdmin := c.Query("exclude_admin") == "1" || c.Query("exclude_admin") == "true"
+
+	status := c.Query("status")
+	if status == "" || middleware.GetUserID(c) == 0 {
+		status = "approved"
+	}
+
+	comments, total, err := model.CommentsList(page, perPage, status, c.Query("search"), order, p.ID, 0, topLevel, excludeAdmin)
+	if err != nil {
+		util.Error(c, http.StatusInternalServerError, "QUERY_ERROR", "评论列表读取失败")
+		return
+	}
+	util.Paginate(c, model.FormatComments(comments), total, page, perPage)
+}
+
+func postByIDOrSlug(ref string) (*model.Post, error) {
+	if id, err := strconv.Atoi(ref); err == nil && id > 0 {
+		if p, err := model.PostByID(id); err == nil {
+			return p, nil
+		}
+	}
+	return model.PostBySlug(ref)
 }
 
 func CreatePost(c *gin.Context) {
@@ -839,7 +884,7 @@ func PostNavigation(c *gin.Context) {
 
 // System update check
 func CheckSystemUpdate(c *gin.Context) {
-	currentVersion := "2.0.0"
+	currentVersion := "2.0.1"
 
 	// Check latest version from utterlog.io
 	resp, err := http.Get("https://utterlog.io/api/version")

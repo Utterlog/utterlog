@@ -2,6 +2,7 @@
 
 import PostCard from './PostCard';
 import Sidebar from './Sidebar';
+import VisitorWeather from './VisitorWeather';
 import Pagination from './Pagination';
 import FadeCover from '@/components/blog/FadeCover';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -361,11 +362,13 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
       )}
 
       {/* ===== Moment row =====
-          社交链接已经迁移到侧边栏资料卡右下角；这里保留左侧占位，
-          让右侧说说 ticker 继续和内容区网格对齐。 */}
+          Left side shows visitor weather; right side keeps the moment
+          ticker aligned with the main content grid. */}
       {(
         <div className="azure-grid azure-strip">
-          <aside className="azure-social-cell" aria-hidden="true" />
+          <aside className="azure-social-cell">
+            <VisitorWeather />
+          </aside>
           {/* Right: Moment ticker */}
           <section className="azure-moment-cell">
             {latestMoment && (

@@ -1,9 +1,10 @@
 /**
  * Theme System — Dynamic theme loading and management
  *
- * Themes are stored in /themes/{ThemeName}/ with:
- * - theme.json: manifest (name, version, description, author, screenshot)
- * - components: React components that override default blog layout
+ * Built-in theme source lives in web/themes/{ThemeName}/ and is statically
+ * imported for Next.js SSR. Runtime-uploaded theme packages live in the API
+ * container under content/themes/{ThemeName}/; their public assets are served
+ * from /themes/{ThemeName}/...
  *
  * Active theme is stored in the database options table (key: "active_theme")
  */
@@ -58,7 +59,8 @@ import * as Azure from '@/themes/Azure';
 import * as Chred from '@/themes/Chred';
 import * as Flux from '@/themes/Flux';
 
-// 主题 CSS 按需加载：public/themes/{name}/styles.css，由 blog layout 动态 <link> 引入
+// 主题 CSS 按需加载：/themes/{name}/styles.css，由 blog layout 动态 <link> 引入。
+// 后端会先查 content/themes，再查内置 public/themes，最后回退到 web 容器。
 
 import UtterlogManifest from '@/themes/Utterlog/theme.json';
 import AzureManifest from '@/themes/Azure/theme.json';

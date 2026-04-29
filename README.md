@@ -31,133 +31,119 @@
   <img src="https://img.shields.io/badge/Registry-registry.utterlog.io-0052D9?style=flat-square&logo=docker&logoColor=white" alt="Utterlog Registry">
 </p>
 
-<!-- Docker Hub pull-count badges can be enabled after Docker Hub mirrors exist.
+<!-- Docker Hub 镜像同步启用后可打开拉取次数徽章：
 <p>
   <a href="https://hub.docker.com/r/utterlog/utterlog-api">
-    <img src="https://img.shields.io/docker/pulls/utterlog/utterlog-api?style=flat-square&logo=docker&label=api%20pulls" alt="Docker API pulls">
+    <img src="https://img.shields.io/docker/pulls/utterlog/utterlog-api?style=flat-square&logo=docker&label=API%20pulls" alt="Docker API pulls">
   </a>
   <a href="https://hub.docker.com/r/utterlog/utterlog-web">
-    <img src="https://img.shields.io/docker/pulls/utterlog/utterlog-web?style=flat-square&logo=docker&label=web%20pulls" alt="Docker Web pulls">
+    <img src="https://img.shields.io/docker/pulls/utterlog/utterlog-web?style=flat-square&logo=docker&label=Web%20pulls" alt="Docker Web pulls">
   </a>
 </p>
 -->
 
 <p>
-  <a href="https://demo.utterlog.io"><img src="https://img.shields.io/badge/Live%20Demo-demo.utterlog.io-22c55e?style=for-the-badge&logo=safari&logoColor=white" alt="Live Demo" height="38"></a>
-  <a href="https://utterlog.io"><img src="https://img.shields.io/badge/Website-utterlog.io-3b82f6?style=for-the-badge&logo=hugo&logoColor=white" alt="Website" height="38"></a>
-  <a href="https://github.com/utterlog/utterlog/releases"><img src="https://img.shields.io/badge/Download-Latest%20Release-0f172a?style=for-the-badge&logo=github&logoColor=white" alt="Latest Release" height="38"></a>
+  <a href="https://demo.utterlog.io"><img src="https://img.shields.io/badge/在线演示-demo.utterlog.io-22c55e?style=for-the-badge&logo=safari&logoColor=white" alt="Live Demo" height="38"></a>
+  <a href="https://utterlog.io"><img src="https://img.shields.io/badge/产品主页-utterlog.io-3b82f6?style=for-the-badge&logo=hugo&logoColor=white" alt="Website" height="38"></a>
+  <a href="https://github.com/utterlog/utterlog/releases"><img src="https://img.shields.io/badge/下载-Latest%20Release-0f172a?style=for-the-badge&logo=github&logoColor=white" alt="Latest Release" height="38"></a>
 </p>
 
-Utterlog is a self-hosted publishing platform for independent writers, bloggers, makers, and small communities.
+Utterlog 是一个面向独立作者、个人站长和小型社区的自托管内容平台。
 
-It gives you a complete personal content hub: long-form posts, custom pages, themes, comments, links, albums, footprints, RSS subscriptions, AI writing tools, analytics, and site settings in one place.
+它不只是博客程序，还把文章、页面、评论、友链、相册、足迹、RSS 订阅、AI 辅助写作、访问统计和站点设置放在一个后台里，让个人网站可以长期维护、持续扩展，并且始终由你自己掌控。
 
-中文介绍：Utterlog 是为独立作者准备的一体化内容平台。它不只是博客程序，还可以管理页面、评论、友链、相册、足迹、RSS 订阅、AI 辅助写作和站点数据。
+## 为什么选择 Utterlog
 
-## Why Utterlog
+- **内容归你所有**：部署在自己的服务器，用自己的域名，数据和附件都在自己手里。
+- **为真实博客而设计**：文章、页面、分类、标签、归档、RSS、固定链接、SEO、评论、媒体和备份都是核心能力。
+- **不只写文章**：说说、相册、音乐、电影、图书、游戏、好物、视频、足迹和友链都可以统一管理。
+- **AI 是辅助，不是噱头**：摘要、关键词、Slug、排版、封面提示词、评论审核、智能回复和文章陪读都围绕写作与运营场景设计。
+- **主题和内容分离**：文章数据不绑定主题，主题可以声明菜单位置、侧边栏、页脚按钮和页面样式。
+- **部署路径清晰**：Docker 部署，单入口端口，适合放在 nginx、Caddy、1Panel、宝塔或 AAPanel 后面运行。
 
-- **Own your content**: run your site on your own server, with your own domain and your own data.
-- **Built for real blogs**: posts, pages, categories, tags, feeds, permalinks, archives, comments, media, SEO, and backups are first-class features.
-- **More than articles**: publish albums, moments, reading lists, movies, music, goods, videos, travel footprints, and friend links.
-- **AI where it helps**: generate summaries, tags, slugs, cover prompts, formatting suggestions, comment replies, and article Q&A without turning the product into an AI toy.
-- **Theme-driven publishing**: switch between built-in themes, configure menus and buttons, and keep your content independent from presentation.
-- **Self-hosting friendly**: one install command, Docker-based deployment, single public entry port behind your reverse proxy.
+## 核心能力
 
-## Product Highlights
+### 内容发布
 
-### Publishing
+使用 Markdown 写文章和页面，支持封面、摘要、分类、标签、公开编号、固定链接和自定义页面。发布后自动生成文章页、分类页、标签页、归档页、RSS、站点地图和 SEO 信息。
 
-Write posts and pages with Markdown, HTML fragments, cover images, excerpts, categories, tags, public post numbers, and custom permalink structures.
+### 主题系统
 
-Utterlog automatically serves article pages, category pages, tag pages, archive pages, RSS feeds, sitemap, robots.txt, and SEO metadata.
+内置 Azure、Utterlog、Flux、Chred 等主题。主题可以定义顶部导航、侧栏导航、页脚按钮、搜索入口和页面结构。你可以在后台切换主题、上传 Logo 和 Favicon、配置社交按钮，让站点呈现自己的风格。
 
-### Themes
+### 评论与互动
 
-Utterlog ships with multiple built-in themes, including Azure, Utterlog, Flux, and Chred. Themes can declare their own menu locations, sidebars, footer buttons, search controls, and page styles.
+评论系统支持嵌套回复、审核、邮件通知、验证码、头像、国家旗、浏览器和系统标识。文章还支持段落级点评，适合教程、翻译、读书笔记、prompt 分享和长文讨论。
 
-You can switch themes from the admin panel, upload your logo and favicon, set custom buttons, and keep the writing experience separated from the visual layer.
+### AI 写作与陪读
 
-### Comments and Interaction
+后台可以使用 AI 生成摘要、关键词、Slug、排版建议、封面提示词、文章问题和评论回复。前台可以启用文章页 AI 陪读，也可以启用全站 AI 聊天气泡，帮助访客理解文章和站点内容。
 
-The comment system supports nested replies, moderation, email notifications, avatars, country flags, browser and OS labels, captcha, visitor metadata, and admin replies.
+### 足迹与收藏
 
-Readers can also leave paragraph-level annotations, which is useful for tutorials, translations, prompts, notes, and long-form discussions.
+文章可以标记国家或城市，在足迹页面生成地图和时间线。相册、音乐、电影、图书、游戏、好物、视频等内容类型也可以独立管理，适合整理生活记录、作品集和长期收藏。
 
-### AI Assistant
+### 友链与订阅
 
-Utterlog includes AI tools for summaries, keywords, slugs, formatting, cover prompts, batch generation, smart comment review, and smart replies.
+友情链接支持分类、图标、头像、站点描述、RSS 地址和不同展示样式。订阅页可以聚合友链 RSS，让个人站点成为自己的阅读入口。
 
-On the public site, you can enable article-level AI reading assistance or a site-wide chat bubble that helps visitors explore your content.
+### 统计与运营
 
-### Footprints and Collections
+后台提供文章数、评论数、访问量、在线用户、访客来源、访客地图、最近访客、字数统计、缓存清理、媒体设置、安全设置、语言、时区和第三方服务配置。
 
-Mark posts with countries or cities and generate a footprint page with a map and travel timeline. Post hero images can display related country flags.
+## 功能概览
 
-Utterlog also includes albums, music, movies, books, games, goods, and videos, so personal collections can live beside your writing instead of being scattered across platforms.
-
-### Links and RSS
-
-Friend links support categories, icons, avatars, descriptions, RSS addresses, and multiple display modes. Categories can be displayed as rich cards or compact icon grids.
-
-The feeds page can aggregate RSS from your links, turning your site into a small personal reading hub.
-
-### Analytics and Site Operations
-
-The admin dashboard includes post stats, comments, visits, online users, referrers, visitor locations, recent visitors, word counts, cache actions, media settings, language, timezone, email, security, and third-party service configuration.
-
-## Feature Overview
-
-| Area | Capabilities |
+| 模块 | 功能 |
 |---|---|
-| Writing | Markdown, pages, excerpts, covers, categories, tags, permalinks, public post numbers |
-| Themes | Built-in themes, custom menus, sidebar navigation, footer buttons, logo and favicon |
-| Comments | Nested replies, moderation, email notifications, captcha, avatars, country flags |
-| AI | Summaries, tags, slugs, formatting, cover prompts, smart replies, AI reader chat |
-| Footprints | Country/city markers, Mapbox map, travel timeline, post flags |
-| Links | Link categories, icons, avatars, RSS, card and icon display modes |
-| Collections | Albums, music, movies, books, games, goods, videos |
-| Feeds | RSS output, subscription page, friend-link feed aggregation |
-| Analytics | Views, words, visitors, online users, referrers, visitor map |
-| Settings | Language, timezone, SEO, email, media, security, third-party services |
+| 写作 | Markdown、页面、封面、摘要、分类、标签、固定链接、公开编号 |
+| 主题 | 多主题切换、菜单位置、侧栏导航、页脚按钮、Logo、Favicon |
+| 评论 | 嵌套回复、审核、邮件通知、验证码、头像、国家旗、等级 |
+| AI | 摘要、关键词、Slug、排版、封面提示词、智能回复、文章陪读 |
+| 足迹 | 国家/城市标记、Mapbox 地图、旅行时间线、文章国家旗 |
+| 友链 | 分类、图标、头像、RSS、卡片式和图标式展示 |
+| 收藏 | 相册、音乐、电影、图书、游戏、好物、视频 |
+| 订阅 | 站点 RSS、订阅页、友链 RSS 聚合 |
+| 统计 | 阅读量、字数、访客、在线人数、来源、访客地图 |
+| 设置 | 多语言、时区、SEO、邮件、媒体、安全、第三方服务 |
 
-## Quick Start
+## 快速开始
 
-Install Utterlog on a server with Docker:
+已有 Docker 环境时，一行命令安装：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | bash
 ```
 
-Install with automatic HTTPS:
+需要自动配置 HTTPS 时：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | DOMAIN=blog.yoursite.com bash
 ```
 
-After installation, open the URL printed by the installer, create the admin account, and finish site setup in the admin panel.
+安装完成后，按终端输出访问后台，创建管理员账号，然后在后台完成站点基础配置。
 
-## Documentation
+## Docker 镜像
 
-- Live demo: [demo.utterlog.io](https://demo.utterlog.io)
-- Product site: [utterlog.io](https://utterlog.io)
-- Installation guide: [INSTALL.md](INSTALL.md)
-- Reverse proxy and deployment notes: [deploy/README.md](deploy/README.md)
-- Changelog: [CHANGELOG.md](CHANGELOG.md)
-- WordPress import plugin: [utterlog-sync](https://github.com/utterlog/utterlog-sync)
+Utterlog 生产镜像同时发布到 GitHub Container Registry 和一方镜像源：
 
-## Container Images
-
-Utterlog publishes production images to both GitHub Container Registry and the first-party registry:
-
-| Component | GHCR | First-party registry |
+| 组件 | GHCR | 一方镜像源 |
 |---|---|---|
 | API | `ghcr.io/utterlog/utterlog-api` | `registry.utterlog.io/utterlog/utterlog-api` |
 | Web | `ghcr.io/utterlog/utterlog-web` | `registry.utterlog.io/utterlog/utterlog-web` |
 
-The installer uses the first-party registry by default and can fall back to GHCR.
+安装脚本默认优先使用 `registry.utterlog.io`，也可以切换到 GHCR。
 
-> Docker pull count badges are only reliable for Docker Hub repositories. Utterlog currently publishes to GHCR and `registry.utterlog.io`, which do not expose public pull-count metrics through shields.io.
+> GHCR 和 `registry.utterlog.io` 目前不向 shields.io 暴露公开拉取次数。Docker Hub 镜像同步启用后，README 顶部预留的 Docker pulls 徽章可以直接打开。
+
+## 文档与链接
+
+- 在线演示：[demo.utterlog.io](https://demo.utterlog.io)
+- 产品主页：[utterlog.io](https://utterlog.io)
+- 安装指南：[INSTALL.md](INSTALL.md)
+- 反代和部署：[deploy/README.md](deploy/README.md)
+- 更新日志：[CHANGELOG.md](CHANGELOG.md)
+- WordPress 导入插件：[utterlog-sync](https://github.com/utterlog/utterlog-sync)
 
 ## License
 
-Utterlog is released under the [MIT License](LICENSE).
+Utterlog 使用 [MIT License](LICENSE) 发布。

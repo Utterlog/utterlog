@@ -12,6 +12,7 @@ interface LinkGroupConfig {
   key: string;
   name: string;
   style: LinkGroupStyle;
+  icon?: string;
 }
 
 const DEFAULT_GROUP_KEY = 'default';
@@ -27,6 +28,13 @@ function normalizeGroupKey(value: unknown): string {
   return String(value || '').trim() || DEFAULT_GROUP_KEY;
 }
 
+function normalizeGroupIcon(value: unknown): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const match = raw.match(/class=["']([^"']+)["']/i);
+  return (match ? match[1] : raw).replace(/\s+/g, ' ').trim();
+}
+
 function normalizeLinkGroups(groups: LinkGroupConfig[]): LinkGroupConfig[] {
   const seen = new Set<string>();
   const normalized: LinkGroupConfig[] = [];
@@ -39,6 +47,7 @@ function normalizeLinkGroups(groups: LinkGroupConfig[]): LinkGroupConfig[] {
       key,
       name: String(group.name || key).trim() || key,
       style: normalizeGroupStyle(group.style),
+      icon: normalizeGroupIcon(group.icon),
     });
   });
 
@@ -64,6 +73,7 @@ function parseLinkGroupsOption(raw: unknown): LinkGroupConfig[] {
         key,
         name: String(item?.name ?? (key === DEFAULT_GROUP_KEY ? '默认' : item?.key) ?? '').trim(),
         style: normalizeGroupStyle(item?.style),
+        icon: normalizeGroupIcon(item?.icon),
       };
     }));
   } catch {
@@ -78,7 +88,7 @@ function mergeLinkGroups(configs: LinkGroupConfig[], links: any[]): LinkGroupCon
     const key = normalizeGroupKey(link?.group_name);
     if (seen.has(key)) return;
     seen.add(key);
-    merged.push({ key, name: key, style: 'card' });
+    merged.push({ key, name: key, style: 'card', icon: '' });
   });
   return merged;
 }
@@ -98,7 +108,7 @@ export default function LinksPage() {
   const [editingGroup, setEditingGroup] = useState<{ old: string; new: string } | null>(null);
   const [linkGroups, setLinkGroups] = useState<LinkGroupConfig[]>(DEFAULT_LINK_GROUPS);
   const [refreshingFeeds, setRefreshingFeeds] = useState(false);
-  const [busy, setBusy] = useState<'icon' | 'cache' | 'rss' | null>(null);
+  const [busy, setBusy] = useState<'icon' | 'rss' | null>(null);
   // Incremented by 一键刷新 ico — appended to favicon URLs to bust
   // the browser's image cache without touching any DB state.
   const [iconBust, setIconBust] = useState(0);
@@ -123,18 +133,6 @@ export default function LinksPage() {
     setIconBust(Date.now());
     setTimeout(() => setBusy(null), 400);
     toast.success(t('admin.links.toast.iconsRefreshed', '已刷新所有友链图标缓存'));
-  };
-
-  const clearCache = async () => {
-    if (!confirm(t('admin.links.confirm.clearCache', '确定清空服务端缓存？验证码、在线数等临时缓存会重建。'))) return;
-    setBusy('cache');
-    try {
-      const r: any = await api.post('/admin/system/clear-cache');
-      const d = r?.data || r;
-      toast.success(t('admin.links.toast.cacheCleared', '已清空 {count} 条缓存', { count: d?.cleared ?? 0 }));
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message || t('admin.common.clearFailed', '清空失败'));
-    } finally { setBusy(null); }
   };
 
   const clearRSSCache = async () => {
@@ -180,7 +178,7 @@ export default function LinksPage() {
       return;
     }
     try {
-      await saveLinkGroups([...existingGroups, { key: g, name: g, style: 'card' }]);
+      await saveLinkGroups([...existingGroups, { key: g, name: g, style: 'card', icon: '' }]);
       setNewGroupName('');
       toast.success(t('admin.links.toast.groupAdded', '分类「{group}」已添加', { group: g }));
     } catch {
@@ -242,6 +240,17 @@ export default function LinksPage() {
     try {
       await saveLinkGroups(existingGroups.map(group => (
         group.key === groupName ? { ...group, style } : group
+      )));
+      toast.success(t('admin.common.saveSuccess', '保存成功'));
+    } catch {
+      toast.error(t('admin.common.saveFailed', '保存失败'));
+    }
+  };
+
+  const updateGroupIcon = async (groupName: string, icon: string) => {
+    try {
+      await saveLinkGroups(existingGroups.map(group => (
+        group.key === groupName ? { ...group, icon: normalizeGroupIcon(icon) } : group
       )));
       toast.success(t('admin.common.saveSuccess', '保存成功'));
     } catch {
@@ -345,10 +354,6 @@ export default function LinksPage() {
             <i className="fa-regular fa-image" />
             {t('admin.links.refreshIco', '刷新 ico')}
           </Button>
-          <Button variant="secondary" onClick={clearCache} loading={busy === 'cache'} disabled={busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
-            <i className="fa-regular fa-broom-wide" />
-            {t('admin.links.clearCache', '清空缓存')}
-          </Button>
           <Button variant="secondary" onClick={clearRSSCache} loading={busy === 'rss'} disabled={busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
             <i className="fa-regular fa-trash-can" />
             {t('admin.links.clearRss', '清空 RSS')}
@@ -357,7 +362,10 @@ export default function LinksPage() {
             <i className="fa-regular fa-arrows-rotate" />
             {t('admin.links.refreshFeeds', '刷新订阅')}
           </Button>
-          <Button variant="secondary" onClick={() => setShowGroupModal(true)} style={{ padding: '0 18px' }}>{t('admin.links.groups', '分类')}</Button>
+          <Button variant="secondary" onClick={() => setShowGroupModal(true)} style={{ padding: '0 18px', gap: '8px' }}>
+            <i className="fa-regular fa-folder-tree" />
+            {t('admin.links.groups', '分类')}
+          </Button>
           <Button onClick={openCreate} style={{ padding: '0 20px', gap: '8px' }}>
             <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />
             {t('admin.common.add', '添加')}
@@ -391,17 +399,27 @@ export default function LinksPage() {
         <EmptyState title={t('admin.links.empty', '暂无友链')} description={t('admin.links.emptyDescription', '添加您的第一个友情链接')} actionText={t('admin.links.addLink', '添加友链')} onAction={openCreate} />
       ) : (
         <div className="card" style={{ overflow: 'hidden' }}>
-          <table className="table">
+          <table className="table" style={{ width: '100%', tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '44px' }} />
+              <col style={{ width: '48px' }} />
+              <col style={{ width: '190px' }} />
+              <col style={{ width: '28%' }} />
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '88px' }} />
+              <col style={{ width: '84px' }} />
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ width: '40px' }}>#</th>
-                <th style={{ width: '36px' }}></th>
-                <th style={{ width: '120px' }}>{t('admin.links.columns.name', '站点名称')}</th>
+                <th>#</th>
+                <th></th>
+                <th>{t('admin.links.columns.name', '站点名称')}</th>
                 <th>{t('admin.links.columns.description', '描述')}</th>
                 <th>{t('admin.links.columns.url', '网址')}</th>
                 <th>RSS</th>
-                <th style={{ width: '80px' }}>{t('admin.links.columns.group', '分组')}</th>
-                <th style={{ width: '72px', textAlign: 'right' }}>{t('admin.common.actions', '操作')}</th>
+                <th>{t('admin.links.columns.group', '分组')}</th>
+                <th style={{ textAlign: 'right' }}>{t('admin.common.actions', '操作')}</th>
               </tr>
             </thead>
             <tbody>
@@ -417,20 +435,20 @@ export default function LinksPage() {
                         <img src={favicon} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       </div>
                     </td>
-                    <td style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{link.name}</td>
+                    <td style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.name}</td>
                     <td className="text-dim" style={{ fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.description || '—'}</td>
                     <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary-themed" style={{ fontSize: '12px' }}>{link.url}</a>
+                      <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary-themed" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px' }}>{link.url}</a>
                     </td>
                     <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {link.rss_url ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', maxWidth: '100%', minWidth: 0 }}>
                           <i className="fa-solid fa-rss" style={{ fontSize: '11px', color: '#f97316', flexShrink: 0 }} />
-                          <a href={link.rss_url} target="_blank" rel="noopener noreferrer" className="text-dim" style={{ fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.rss_url}</a>
+                          <a href={link.rss_url} target="_blank" rel="noopener noreferrer" className="text-dim" style={{ display: 'block', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px' }}>{link.rss_url}</a>
                         </span>
                       ) : <span className="text-dim">—</span>}
                     </td>
-                    <td className="text-dim" style={{ fontSize: '12px' }}>{groupLabel(link.group_name || DEFAULT_GROUP_KEY)}</td>
+                    <td className="text-dim" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px' }}>{groupLabel(link.group_name || DEFAULT_GROUP_KEY)}</td>
                     <td style={{ textAlign: 'right' }}>
                       <button onClick={() => openEdit(link)} className="action-btn primary" title={t('admin.common.edit', '编辑')}>
                         <i className="fa-regular fa-pen" style={{ fontSize: '13px' }} />
@@ -510,7 +528,7 @@ export default function LinksPage() {
       <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('admin.common.confirmDelete', '确认删除')} message={t('admin.links.confirmDelete', '是否确认删除此友情链接？')} />
 
       {/* Group Management Modal */}
-      <Modal isOpen={showGroupModal} onClose={() => { setShowGroupModal(false); setEditingGroup(null); }} title={t('admin.links.groupManagement', '分类管理')}>
+      <Modal isOpen={showGroupModal} onClose={() => { setShowGroupModal(false); setEditingGroup(null); }} title={t('admin.links.groupManagement', '分类管理')} size="xl">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {/* Existing groups */}
           {existingGroups.length > 0 ? (
@@ -519,7 +537,7 @@ export default function LinksPage() {
                 const count = links.filter((l: any) => (l.group_name || DEFAULT_GROUP_KEY) === group.key).length;
                 const isEditing = editingGroup?.old === group.key;
                 return (
-                  <div key={group.key} style={{ display: 'grid', gridTemplateColumns: 'minmax(140px, 1fr) 132px 52px auto', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--color-bg-soft)' }}>
+                  <div key={group.key} style={{ display: 'grid', gridTemplateColumns: 'minmax(140px, 1fr) minmax(260px, 1.5fr) 132px 64px auto', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--color-bg-soft)' }}>
                     {isEditing ? (
                       <input
                         className="input focus-ring"
@@ -533,6 +551,23 @@ export default function LinksPage() {
                     ) : (
                       <span className="text-main" style={{ fontSize: '13px', fontWeight: 500 }}>{groupLabel(group.key)}</span>
                     )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className={group.icon || 'fa-regular fa-folder'} style={{ width: '18px', textAlign: 'center', fontSize: '13px', color: 'var(--color-primary)' }} />
+                      <input
+                        className="input focus-ring"
+                        value={group.icon || ''}
+                        onChange={e => setLinkGroups(prev => prev.map(item => (
+                          item.key === group.key ? { ...item, icon: e.target.value } : item
+                        )))}
+                        onBlur={e => updateGroupIcon(group.key, e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') updateGroupIcon(group.key, e.currentTarget.value);
+                          if (e.key === 'Escape') fetchLinks();
+                        }}
+                        placeholder="fa-solid fa-link"
+                        style={{ height: '30px', fontSize: '12px', padding: '0 8px' }}
+                      />
+                    </div>
                     <select
                       className="input focus-ring"
                       value={group.style}

@@ -6,6 +6,7 @@
 #   /admin/*    → embed Vite SPA
 #   /api/*      → Go handlers
 #   /uploads/*  → 本地文件
+#   content/    → 运行时主题/插件目录
 #   /*          → 反代到内网 web:3000 (Next.js dev server, hot reload)
 #
 # 启动: make dev   或   docker compose up -d --build
@@ -54,6 +55,7 @@ services:
     volumes:
       - ./api:/app
       - ./api/public/uploads:/app/public/uploads
+      - ./content:/app/content
       - api_go_cache:/go/pkg/mod
       # One-click update feature — admin → 设置 → 系统更新 → 一键升级
       # shells out to `docker compose` via the host socket. The install

@@ -293,7 +293,8 @@ func AnalyticsOverview(c *gin.Context) {
 		Host  string `db:"referer_host" json:"host"`
 		Count int    `db:"count" json:"count"`
 	}
-	config.DB.Select(&topReferers, fmt.Sprintf("SELECT referer_host, COUNT(*) as count FROM %s %s AND referer_host != '' GROUP BY referer_host ORDER BY count DESC LIMIT 10", t, strings.Replace(where, "WHERE", "WHERE 1=1 AND", 1)))
+	refererWhere := analyticsWhereAnd(where, "referer_host != ''")
+	config.DB.Select(&topReferers, fmt.Sprintf("SELECT referer_host, COUNT(*) as count FROM %s %s GROUP BY referer_host ORDER BY count DESC LIMIT 10", t, refererWhere))
 
 	// Browsers
 	var browsers []struct {
@@ -322,7 +323,8 @@ func AnalyticsOverview(c *gin.Context) {
 		Code    string `db:"country" json:"code"`
 		Count   int    `db:"count" json:"count"`
 	}
-	config.DB.Select(&countries, fmt.Sprintf("SELECT country_name, country, COUNT(*) as count FROM %s %s AND country != '' GROUP BY country_name, country ORDER BY count DESC LIMIT 20", t, strings.Replace(where, "WHERE", "WHERE 1=1 AND", 1)))
+	countryWhere := analyticsWhereAnd(where, "country != ''")
+	config.DB.Select(&countries, fmt.Sprintf("SELECT country_name, country, COUNT(*) as count FROM %s %s GROUP BY country_name, country ORDER BY count DESC LIMIT 20", t, countryWhere))
 
 	// Hourly chart (last 24h)
 	var hourly []struct {
@@ -353,7 +355,12 @@ func AnalyticsOverview(c *gin.Context) {
 		Country   string `db:"country_name" json:"country"`
 		CreatedAt int64  `db:"created_at" json:"created_at"`
 	}
-	config.DB.Select(&recent, fmt.Sprintf("SELECT ip_masked, path, browser, os, device_type, country_name, created_at FROM %s ORDER BY created_at DESC LIMIT 20", t))
+	config.DB.Select(&recent, recentVisitorEntryCTE(t)+
+		`SELECT ip_masked, path, browser, os, device_type, country_name, created_at
+		FROM entry_logs
+		WHERE entry_rank = 1
+		ORDER BY session_last_at DESC, id DESC
+		LIMIT 20`)
 
 	util.Success(c, gin.H{
 		"summary": gin.H{
@@ -371,6 +378,17 @@ func AnalyticsOverview(c *gin.Context) {
 		"daily":        daily,
 		"recent":       recent,
 	})
+}
+
+func analyticsWhereAnd(where, condition string) string {
+	condition = strings.TrimSpace(condition)
+	if condition == "" {
+		return where
+	}
+	if strings.TrimSpace(where) == "" {
+		return "WHERE " + condition
+	}
+	return where + " AND " + condition
 }
 
 // GeoIP lookup for a single IP
@@ -422,6 +440,11 @@ func TrackPageView(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		util.BadRequest(c, "path is required")
+		return
+	}
+
+	if currentUserIsAdmin(c) {
+		util.Success(c, gin.H{"ok": true, "skipped": "admin"})
 		return
 	}
 
@@ -483,6 +506,22 @@ func TrackPageView(c *gin.Context) {
 	}()
 
 	util.Success(c, gin.H{"ok": true})
+}
+
+func currentUserIsAdmin(c *gin.Context) bool {
+	id, ok := c.Get("user_id")
+	if !ok {
+		return false
+	}
+	userID, ok := id.(int)
+	if !ok || userID <= 0 {
+		return false
+	}
+	var role string
+	if err := config.DB.Get(&role, "SELECT role FROM "+config.T("users")+" WHERE id = $1", userID); err != nil {
+		return false
+	}
+	return strings.EqualFold(role, "admin")
 }
 
 // permalinkRegexCache caches one compiled regex per template so we
@@ -785,6 +824,75 @@ func AccessLogs(c *gin.Context) {
 	util.Paginate(c, logs, total, page, perPage)
 }
 
+func recentVisitorPageWhere() string {
+	return strings.Join([]string{
+		"path <> ''",
+		"path LIKE '/%'",
+		"path NOT LIKE '/api/%'",
+		"path NOT LIKE '/admin%'",
+		"path NOT LIKE '/uploads/%'",
+		"path NOT LIKE '/_next/%'",
+		"path NOT LIKE '/themes/%'",
+		"path NOT LIKE '/static/%'",
+		"path NOT LIKE '/.well-known/%'",
+		"path NOT LIKE '/wp-%'",
+		"path NOT IN ('/feed', '/feed/', '/rss', '/rss/', '/rss.xml', '/atom.xml', '/xmlrpc.php', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/manifest.json', '/ads.txt')",
+		"path !~ '\\.[A-Za-z0-9]{1,8}$'",
+	}, " AND ")
+}
+
+func recentVisitorEntryCTE(accessLogTable string) string {
+	visitorKey := "COALESCE(NULLIF(fingerprint,''), NULLIF(visitor_id,''), NULLIF(ip,''), id::text)"
+	return fmt.Sprintf(`
+WITH page_logs AS (
+	SELECT id, ip, ip_masked, path, referer_host, browser, browser_version, os, os_version, device_type,
+		country_name, country, region, city, duration, visitor_id, fingerprint, created_at,
+		%s AS visitor_key
+	FROM %s
+	WHERE %s
+),
+ordered AS (
+	SELECT *,
+		LAG(created_at) OVER (PARTITION BY visitor_key ORDER BY created_at ASC, id ASC) AS prev_created_at
+	FROM page_logs
+),
+marked AS (
+	SELECT *,
+		CASE WHEN prev_created_at IS NULL OR created_at - prev_created_at > 1800 THEN 1 ELSE 0 END AS new_session
+	FROM ordered
+),
+sessions AS (
+	SELECT *,
+		SUM(new_session) OVER (PARTITION BY visitor_key ORDER BY created_at ASC, id ASC) AS session_no
+	FROM marked
+),
+latest_session AS (
+	SELECT *,
+		MAX(session_no) OVER (PARTITION BY visitor_key) AS latest_session_no,
+		MAX(created_at) OVER (PARTITION BY visitor_key, session_no) AS session_last_at
+	FROM sessions
+),
+session_rows AS (
+	SELECT *,
+		MIN(created_at) OVER (PARTITION BY visitor_key, session_no) AS session_start_at,
+		MAX(created_at) OVER (PARTITION BY visitor_key, session_no) AS session_end_at,
+		GREATEST(
+			COALESCE(SUM(CASE WHEN COALESCE(duration,0) > 0 THEN duration ELSE 0 END) OVER (PARTITION BY visitor_key, session_no), 0),
+			MAX(created_at) OVER (PARTITION BY visitor_key, session_no) - MIN(created_at) OVER (PARTITION BY visitor_key, session_no)
+		)::int AS session_duration,
+		ROW_NUMBER() OVER (PARTITION BY visitor_key, session_no ORDER BY created_at ASC, id ASC) AS entry_rank
+	FROM latest_session
+),
+entry_logs AS (
+	SELECT id, ip, ip_masked, path, referer_host, browser, browser_version, os, os_version, device_type,
+		country_name, country, region, city, session_duration AS duration, visitor_id, fingerprint,
+		session_start_at AS created_at, session_end_at AS session_last_at, visitor_key, session_no, entry_rank
+	FROM session_rows
+	WHERE session_no = latest_session_no AND entry_rank = 1
+)
+`, visitorKey, accessLogTable, recentVisitorPageWhere())
+}
+
 // RecentVisitors returns paginated visitors with comment author matching
 func RecentVisitors(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -794,6 +902,7 @@ func RecentVisitors(c *gin.Context) {
 	}
 	offset := (page - 1) * perPage
 	t := config.T
+	entryCTE := recentVisitorEntryCTE(t("access_logs"))
 
 	type Visitor struct {
 		ID          int    `db:"id" json:"id"`
@@ -817,12 +926,19 @@ func RecentVisitors(c *gin.Context) {
 	}
 
 	var total int
-	config.DB.Get(&total, "SELECT COUNT(*) FROM "+t("access_logs"))
+	config.DB.Get(&total, entryCTE+"SELECT COUNT(*) FROM entry_logs WHERE entry_rank = 1")
 
 	var visitors []Visitor
-	config.DB.Select(&visitors, fmt.Sprintf(
-		"SELECT id, ip, ip_masked, path, referer_host, browser, browser_version, os, os_version, device_type, COALESCE(country_name,'') as country_name, COALESCE(country,'') as country, COALESCE(region,'') as region, COALESCE(city,'') as city, COALESCE(duration,0) as duration, COALESCE(visitor_id,'') as visitor_id, COALESCE(fingerprint,'') as fingerprint, created_at FROM %s ORDER BY created_at DESC LIMIT $1 OFFSET $2",
-		t("access_logs")), perPage, offset)
+	config.DB.Select(&visitors, entryCTE+
+		`SELECT id, ip, ip_masked, path, referer_host, browser, browser_version, os, os_version, device_type,
+			COALESCE(country_name,'') as country_name, COALESCE(country,'') as country,
+			COALESCE(region,'') as region, COALESCE(city,'') as city, COALESCE(duration,0) as duration,
+			COALESCE(visitor_id,'') as visitor_id, COALESCE(fingerprint,'') as fingerprint, created_at
+		FROM entry_logs
+		WHERE entry_rank = 1
+		ORDER BY session_last_at DESC, id DESC
+		LIMIT $1 OFFSET $2`,
+		perPage, offset)
 
 	// Match visitors to comment authors: visitor_id > IP
 	type authorInfo struct{ Name, Email, Avatar string }
@@ -899,6 +1015,11 @@ func TrackDuration(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		util.BadRequest(c, "path and duration required")
+		return
+	}
+
+	if currentUserIsAdmin(c) {
+		util.Success(c, gin.H{"ok": true, "skipped": "admin"})
 		return
 	}
 

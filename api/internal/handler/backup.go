@@ -16,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Create backup (DB dump + uploads)
+// Create backup (DB dump + uploads + runtime content)
 func CreateBackup(c *gin.Context) {
 	backupDir := "backups"
 	os.MkdirAll(backupDir, 0755)
@@ -37,13 +37,15 @@ func CreateBackup(c *gin.Context) {
 	)
 	dumpCmd.Env = append(os.Environ(), "PGPASSWORD="+config.C.DBPass)
 	if err := dumpCmd.Run(); err != nil {
-		util.Error(c, 500, "DUMP_ERROR", "数据库导出失败: "+err.Error()); return
+		util.Error(c, 500, "DUMP_ERROR", "数据库导出失败: "+err.Error())
+		return
 	}
 
-	// 2. Create zip with DB dump + uploads
+	// 2. Create zip with DB dump + uploads + runtime content
 	zipFile, err := os.Create(zipPath)
 	if err != nil {
-		util.Error(c, 500, "ZIP_ERROR", "创建备份文件失败"); return
+		util.Error(c, 500, "ZIP_ERROR", "创建备份文件失败")
+		return
 	}
 	defer zipFile.Close()
 
@@ -52,14 +54,9 @@ func CreateBackup(c *gin.Context) {
 	// Add DB dump
 	addFileToZip(w, dbDumpPath, "database.sql")
 
-	// Add uploads directory
-	uploadsDir := "public/uploads"
-	filepath.Walk(uploadsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() { return nil }
-		relPath, _ := filepath.Rel("public", path)
-		addFileToZip(w, path, relPath)
-		return nil
-	})
+	// Add uploads and runtime extension content.
+	addDirToZip(w, "public/uploads", "uploads")
+	addDirToZip(w, "content", "content")
 
 	w.Close()
 	os.Remove(dbDumpPath) // cleanup dump file
@@ -67,7 +64,9 @@ func CreateBackup(c *gin.Context) {
 	// Get file size
 	fi, _ := os.Stat(zipPath)
 	size := int64(0)
-	if fi != nil { size = fi.Size() }
+	if fi != nil {
+		size = fi.Size()
+	}
 
 	util.Success(c, gin.H{
 		"filename": filename,
@@ -85,7 +84,9 @@ func ListBackups(c *gin.Context) {
 
 	var backups []gin.H
 	filepath.Walk(backupDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || filepath.Ext(path) != ".zip" { return nil }
+		if err != nil || info.IsDir() || filepath.Ext(path) != ".zip" {
+			return nil
+		}
 		backups = append(backups, gin.H{
 			"filename": info.Name(),
 			"size":     info.Size(),
@@ -94,7 +95,9 @@ func ListBackups(c *gin.Context) {
 		})
 		return nil
 	})
-	if backups == nil { backups = []gin.H{} }
+	if backups == nil {
+		backups = []gin.H{}
+	}
 	util.Success(c, backups)
 }
 
@@ -103,7 +106,8 @@ func DownloadBackup(c *gin.Context) {
 	filename := c.Param("filename")
 	path := filepath.Join("backups", filename)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		util.NotFound(c, "备份文件"); return
+		util.NotFound(c, "备份文件")
+		return
 	}
 	c.File(path)
 }
@@ -116,18 +120,22 @@ func DeleteBackup(c *gin.Context) {
 	util.Success(c, nil)
 }
 
-// Import backup (restore DB + uploads)
+// Import backup (restore DB + uploads + runtime content)
 func ImportBackup(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		util.BadRequest(c, "请上传备份文件"); return
+		util.BadRequest(c, "请上传备份文件")
+		return
 	}
 	defer file.Close()
 
 	// Save uploaded zip
 	tmpPath := filepath.Join("backups", "import-"+header.Filename)
 	dst, err := os.Create(tmpPath)
-	if err != nil { util.Error(c, 500, "SAVE_ERROR", "保存失败"); return }
+	if err != nil {
+		util.Error(c, 500, "SAVE_ERROR", "保存失败")
+		return
+	}
 	io.Copy(dst, file)
 	dst.Close()
 
@@ -137,12 +145,19 @@ func ImportBackup(c *gin.Context) {
 	defer os.RemoveAll(extractDir)
 
 	r, err := zip.OpenReader(tmpPath)
-	if err != nil { util.Error(c, 400, "ZIP_ERROR", "无效的备份文件"); return }
+	if err != nil {
+		util.Error(c, 400, "ZIP_ERROR", "无效的备份文件")
+		return
+	}
 	defer r.Close()
 
 	dbFile := ""
 	for _, f := range r.File {
-		outPath := filepath.Join(extractDir, f.Name)
+		cleanName := filepath.Clean(f.Name)
+		if cleanName == "." || filepath.IsAbs(cleanName) || strings.HasPrefix(cleanName, ".."+string(os.PathSeparator)) {
+			continue
+		}
+		outPath := filepath.Join(extractDir, cleanName)
 		if f.FileInfo().IsDir() {
 			os.MkdirAll(outPath, 0755)
 			continue
@@ -154,16 +169,17 @@ func ImportBackup(c *gin.Context) {
 		rc.Close()
 		outFile.Close()
 
-		if f.Name == "database.sql" { dbFile = outPath }
+		zipName := filepath.ToSlash(cleanName)
+		if zipName == "database.sql" {
+			dbFile = outPath
+		}
 
-		// Restore uploads
-		if len(f.Name) > 8 && f.Name[:8] == "uploads/" {
-			destPath := filepath.Join("public", f.Name)
-			os.MkdirAll(filepath.Dir(destPath), 0755)
-			src, _ := os.Open(outPath)
-			dst, _ := os.Create(destPath)
-			io.Copy(dst, src)
-			src.Close(); dst.Close()
+		// Restore uploads and runtime content.
+		if strings.HasPrefix(zipName, "uploads/") {
+			restoreBackupFile(outPath, filepath.Join("public", filepath.FromSlash(zipName)))
+		}
+		if strings.HasPrefix(zipName, "content/") {
+			restoreBackupFile(outPath, filepath.FromSlash(zipName))
 		}
 	}
 
@@ -178,17 +194,22 @@ func ImportBackup(c *gin.Context) {
 		)
 		restoreCmd.Env = append(os.Environ(), "PGPASSWORD="+config.C.DBPass)
 		if err := restoreCmd.Run(); err != nil {
-			util.Error(c, 500, "RESTORE_ERROR", "数据库恢复失败: "+err.Error()); return
+			util.Error(c, 500, "RESTORE_ERROR", "数据库恢复失败: "+err.Error())
+			return
 		}
 	}
 
 	os.Remove(tmpPath) // cleanup import file
 
 	fileCount := 0
-	for _, f := range r.File { if !f.FileInfo().IsDir() { fileCount++ } }
+	for _, f := range r.File {
+		if !f.FileInfo().IsDir() {
+			fileCount++
+		}
+	}
 
 	util.Success(c, gin.H{
-		"restored":   true,
+		"restored":    true,
 		"db_restored": dbFile != "",
 		"files":       fileCount,
 	})
@@ -200,31 +221,47 @@ func BackupStats(c *gin.Context) {
 	var dbSize string
 	config.DB.Get(&dbSize, "SELECT pg_size_pretty(pg_database_size($1))", config.C.DBName)
 
-	// Uploads size
-	uploadsSize := int64(0)
-	filepath.Walk("public/uploads", func(_ string, info os.FileInfo, _ error) error {
-		if info != nil && !info.IsDir() { uploadsSize += info.Size() }
-		return nil
-	})
+	uploadsSize := dirSize("public/uploads")
+	contentSize := dirSize("content")
 
 	// Backup count
 	backupCount := 0
 	filepath.Walk("backups", func(_ string, info os.FileInfo, _ error) error {
-		if info != nil && !info.IsDir() && filepath.Ext(info.Name()) == ".zip" { backupCount++ }
+		if info != nil && !info.IsDir() && filepath.Ext(info.Name()) == ".zip" {
+			backupCount++
+		}
 		return nil
 	})
 
 	util.Success(c, gin.H{
-		"db_size":      dbSize,
-		"uploads_size": formatBytes(uploadsSize),
+		"db_size":       dbSize,
+		"uploads_size":  formatBytes(uploadsSize),
 		"uploads_bytes": uploadsSize,
-		"backup_count": backupCount,
+		"content_size":  formatBytes(contentSize),
+		"content_bytes": contentSize,
+		"backup_count":  backupCount,
+	})
+}
+
+func addDirToZip(w *zip.Writer, dirPath, zipRoot string) {
+	filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info == nil || info.IsDir() {
+			return nil
+		}
+		relPath, err := filepath.Rel(dirPath, path)
+		if err != nil {
+			return nil
+		}
+		addFileToZip(w, path, filepath.ToSlash(filepath.Join(zipRoot, relPath)))
+		return nil
 	})
 }
 
 func addFileToZip(w *zip.Writer, filePath, zipPath string) {
 	f, err := os.Open(filePath)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	defer f.Close()
 	info, _ := f.Stat()
 	header, _ := zip.FileInfoHeader(info)
@@ -234,9 +271,41 @@ func addFileToZip(w *zip.Writer, filePath, zipPath string) {
 	io.Copy(writer, f)
 }
 
+func restoreBackupFile(srcPath, destPath string) {
+	os.MkdirAll(filepath.Dir(destPath), 0755)
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return
+	}
+	defer src.Close()
+	dst, err := os.Create(destPath)
+	if err != nil {
+		return
+	}
+	defer dst.Close()
+	io.Copy(dst, src)
+}
+
+func dirSize(dirPath string) int64 {
+	size := int64(0)
+	filepath.Walk(dirPath, func(_ string, info os.FileInfo, _ error) error {
+		if info != nil && !info.IsDir() {
+			size += info.Size()
+		}
+		return nil
+	})
+	return size
+}
+
 func formatBytes(b int64) string {
-	if b < 1024 { return strconv.FormatInt(b, 10) + " B" }
-	if b < 1024*1024 { return fmt.Sprintf("%.1f KB", float64(b)/1024) }
-	if b < 1024*1024*1024 { return fmt.Sprintf("%.1f MB", float64(b)/1024/1024) }
+	if b < 1024 {
+		return strconv.FormatInt(b, 10) + " B"
+	}
+	if b < 1024*1024 {
+		return fmt.Sprintf("%.1f KB", float64(b)/1024)
+	}
+	if b < 1024*1024*1024 {
+		return fmt.Sprintf("%.1f MB", float64(b)/1024/1024)
+	}
 	return fmt.Sprintf("%.1f GB", float64(b)/1024/1024/1024)
 }

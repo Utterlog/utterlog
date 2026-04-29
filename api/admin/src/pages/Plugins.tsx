@@ -108,7 +108,7 @@ export default function Plugins() {
         fontSize: 12, lineHeight: 1.7, color: 'var(--color-text-sub)',
       }}>
         <i className="fa-regular fa-lightbulb" style={{ marginRight: 6, color: 'var(--color-primary)' }} />
-        插件包为 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>.zip</code> 格式，根目录包含 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>manifest.json</code>。上传后解压到 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>plugins/&lt;id&gt;/</code>，默认**不自动启用**，需手动开启。
+        插件包为 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>.zip</code> 格式，根目录包含 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>manifest.json</code>。上传后解压到 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>content/plugins/&lt;id&gt;/</code>，默认**不自动启用**，需手动开启。
       </div>
 
       {loading ? (

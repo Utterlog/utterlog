@@ -134,7 +134,7 @@ export default function FootprintsPage() {
       const options = responseData<Record<string, any>>(optionsRes, {});
       const nextSettings: FootprintSettingsForm = {
         footprint_enabled: isEnabled(options.footprint_enabled),
-        footprint_mapbox_token: String(options.footprint_mapbox_token || ''),
+        footprint_mapbox_token: String(options.mapbox_access_token || options.footprint_mapbox_token || ''),
         footprint_default_center: String(options.footprint_default_center || defaultFootprintSettings.footprint_default_center),
         footprint_default_zoom: String(options.footprint_default_zoom || defaultFootprintSettings.footprint_default_zoom),
         footprint_geocoder_provider: String(options.footprint_geocoder_provider || defaultFootprintSettings.footprint_geocoder_provider),
@@ -196,7 +196,9 @@ export default function FootprintsPage() {
         footprint_default_zoom: String(settingsForm.footprint_default_zoom || defaultFootprintSettings.footprint_default_zoom).trim(),
         footprint_geocoder_provider: settingsForm.footprint_geocoder_provider || defaultFootprintSettings.footprint_geocoder_provider,
       };
-      await optionsApi.updateMany(nextSettings);
+      const footprintSettings: Record<string, any> = { ...nextSettings };
+      delete footprintSettings.footprint_mapbox_token;
+      await optionsApi.updateMany(footprintSettings);
       setSettingsForm(nextSettings);
       setEnabled(nextSettings.footprint_enabled);
       setHasMapboxToken(!!nextSettings.footprint_mapbox_token);
@@ -444,17 +446,18 @@ export default function FootprintsPage() {
             />
           </div>
 
-          <div style={{ display: 'grid', gap: 12 }}>
-            <Input
-              type="password"
-              label={t('admin.settings.footprint.mapboxToken', 'Mapbox Token')}
-              value={settingsForm.footprint_mapbox_token}
-              onChange={(event) => updateSettingsForm({ footprint_mapbox_token: event.target.value })}
-              placeholder="pk.eyJ1..."
-            />
-            <p className="text-dim" style={{ margin: '-6px 0 0', fontSize: 12 }}>
-              {t('admin.settings.footprint.mapboxTokenHint', '每个站点需要填写自己的 Mapbox public token，通常以 pk. 开头。')}
-            </p>
+          <div style={{ padding: '12px 14px', border: '1px solid var(--color-border)', background: 'var(--color-bg-soft)', fontSize: 12, lineHeight: 1.7, color: 'var(--color-text-sub)' }}>
+            <i className="fa-regular fa-key" style={{ marginRight: 6, color: 'var(--color-primary)' }} />
+            {hasMapboxToken
+              ? t('admin.settings.footprint.mapboxConfiguredHint', 'Mapbox Token 已在系统设置 → 第三方服务中配置。')
+              : t('admin.settings.footprint.mapboxMovedHint', 'Mapbox Token 已移动到系统设置 → 第三方服务。配置后足迹地图和统计地图会共用同一个 Token。')}
+            <button
+              type="button"
+              onClick={() => { window.location.href = '/admin/settings#services'; }}
+              style={{ marginLeft: 10, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+            >
+              {t('admin.common.goToSettings', '前往设置')}
+            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 12 }}>

@@ -1,10 +1,12 @@
 
-import { useRef, useCallback, useState, Component } from 'react';
+import { useRef, useCallback, useState, useEffect, useLayoutEffect, Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeSlug from 'rehype-slug';
 import { useI18n } from '@/lib/i18n';
 
@@ -221,6 +223,95 @@ function calcStats(text: string) {
   return { chars, words, paragraphs, readingTime };
 }
 
+const previewSanitizeSchema = {
+  ...defaultSchema,
+  tagNames: Array.from(new Set([...(defaultSchema.tagNames || []), 'mark'])),
+};
+
+function renderableMarkdown(text: string) {
+  return text.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>');
+}
+
+function ToolbarDropdown({
+  open,
+  anchorRef,
+  onClose,
+  children,
+  minWidth = 120,
+  maxHeight,
+  style,
+}: {
+  open: boolean;
+  anchorRef: React.RefObject<HTMLElement | null>;
+  onClose: () => void;
+  children: ReactNode;
+  minWidth?: number;
+  maxHeight?: number;
+  style?: React.CSSProperties;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  const updatePosition = useCallback(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const width = style?.width && typeof style.width === 'number' ? style.width : minWidth;
+    const left = Math.min(Math.max(rect.left, 8), Math.max(8, window.innerWidth - width - 8));
+    setPos({ top: rect.bottom + 4, left });
+  }, [anchorRef, minWidth, style?.width]);
+
+  useLayoutEffect(() => {
+    if (open) updatePosition();
+  }, [open, updatePosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target) || anchorRef.current?.contains(target)) return;
+      onClose();
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [anchorRef, onClose, open, updatePosition]);
+
+  if (!open || !pos) return null;
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      style={{
+        position: 'fixed',
+        top: pos.top,
+        left: pos.left,
+        zIndex: 10000,
+        minWidth,
+        maxHeight,
+        overflowY: maxHeight ? 'auto' : undefined,
+        background: 'var(--color-bg-card)',
+        border: '1px solid var(--color-border)',
+        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.16)',
+        ...style,
+      }}
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 /* ── component ── */
 interface MarkdownEditorProps {
   value: string;
@@ -274,7 +365,7 @@ function ShortcodeRenderer({ content }: { content: string }) {
     <>
       {parts.map((part, i) => {
         if (part.type === 'md') {
-          return <ReactMarkdown key={i} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeHighlight, rehypeSlug]}>{part.content.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>')}</ReactMarkdown>;
+          return <ReactMarkdown key={i} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, [rehypeSanitize, previewSanitizeSchema], rehypeHighlight, rehypeSlug]}>{renderableMarkdown(part.content)}</ReactMarkdown>;
         }
         if (part.type === 'collapse') {
           return (
@@ -284,7 +375,7 @@ function ShortcodeRenderer({ content }: { content: string }) {
                 {part.attrs?.title || '点击展开'}
               </summary>
               <div style={{ padding: '12px 16px', borderTop: '1px dashed var(--color-border)', fontSize: '14px', lineHeight: 1.7 }}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{part.content.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>')}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, [rehypeSanitize, previewSanitizeSchema]]}>{renderableMarkdown(part.content)}</ReactMarkdown>
               </div>
             </details>
           );
@@ -347,8 +438,8 @@ class PreviewErrorBoundary extends Component<{ children: ReactNode }, { error: s
 function SafePreview({ value }: { value: string }) {
   return (
     <PreviewErrorBoundary>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeHighlight, rehypeSlug]}>
-        {value.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>')}
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, [rehypeSanitize, previewSanitizeSchema], rehypeHighlight, rehypeSlug]}>
+        {renderableMarkdown(value)}
       </ReactMarkdown>
     </PreviewErrorBoundary>
   );
@@ -365,6 +456,10 @@ export default function MarkdownEditor({
 }: MarkdownEditorProps) {
   const { t } = useI18n();
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const headingBtnRef = useRef<HTMLButtonElement>(null);
+  const colorBtnRef = useRef<HTMLButtonElement>(null);
+  const codeLangBtnRef = useRef<HTMLButtonElement>(null);
+  const tableBtnRef = useRef<HTMLButtonElement>(null);
   const [showHeadings, setShowHeadings] = useState(false);
   const [showTable, setShowTable] = useState(false);
   const [tableHover, setTableHover] = useState({ r: 0, c: 0 });
@@ -397,6 +492,22 @@ export default function MarkdownEditor({
     },
     [onChange],
   );
+
+  const closeDropdowns = useCallback(() => {
+    setShowHeadings(false);
+    setShowTable(false);
+    setShowCodeLang(false);
+    setShowColor(false);
+    setTableHover({ r: 0, c: 0 });
+  }, []);
+
+  const toggleDropdown = useCallback((name: 'heading' | 'table' | 'code' | 'color') => {
+    setShowHeadings(prev => (name === 'heading' ? !prev : false));
+    setShowTable(prev => (name === 'table' ? !prev : false));
+    setShowCodeLang(prev => (name === 'code' ? !prev : false));
+    setShowColor(prev => (name === 'color' ? !prev : false));
+    if (name !== 'table') setTableHover({ r: 0, c: 0 });
+  }, []);
 
   /* Tab key → insert 2 spaces */
   const handleKeyDown = useCallback(
@@ -444,11 +555,12 @@ export default function MarkdownEditor({
           <i className="fa-regular fa-eye" style={{ fontSize: '14px' }} /> Markdown
         </span>
         {/* Heading dropdown */}
-        <div style={{ position: 'relative' }}>
+        <div>
           <button
+            ref={headingBtnRef}
             type="button"
             title={t('admin.editor.toolbar.heading', '标题')}
-            onClick={() => setShowHeadings(!showHeadings)}
+            onClick={() => toggleDropdown('heading')}
             style={{
               padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
               color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center', gap: '2px',
@@ -457,12 +569,7 @@ export default function MarkdownEditor({
           >
             H<span style={{ fontSize: '9px', marginLeft: '1px' }}>▾</span>
           </button>
-          {showHeadings && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, zIndex: 20,
-              background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)', minWidth: '80px',
-            }}>
+          <ToolbarDropdown open={showHeadings} anchorRef={headingBtnRef} onClose={closeDropdowns} minWidth={80}>
               {[1, 2, 3, 4, 5, 6].map(n => (
                 <button key={n} type="button" onClick={() => {
                   if (taRef.current) linePrefix(taRef.current, '#'.repeat(n) + ' ', onChange);
@@ -478,28 +585,27 @@ export default function MarkdownEditor({
                   H{n}
                 </button>
               ))}
-            </div>
-          )}
+          </ToolbarDropdown>
         </div>
         <span style={{ width: '1px', height: '16px', background: 'var(--color-border)', margin: '0 4px' }} />
         {toolbar.map((btn, idx) =>
           btn.label === 'sep' ? (
             <span key={`sep-${idx}`} style={{ width: '1px', height: '16px', background: 'var(--color-border)', margin: '0 4px' }} />
           ) : btn.label === 'color' ? (
-            <div key="color" style={{ position: 'relative' }}>
-              <button type="button" title={t('admin.editor.toolbar.textColor', '字体颜色')} onClick={() => setShowColor(!showColor)} style={{
+            <div key="color">
+              <button ref={colorBtnRef} type="button" title={t('admin.editor.toolbar.textColor', '字体颜色')} onClick={() => toggleDropdown('color')} style={{
                 padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center',
               }}>
                 <i className="fa-regular fa-palette" style={{ fontSize: '13px' }} />
               </button>
-              {showColor && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-                  zIndex: 20, padding: '12px', background: 'var(--color-bg-card)',
-                  border: '1px solid var(--color-border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  borderRadius: '8px', width: '180px',
-                }}>
+              <ToolbarDropdown
+                open={showColor}
+                anchorRef={colorBtnRef}
+                onClose={closeDropdowns}
+                minWidth={180}
+                style={{ padding: '12px', borderRadius: '8px', width: 180 }}
+              >
                   <p style={{ fontSize: '11px', color: 'var(--color-text-dim)', marginBottom: '8px' }}>{t('admin.editor.chooseTextColor', '选择字体颜色')}</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
                     {['#f43f5e', '#f97316', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#1a1a1a', '#6b7280'].map(color => (
@@ -529,8 +635,7 @@ export default function MarkdownEditor({
                       {t('admin.editor.customColor', '自定义颜色')}
                     </button>
                   </div>
-                </div>
-              )}
+              </ToolbarDropdown>
             </div>
           ) : (
             <button
@@ -558,21 +663,15 @@ export default function MarkdownEditor({
           )
         )}
         {/* Code block language picker */}
-        <div style={{ position: 'relative' }}>
-          <button type="button" title={t('admin.editor.toolbar.codeBlock', '代码块')} onClick={() => setShowCodeLang(!showCodeLang)} style={{
+        <div>
+          <button ref={codeLangBtnRef} type="button" title={t('admin.editor.toolbar.codeBlock', '代码块')} onClick={() => toggleDropdown('code')} style={{
             padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center',
             fontSize: '10px', fontFamily: 'monospace',
           }}>
             {'{ }'}
           </button>
-          {showCodeLang && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, zIndex: 20,
-              background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: '240px', overflowY: 'auto',
-              minWidth: '120px',
-            }}>
+          <ToolbarDropdown open={showCodeLang} anchorRef={codeLangBtnRef} onClose={closeDropdowns} minWidth={120} maxHeight={240}>
               {['javascript', 'typescript', 'python', 'go', 'rust', 'java', 'php', 'ruby', 'swift', 'kotlin', 'c', 'cpp', 'csharp', 'html', 'css', 'scss', 'sql', 'bash', 'shell', 'json', 'yaml', 'toml', 'xml', 'markdown', 'diff', 'docker', 'nginx', 'lua', 'r', 'dart'].map(lang => (
                 <button key={lang} type="button" onClick={() => {
                   if (taRef.current) {
@@ -597,23 +696,17 @@ export default function MarkdownEditor({
                   {lang}
                 </button>
               ))}
-            </div>
-          )}
+          </ToolbarDropdown>
         </div>
         {/* Table grid picker */}
-        <div style={{ position: 'relative' }}>
-          <button type="button" title={t('admin.editor.toolbar.table', '表格')} onClick={() => setShowTable(!showTable)} style={{
+        <div>
+          <button ref={tableBtnRef} type="button" title={t('admin.editor.toolbar.table', '表格')} onClick={() => toggleDropdown('table')} style={{
             padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center',
           }}>
             <i className="fa-regular fa-table" style={{ fontSize: '13px' }} />
           </button>
-          {showTable && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, zIndex: 20, padding: '8px',
-              background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-            }}>
+          <ToolbarDropdown open={showTable} anchorRef={tableBtnRef} onClose={closeDropdowns} minWidth={150} style={{ padding: '8px' }}>
               <p style={{ fontSize: '11px', color: 'var(--color-text-dim)', marginBottom: '6px' }}>
                 {tableHover.r > 0 ? `${tableHover.r} x ${tableHover.c}` : t('admin.editor.chooseTableSize', '选择表格大小')}
               </p>
@@ -648,8 +741,7 @@ export default function MarkdownEditor({
                   );
                 })}
               </div>
-            </div>
-          )}
+          </ToolbarDropdown>
         </div>
         <span style={{ width: '1px', height: '16px', background: 'var(--color-border)', margin: '0 4px' }} />
         {onImportMd && (

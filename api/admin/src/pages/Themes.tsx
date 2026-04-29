@@ -177,7 +177,7 @@ export default function Themes() {
         fontSize: 12, lineHeight: 1.7, color: 'var(--color-text-sub)',
       }}>
         <i className="fa-regular fa-lightbulb" style={{ marginRight: 6, color: 'var(--color-primary)' }} />
-        主题包为 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>.zip</code> 格式，根目录包含 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>manifest.json</code>（含 <code>id / name / version</code>）。上传后自动解压到 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>themes/&lt;id&gt;/</code>。
+        主题包为 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>.zip</code> 格式，根目录包含 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>manifest.json</code>（含 <code>id / name / version</code>）。上传后自动解压到 <code style={{ background: 'var(--color-bg-card)', padding: '1px 5px', fontSize: 11 }}>content/themes/&lt;id&gt;/</code>。
       </div>
 
       {/* Grid */}
