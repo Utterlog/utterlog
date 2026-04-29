@@ -3,10 +3,11 @@ import toast from 'react-hot-toast';
 import { themesApi, type ExtensionManifest } from '@/lib/api';
 import { siteUrlOf } from '@/lib/site';
 import FooterIconsEditor from '@/components/FooterIconsEditor';
+import AzureProfileSettings from '@/components/AzureProfileSettings';
 import MenusPage from './Menus';
 
 export default function Themes() {
-  const [tab, setTab] = useState<'themes' | 'menus' | 'header' | 'footer'>('themes');
+  const [tab, setTab] = useState<'themes' | 'menus' | 'profile' | 'header' | 'footer'>('themes');
   const [themes, setThemes] = useState<ExtensionManifest[]>([]);
   const [active, setActive] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -95,6 +96,7 @@ export default function Themes() {
   const tabs: { key: typeof tab; label: string; icon: string }[] = [
     { key: 'themes', label: '主题', icon: 'fa-regular fa-palette' },
     { key: 'menus', label: '菜单', icon: 'fa-regular fa-list' },
+    { key: 'profile', label: '资料卡', icon: 'fa-regular fa-id-card' },
     { key: 'header', label: '头部按钮', icon: 'fa-regular fa-window-maximize' },
     { key: 'footer', label: '页脚图标', icon: 'fa-regular fa-share-nodes' },
   ];
@@ -119,6 +121,7 @@ export default function Themes() {
       </div>
 
       {tab === 'menus' && <MenusPage />}
+      {tab === 'profile' && <AzureProfileSettings />}
       {tab === 'header' && (
         <FooterIconsEditor
           optionKey="theme_header_buttons"

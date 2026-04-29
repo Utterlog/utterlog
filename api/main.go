@@ -511,7 +511,7 @@ func main() {
 		authed.GET("/analytics/geoip", handler.GeoIPLookup)
 		authed.GET("/analytics/map", handler.VisitorMapData)
 		authed.POST("/analytics/enrich-geoip", handler.EnrichGeoIP)
-		authed.GET("/dashboard/stats", handler.DashboardStats)
+		authed.GET("/admin/stats", handler.DashboardStats)
 
 		// Telegram management
 		authed.POST("/telegram/test", handler.TelegramTest)

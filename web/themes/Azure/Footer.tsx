@@ -295,9 +295,10 @@ export default function Footer() {
   };
 
   return (
-    <footer style={{ borderTop: '1px solid #d9d9d9', position: 'relative' }}>
+    <footer className="azure-footer" style={{ borderTop: '1px solid #d9d9d9', position: 'relative' }}>
       {/* Utterlog brand logo — page left edge */}
       <a href="https://utterlog.io" target="_blank" rel="noopener noreferrer" title="Powered by Utterlog!"
+        className="azure-footer-powered"
         style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
         <svg width="32" height="32" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.18 }}>
           <path d="M12 0c9.601 0 12 2.399 12 12 0 9.601-2.399 12-12 12-9.601 0-12-2.399-12-12C0 2.399 2.399 0 12 0z" fill="#333" />
@@ -307,6 +308,7 @@ export default function Footer() {
       {/* 音乐按钮 */}
       {!musicStore.visible && pathname !== '/music' && (
         <button
+          className="azure-footer-music-button"
           onClick={async () => {
             if (musicStore.playlist.length > 0) {
               musicStore.show();
@@ -341,14 +343,14 @@ export default function Footer() {
         </button>
       )}
 
-      <div style={{
+      <div className="azure-footer-inner" style={{
         maxWidth: '1400px', margin: '0 auto',
         padding: '16px 24px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         fontSize: '12px', color: '#999',
       }}>
         {/* Left: Copyright + Stats */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+        <div className="azure-footer-meta" style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <span>&copy; {new Date().getFullYear()} {siteName}. All rights reserved.</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <i className="fa-regular fa-eye" style={{ fontSize: '11px' }} /> 总浏览量 {totalViews}
@@ -365,7 +367,7 @@ export default function Footer() {
               {onlineOpen && (
                 <>
                   <div onClick={() => setOnlineOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
-                  <div style={{
+                  <div className="azure-footer-online-popover" style={{
                     position: 'absolute', left: 0, bottom: '100%', marginBottom: '10px', zIndex: 91,
                     width: '280px', maxHeight: '300px', overflowY: 'auto',
                     background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)',
@@ -445,7 +447,7 @@ export default function Footer() {
         </div>
 
         {/* Right: Icon links + Login/Avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', flexShrink: 0 }}>
+        <div className="azure-footer-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', flexShrink: 0 }}>
           {iconLinks.map((item, i) => {
             const baseStyle: React.CSSProperties = {
               width: '28px', height: '28px',
@@ -496,7 +498,7 @@ export default function Footer() {
 
             {/* Login popup */}
             {showLogin && !user && (
-              <div ref={loginRef} style={{
+              <div ref={loginRef} className="azure-footer-login-popover" style={{
                 position: 'absolute', bottom: '40px', right: 0, zIndex: 100,
                 width: '280px', background: '#fff', border: '1px solid #e0e0e0',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.12)', padding: '20px',
@@ -637,7 +639,7 @@ export default function Footer() {
 
             {/* Logged in: click avatar shows menu */}
             {user && showLogin && (
-              <div ref={loginRef} style={{
+              <div ref={loginRef} className="azure-footer-login-popover" style={{
                 position: 'absolute', bottom: '36px', right: 0, zIndex: 100,
                 background: '#fff', border: '1px solid #e0e0e0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
                 padding: '8px 0', minWidth: '120px',
@@ -663,6 +665,7 @@ export default function Footer() {
             是镜像关系。 */}
         {readerActive && readerDismissed && (
           <button
+            className="azure-footer-reader-button"
             onClick={showReader}
             title="重新打开陪读"
             style={{
@@ -684,6 +687,7 @@ export default function Footer() {
 
         {/* Scroll to top — footer 内，垂直居中，靠页面最右边 */}
         <button
+          className="azure-footer-scroll-top"
           onClick={() => document.querySelector('.blog-main')?.scrollTo({ top: 0, behavior: 'smooth' })}
           title="回到顶部"
           style={{

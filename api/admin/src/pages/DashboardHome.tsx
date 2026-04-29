@@ -54,7 +54,7 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       const [dashRes, postsRes, commentsRes]: any = await Promise.all([
-        api.get('/dashboard/stats'),
+        api.get('/admin/stats'),
         postsApi.list({ limit: 5 }),
         commentsApi.list({ per_page: 15, status: 'approved' }),
       ]);

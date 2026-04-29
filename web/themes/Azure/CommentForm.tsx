@@ -250,9 +250,9 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
 
   return (
     <>
-    <div style={{ border: '1px solid var(--color-border, #eee)', marginTop: '24px' }}>
+    <div className="azure-comment-form" style={{ border: '1px solid var(--color-border, #eee)', marginTop: '24px' }}>
       {/* Header bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: '60px', borderBottom: '1px solid var(--color-border, #eee)' }}>
+      <div className="azure-comment-form-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: '60px', borderBottom: '1px solid var(--color-border, #eee)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {isAdmin && user?.avatar ? (
             <img src={user.avatar} alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', flexShrink: 0 }} />
@@ -265,7 +265,7 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
         </div>
 
         {/* Right side: user state */}
-        <div style={{ fontSize: '12px', color: 'var(--color-text-dim)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="azure-comment-form-user-state" style={{ fontSize: '12px', color: 'var(--color-text-dim)', display: 'flex', alignItems: 'center', gap: '6px' }}>
           {isAdmin && (
             <>
               <span>以 <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{name}</span> 的身份登录。</span>
@@ -296,18 +296,18 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
 
       {/* Info fields (for new/editing visitors) */}
       {showInfoFields && (
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border, #eee)' }}>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', padding: '0 16px', height: '50px', borderRight: '1px solid var(--color-border, #eee)' }}>
+        <div className="azure-comment-form-fields" style={{ display: 'flex', borderBottom: '1px solid var(--color-border, #eee)' }}>
+          <div className="azure-comment-form-field" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', padding: '0 16px', height: '50px', borderRight: '1px solid var(--color-border, #eee)' }}>
             <i className="fa-regular fa-user" style={{ fontSize: '12px', color: '#bbb' }} />
             <input value={name} onChange={e => setName(e.target.value)} placeholder="昵称*"
               style={{ flex: 1, border: 'none', outline: 'none', fontSize: '13px', background: 'transparent', color: 'var(--color-text-main)' }} />
           </div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', padding: '0 16px', height: '50px', borderRight: '1px solid var(--color-border, #eee)' }}>
+          <div className="azure-comment-form-field" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', padding: '0 16px', height: '50px', borderRight: '1px solid var(--color-border, #eee)' }}>
             <i className="fa-regular fa-envelope" style={{ fontSize: '12px', color: '#bbb' }} />
             <input value={email} onChange={e => setEmail(e.target.value)} placeholder="邮箱*" type="email"
               style={{ flex: 1, border: 'none', outline: 'none', fontSize: '13px', background: 'transparent', color: 'var(--color-text-main)' }} />
           </div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', padding: '0 16px', height: '50px' }}>
+          <div className="azure-comment-form-field" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', padding: '0 16px', height: '50px' }}>
             <i className="fa-regular fa-globe" style={{ fontSize: '12px', color: '#bbb' }} />
             <input value={url} onChange={e => setUrl(e.target.value)} placeholder="网站"
               style={{ flex: 1, border: 'none', outline: 'none', fontSize: '13px', background: 'transparent', color: 'var(--color-text-main)' }} />
@@ -316,8 +316,8 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
       )}
 
       {/* Textarea */}
-      <div style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', padding: '12px 12px 12px 16px', gap: '6px', minHeight: '250px', borderBottom: showEmoji ? 'none' : undefined }}>
+      <div className="azure-comment-form-textarea-wrap" style={{ position: 'relative' }}>
+        <div className="azure-comment-form-textarea-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '12px 12px 12px 16px', gap: '6px', minHeight: '250px', borderBottom: showEmoji ? 'none' : undefined }}>
           <i className="fa-regular fa-pen-to-square" style={{ fontSize: '12px', color: '#bbb', marginTop: '4px' }} />
           <textarea
             ref={textareaRef}
@@ -354,7 +354,7 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
 
         {/* Emoji panel */}
         {showEmoji && (
-          <div ref={emojiRef} style={{
+          <div ref={emojiRef} className="azure-comment-form-emoji-panel" style={{
             position: 'absolute', left: '8px', bottom: '36px', zIndex: 50,
             width: '342px', padding: '6px',
             background: 'var(--color-bg-card, #fff)', border: '1px solid var(--color-border, #eee)',
@@ -389,7 +389,7 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
     </div>
 
     {/* Bottom: captcha + submit (outside the border box) */}
-    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '12px', gap: '8px' }}>
+    <div className="azure-comment-form-actions" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '12px', gap: '8px' }}>
       {!isAdmin && (
         <CommentCaptcha onVerified={setCaptchaResult} onReset={() => setCaptchaResult(null)} />
       )}

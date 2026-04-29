@@ -10,13 +10,17 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
   background: #f5f5f5;
   color: #1a1a1a;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
 }
 [data-theme="Azure"] .azure-main {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 [data-theme="Azure"] .azure-frame {
   box-sizing: border-box;
@@ -261,6 +265,14 @@
 [data-theme="Azure"] .azure-header-button:disabled {
   opacity: 0.55;
   cursor: wait;
+}
+[data-theme="Azure"] .azure-random-button.loading {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  opacity: 1;
+}
+[data-theme="Azure"] .azure-random-button.loading svg {
+  flex-shrink: 0;
 }
 [data-theme="Azure"] .azure-header-button i {
   font-size: 15px;
@@ -646,6 +658,175 @@
   position: sticky;
   top: 0;
 }
+[data-theme="Azure"] .azure-profile-card {
+  position: relative;
+  min-height: 238px;
+  margin: 16px;
+  padding: 16px;
+  overflow: hidden;
+  color: #fff;
+  background: var(--color-primary);
+  border-radius: 6px;
+}
+[data-theme="Azure"] .azure-profile-welcome {
+  display: block;
+  max-width: 100%;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 6px 10px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+}
+[data-theme="Azure"] .azure-profile-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 112px;
+  margin-top: 14px;
+}
+[data-theme="Azure"] .azure-profile-face,
+[data-theme="Azure"] .azure-profile-intro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+[data-theme="Azure"] .azure-profile-avatar-wrap {
+  position: relative;
+  width: 92px;
+  height: 92px;
+}
+[data-theme="Azure"] .azure-profile-avatar,
+[data-theme="Azure"] .azure-profile-avatar-fallback {
+  display: block;
+  width: 92px;
+  height: 92px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.18);
+  border: 4px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+}
+[data-theme="Azure"] .azure-profile-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 32px;
+  font-weight: 700;
+}
+[data-theme="Azure"] .azure-profile-mood {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+  line-height: 1;
+  background: #fff;
+  border: 3px solid #fff;
+  border-radius: 50%;
+}
+[data-theme="Azure"] .azure-profile-intro {
+  margin: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.75;
+  text-align: left;
+  opacity: 0;
+  transform: translateY(8px);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+}
+[data-theme="Azure"] .azure-profile-card[data-has-intro="true"]:hover .azure-profile-face {
+  opacity: 0;
+  transform: scale(0.94);
+}
+[data-theme="Azure"] .azure-profile-card[data-has-intro="true"]:hover .azure-profile-intro {
+  opacity: 1;
+  transform: translateY(0);
+}
+[data-theme="Azure"] .azure-profile-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+[data-theme="Azure"] .azure-profile-text {
+  min-width: 0;
+}
+[data-theme="Azure"] .azure-profile-name {
+  overflow: hidden;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-theme="Azure"] .azure-profile-tagline {
+  margin-top: 4px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-theme="Azure"] .azure-profile-socials {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+[data-theme="Azure"] .azure-profile-social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: #fff;
+  font-size: 16px;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.14);
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+[data-theme="Azure"] .azure-profile-social:hover {
+  background: rgba(255, 255, 255, 0.24);
+  transform: translateY(-1px);
+}
+[data-theme="Azure"] .azure-profile-social-svg,
+[data-theme="Azure"] .azure-profile-social-img {
+  display: inline-flex;
+  width: 17px;
+  height: 17px;
+}
+[data-theme="Azure"] .azure-profile-social-svg svg,
+[data-theme="Azure"] .azure-profile-social-img {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+}
 [data-theme="Azure"] .azure-post-list-item {
   border-bottom: 1px solid #e5e5e5;
 }
@@ -837,7 +1018,8 @@
 }
 [data-theme="Azure"] .azure-post-hero-cover {
   width: 100%;
-  height: 400px;
+  aspect-ratio: 16 / 9;
+  height: auto;
 }
 [data-theme="Azure"] .azure-post-hero-overlay {
   position: absolute;
@@ -1272,6 +1454,135 @@
   [data-theme="Azure"] .azure-mobile-toc-list {
     max-height: calc(min(520px, calc(100vh - 76px)) - 44px);
   }
+  [data-theme="Azure"] .azure-footer {
+    box-sizing: border-box;
+    overflow: hidden;
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+  [data-theme="Azure"] .azure-footer-inner {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 18px 20px 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 14px !important;
+  }
+  [data-theme="Azure"] .azure-footer-meta {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    line-height: 1.65 !important;
+  }
+  [data-theme="Azure"] .azure-footer-meta > * {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  [data-theme="Azure"] .azure-footer-actions {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    flex-shrink: 1 !important;
+    gap: 8px !important;
+  }
+  [data-theme="Azure"] .azure-footer-powered,
+  [data-theme="Azure"] .azure-footer-music-button,
+  [data-theme="Azure"] .azure-footer-reader-button,
+  [data-theme="Azure"] .azure-footer-scroll-top {
+    display: none !important;
+  }
+  [data-theme="Azure"] .azure-footer-online-popover,
+  [data-theme="Azure"] .azure-footer-login-popover {
+    right: auto !important;
+    left: 0 !important;
+    width: min(280px, calc(100vw - 40px)) !important;
+    max-width: calc(100vw - 40px) !important;
+  }
+  [data-theme="Azure"] .azure-comment-form {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-header {
+    height: auto !important;
+    min-height: 58px !important;
+    padding: 12px 14px !important;
+    align-items: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-user-state {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 6px 8px !important;
+    line-height: 1.6 !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-fields {
+    flex-direction: column !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-field {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    flex: none !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--color-border, #eee) !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-field:last-child {
+    border-bottom: 0 !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-field input {
+    min-width: 0 !important;
+    font-size: 16px !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-textarea-row {
+    min-height: 190px !important;
+    padding: 12px 14px 38px !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-textarea-row textarea {
+    min-height: 160px !important;
+    font-size: 16px !important;
+  }
+  [data-theme="Azure"] .azure-comment-form .comment-hint {
+    right: 12px !important;
+    bottom: 10px !important;
+    max-width: calc(100% - 64px) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-emoji-panel {
+    left: 8px !important;
+    width: min(342px, calc(100vw - 56px)) !important;
+    grid-template-columns: repeat(8, 32px) !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-actions {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 0 !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-actions > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  [data-theme="Azure"] .azure-comment-form-actions button {
+    width: 100% !important;
+    min-height: 42px !important;
+  }
   [data-theme="Azure"] .azure-hero-cover {
     height: clamp(210px, 62vw, 280px);
   }
@@ -1336,7 +1647,8 @@
     -webkit-line-clamp: 2;
   }
   [data-theme="Azure"] .azure-post-hero-cover {
-    height: clamp(240px, 64vw, 360px);
+    aspect-ratio: 16 / 9;
+    height: auto;
   }
   [data-theme="Azure"] .azure-post-hero-overlay {
     padding: 56px 18px 18px;

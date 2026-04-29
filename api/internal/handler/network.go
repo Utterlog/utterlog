@@ -559,15 +559,17 @@ func GetUtterlogProfile(c *gin.Context) {
 		config.T("users")), userID)
 
 	localAvatar := ""
-	if user.Avatar != nil { localAvatar = *user.Avatar }
+	if user.Avatar != nil {
+		localAvatar = *user.Avatar
+	}
 	util.Success(c, gin.H{
 		"utterlog_id":     utterlogID,
 		"utterlog_avatar": utterlogAvatar,
 		"username":        user.Username,
 		"nickname":        user.NicknameStr(),
 		"email":           user.Email,
-		"avatar":          localAvatar,       // raw local avatar (for Profile edit UI)
-		"avatar_url":      user.AvatarURL(),  // resolved (utterlog > local) for unified display
+		"avatar":          localAvatar,      // raw local avatar (for Profile edit UI)
+		"avatar_url":      user.AvatarURL(), // resolved (utterlog > local) for unified display
 		"bound":           utterlogID != "",
 	})
 }
@@ -609,16 +611,16 @@ func OAuthCallback(c *gin.Context) {
 	siteID := getSiteID()
 
 	payload := gin.H{
-		"grant_type":    "authorization_code",
-		"code":          code,
-		"client_id":     siteID,
-		"fingerprint":   siteFingerprint(),
+		"grant_type":  "authorization_code",
+		"code":        code,
+		"client_id":   siteID,
+		"fingerprint": siteFingerprint(),
 		// Same as OAuthAuthorize — must match the URI sent at authorize time.
-		"redirect_uri":  config.PublicBaseURL() + "/api/v1/network/oauth/callback",
+		"redirect_uri": config.PublicBaseURL() + "/api/v1/network/oauth/callback",
 	}
 	resp, err := hubRequest("POST", "/oauth/token", payload)
 	if err != nil {
-		c.Redirect(302, "/dashboard/profile?error=hub_unreachable")
+		c.Redirect(302, "/admin/profile?error=hub_unreachable")
 		return
 	}
 	defer resp.Body.Close()
@@ -635,6 +637,7 @@ func OAuthCallback(c *gin.Context) {
 	if strings.Contains(frontendURL, "localhost:8080") {
 		frontendURL = strings.Replace(frontendURL, ":8080", ":3000", 1)
 	}
+	frontendURL = strings.TrimRight(frontendURL, "/")
 
 	if resp.StatusCode == 200 {
 		data, _ := result["data"].(map[string]interface{})
@@ -654,14 +657,14 @@ func OAuthCallback(c *gin.Context) {
 		c.String(200, fmt.Sprintf(`<!DOCTYPE html><html><body><script>
 			if (window.opener) { window.opener.location.reload(); }
 			window.close();
-			setTimeout(function(){ window.location.href = '%s/dashboard/utterlog'; }, 500);
+			setTimeout(function(){ window.location.href = '%s/admin/utterlog'; }, 500);
 		</script><p>绑定成功，正在关闭...</p></body></html>`, frontendURL))
 	} else {
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		c.String(200, fmt.Sprintf(`<!DOCTYPE html><html><body><script>
 			if (window.opener) { window.opener.location.reload(); }
 			window.close();
-			setTimeout(function(){ window.location.href = '%s/dashboard/utterlog?error=oauth_failed'; }, 500);
+			setTimeout(function(){ window.location.href = '%s/admin/utterlog?error=oauth_failed'; }, 500);
 		</script><p>绑定失败，正在关闭...</p></body></html>`, frontendURL))
 	}
 }

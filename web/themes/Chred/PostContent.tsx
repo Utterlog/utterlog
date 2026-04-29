@@ -305,6 +305,7 @@ function processImageGrids(text: string): string {
   const lines = text.split('\n');
   const result: string[] = [];
   let group: { alt: string; src: string }[] = [];
+  let pendingBlankAfterGroup = 0;
 
   const flushGroup = () => {
     if (group.length >= 2) {
@@ -312,19 +313,27 @@ function processImageGrids(text: string): string {
         `<img data-grid-src="${g.src}" data-grid-alt="${g.alt.replace(/"/g, '&quot;')}" />`
       ).join('');
       result.push(`<div data-image-grid data-count="${group.length}">${imgs}</div>`);
+      // Generated raw HTML blocks must be isolated from the following
+      // markdown block. Without this blank line, a following `> quote`
+      // is parsed as literal HTML text and renders as &gt;.
+      result.push('');
     } else if (group.length === 1) {
       // Single image — keep as markdown
       result.push(`![${group[0].alt}](${group[0].src})`);
+      if (pendingBlankAfterGroup > 0) result.push('');
     }
     group = [];
+    pendingBlankAfterGroup = 0;
   };
 
   for (const line of lines) {
     const match = line.match(imgPattern);
     if (match) {
       group.push({ alt: match[1], src: match[2] });
+      pendingBlankAfterGroup = 0;
     } else if (line.trim() === '' && group.length > 0) {
       // Allow blank lines between consecutive images
+      pendingBlankAfterGroup++;
       continue;
     } else {
       flushGroup();

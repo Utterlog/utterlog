@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 
@@ -102,7 +103,7 @@ export default function NotificationBell() {
 
             {/* Pending comments alert */}
             {pendingComments > 0 && (
-              <a href="/dashboard/comments/pending" style={{
+              <Link to="/comments/pending" onClick={() => setOpen(false)} style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '10px 16px', background: '#fef3c7', borderBottom: '1px solid #fde68a',
                 textDecoration: 'none', color: '#92400e', fontSize: '13px',
@@ -110,7 +111,7 @@ export default function NotificationBell() {
                 <i className="fa-solid fa-comment-dots" style={{ fontSize: '14px' }} />
                 <span>{t('admin.notification.pendingComments', '{count} 条评论等待审核', { count: pendingComments })}</span>
                 <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', marginLeft: 'auto', opacity: 0.5 }} />
-              </a>
+              </Link>
             )}
 
             {/* List */}

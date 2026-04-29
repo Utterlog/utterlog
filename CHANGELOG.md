@@ -8,6 +8,20 @@
 
 ## [Unreleased]
 
+## [1.5.7] - 2026-04-29
+
+### Changed
+
+- Azure 主题 Header 随机文章按钮图标改为骰子，点击后按钮先显示圆形 loading，等待 1 秒再跳转随机文章。
+- Azure 主题文章页顶部 banner 改为 16:9 显示比例，减少 16:9 封面图的上下裁切。
+- Azure 主题移动端页脚和评论表单重新适配：页脚改为单列流式布局，隐藏移动端页脚浮动圆按钮，评论表单字段与提交区改为单列，避免横向撑宽和底部滚动异常。
+- Azure 主题侧边栏资料卡重构：资料卡支持主题设置自定义头像、心情 Emoji、欢迎语、短描述、悬浮简介和专属社交按钮，并读取评论表单缓存显示欢迎回来。
+
+### Fixed
+
+- 修复后台通知铃铛待审核评论入口仍跳转旧 `/dashboard/comments/pending` 的问题，并清理 Utterlog 网络绑定回跳与后台首页统计接口中的旧 `/dashboard` 路径残留，统一使用 `/admin` 后台路径。
+- 修复文章正文连续图片自动网格预处理会吞掉图片组后的空行，导致紧跟的 Markdown `> ` 引用块被当作普通 `&gt;` 文本输出的问题。
+
 ## [1.5.6] - 2026-04-28
 
 ### Added
@@ -244,7 +258,8 @@
 - 6 项 AI 提示词全部可在后台编辑：摘要 / Slug / 关键词 / 排版 / 推荐问题 / 封面图；每项中文默认值，textarea 留空 + 保存自动恢复默认
 - AI 模型分发改为按用途路由：把原先 8 个 `ai_purpose_*_provider` 收成 2 个槽位（content + chat）；DB 自动清理 7 条遗留 option
 
-[Unreleased]: https://github.com/utterlog/utterlog/compare/v1.5.6...HEAD
+[Unreleased]: https://github.com/utterlog/utterlog/compare/v1.5.7...HEAD
+[1.5.7]: https://github.com/utterlog/utterlog/compare/v1.5.6...v1.5.7
 [1.5.6]: https://github.com/utterlog/utterlog/compare/v1.5.5...v1.5.6
 [1.4.2]: https://github.com/utterlog/utterlog/releases/tag/v1.4.2
 [1.4.1]: https://github.com/utterlog/utterlog/releases/tag/v1.4.1

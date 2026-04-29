@@ -14,7 +14,6 @@ import PostLink from '@/components/blog/PostLink';
 import LoadingSpinner from '@/components/blog/LoadingSpinner';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
-const ACCENT = '#0052D9';
 
 const MODES = [
   { key: 'latest', label: '最新文章', color: '#0052D9', param: '&order_by=created_at&order=desc' },
@@ -380,7 +379,6 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                 if (options.social_instagram) items.push({ key: 'instagram', href: options.social_instagram, icon: 'fa-brands fa-instagram', hover: '#e4405f', title: 'Instagram' });
                 if (options.social_bilibili) items.push({ key: 'bilibili', href: options.social_bilibili, icon: 'fa-brands fa-bilibili', hover: '#00a1d6', title: 'Bilibili' });
                 if (options.social_email) items.push({ key: 'email', href: `mailto:${options.social_email}`, icon: 'fa-regular fa-envelope', hover: '#333', title: '邮箱', mail: true });
-                if (options.site_url) items.push({ key: 'site', href: options.site_url, icon: 'fa-solid fa-globe', hover: ACCENT, title: '网站' });
                 return items.map(it => (
                   <a
                     key={it.key}

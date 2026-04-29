@@ -24,13 +24,17 @@ export default function Header() {
   const [headerSearchOpen, setHeaderSearchOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
+  const [randomLoading, setRandomLoading] = useState(false);
   const [tocAvailable, setTocAvailable] = useState(false);
   const modalSearchRef = useRef<HTMLInputElement>(null);
   const headerSearchRef = useRef<HTMLInputElement>(null);
   const headerActionsRef = useRef<HTMLDivElement>(null);
   const { menus, site, options } = useThemeContext();
 
-  useEffect(() => { setNavigating(false); }, [pathname]);
+  useEffect(() => {
+    setNavigating(false);
+    setRandomLoading(false);
+  }, [pathname]);
   useEffect(() => {
     setTocAvailable(false);
     const sync = () => setTocAvailable(document.documentElement.dataset.azureTocAvailable === 'true');
@@ -149,10 +153,12 @@ export default function Header() {
   };
 
   const visitRandomPost = async () => {
+    if (randomLoading || navigating) return;
     setMenuOpen(false);
     setHeaderSearchOpen(false);
     setSearchOpen(false);
-    setNavigating(true);
+    setRandomLoading(true);
+    const startedAt = Date.now();
     try {
       const resp = await fetch(`${API_BASE}/posts?type=post&status=publish&per_page=1&order_by=random&_t=${Date.now()}`);
       if (!resp.ok) throw new Error('random post request failed');
@@ -161,13 +167,18 @@ export default function Header() {
       const post = posts[0];
       if (!post) {
         toast.error('暂无可访问文章');
-        setNavigating(false);
+        setRandomLoading(false);
         return;
       }
-      window.location.href = buildPermalink(post, options?.permalink_structure);
+      const href = buildPermalink(post, options?.permalink_structure);
+      const wait = Math.max(0, 1000 - (Date.now() - startedAt));
+      window.setTimeout(() => {
+        setNavigating(true);
+        window.location.href = href;
+      }, wait);
     } catch {
       toast.error('随机访问失败');
-      setNavigating(false);
+      setRandomLoading(false);
     }
   };
 
@@ -306,13 +317,17 @@ export default function Header() {
 
           <button
             type="button"
-            className="azure-header-button azure-random-button"
-            title="随机文章"
-            aria-label="随机访问一篇文章"
+            className={`azure-header-button azure-random-button${randomLoading ? ' loading' : ''}`}
+            title={randomLoading ? '正在随机访问' : '随机文章'}
+            aria-label={randomLoading ? '正在随机访问一篇文章' : '随机访问一篇文章'}
             onClick={visitRandomPost}
-            disabled={navigating}
+            disabled={navigating || randomLoading}
           >
-            <i className="fa-sharp fa-light fa-shuffle" aria-hidden="true" />
+            {randomLoading ? (
+              <LoadingSpinner size={16} title="正在随机访问" />
+            ) : (
+              <i className="fa-sharp fa-light fa-dice" aria-hidden="true" />
+            )}
           </button>
 
           {/* Search */}

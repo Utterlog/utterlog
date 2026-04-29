@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import PostLink from '@/components/blog/PostLink';
 import { useThemeContext } from '@/lib/theme-context';
+import AzureProfileCard from './ProfileCard';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
@@ -58,13 +59,6 @@ export default function Sidebar() {
   // skip the `social_links` JSON → flat-key expansion that theme-data
   // does, so Sidebar's social icons silently didn't render.
   const ctx = useThemeContext();
-  const siteOptions = ctx.options;
-  const author = {
-    nickname: ctx.owner.nickname,
-    bio: ctx.owner.bio,
-    avatar: ctx.owner.avatar,
-    email: ctx.owner.email,
-  };
   const categoriesCtx = ctx.categories;
   const tagsCtx = ctx.tags
     .slice()
@@ -105,26 +99,7 @@ export default function Sidebar() {
   return (
     <aside style={{ width: '100%' }}>
 
-      {/* Author profile card — `author.avatar` is resolved by
-          theme-data.ts from /owner's `avatar` field (always a URL via
-          resolveDisplayAvatar). Same source Footer uses for the
-          logged-in user avatar, so every surface renders identically. */}
-      <div style={{ borderBottom: '1px solid #e5e5e5', padding: '20px 16px', textAlign: 'center' }}>
-        {author?.avatar && (
-          <img
-            src={author.avatar}
-            alt=""
-            style={{ width: 64, height: 64, objectFit: 'cover', margin: '0 auto 8px', display: 'block', background: '#f0f0f0', clipPath: 'url(#squircle)' }}
-          />
-        )}
-        <div style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a1a' }}>
-          {author?.nickname || siteOptions.site_title || '博主'}
-        </div>
-        {(author?.bio || siteOptions.site_description) && (
-          <p style={{ fontSize: '12px', color: '#888', margin: '4px 0 0' }}>{author?.bio || siteOptions.site_description}</p>
-        )}
-        {/* 社交链接已迁移到 hero 下方那行（HomePage.tsx 280px 左格），头像下面不再重复展示。 */}
-      </div>
+      <AzureProfileCard />
 
       {/* Post tabs */}
       <div style={{ borderBottom: '1px solid #e5e5e5' }}>
