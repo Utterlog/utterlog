@@ -1,8 +1,15 @@
+import type { Metadata } from 'next';
 import { getPosts, getOptions } from '@/lib/blog-api';
 import { getThemeComponents, DEFAULT_THEME } from '@/lib/theme';
 
 interface PageProps {
   params: Promise<{ num: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { num } = await params;
+  const page = Number(num) || 1;
+  return { title: page > 1 ? `第 ${page} 页` : '首页' };
 }
 
 export default async function PaginatedPage({ params }: PageProps) {

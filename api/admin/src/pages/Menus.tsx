@@ -349,18 +349,15 @@ export default function MenusPage() {
               />
               {!isAzureSidebar && (
                 <>
-                  <button onClick={() => setPickerOpen({ target: idx })} title={t('admin.menus.addChildFromExisting', '从已有页面添加子菜单')}
-                    style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', cursor: 'pointer' }}>
+                  <button onClick={() => setPickerOpen({ target: idx })} title={t('admin.menus.addChildFromExisting', '从已有页面添加子菜单')} className="action-btn">
                     <i className="fa-regular fa-list-tree" style={{ fontSize: '12px' }} />
                   </button>
-                  <button onClick={() => addChild(idx)} title={t('admin.menus.addBlankChild', '添加空白子菜单')}
-                    style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)', cursor: 'pointer' }}>
+                  <button onClick={() => addChild(idx)} title={t('admin.menus.addBlankChild', '添加空白子菜单')} className="action-btn">
                     <i className="fa-regular fa-diagram-subtask" style={{ fontSize: '12px' }} />
                   </button>
                 </>
               )}
-              <button onClick={() => removeItem(idx)} title={t('admin.common.delete', '删除')}
-                style={{ padding: '6px 10px', fontSize: '12px', background: 'none', border: '1px solid var(--color-border)', cursor: 'pointer', color: '#dc2626' }}>
+              <button onClick={() => removeItem(idx)} title={t('admin.common.delete', '删除')} className="action-btn danger">
                 <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} />
               </button>
             </div>
@@ -383,8 +380,7 @@ export default function MenusPage() {
                       onChange={e => updateChild(idx, cIdx, 'href', e.target.value)}
                       placeholder="/path"
                     />
-                    <button onClick={() => removeChild(idx, cIdx)}
-                      style={{ padding: '4px 8px', fontSize: '11px', background: 'none', border: '1px solid var(--color-border)', cursor: 'pointer', color: '#dc2626' }}>
+                    <button onClick={() => removeChild(idx, cIdx)} className="action-btn danger" title={t('admin.common.delete', '删除')}>
                       <i className="fa-regular fa-trash" style={{ fontSize: '11px' }} />
                     </button>
                   </div>

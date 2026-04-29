@@ -156,7 +156,7 @@ export default function MediaPage() {
                 </button>
                 <button
                   onClick={() => setDeleteId(file.id)}
-                  style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: 0 }}
+                  className="action-btn danger"
                   title={t('admin.common.delete', '删除')}
                 >
                   <i className="fa-regular fa-trash" style={{ fontSize: '14px' }} />

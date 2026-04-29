@@ -296,6 +296,18 @@ export default function SecurityPage() {
           <div className="card" style={cardStyle}>
             <h3 style={sectionTitleStyle}>{t('admin.security.settings.geoTitle', 'GeoIP 地域封锁')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>
+                  {t('admin.security.settings.geoProvider', 'GeoIP 数据源')}
+                </label>
+                <select className="input text-sm" value={settings.ip_geo_provider || 'ipx'} onChange={(e) => setSettings({ ...settings, ip_geo_provider: e.target.value })}>
+                  <option value="ipx">{t('admin.security.settings.geoProviderIpx', 'api.ipx.ee（默认，基于 ip-api.com，国外更准确）')}</option>
+                  <option value="cnip">{t('admin.security.settings.geoProviderCnip', 'cnip.io（基于 ip2region，国内更准确）')}</option>
+                </select>
+                <p className="text-dim" style={{ fontSize: '12px', marginTop: '6px' }}>
+                  {t('admin.security.settings.geoProviderHint', '用于访客统计、评论归属地、GeoIP 封锁和服务器出口 IP 识别。')}
+                </p>
+              </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
                 <input type="checkbox" checked={settings.geo_enabled ?? false} onChange={(e) => setSettings({ ...settings, geo_enabled: e.target.checked })} />
                 {t('admin.security.settings.enableGeo', '启用地域封锁')}

@@ -163,8 +163,8 @@ export default function VideosPage() {
                   {item.comment && <p className="text-dim" style={{ fontSize: '11px', marginTop: '4px' }}>{item.comment}</p>}
                 </div>
                 <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                  <button onClick={() => openEdit(item)} className="text-primary-themed" style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}><i className="fa-regular fa-pen" style={{ fontSize: '13px' }} /></button>
-                  <button onClick={() => setDeleteId(item.id)} style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}><i className="fa-regular fa-trash" style={{ fontSize: '13px' }} /></button>
+                  <button onClick={() => openEdit(item)} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '13px' }} /></button>
+                  <button onClick={() => setDeleteId(item.id)} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '13px' }} /></button>
                 </div>
               </div>
             </div>

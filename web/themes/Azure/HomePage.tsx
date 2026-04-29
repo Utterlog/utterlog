@@ -360,41 +360,12 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
         </div>
       )}
 
-      {/* ===== Social + Moment row — single unit =====
-          左格原本是 hero 轮播的播放控制按钮（快退 / 上一篇 / 暂停 / 下一篇 / 快进），
-          实际使用率很低，改为博主社交链接，更贴合首页气氛。
-          自动轮播的「悬停暂停」逻辑保留在 hero 区块自己的 onMouseEnter 里。 */}
+      {/* ===== Moment row =====
+          社交链接已经迁移到侧边栏资料卡右下角；这里保留左侧占位，
+          让右侧说说 ticker 继续和内容区网格对齐。 */}
       {(
         <div className="azure-grid azure-strip">
-          {/* Left: Social links — admin 配置的项才会显示，全空时整格为空。 */}
-          <aside className="azure-social-cell">
-            <div className="azure-social-links">
-              {(() => {
-                const items: Array<{ key: string; href: string; icon: string; hover: string; title: string; mail?: boolean }> = [];
-                if (options.social_github) items.push({ key: 'github', href: options.social_github, icon: 'fa-brands fa-github', hover: '#333', title: 'GitHub' });
-                if (options.social_twitter) items.push({ key: 'twitter', href: options.social_twitter, icon: 'fa-brands fa-x-twitter', hover: '#1da1f2', title: 'Twitter / X' });
-                if (options.social_weibo) items.push({ key: 'weibo', href: options.social_weibo, icon: 'fa-brands fa-weibo', hover: '#e6162d', title: '微博' });
-                if (options.social_telegram) items.push({ key: 'telegram', href: options.social_telegram, icon: 'fa-brands fa-telegram', hover: '#0088cc', title: 'Telegram' });
-                if (options.social_youtube) items.push({ key: 'youtube', href: options.social_youtube, icon: 'fa-brands fa-youtube', hover: '#ff0000', title: 'YouTube' });
-                if (options.social_instagram) items.push({ key: 'instagram', href: options.social_instagram, icon: 'fa-brands fa-instagram', hover: '#e4405f', title: 'Instagram' });
-                if (options.social_bilibili) items.push({ key: 'bilibili', href: options.social_bilibili, icon: 'fa-brands fa-bilibili', hover: '#00a1d6', title: 'Bilibili' });
-                if (options.social_email) items.push({ key: 'email', href: `mailto:${options.social_email}`, icon: 'fa-regular fa-envelope', hover: '#333', title: '邮箱', mail: true });
-                return items.map(it => (
-                  <a
-                    key={it.key}
-                    href={it.href}
-                    target={it.mail ? undefined : '_blank'}
-                    rel={it.mail ? undefined : 'noopener noreferrer'}
-                    title={it.title}
-                    className="azure-social-link"
-                    style={{ '--azure-social-hover': it.hover } as CSSProperties}
-                  >
-                    <i className={it.icon} aria-hidden="true" />
-                  </a>
-                ));
-              })()}
-            </div>
-          </aside>
+          <aside className="azure-social-cell" aria-hidden="true" />
           {/* Right: Moment ticker */}
           <section className="azure-moment-cell">
             {latestMoment && (

@@ -133,7 +133,7 @@ export default function FollowsPage() {
 
                 {/* Actions */}
                 {activeTab === 'following' && (
-                  <button onClick={() => handleUnfollow(siteUrl)} className="text-dim" style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer' }} title="取消关注">
+                  <button onClick={() => handleUnfollow(siteUrl)} className="action-btn danger" title="取消关注">
                     <i className="fa-regular fa-trash" style={{ fontSize: '14px' }} />
                   </button>
                 )}

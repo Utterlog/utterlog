@@ -101,6 +101,43 @@ export default function Sidebar() {
 
       <AzureProfileCard />
 
+      {/* Recent comments — clicking the row jumps to the article and
+          anchors to the specific comment. PostLink builds the URL via
+          the admin's permalink config (so /posts/<slug>, /<year>/<slug>,
+          etc. all work) and the #comment-<id> hash matches the
+          CommentList item id used in the article body. */}
+      <div style={{ borderBottom: '1px solid #e5e5e5' }}>
+        {sectionTitle('fa-regular fa-comments', '最新评论')}
+        {comments.map((c: any, idx: number) => (
+          <PostLink
+            key={c.id}
+            post={{ id: c.post_id, slug: c.post_slug, title: c.post_title, categories: c.post_categories }}
+            style={{
+              display: 'flex', gap: '10px', padding: '10px 16px',
+              borderBottom: idx < comments.length - 1 ? '1px solid #f5f5f5' : 'none',
+              textDecoration: 'none', color: 'inherit',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={(e: any) => { e.currentTarget.style.background = '#f8f9fa'; }}
+            onMouseLeave={(e: any) => { e.currentTarget.style.background = 'transparent'; }}
+          >
+            <img
+              src={c.avatar_url || `https://gravatar.bluecdn.com/avatar/${c.author_email}?s=40&d=mp`}
+              alt="" style={{ width: 32, height: 32, objectFit: 'cover', flexShrink: 0, clipPath: 'url(#squircle)' }}
+            />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#333' }}>{c.author_name || c.author}</span>
+                <span style={{ fontSize: '11px', color: '#bbb' }}>{timeAgo(c.created_at)}</span>
+              </div>
+              <p style={{ fontSize: '12px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '2px 0 0' }}>
+                {c.content}
+              </p>
+            </div>
+          </PostLink>
+        ))}
+      </div>
+
       {/* Post tabs */}
       <div style={{ borderBottom: '1px solid #e5e5e5' }}>
         <div style={{ display: 'flex' }}>
@@ -140,43 +177,6 @@ export default function Sidebar() {
             );
           })}
         </div>
-      </div>
-
-      {/* Recent comments — clicking the row jumps to the article and
-          anchors to the specific comment. PostLink builds the URL via
-          the admin's permalink config (so /posts/<slug>, /<year>/<slug>,
-          etc. all work) and the #comment-<id> hash matches the
-          CommentList item id used in the article body. */}
-      <div style={{ borderBottom: '1px solid #e5e5e5' }}>
-        {sectionTitle('fa-regular fa-comments', '最新评论')}
-        {comments.map((c: any, idx: number) => (
-          <PostLink
-            key={c.id}
-            post={{ id: c.post_id, slug: c.post_slug, title: c.post_title, categories: c.post_categories }}
-            style={{
-              display: 'flex', gap: '10px', padding: '10px 16px',
-              borderBottom: idx < comments.length - 1 ? '1px solid #f5f5f5' : 'none',
-              textDecoration: 'none', color: 'inherit',
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={(e: any) => { e.currentTarget.style.background = '#f8f9fa'; }}
-            onMouseLeave={(e: any) => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <img
-              src={c.avatar_url || `https://gravatar.bluecdn.com/avatar/${c.author_email}?s=40&d=mp`}
-              alt="" style={{ width: 32, height: 32, objectFit: 'cover', flexShrink: 0, clipPath: 'url(#squircle)' }}
-            />
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#333' }}>{c.author_name || c.author}</span>
-                <span style={{ fontSize: '11px', color: '#bbb' }}>{timeAgo(c.created_at)}</span>
-              </div>
-              <p style={{ fontSize: '12px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '2px 0 0' }}>
-                {c.content}
-              </p>
-            </div>
-          </PostLink>
-        ))}
       </div>
 
       {/* Tags — colorful cloud */}

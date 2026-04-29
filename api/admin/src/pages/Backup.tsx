@@ -113,7 +113,7 @@ export default function BackupPage() {
                 <td>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <a href={b.url} download className="btn btn-secondary" style={{ fontSize: '11px', padding: '3px 8px', textDecoration: 'none' }}>下载</a>
-                    <button onClick={() => deleteBackup(b.filename)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '3px' }}><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
+                    <button onClick={() => deleteBackup(b.filename)} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
                   </div>
                 </td>
               </tr>

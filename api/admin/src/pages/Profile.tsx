@@ -735,8 +735,8 @@ export default function ProfilePage() {
                         toast.success(t('admin.profile.toast.deleted', '已删除'));
                       } catch { toast.error(t('admin.posts.toast.deleteFailed', '删除失败')); }
                     }}
-                    className="btn btn-ghost"
-                    style={{ padding: '4px 8px', color: '#ef4444' }}
+                    className="action-btn danger"
+                    title={t('admin.common.delete', '删除')}
                   >
                     <i className="fa-light fa-trash" style={{ fontSize: '14px' }} />
                   </button>

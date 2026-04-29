@@ -1,12 +1,9 @@
 package handler
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"html"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -16,6 +13,7 @@ import (
 	"sync"
 	"time"
 	"utterlog-go/config"
+	"utterlog-go/internal/geoip"
 	"utterlog-go/internal/i18n"
 	"utterlog-go/internal/middleware"
 	"utterlog-go/internal/model"
@@ -373,7 +371,7 @@ func SystemStatus(c *gin.Context) {
 			"comments": commentCount,
 			"links":    linkCount,
 		},
-		"version": "1.0.0",
+		"version": "2.0.0",
 	})
 }
 
@@ -599,36 +597,24 @@ func getHostname() string {
 // Inside a Docker container, `hostname -I` / `ifconfig` report the
 // container's internal bridge IP (172.x.x.x), which is useless to show
 // as "主机 IP" in the admin sidebar — visitors never hit that address.
-// Probe api.ipx.ee which returns whatever outbound IP the egress gets,
-// cached for the process lifetime. Fall back to local interface IP when
-// the probe fails (offline dev).
+// Probe the configured GeoIP provider for the outbound IP, cached for the
+// process lifetime. Fall back to local interface IP when the probe fails
+// (offline dev).
 var cachedPublicIP string
 var publicIPOnce sync.Once
 
 func getLocalIP() string {
 	publicIPOnce.Do(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
-		defer cancel()
-		req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.ipx.ee/ip", nil)
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil || resp == nil {
+		result, err := geoip.LookupCurrent()
+		if err != nil || result == nil || result.IP == "" {
 			cachedPublicIP = localInterfaceIP()
 			return
 		}
-		defer resp.Body.Close()
-		var d struct {
-			IP          string `json:"ip"`
-			CountryCode string `json:"country_code"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&d); err != nil || d.IP == "" {
-			cachedPublicIP = localInterfaceIP()
-			return
-		}
-		cachedPublicIP = d.IP
+		cachedPublicIP = result.IP
 		// Warm the country cache from the same response so we don't
 		// need a second HTTP round-trip.
-		if d.CountryCode != "" && cachedCountry == "" {
-			cachedCountry = strings.ToLower(d.CountryCode)
+		if result.CountryCode != "" && cachedCountry == "" {
+			cachedCountry = strings.ToLower(result.CountryCode)
 		}
 	})
 	return cachedPublicIP
@@ -660,20 +646,12 @@ func getServerCountry() string {
 		if cachedCountry != "" {
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
-		defer cancel()
-		req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.ipx.ee/ip", nil)
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
+		result, err := geoip.LookupCurrent()
+		if err != nil || result == nil {
 			cachedCountry = ""
 			return
 		}
-		defer resp.Body.Close()
-		var geo struct {
-			CountryCode string `json:"country_code"`
-		}
-		json.NewDecoder(resp.Body).Decode(&geo)
-		cachedCountry = strings.ToLower(geo.CountryCode)
+		cachedCountry = strings.ToLower(result.CountryCode)
 	})
 	return cachedCountry
 }

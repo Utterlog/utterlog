@@ -1,5 +1,8 @@
+import type { Metadata } from 'next';
 import { getGoods } from '@/lib/blog-api';
 import PageTitle from '@/components/blog/PageTitle';
+
+export const metadata: Metadata = { title: '好物' };
 
 export default async function GoodsPage() {
   let items: any[] = [];

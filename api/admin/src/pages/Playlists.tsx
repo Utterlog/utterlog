@@ -160,8 +160,8 @@ export default function PlaylistsPage() {
                       <p className="text-dim" style={{ fontSize: '12px' }}>{p.song_count || 0} 首</p>
                     </div>
                     <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                      <button onClick={(e) => { e.stopPropagation(); openEdit(p); }} className="text-primary-themed" style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}><i className="fa-regular fa-pen" style={{ fontSize: '13px' }} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); setDeleteId(p.id); }} style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}><i className="fa-regular fa-trash" style={{ fontSize: '13px' }} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); openEdit(p); }} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '13px' }} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); setDeleteId(p.id); }} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '13px' }} /></button>
                     </div>
                   </div>
                 </div>
@@ -197,7 +197,7 @@ export default function PlaylistsPage() {
                       <span className="text-dim" style={{ fontSize: '11px', flexShrink: 0 }}>
                         {{ netease: '网易云', tencent: 'QQ', kugou: '酷狗', local: '本地' }[s.platform as string] || s.platform || ''}
                       </span>
-                      <button onClick={() => removeSong(s.id)} style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', flexShrink: 0 }}><i className="fa-solid fa-xmark" style={{ fontSize: '14px' }} /></button>
+                      <button onClick={() => removeSong(s.id)} className="action-btn danger" title="移除"><i className="fa-solid fa-xmark" style={{ fontSize: '14px' }} /></button>
                     </div>
                   ))}
                 </div>

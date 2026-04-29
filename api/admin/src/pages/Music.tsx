@@ -235,11 +235,11 @@ export default function MusicPage() {
                   {{ netease: '网易云', tencent: 'QQ', kugou: '酷狗', kuwo: '酷我', baidu: '百度', local: '本地' }[item.platform as string] || item.platform || '本地'}
                 </span>
                 <div style={{ display: 'flex', gap: '4px' }}>
-                  <button onClick={() => toggleVisibility(item)} title={item.status === 'publish' ? '隐藏' : '显示'} style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-dim)' }}>
+                  <button onClick={() => toggleVisibility(item)} title={item.status === 'publish' ? '隐藏' : '显示'} className="action-btn">
                     {item.status === 'publish' ? <i className="fa-regular fa-eye" style={{ fontSize: '14px' }} /> : <i className="fa-regular fa-eye-slash" style={{ fontSize: '14px' }} />}
                   </button>
-                  <button onClick={() => openEdit(item)} className="text-primary-themed" style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-                  <button onClick={() => setDeleteId(item.id)} style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
+                  <button onClick={() => openEdit(item)} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+                  <button onClick={() => setDeleteId(item.id)} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
                 </div>
               </div>
             </div>

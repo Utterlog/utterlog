@@ -34,6 +34,19 @@ function parseSocialLinks(raw: unknown): ProfileSocialLink[] {
   }
 }
 
+function builtinSocialLinks(options: Record<string, string>): ProfileSocialLink[] {
+  const items: ProfileSocialLink[] = [];
+  if (options.social_github) items.push({ icon: 'fa-brands fa-github', label: 'GitHub', href: options.social_github });
+  if (options.social_twitter) items.push({ icon: 'fa-brands fa-x-twitter', label: 'Twitter / X', href: options.social_twitter });
+  if (options.social_weibo) items.push({ icon: 'fa-brands fa-weibo', label: '微博', href: options.social_weibo });
+  if (options.social_telegram) items.push({ icon: 'fa-brands fa-telegram', label: 'Telegram', href: options.social_telegram });
+  if (options.social_youtube) items.push({ icon: 'fa-brands fa-youtube', label: 'YouTube', href: options.social_youtube });
+  if (options.social_instagram) items.push({ icon: 'fa-brands fa-instagram', label: 'Instagram', href: options.social_instagram });
+  if (options.social_bilibili) items.push({ icon: 'fa-brands fa-bilibili', label: 'Bilibili', href: options.social_bilibili });
+  if (options.social_email) items.push({ icon: 'fa-regular fa-envelope', label: '邮箱', href: `mailto:${options.social_email}` });
+  return items;
+}
+
 function renderProfileIcon(icon: string) {
   if (icon.trim().startsWith('<svg')) {
     return <span className="azure-profile-social-svg" dangerouslySetInnerHTML={{ __html: icon }} />;
@@ -74,8 +87,11 @@ export default function AzureProfileCard() {
     ? `欢迎再次回来，${visitor.name}`
     : (options.azure_sidebar_profile_welcome || '欢迎来到这里');
   const socials = useMemo(
-    () => parseSocialLinks(options.azure_sidebar_social_links),
-    [options.azure_sidebar_social_links]
+    () => {
+      const configured = parseSocialLinks(options.azure_sidebar_social_links);
+      return configured.length > 0 ? configured : builtinSocialLinks(options);
+    },
+    [options]
   );
 
   if (!enabled) return null;

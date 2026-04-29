@@ -1,14 +1,13 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 	"utterlog-go/config"
+	"utterlog-go/internal/geoip"
 	"utterlog-go/internal/model"
 	"utterlog-go/internal/util"
 
@@ -164,16 +163,10 @@ func getIPCountry(ip string) string {
 		return country
 	}
 
-	// Fetch from API
-	resp, err := http.Get("https://api.ipx.ee/ip/" + ip)
-	if err != nil {
+	geo, err := geoip.Lookup(ip)
+	if err != nil || geo == nil {
 		return ""
 	}
-	defer resp.Body.Close()
-	var geo struct {
-		CountryCode string `json:"country_code"`
-	}
-	json.NewDecoder(resp.Body).Decode(&geo)
 	return geo.CountryCode
 }
 
@@ -357,23 +350,25 @@ func SecurityTimeline(c *gin.Context) {
 
 func GetSecuritySettings(c *gin.Context) {
 	util.Success(c, gin.H{
-		"cc_enabled":    ccEnabled,
-		"cc_limit_5s":   ccLimit5s,
-		"cc_limit_60s":  ccLimit60s,
-		"geo_enabled":   geoEnabled,
-		"geo_mode":      geoMode,
-		"geo_countries": geoCountries,
+		"cc_enabled":      ccEnabled,
+		"cc_limit_5s":     ccLimit5s,
+		"cc_limit_60s":    ccLimit60s,
+		"geo_enabled":     geoEnabled,
+		"geo_mode":        geoMode,
+		"geo_countries":   geoCountries,
+		"ip_geo_provider": geoip.CurrentProvider(),
 	})
 }
 
 func UpdateSecuritySettings(c *gin.Context) {
 	var req struct {
-		CCEnabled    *bool    `json:"cc_enabled"`
-		CCLimit5s    *int     `json:"cc_limit_5s"`
-		CCLimit60s   *int     `json:"cc_limit_60s"`
-		GeoEnabled   *bool    `json:"geo_enabled"`
-		GeoMode      *string  `json:"geo_mode"`
-		GeoCountries []string `json:"geo_countries"`
+		CCEnabled     *bool    `json:"cc_enabled"`
+		CCLimit5s     *int     `json:"cc_limit_5s"`
+		CCLimit60s    *int     `json:"cc_limit_60s"`
+		GeoEnabled    *bool    `json:"geo_enabled"`
+		GeoMode       *string  `json:"geo_mode"`
+		GeoCountries  []string `json:"geo_countries"`
+		IPGeoProvider *string  `json:"ip_geo_provider"`
 	}
 	c.ShouldBindJSON(&req)
 
@@ -395,6 +390,10 @@ func UpdateSecuritySettings(c *gin.Context) {
 	if req.GeoCountries != nil {
 		geoCountries = req.GeoCountries
 	}
+	ipGeoProvider := geoip.CurrentProvider()
+	if req.IPGeoProvider != nil {
+		ipGeoProvider = geoip.NormalizeProvider(*req.IPGeoProvider)
+	}
 
 	// Persist to options
 	save := func(k, v string) {
@@ -408,6 +407,7 @@ func UpdateSecuritySettings(c *gin.Context) {
 	save("geo_enabled", fmt.Sprintf("%v", geoEnabled))
 	save("geo_mode", geoMode)
 	save("geo_countries", strings.Join(geoCountries, ","))
+	save(geoip.OptionProvider, ipGeoProvider)
 
 	util.Success(c, gin.H{"saved": true})
 }

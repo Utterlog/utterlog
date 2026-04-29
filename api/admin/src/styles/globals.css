@@ -649,6 +649,15 @@ body {
   background: var(--color-bg-soft);
   color: var(--color-text-main);
 }
+.action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.action-btn > i,
+.action-btn > svg {
+  flex: 0 0 auto;
+  line-height: 1;
+}
 .action-btn.primary { color: var(--color-primary); }
 .action-btn.primary:hover { background: color-mix(in srgb, var(--color-primary) 8%, var(--color-bg-card)); border-color: var(--color-primary); }
 .action-btn.success { color: #16a34a; }

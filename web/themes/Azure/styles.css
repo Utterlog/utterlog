@@ -661,12 +661,12 @@
 [data-theme="Azure"] .azure-profile-card {
   position: relative;
   min-height: 238px;
-  margin: 16px;
-  padding: 16px;
+  margin: 0;
+  padding: 18px 16px 16px;
   overflow: hidden;
   color: #fff;
   background: var(--color-primary);
-  border-radius: 6px;
+  border-radius: 0;
 }
 [data-theme="Azure"] .azure-profile-welcome {
   display: block;
@@ -683,7 +683,7 @@
   white-space: nowrap;
   background: rgba(255, 255, 255, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
+  border-radius: 0;
 }
 [data-theme="Azure"] .azure-profile-body {
   position: relative;
@@ -793,7 +793,7 @@
 [data-theme="Azure"] .azure-profile-socials {
   display: flex;
   flex-shrink: 0;
-  gap: 8px;
+  gap: 6px;
 }
 [data-theme="Azure"] .azure-profile-social {
   display: inline-flex;
@@ -807,7 +807,7 @@
   text-decoration: none;
   background: rgba(255, 255, 255, 0.14);
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
   transition: background 0.16s ease, transform 0.16s ease;
 }
@@ -1018,8 +1018,7 @@
 }
 [data-theme="Azure"] .azure-post-hero-cover {
   width: 100%;
-  aspect-ratio: 16 / 9;
-  height: auto;
+  height: 400px;
 }
 [data-theme="Azure"] .azure-post-hero-overlay {
   position: absolute;
@@ -1647,8 +1646,7 @@
     -webkit-line-clamp: 2;
   }
   [data-theme="Azure"] .azure-post-hero-cover {
-    aspect-ratio: 16 / 9;
-    height: auto;
+    height: clamp(240px, 64vw, 360px);
   }
   [data-theme="Azure"] .azure-post-hero-overlay {
     padding: 56px 18px 18px;

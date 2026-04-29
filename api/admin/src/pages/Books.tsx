@@ -99,8 +99,8 @@ export default function booksPage() {
                 )}
                 {item.comment && <p className="text-dim" style={{ fontSize: '12px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.comment}</p>}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', marginTop: '8px' }}>
-                  <button onClick={() => openEdit(item)} className="text-primary-themed" style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-                  <button onClick={() => setDeleteId(item.id)} style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
+                  <button onClick={() => openEdit(item)} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+                  <button onClick={() => setDeleteId(item.id)} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
                 </div>
               </div>
             </div>

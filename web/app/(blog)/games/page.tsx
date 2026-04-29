@@ -1,5 +1,8 @@
+import type { Metadata } from 'next';
 import { getGames } from '@/lib/blog-api';
 import PageTitle from '@/components/blog/PageTitle';
+
+export const metadata: Metadata = { title: '游戏' };
 
 const statusLabel: Record<string, string> = { want: '想玩', playing: '在玩', finished: '通关', abandoned: '弃坑' };
 

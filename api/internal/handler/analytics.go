@@ -2,15 +2,14 @@ package handler
 
 import (
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 	"utterlog-go/config"
+	"utterlog-go/internal/geoip"
 	"utterlog-go/internal/model"
 	"utterlog-go/internal/siteclock"
 	"utterlog-go/internal/util"
@@ -177,29 +176,15 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 }
 
 func enrichAccessGeo(logID int, ip string) {
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get("https://api.ipx.ee/ip/" + ip)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-
-	var raw struct {
-		CountryCode string  `json:"country_code"`
-		Country     string  `json:"country"`
-		Province    string  `json:"province"`
-		City        string  `json:"city"`
-		Latitude    float64 `json:"latitude"`
-		Longitude   float64 `json:"longitude"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil || raw.CountryCode == "" {
+	geo, err := geoip.Lookup(ip)
+	if err != nil || geo == nil || geo.CountryCode == "" {
 		return
 	}
 
 	config.DB.Exec(fmt.Sprintf(
 		"UPDATE %s SET country=$1, country_name=$2, region=$3, city=$4, latitude=$5, longitude=$6 WHERE id=$7",
 		config.T("access_logs")),
-		strings.ToLower(raw.CountryCode), raw.Country, raw.Province, raw.City, raw.Latitude, raw.Longitude, logID)
+		strings.ToLower(geo.CountryCode), geo.Country, geo.Province, geo.City, geo.Latitude, geo.Longitude, logID)
 }
 
 // User-Agent parser
@@ -395,15 +380,11 @@ func GeoIPLookup(c *gin.Context) {
 		ip = c.ClientIP()
 	}
 
-	resp, err := http.Get("https://api.ipx.ee/ip/" + ip)
+	result, err := geoip.Lookup(ip)
 	if err != nil {
 		util.Error(c, 502, "GEOIP_ERROR", err.Error())
 		return
 	}
-	defer resp.Body.Close()
-
-	var result map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&result)
 	util.Success(c, result)
 }
 
@@ -417,27 +398,14 @@ func EnrichGeoIP(c *gin.Context) {
 
 	enriched := 0
 	for _, item := range ips {
-		resp, err := http.Get("https://api.ipx.ee/ip/" + item.IP)
-		if err != nil {
+		geo, err := geoip.Lookup(item.IP)
+		if err != nil || geo == nil || geo.CountryCode == "" {
 			continue
 		}
-		var geo struct {
-			CountryCode string  `json:"country_code"`
-			Country     string  `json:"country"`
-			Province    string  `json:"province"`
-			City        string  `json:"city"`
-			Lat         float64 `json:"latitude"`
-			Lon         float64 `json:"longitude"`
-		}
-		json.NewDecoder(resp.Body).Decode(&geo)
-		resp.Body.Close()
-
-		if geo.CountryCode != "" {
-			config.DB.Exec(fmt.Sprintf(
-				"UPDATE %s SET country=$1, country_name=$2, region=$3, city=$4, latitude=$5, longitude=$6 WHERE ip=$7",
-				t), strings.ToLower(geo.CountryCode), geo.Country, geo.Province, geo.City, geo.Lat, geo.Lon, item.IP)
-			enriched++
-		}
+		config.DB.Exec(fmt.Sprintf(
+			"UPDATE %s SET country=$1, country_name=$2, region=$3, city=$4, latitude=$5, longitude=$6 WHERE ip=$7",
+			t), strings.ToLower(geo.CountryCode), geo.Country, geo.Province, geo.City, geo.Latitude, geo.Longitude, item.IP)
+		enriched++
 		time.Sleep(200 * time.Millisecond) // Rate limit
 	}
 

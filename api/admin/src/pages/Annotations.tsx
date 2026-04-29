@@ -176,8 +176,7 @@ export default function AnnotationsPage() {
       title: '',
       width: '100px',
       render: (row: AdminAnnotation) => (
-        <button onClick={() => setDeleteId(row.id)} title="删除"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '4px 8px' }}>
+        <button onClick={() => setDeleteId(row.id)} title="删除" className="action-btn danger">
           <i className="fa-regular fa-trash" />
         </button>
       ),

@@ -4,12 +4,11 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
-	"time"
 	"utterlog-go/config"
+	"utterlog-go/internal/geoip"
 )
 
 type Comment struct {
@@ -29,7 +28,7 @@ type Comment struct {
 	LikeCount   int     `db:"like_count" json:"like_count"`
 	Featured    bool    `db:"featured" json:"featured"`
 	DisplayID   int     `db:"display_id" json:"display_id"`
-	GeoData     *string `db:"geo" json:"-"`           // stored JSON, parsed in FormatComments
+	GeoData     *string `db:"geo" json:"-"`          // stored JSON, parsed in FormatComments
 	ClientHints *string `db:"client_hints" json:"-"` // JSON from UA Client Hints API
 	VisitorID   string  `db:"visitor_id" json:"-"`
 	CreatedAt   int64   `db:"created_at" json:"created_at"`
@@ -59,39 +58,29 @@ func lookupGeo(ip string) *GeoInfo {
 	if ip == "" {
 		return nil
 	}
+	provider := geoip.CurrentProvider()
+	cacheKey := provider + ":" + ip
 	geoCacheMu.RLock()
-	if g, ok := geoCache[ip]; ok {
+	if g, ok := geoCache[cacheKey]; ok {
 		geoCacheMu.RUnlock()
 		return g
 	}
 	geoCacheMu.RUnlock()
 
-	client := &http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Get("https://api.ipx.ee/ip/" + ip)
-	if err != nil {
-		return nil
-	}
-	defer resp.Body.Close()
-
-	var raw struct {
-		CountryCode string `json:"country_code"`
-		Country     string `json:"country"`
-		Province    string `json:"province"`
-		City        string `json:"city"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+	result, err := geoip.Lookup(ip)
+	if err != nil || result == nil {
 		return nil
 	}
 
 	geo := &GeoInfo{
-		CountryCode: strings.ToLower(raw.CountryCode),
-		Country:     raw.Country,
-		Province:    raw.Province,
-		City:        raw.City,
+		CountryCode: strings.ToLower(result.CountryCode),
+		Country:     result.Country,
+		Province:    result.Province,
+		City:        result.City,
 	}
 
 	geoCacheMu.Lock()
-	geoCache[ip] = geo
+	geoCache[cacheKey] = geo
 	geoCacheMu.Unlock()
 
 	return geo
@@ -120,19 +109,19 @@ type CommentWithPost struct {
 	PostSlug         string         `json:"post_slug"`
 	PostCommentCount int            `json:"post_comment_count"`
 	PostCategories   []MetaBrief    `json:"post_categories,omitempty"`
-	AvatarURL    string         `json:"avatar_url"`
-	Geo          *GeoInfo       `json:"geo,omitempty"`
-	IsAdmin      bool           `json:"is_admin"`
-	Parent       *ParentComment `json:"parent,omitempty"`
-	CommentCount int            `json:"comment_count"`
-	Level        int            `json:"level"`
-	IsFriendLink bool           `json:"is_friend_link"`
-	FollowStatus string         `json:"follow_status,omitempty"` // "follower" | "following" | "mutual" | ""
-	OSName       string         `json:"os_name,omitempty"`
-	OSVersion    string         `json:"os_version,omitempty"`
-	BrowserName  string         `json:"browser_name,omitempty"`
-	BrowserVer   string         `json:"browser_version,omitempty"`
-	IsMobile     bool           `json:"is_mobile,omitempty"`
+	AvatarURL        string         `json:"avatar_url"`
+	Geo              *GeoInfo       `json:"geo,omitempty"`
+	IsAdmin          bool           `json:"is_admin"`
+	Parent           *ParentComment `json:"parent,omitempty"`
+	CommentCount     int            `json:"comment_count"`
+	Level            int            `json:"level"`
+	IsFriendLink     bool           `json:"is_friend_link"`
+	FollowStatus     string         `json:"follow_status,omitempty"` // "follower" | "following" | "mutual" | ""
+	OSName           string         `json:"os_name,omitempty"`
+	OSVersion        string         `json:"os_version,omitempty"`
+	BrowserName      string         `json:"browser_name,omitempty"`
+	BrowserVer       string         `json:"browser_version,omitempty"`
+	IsMobile         bool           `json:"is_mobile,omitempty"`
 }
 
 func commentLevel(count int) int {
@@ -303,10 +292,10 @@ func FormatComments(comments []Comment) []CommentWithPost {
 
 	// Followers: load all follow relationships
 	type followerRow struct {
-		SourceSite string `db:"source_site"`
-		FollowingID int   `db:"following_id"`
-		UserID      int   `db:"user_id"`
-		Mutual      bool  `db:"mutual"`
+		SourceSite  string `db:"source_site"`
+		FollowingID int    `db:"following_id"`
+		UserID      int    `db:"user_id"`
+		Mutual      bool   `db:"mutual"`
 	}
 	var followers []followerRow
 	config.DB.Select(&followers, "SELECT source_site, following_id, user_id, COALESCE(mutual, false) as mutual FROM "+config.T("followers")+" WHERE source_site != ''")
@@ -503,18 +492,25 @@ func CommentsList(page, perPage int, status, search, order string, postID, userI
 			}
 			where = append(where, fmt.Sprintf("status IN (%s)", strings.Join(placeholders, ",")))
 		} else {
-			where = append(where, fmt.Sprintf("status = $%d", idx)); args = append(args, status); idx++
+			where = append(where, fmt.Sprintf("status = $%d", idx))
+			args = append(args, status)
+			idx++
 		}
 	}
 	if postID > 0 {
-		where = append(where, fmt.Sprintf("post_id = $%d", idx)); args = append(args, postID); idx++
+		where = append(where, fmt.Sprintf("post_id = $%d", idx))
+		args = append(args, postID)
+		idx++
 	}
 	if userID > 0 {
-		where = append(where, fmt.Sprintf("user_id = $%d", idx)); args = append(args, userID); idx++
+		where = append(where, fmt.Sprintf("user_id = $%d", idx))
+		args = append(args, userID)
+		idx++
 	}
 	if search != "" {
 		where = append(where, fmt.Sprintf("(content ILIKE $%d OR author_name ILIKE $%d OR author_email ILIKE $%d)", idx, idx+1, idx+2))
-		args = append(args, "%"+search+"%", "%"+search+"%", "%"+search+"%"); idx += 3
+		args = append(args, "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		idx += 3
 	}
 	whereStr := ""
 	if len(where) > 0 {
@@ -522,7 +518,9 @@ func CommentsList(page, perPage int, status, search, order string, postID, userI
 	}
 
 	orderDir := "DESC"
-	if order == "asc" { orderDir = "ASC" }
+	if order == "asc" {
+		orderDir = "ASC"
+	}
 
 	if !topLevel {
 		// Original behavior: paginate all comments
@@ -531,7 +529,9 @@ func CommentsList(page, perPage int, status, search, order string, postID, userI
 		args = append(args, perPage, (page-1)*perPage)
 		var comments []Comment
 		config.DB.Select(&comments, fmt.Sprintf("SELECT * FROM %s %s ORDER BY created_at %s LIMIT $%d OFFSET $%d", t, whereStr, orderDir, idx, idx+1), args...)
-		if comments == nil { comments = []Comment{} }
+		if comments == nil {
+			comments = []Comment{}
+		}
 		return comments, total, nil
 	}
 
@@ -572,7 +572,9 @@ func CommentsList(page, perPage int, status, search, order string, postID, userI
 	config.DB.Select(&comments, fmt.Sprintf(
 		"SELECT * FROM %s WHERE id IN (%s) OR parent_id IN (%s) ORDER BY created_at %s",
 		t, strings.Join(ph1, ","), strings.Join(ph2, ","), orderDir), fetchArgs...)
-	if comments == nil { comments = []Comment{} }
+	if comments == nil {
+		comments = []Comment{}
+	}
 	return comments, total, nil
 }
 

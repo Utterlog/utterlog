@@ -1,5 +1,8 @@
+import type { Metadata } from 'next';
 import { getBooks } from '@/lib/blog-api';
 import PageTitle from '@/components/blog/PageTitle';
+
+export const metadata: Metadata = { title: '图书' };
 
 const progressLabel: Record<string, string> = { want: '想读', reading: '在读', finished: '读完', abandoned: '弃读' };
 

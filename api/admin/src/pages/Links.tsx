@@ -1,10 +1,87 @@
 
 import { useEffect, useState } from 'react';
-import { linksApi, mediaApi } from '@/lib/api';
+import { linksApi, mediaApi, optionsApi } from '@/lib/api';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button, Input, Modal, ConfirmDialog, EmptyState } from '@/components/ui';
 import { useI18n } from '@/lib/i18n';
+
+type LinkGroupStyle = 'card' | 'compact';
+
+interface LinkGroupConfig {
+  key: string;
+  name: string;
+  style: LinkGroupStyle;
+}
+
+const DEFAULT_GROUP_KEY = 'default';
+const DEFAULT_LINK_GROUPS: LinkGroupConfig[] = [
+  { key: DEFAULT_GROUP_KEY, name: '默认', style: 'card' },
+];
+
+function normalizeGroupStyle(style: unknown): LinkGroupStyle {
+  return style === 'compact' ? 'compact' : 'card';
+}
+
+function normalizeGroupKey(value: unknown): string {
+  return String(value || '').trim() || DEFAULT_GROUP_KEY;
+}
+
+function normalizeLinkGroups(groups: LinkGroupConfig[]): LinkGroupConfig[] {
+  const seen = new Set<string>();
+  const normalized: LinkGroupConfig[] = [];
+
+  groups.forEach(group => {
+    const key = normalizeGroupKey(group.key);
+    if (seen.has(key)) return;
+    seen.add(key);
+    normalized.push({
+      key,
+      name: String(group.name || key).trim() || key,
+      style: normalizeGroupStyle(group.style),
+    });
+  });
+
+  if (!seen.has(DEFAULT_GROUP_KEY)) {
+    normalized.unshift(DEFAULT_LINK_GROUPS[0]);
+  }
+
+  return normalized;
+}
+
+function parseLinkGroupsOption(raw: unknown): LinkGroupConfig[] {
+  if (!raw) return DEFAULT_LINK_GROUPS;
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(parsed)) return DEFAULT_LINK_GROUPS;
+    return normalizeLinkGroups(parsed.map((item: any) => {
+      if (typeof item === 'string') {
+        const key = normalizeGroupKey(item);
+        return { key, name: key === DEFAULT_GROUP_KEY ? '默认' : item, style: 'card' };
+      }
+      const key = normalizeGroupKey(item?.key ?? item?.name);
+      return {
+        key,
+        name: String(item?.name ?? (key === DEFAULT_GROUP_KEY ? '默认' : item?.key) ?? '').trim(),
+        style: normalizeGroupStyle(item?.style),
+      };
+    }));
+  } catch {
+    return DEFAULT_LINK_GROUPS;
+  }
+}
+
+function mergeLinkGroups(configs: LinkGroupConfig[], links: any[]): LinkGroupConfig[] {
+  const merged = normalizeLinkGroups(configs);
+  const seen = new Set(merged.map(group => group.key));
+  links.forEach(link => {
+    const key = normalizeGroupKey(link?.group_name);
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push({ key, name: key, style: 'card' });
+  });
+  return merged;
+}
 
 export default function LinksPage() {
   const { t } = useI18n();
@@ -19,7 +96,7 @@ export default function LinksPage() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [editingGroup, setEditingGroup] = useState<{ old: string; new: string } | null>(null);
-  const [customGroups, setCustomGroups] = useState<string[]>([]);
+  const [linkGroups, setLinkGroups] = useState<LinkGroupConfig[]>(DEFAULT_LINK_GROUPS);
   const [refreshingFeeds, setRefreshingFeeds] = useState(false);
   const [busy, setBusy] = useState<'icon' | 'cache' | 'rss' | null>(null);
   // Incremented by 一键刷新 ico — appended to favicon URLs to bust
@@ -84,43 +161,92 @@ export default function LinksPage() {
     finally { setAvatarUploading(false); e.target.value = ''; }
   };
 
-  const existingGroups = Array.from(new Set([
-    ...links.map((l: any) => l.group_name || 'default'),
-    ...customGroups,
-  ]));
+  const existingGroups = mergeLinkGroups(linkGroups, links);
+  const groupMap = new Map(existingGroups.map(group => [group.key, group]));
 
-  const addGroup = () => {
+  const saveLinkGroups = async (groups: LinkGroupConfig[]) => {
+    const next = normalizeLinkGroups(groups);
+    setLinkGroups(next);
+    await optionsApi.update('link_groups', JSON.stringify(next));
+    return next;
+  };
+
+  const addGroup = async () => {
     const g = newGroupName.trim();
     if (!g) return;
-    if (existingGroups.includes(g)) { toast.error(t('admin.links.toast.groupExists', '分类「{group}」已存在', { group: g })); setNewGroupName(''); return; }
-    setCustomGroups(prev => [...prev, g]);
-    setNewGroupName('');
-    toast.success(t('admin.links.toast.groupAdded', '分类「{group}」已添加', { group: g }));
+    if (existingGroups.some(group => group.key === g)) {
+      toast.error(t('admin.links.toast.groupExists', '分类「{group}」已存在', { group: g }));
+      setNewGroupName('');
+      return;
+    }
+    try {
+      await saveLinkGroups([...existingGroups, { key: g, name: g, style: 'card' }]);
+      setNewGroupName('');
+      toast.success(t('admin.links.toast.groupAdded', '分类「{group}」已添加', { group: g }));
+    } catch {
+      toast.error(t('admin.common.saveFailed', '保存失败'));
+    }
   };
 
   const renameGroup = async (oldName: string, newName: string) => {
     if (!newName.trim() || newName === oldName) { setEditingGroup(null); return; }
+    const nextName = newName.trim();
+    if (oldName === DEFAULT_GROUP_KEY) {
+      try {
+        await saveLinkGroups(existingGroups.map(group => (
+          group.key === DEFAULT_GROUP_KEY ? { ...group, name: nextName } : group
+        )));
+        setEditingGroup(null);
+        toast.success(t('admin.links.toast.groupRenamed', '分类「{oldName}」已重命名为「{newName}」', {
+          oldName: groupLabel(oldName),
+          newName: nextName,
+        }));
+      } catch {
+        toast.error(t('admin.links.toast.renameFailed', '重命名失败'));
+      }
+      return;
+    }
+    if (existingGroups.some(group => group.key === nextName && group.key !== oldName)) {
+      toast.error(t('admin.links.toast.groupExists', '分类「{group}」已存在', { group: nextName }));
+      return;
+    }
     const toUpdate = links.filter((l: any) => (l.group_name || 'default') === oldName);
     try {
       for (const link of toUpdate) {
-        await linksApi.update(link.id, { ...link, group_name: newName.trim() });
+        await linksApi.update(link.id, { ...link, group_name: nextName });
       }
-      toast.success(t('admin.links.toast.groupRenamed', '分类「{oldName}」已重命名为「{newName}」', { oldName, newName }));
+      await saveLinkGroups(existingGroups.map(group => (
+        group.key === oldName ? { ...group, key: nextName, name: nextName } : group
+      )));
+      toast.success(t('admin.links.toast.groupRenamed', '分类「{oldName}」已重命名为「{newName}」', { oldName, newName: nextName }));
       setEditingGroup(null);
       fetchLinks();
     } catch { toast.error(t('admin.links.toast.renameFailed', '重命名失败')); }
   };
 
   const deleteGroup = async (groupName: string) => {
+    if (groupName === DEFAULT_GROUP_KEY) return;
     const toUpdate = links.filter((l: any) => (l.group_name || 'default') === groupName);
     try {
       for (const link of toUpdate) {
-        await linksApi.update(link.id, { ...link, group_name: 'default' });
+        await linksApi.update(link.id, { ...link, group_name: DEFAULT_GROUP_KEY });
       }
-      toast.success(t('admin.links.toast.groupDeleted', '分类「{group}」已删除，{count} 条友链已移至默认分类', { group: groupName, count: toUpdate.length }));
+      await saveLinkGroups(existingGroups.filter(group => group.key !== groupName));
+      toast.success(t('admin.links.toast.groupDeleted', '分类「{group}」已删除，{count} 条友链已移至默认分类', { group: groupLabel(groupName), count: toUpdate.length }));
       if (activeGroup === groupName) setActiveGroup('all');
       fetchLinks();
     } catch { toast.error(t('admin.common.deleteFailed', '删除失败')); }
+  };
+
+  const updateGroupStyle = async (groupName: string, style: LinkGroupStyle) => {
+    try {
+      await saveLinkGroups(existingGroups.map(group => (
+        group.key === groupName ? { ...group, style } : group
+      )));
+      toast.success(t('admin.common.saveSuccess', '保存成功'));
+    } catch {
+      toast.error(t('admin.common.saveFailed', '保存失败'));
+    }
   };
 
   const [form, setForm] = useState({
@@ -132,14 +258,20 @@ export default function LinksPage() {
   const fetchLinks = async () => {
     setLoading(true);
     try {
-      const r: any = await linksApi.list();
-      setLinks(r.data || []);
+      const [linksRes, optionsRes]: any[] = await Promise.all([
+        linksApi.list(),
+        optionsApi.list(),
+      ]);
+      const nextLinks = linksRes.data || [];
+      const options = optionsRes.data || optionsRes || {};
+      setLinks(nextLinks);
+      setLinkGroups(mergeLinkGroups(parseLinkGroupsOption(options.link_groups), nextLinks));
     } catch { toast.error(t('admin.links.toast.fetchFailed', '获取友链失败')); }
     finally { setLoading(false); }
   };
 
   // Extract unique groups
-  const groups = ['all', ...Array.from(new Set(links.map((l: any) => l.group_name || 'default')))];
+  const groups = ['all', ...existingGroups.map(group => group.key)];
   const orderedLinks = [...links].sort((a: any, b: any) => {
     const ao = Number(a.order_num) > 0 ? Number(a.order_num) : Number(a.id) || 0;
     const bo = Number(b.order_num) > 0 ? Number(b.order_num) : Number(b.id) || 0;
@@ -196,7 +328,12 @@ export default function LinksPage() {
     finally { setDeleteId(null); }
   };
 
-  const groupLabel = (g: string) => g === 'all' ? t('admin.common.all', '全部') : g === 'default' ? t('admin.links.defaultGroup', '默认') : g;
+  const groupLabel = (g: string) => {
+    if (g === 'all') return t('admin.common.all', '全部');
+    const group = groupMap.get(g);
+    if (group) return group.name || (g === DEFAULT_GROUP_KEY ? t('admin.links.defaultGroup', '默认') : g);
+    return g === DEFAULT_GROUP_KEY ? t('admin.links.defaultGroup', '默认') : g;
+  };
 
   return (
     <div>
@@ -293,12 +430,12 @@ export default function LinksPage() {
                         </span>
                       ) : <span className="text-dim">—</span>}
                     </td>
-                    <td className="text-dim" style={{ fontSize: '12px' }}>{link.group_name === 'default' || !link.group_name ? t('admin.links.defaultGroup', '默认') : link.group_name}</td>
+                    <td className="text-dim" style={{ fontSize: '12px' }}>{groupLabel(link.group_name || DEFAULT_GROUP_KEY)}</td>
                     <td style={{ textAlign: 'right' }}>
-                      <button onClick={() => openEdit(link)} className="text-primary-themed" style={{ padding: '4px 6px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                      <button onClick={() => openEdit(link)} className="action-btn primary" title={t('admin.common.edit', '编辑')}>
                         <i className="fa-regular fa-pen" style={{ fontSize: '13px' }} />
                       </button>
-                      <button onClick={() => setDeleteId(link.id)} style={{ padding: '4px 6px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}>
+                      <button onClick={() => setDeleteId(link.id)} className="action-btn danger" title={t('admin.common.delete', '删除')} style={{ marginLeft: '6px' }}>
                         <i className="fa-regular fa-trash" style={{ fontSize: '13px' }} />
                       </button>
                     </td>
@@ -317,16 +454,13 @@ export default function LinksPage() {
             <Input label={t('admin.links.name', '名称')} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('admin.links.namePlaceholder', '站点名称')} />
             <div>
               <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.links.groups', '分类')}</label>
-              <input
+              <select
                 className="input focus-ring"
                 value={form.group_name}
                 onChange={e => setForm({ ...form, group_name: e.target.value })}
-                placeholder="default"
-                list="link-groups"
-              />
-              <datalist id="link-groups">
-                {existingGroups.map(g => <option key={g} value={g} />)}
-              </datalist>
+              >
+                {existingGroups.map(group => <option key={group.key} value={group.key}>{groupLabel(group.key)}</option>)}
+              </select>
             </div>
           </div>
 
@@ -381,34 +515,45 @@ export default function LinksPage() {
           {/* Existing groups */}
           {existingGroups.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {existingGroups.map(g => {
-                const count = links.filter((l: any) => (l.group_name || 'default') === g).length;
-                const isEditing = editingGroup?.old === g;
+              {existingGroups.map(group => {
+                const count = links.filter((l: any) => (l.group_name || DEFAULT_GROUP_KEY) === group.key).length;
+                const isEditing = editingGroup?.old === group.key;
                 return (
-                  <div key={g} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--color-bg-soft)', borderRadius: '4px' }}>
+                  <div key={group.key} style={{ display: 'grid', gridTemplateColumns: 'minmax(140px, 1fr) 132px 52px auto', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--color-bg-soft)' }}>
                     {isEditing ? (
                       <input
                         className="input focus-ring"
                         value={editingGroup?.new ?? ''}
-                        onChange={e => setEditingGroup({ old: editingGroup?.old ?? g, new: e.target.value })}
-                        onKeyDown={e => { if (e.key === 'Enter') renameGroup(g, editingGroup?.new ?? ''); if (e.key === 'Escape') setEditingGroup(null); }}
-                        onBlur={() => renameGroup(g, editingGroup?.new ?? '')}
+                        onChange={e => setEditingGroup({ old: editingGroup?.old ?? group.key, new: e.target.value })}
+                        onKeyDown={e => { if (e.key === 'Enter') renameGroup(group.key, editingGroup?.new ?? ''); if (e.key === 'Escape') setEditingGroup(null); }}
+                        onBlur={() => renameGroup(group.key, editingGroup?.new ?? '')}
                         autoFocus
-                        style={{ flex: 1, fontSize: '13px', padding: '4px 8px' }}
+                        style={{ fontSize: '13px', padding: '4px 8px' }}
                       />
                     ) : (
-                      <span className="text-main" style={{ flex: 1, fontSize: '13px', fontWeight: 500 }}>{g === 'default' ? t('admin.links.defaultGroup', '默认') : g}</span>
+                      <span className="text-main" style={{ fontSize: '13px', fontWeight: 500 }}>{groupLabel(group.key)}</span>
                     )}
-                    <span className="text-dim" style={{ fontSize: '11px', flexShrink: 0 }}>{t('admin.links.countItems', '{count} 条', { count })}</span>
-                    {g !== 'default' && !isEditing && (
-                      <>
-                        <button onClick={() => setEditingGroup({ old: g, new: g })} className="text-primary-themed" style={{ padding: '2px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    <select
+                      className="input focus-ring"
+                      value={group.style}
+                      onChange={e => updateGroupStyle(group.key, e.target.value as LinkGroupStyle)}
+                      style={{ height: '30px', fontSize: '12px', padding: '0 8px' }}
+                    >
+                      <option value="card">{t('admin.links.groupStyle.card', '卡片式')}</option>
+                      <option value="compact">{t('admin.links.groupStyle.compact', '图标式')}</option>
+                    </select>
+                    <span className="text-dim" style={{ fontSize: '11px', textAlign: 'right' }}>{t('admin.links.countItems', '{count} 条', { count })}</span>
+                    {!isEditing && (
+                      <span style={{ display: 'inline-flex', gap: '6px', justifyContent: 'flex-end' }}>
+                        <button onClick={() => setEditingGroup({ old: group.key, new: group.name })} className="action-btn primary" title={t('admin.common.edit', '编辑')}>
                           <i className="fa-regular fa-pen" style={{ fontSize: '12px' }} />
                         </button>
-                        <button onClick={() => deleteGroup(g)} style={{ padding: '2px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}>
-                          <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} />
-                        </button>
-                      </>
+                        {group.key !== DEFAULT_GROUP_KEY && (
+                          <button onClick={() => deleteGroup(group.key)} className="action-btn danger" title={t('admin.common.delete', '删除')}>
+                            <i className="fa-regular fa-trash" style={{ fontSize: '12px' }} />
+                          </button>
+                        )}
+                      </span>
                     )}
                   </div>
                 );

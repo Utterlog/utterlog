@@ -181,9 +181,8 @@ export default function PagesPage() {
                   <td>
                     {p.contentKey ? (
                       <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                        <button onClick={() => openContentEditor(p.contentKey!)} className="text-primary-themed"
-                          title={t('admin.pages.editContent', '编辑内容')}
-                          style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                        <button onClick={() => openContentEditor(p.contentKey!)} className="action-btn primary"
+                          title={t('admin.pages.editContent', '编辑内容')}>
                           <i className="fa-regular fa-pen" style={{ fontSize: '14px' }} />
                         </button>
                       </div>
@@ -225,10 +224,10 @@ export default function PagesPage() {
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                    <button onClick={() => navigate(`/pages/edit/${page.id}`)} className="text-primary-themed" style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    <button onClick={() => navigate(`/pages/edit/${page.id}`)} className="action-btn primary" title="编辑">
                       <i className="fa-regular fa-pen" style={{ fontSize: '14px' }} />
                     </button>
-                    <button onClick={() => setDeleteId(page.id)} style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}>
+                    <button onClick={() => setDeleteId(page.id)} className="action-btn danger" title="删除">
                       <i className="fa-regular fa-trash" style={{ fontSize: '14px' }} />
                     </button>
                   </div>

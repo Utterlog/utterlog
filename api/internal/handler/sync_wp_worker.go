@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 	"utterlog-go/config"
+	"utterlog-go/internal/geoip"
 	"utterlog-go/internal/model"
 	"utterlog-go/internal/storage"
 
@@ -71,7 +72,7 @@ func RunPostFinishWorker(jobID, siteUUID string) {
 
 	// Count recalc runs BEFORE geoip so the homepage sidebar / dashboard
 	// don't stay stuck at 0 for the ~minutes that the rate-limited
-	// ip-api.com lookups take (0.17-3 req/s for 400+ comments). GeoIP
+	// GeoIP lookups take (0.17-3 req/s for 400+ comments). GeoIP
 	// is a cosmetic enrichment; sync progress should feel done when
 	// the user-visible counts are right.
 	updateJob(jobID, "stage", "counts")
@@ -107,7 +108,9 @@ func RunPostFinishWorker(jobID, siteUUID string) {
 // ==================== stage 1: scan ====================
 
 // wpMediaURLRegex matches WP upload URLs. The bulk of URLs look like:
-//   https://example.com/wp-content/uploads/2024/03/my-photo-1024x768.jpg
+//
+//	https://example.com/wp-content/uploads/2024/03/my-photo-1024x768.jpg
+//
 // We allow any domain (we'll filter by manifest.source_url later) and
 // any extension. Size-suffix (-NNNxNN) is captured and stripped so
 // all variants of one image map to the same original.
@@ -446,9 +449,9 @@ func rewriteSingleURL(u string, pairs map[string]string) string {
 // ==================== stage 4: geoip ====================
 
 // fillCommentGeoIP looks up country/city for every comment imported
-// by this site that has an IP but no geo yet. Uses ip-api.com free
-// endpoint (45 req/min). Best effort — errors are logged to the job
-// but don't block completion.
+// by this site that has an IP but no geo yet. Uses the configured GeoIP
+// provider. Best effort — errors are logged to the job but don't block
+// completion.
 func fillCommentGeoIP(jobID, siteUUID string) error {
 	rows, err := config.DB.Queryx(fmt.Sprintf(`
 		SELECT id, author_ip::text FROM %s
@@ -472,7 +475,7 @@ func fillCommentGeoIP(jobID, siteUUID string) error {
 		all = append(all, cr)
 	}
 
-	// Throttle: 3 req/s under the free tier's 45/min cap.
+	// Throttle lookups so large imports don't hammer the configured provider.
 	ticker := time.NewTicker(350 * time.Millisecond)
 	defer ticker.Stop()
 	for _, cr := range all {
@@ -487,30 +490,15 @@ func fillCommentGeoIP(jobID, siteUUID string) error {
 }
 
 func lookupIPGeo(ip string) string {
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
-	defer cancel()
-	req, _ := http.NewRequestWithContext(ctx, "GET",
-		"http://ip-api.com/json/"+ip+"?fields=status,country,regionName,city&lang=zh-CN", nil)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return ""
-	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	var data struct {
-		Status     string `json:"status"`
-		Country    string `json:"country"`
-		RegionName string `json:"regionName"`
-		City       string `json:"city"`
-	}
-	json.Unmarshal(body, &data)
-	if data.Status != "success" {
+	result, err := geoip.Lookup(ip)
+	if err != nil || result == nil || result.CountryCode == "" {
 		return ""
 	}
 	out, _ := json.Marshal(map[string]string{
-		"country": data.Country,
-		"region":  data.RegionName,
-		"city":    data.City,
+		"country_code": strings.ToLower(result.CountryCode),
+		"country":      result.Country,
+		"province":     result.Province,
+		"city":         result.City,
 	})
 	return string(out)
 }

@@ -224,8 +224,8 @@ export default function MomentsPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '4px', flexShrink: 0, marginLeft: '12px' }}>
-                  <button onClick={() => openEdit(m)} className="text-primary-themed" style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-                  <button onClick={() => setDeleteId(m.id)} style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
+                  <button onClick={() => openEdit(m)} className="action-btn primary" title={t('admin.common.edit', '编辑')}><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
+                  <button onClick={() => setDeleteId(m.id)} className="action-btn danger" title={t('admin.common.delete', '删除')}><i className="fa-regular fa-trash" style={{ fontSize: '14px' }} /></button>
                 </div>
               </div>
             </div>

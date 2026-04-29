@@ -398,8 +398,7 @@ export default function FootprintsPage() {
                           type="button"
                           onClick={() => openEdit(item)}
                           title={t('admin.footprints.editFootprint', '配置足迹')}
-                          className="text-primary-themed"
-                          style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer' }}
+                          className="action-btn primary"
                         >
                           <i className="fa-regular fa-pen" style={{ fontSize: 14 }} />
                         </button>
@@ -407,8 +406,7 @@ export default function FootprintsPage() {
                           type="button"
                           onClick={() => navigate(`/posts/edit/${item.post_id}`)}
                           title={t('admin.footprints.editPost', '编辑文章')}
-                          className="text-sub"
-                          style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer' }}
+                          className="action-btn"
                         >
                           <i className="fa-regular fa-file-pen" style={{ fontSize: 14 }} />
                         </button>
@@ -416,8 +414,7 @@ export default function FootprintsPage() {
                           type="button"
                           onClick={() => window.open(`/footprints?keyword=${encodeURIComponent(locationLabel(item))}`, '_blank', 'noopener,noreferrer')}
                           title={t('admin.footprints.viewOnSite', '前台查看')}
-                          className="text-sub"
-                          style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer' }}
+                          className="action-btn"
                         >
                           <i className="fa-regular fa-arrow-up-right-from-square" style={{ fontSize: 14 }} />
                         </button>

@@ -1,5 +1,8 @@
+import type { Metadata } from 'next';
 import { getMovies } from '@/lib/blog-api';
 import PageTitle from '@/components/blog/PageTitle';
+
+export const metadata: Metadata = { title: '电影' };
 
 const statusLabel: Record<string, string> = { want: '想看', watching: '在看', finished: '看完', abandoned: '弃看' };
 

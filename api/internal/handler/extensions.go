@@ -84,7 +84,7 @@ func enabledOptionKey(kind ExtensionKind) string {
 // through to Utterlog via the default fallback in listExtensions.
 var builtInThemes = []Extension{
 	{
-		ID: "Utterlog", Name: "Utterlog", Version: "1.0.0",
+		ID: "Utterlog", Name: "Utterlog", Version: "2.0.0",
 		Author:      "Utterlog Team",
 		Description: "Utterlog 官方默认主题 — 优雅功能丰富的博客主题",
 		Kind:        "theme",
@@ -95,7 +95,7 @@ var builtInThemes = []Extension{
 		},
 	},
 	{
-		ID: "Azure", Name: "Azure", Version: "1.0.0",
+		ID: "Azure", Name: "Azure", Version: "2.0.0",
 		Author:      "Utterlog Team",
 		Description: "蔚蓝极简内容优先主题 — 直角设计，蓝色配色",
 		Kind:        "theme",
@@ -107,7 +107,7 @@ var builtInThemes = []Extension{
 		},
 	},
 	{
-		ID: "Flux", Name: "Flux", Version: "1.0.0",
+		ID: "Flux", Name: "Flux", Version: "2.0.0",
 		Author:      "Utterlog Team",
 		Description: "极简金融科技风 · 单一绿色强调 · 大量留白 · 受 Stripe Link 启发",
 		Kind:        "theme",
@@ -119,7 +119,7 @@ var builtInThemes = []Extension{
 		},
 	},
 	{
-		ID: "Chred", Name: "Chred", Version: "1.0.0",
+		ID: "Chred", Name: "Chred", Version: "2.0.0",
 		Author:      "Utterlog Team",
 		Description: "红色商务主题 — 卡片式布局，高对比度",
 		Kind:        "theme",

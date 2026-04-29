@@ -95,8 +95,8 @@ export default function GamesPage() {
                 )}
                 {item.comment && <p className="text-dim" style={{ fontSize: '12px', marginTop: '6px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>{item.comment}</p>}
                 <div style={{ display: 'flex', gap: '4px', marginTop: '8px', justifyContent: 'flex-end' }}>
-                  <button onClick={() => openEdit(item)} className="text-primary-themed" style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}><i className="fa-regular fa-pen" style={{ fontSize: '13px' }} /></button>
-                  <button onClick={() => setDeleteId(item.id)} style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}><i className="fa-regular fa-trash" style={{ fontSize: '13px' }} /></button>
+                  <button onClick={() => openEdit(item)} className="action-btn primary" title="编辑"><i className="fa-regular fa-pen" style={{ fontSize: '13px' }} /></button>
+                  <button onClick={() => setDeleteId(item.id)} className="action-btn danger" title="删除"><i className="fa-regular fa-trash" style={{ fontSize: '13px' }} /></button>
                 </div>
               </div>
             </div>

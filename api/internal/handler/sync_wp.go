@@ -105,13 +105,13 @@ func SyncWPPing(c *gin.Context) {
 		return
 	}
 	util.Success(c, gin.H{
-		"ok":            true,
-		"site_uuid":     site.SiteUUID,
-		"label":         site.Label,
-		"source_url":    site.SourceURL,
-		"last_seen_at":  site.LastSeenAt,
-		"server_time":   time.Now().Unix(),
-		"server_version": "1.0.0",
+		"ok":             true,
+		"site_uuid":      site.SiteUUID,
+		"label":          site.Label,
+		"source_url":     site.SourceURL,
+		"last_seen_at":   site.LastSeenAt,
+		"server_time":    time.Now().Unix(),
+		"server_version": "2.0.0",
 	})
 }
 
@@ -287,10 +287,10 @@ func SyncWPFinish(c *gin.Context) {
 	go RunPostFinishWorker(req.JobID, site.SiteUUID)
 
 	util.Success(c, gin.H{
-		"job_id":    req.JobID,
-		"status":    "processing",
+		"job_id":     req.JobID,
+		"status":     "processing",
 		"next_stage": "media download + content rewrite",
-		"hint":      "轮询 /api/v1/sync/wordpress/job/" + req.JobID + "/status",
+		"hint":       "轮询 /api/v1/sync/wordpress/job/" + req.JobID + "/status",
 	})
 }
 
