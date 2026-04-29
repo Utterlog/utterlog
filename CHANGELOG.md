@@ -44,6 +44,8 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 ## [1.0.0] - 2026-04-29
 
+旧版本详细更新说明已归档到 [RELEASE_HISTORY.md](./RELEASE_HISTORY.md)，用于保留 `1.0.x` 到 `1.5.x` 整理前的历史记录。
+
 ### 新增
 
 - 初始发布 Utterlog，提供博客发布、后台管理、前台展示和 Docker 部署基础。
