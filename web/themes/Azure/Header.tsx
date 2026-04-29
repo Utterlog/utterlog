@@ -313,7 +313,11 @@ export default function Header() {
         </nav>
 
         <div className="azure-desktop-actions" ref={headerActionsRef}>
-          {headerButtons.map(renderHeaderButton)}
+          {headerButtons.length > 0 && (
+            <div className="azure-header-custom-actions" aria-label="自定义头部按钮">
+              {headerButtons.map(renderHeaderButton)}
+            </div>
+          )}
 
           <button
             type="button"

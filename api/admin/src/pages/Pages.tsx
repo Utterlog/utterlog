@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { Button, ConfirmDialog } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
+import AboutPageEditor from '@/components/AboutPageEditor';
 
 // A built-in page with `contentKey` gets an inline HTML/markdown editor
 // stored in that option. Pages without contentKey are pure list views
@@ -46,10 +47,15 @@ export default function PagesPage() {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
   const [savingContent, setSavingContent] = useState(false);
+  const [aboutEditorOpen, setAboutEditorOpen] = useState(false);
 
   useEffect(() => { fetchPages(); fetchBuiltinStatus(); }, []);
 
   const openContentEditor = async (contentKey: string) => {
+    if (contentKey === 'page_about_content') {
+      setAboutEditorOpen(true);
+      return;
+    }
     try {
       const r: any = await api.get('/options');
       const opts = r.data || r || {};
@@ -182,7 +188,7 @@ export default function PagesPage() {
                     {p.contentKey ? (
                       <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                         <button onClick={() => openContentEditor(p.contentKey!)} className="action-btn primary"
-                          title={t('admin.pages.editContent', '编辑内容')}>
+                          title={p.key === 'page_about' ? '编辑关于页' : t('admin.pages.editContent', '编辑内容')}>
                           <i className="fa-regular fa-pen" style={{ fontSize: '14px' }} />
                         </button>
                       </div>
@@ -239,6 +245,8 @@ export default function PagesPage() {
       </div>
 
       <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('admin.posts.confirmDeleteTitle', '确认删除')} message={t('admin.common.deleteIrreversible', '删除后无法恢复')} />
+
+      <AboutPageEditor open={aboutEditorOpen} onClose={() => setAboutEditorOpen(false)} />
 
       {editingKey && (
         <div

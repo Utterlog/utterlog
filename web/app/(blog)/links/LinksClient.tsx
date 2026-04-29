@@ -129,6 +129,7 @@ export default function LinksPage() {
     if (!groupedLinks.has(g)) groupedLinks.set(g, []);
     groupedLinks.get(g)!.push(l);
   });
+  const displayGroupKeys = activeGroup === 'all' ? visibleGroupKeys : [activeGroup];
 
   const handleApply = async () => {
     if (!form.name.trim()) { toast.error('请输入站点名称'); return; }
@@ -204,7 +205,10 @@ export default function LinksPage() {
           <div style={{ textAlign: 'center', padding: '80px 0', color: '#999' }}>暂无友链</div>
         ) : (
           /* Grouped display */
-          Array.from(groupedLinks.entries()).map(([groupName, groupLinks]) => (
+          displayGroupKeys.map((groupName) => {
+            const groupLinks = groupedLinks.get(groupName) || [];
+            if (groupLinks.length === 0) return null;
+            return (
             <div key={groupName} style={{ marginBottom: '32px' }}>
               {/* Group title — only show when viewing all */}
               {activeGroup === 'all' && groups.length > 2 && (
@@ -247,7 +251,8 @@ export default function LinksPage() {
                 ))}
               </div>
             </div>
-          ))
+            );
+          })
         )}
 
       </div>

@@ -19,6 +19,24 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.0.2] - 2026-04-29
+
+### 新增
+
+- 关于页面新增结构化个人主页模板，支持个人资料、MBTI、兴趣爱好、音乐偏好和站点更新记录。
+- 关于页面支持在默认模板与自定义 Markdown 正文之间切换，Markdown 内容单独保存。
+
+### 改进
+
+- 友情链接分类管理支持上移/下移调整分类顺序，前台友链页按后台分类顺序展示。
+- 后台系统页面的关于页编辑改为填表式配置，并继续兼容旧版自定义 HTML 内容。
+- 页面管理中内置关于页的操作按钮明确指向关于页面配置编辑器。
+
+### 修复
+
+- 修复 WordPress 同步分类和标签时按大小写敏感 slug 查重，导致 `Debian` / `debian` 等同名标签重复生成 meta 的问题，并在再次同步时合并已产生的来源重复项。
+- 修复主题自定义头部按钮和页脚图标时，Azure 固定随机访问按钮与固定 RSS 按钮可能被覆盖或挤出的问题。
+
 ## [2.0.1] - 2026-04-29
 
 ### 新增
@@ -130,7 +148,8 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 - 修复连续图片自动网格预处理吞掉图片组后的空行，导致紧跟的 Markdown `> ` 引用块被当作普通 `&gt;` 文本输出的问题。
 - 修复后台通知铃铛待审核评论入口仍跳转旧 `/dashboard/comments/pending` 的问题，并统一后台相关回跳到 `/admin` 路径。
 
-[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.2...HEAD
+[2.0.2]: https://github.com/utterlog/utterlog/releases/tag/v2.0.2
 [2.0.1]: https://github.com/utterlog/utterlog/releases/tag/v2.0.1
 [2.0.0]: https://github.com/utterlog/utterlog/releases/tag/v2.0.0
 [1.0.0]: https://github.com/utterlog/utterlog/releases/tag/v1.0.0

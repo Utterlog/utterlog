@@ -884,7 +884,7 @@ func PostNavigation(c *gin.Context) {
 
 // System update check
 func CheckSystemUpdate(c *gin.Context) {
-	currentVersion := "2.0.1"
+	currentVersion := "2.0.2"
 
 	// Check latest version from utterlog.io
 	resp, err := http.Get("https://utterlog.io/api/version")

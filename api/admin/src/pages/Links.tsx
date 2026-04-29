@@ -258,6 +258,23 @@ export default function LinksPage() {
     }
   };
 
+  const moveGroup = async (groupName: string, direction: -1 | 1) => {
+    const currentIndex = existingGroups.findIndex(group => group.key === groupName);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= existingGroups.length) return;
+
+    const next = [...existingGroups];
+    const [group] = next.splice(currentIndex, 1);
+    next.splice(nextIndex, 0, group);
+
+    try {
+      await saveLinkGroups(next);
+      toast.success(t('admin.common.saveSuccess', '保存成功'));
+    } catch {
+      toast.error(t('admin.common.saveFailed', '保存失败'));
+    }
+  };
+
   const [form, setForm] = useState({
     name: '', url: '', description: '', logo: '', rss_url: '', group_name: 'default', order_num: 0,
   });
@@ -533,11 +550,33 @@ export default function LinksPage() {
           {/* Existing groups */}
           {existingGroups.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {existingGroups.map(group => {
+              {existingGroups.map((group, index) => {
                 const count = links.filter((l: any) => (l.group_name || DEFAULT_GROUP_KEY) === group.key).length;
                 const isEditing = editingGroup?.old === group.key;
                 return (
-                  <div key={group.key} style={{ display: 'grid', gridTemplateColumns: 'minmax(140px, 1fr) minmax(260px, 1.5fr) 132px 64px auto', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--color-bg-soft)' }}>
+                  <div key={group.key} style={{ display: 'grid', gridTemplateColumns: '84px minmax(140px, 1fr) minmax(260px, 1.5fr) 132px 64px auto', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--color-bg-soft)' }}>
+                    <span style={{ display: 'inline-flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => moveGroup(group.key, -1)}
+                        className="action-btn"
+                        title={t('admin.common.moveUp', '上移')}
+                        disabled={index === 0}
+                        style={{ opacity: index === 0 ? 0.4 : 1, cursor: index === 0 ? 'not-allowed' : 'pointer' }}
+                      >
+                        <i className="fa-regular fa-chevron-up" style={{ fontSize: '12px' }} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveGroup(group.key, 1)}
+                        className="action-btn"
+                        title={t('admin.common.moveDown', '下移')}
+                        disabled={index === existingGroups.length - 1}
+                        style={{ opacity: index === existingGroups.length - 1 ? 0.4 : 1, cursor: index === existingGroups.length - 1 ? 'not-allowed' : 'pointer' }}
+                      >
+                        <i className="fa-regular fa-chevron-down" style={{ fontSize: '12px' }} />
+                      </button>
+                    </span>
                     {isEditing ? (
                       <input
                         className="input focus-ring"

@@ -11,7 +11,7 @@ interface FooterIcon {
 
 const DEFAULT_OPTION_KEY = 'theme_footer_icons';
 
-const defaultEmptyRow: FooterIcon = { icon: 'fa-light fa-rss', label: 'RSS', copy: '' };
+const defaultEmptyRow: FooterIcon = { icon: 'fa-light fa-link', label: '按钮', href: '' };
 const actionButtonStyle = {
   width: 28,
   minWidth: 28,
@@ -36,7 +36,7 @@ export default function FooterIconsEditor({
   optionKey = DEFAULT_OPTION_KEY,
   title = '页脚图标按钮',
   description,
-  emptyText = '尚未配置，点击"添加"开始。留空则显示默认的 RSS 按钮。',
+  emptyText = '尚未配置额外按钮，页脚仍会显示固定的 RSS 按钮。',
   emptyRow = defaultEmptyRow,
 }: FooterIconsEditorProps) {
   const [items, setItems] = useState<FooterIcon[]>([]);
@@ -140,7 +140,7 @@ export default function FooterIconsEditor({
       <p className="text-dim" style={{ fontSize: 12, lineHeight: 1.6, marginBottom: 16 }}>
         {description || (
           <>
-            显示在博客页脚右侧的图标按钮。图标支持 FontAwesome 类名（如 <code>fa-light fa-rss</code>）、
+            显示在博客页脚右侧的额外图标按钮；固定 RSS 按钮由主题始终显示，不在这里删除。图标支持 FontAwesome 类名（如 <code>fa-light fa-link</code>）、
             图片 URL、内联 SVG、或上传图片。链接留空将作为纯文本标签显示；「复制文本」填写后点击时复制该内容到剪贴板。
           </>
         )}
@@ -172,7 +172,7 @@ export default function FooterIconsEditor({
                 className="input"
                 value={row.icon}
                 onChange={e => updateRow(i, { icon: e.target.value })}
-                placeholder="fa-light fa-rss / <svg…/> / https://…"
+                placeholder="fa-light fa-link / <svg…/> / https://…"
                 style={{ fontSize: 12, fontFamily: 'var(--font-mono, monospace)' }}
               />
               {/* Label */}

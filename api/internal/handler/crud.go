@@ -409,7 +409,7 @@ func SystemStatus(c *gin.Context) {
 			"comments": commentCount,
 			"links":    linkCount,
 		},
-		"version": "2.0.1",
+		"version": "2.0.2",
 	})
 }
 

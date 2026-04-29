@@ -43,20 +43,94 @@ func deriveExcerptFromContent(content string, limit int) string {
 // readable slugs.
 func decodeURLSlug(s string) string {
 	if !strings.Contains(s, "%") {
-		return s
+		return strings.TrimSpace(s)
 	}
 	if decoded, err := url.QueryUnescape(s); err == nil && decoded != "" {
-		return decoded
+		return strings.TrimSpace(decoded)
 	}
-	return s
+	return strings.TrimSpace(s)
+}
+
+func normalizeSyncTermSlug(raw, fallbackName string) string {
+	slug := decodeURLSlug(raw)
+	if slug == "" {
+		slug = strings.TrimSpace(fallbackName)
+	}
+	return strings.ToLower(slug)
+}
+
+func findSyncTermBySource(table, termType, siteUUID string, sourceID int64) int {
+	if sourceID == 0 || siteUUID == "" {
+		return 0
+	}
+	var id int
+	_ = config.DB.Get(&id, fmt.Sprintf(`
+		SELECT id FROM %s
+		WHERE source_site_uuid = $1
+		  AND source_type = 'wordpress'
+		  AND source_id = $2
+		  AND type = $3
+		LIMIT 1
+	`, table), siteUUID, sourceID, termType)
+	return id
+}
+
+func findSyncTermByNameOrSlug(table, termType, name, slug string) int {
+	name = strings.TrimSpace(name)
+	slug = strings.TrimSpace(slug)
+	if name == "" && slug == "" {
+		return 0
+	}
+	var id int
+	_ = config.DB.Get(&id, fmt.Sprintf(`
+		SELECT id FROM %s
+		WHERE type = $1
+		  AND (
+		    ($2 <> '' AND LOWER(name) = LOWER($2))
+		    OR ($3 <> '' AND LOWER(slug) = LOWER($3))
+		  )
+		ORDER BY
+		  CASE WHEN COALESCE(source_site_uuid, '') = '' THEN 0 ELSE 1 END,
+		  CASE WHEN $3 <> '' AND slug = LOWER($3) THEN 0 ELSE 1 END,
+		  CASE WHEN $2 <> '' AND LOWER(name) = LOWER($2) THEN 0 ELSE 1 END,
+		  count DESC,
+		  id ASC
+		LIMIT 1
+	`, table), termType, name, slug)
+	return id
+}
+
+func mergeSyncTermIntoCanonical(metaTable, relTable string, duplicateID, canonicalID int, now int64, siteUUID string, sourceID int64) {
+	if duplicateID == 0 || canonicalID == 0 || duplicateID == canonicalID {
+		return
+	}
+	_, _ = config.DB.Exec(fmt.Sprintf(`
+		INSERT INTO %s (post_id, meta_id, created_at)
+		SELECT post_id, $2, COALESCE(created_at, $3)
+		FROM %s
+		WHERE meta_id = $1
+		ON CONFLICT DO NOTHING
+	`, relTable, relTable), duplicateID, canonicalID, now)
+	_, _ = config.DB.Exec(fmt.Sprintf(`DELETE FROM %s WHERE meta_id = $1`, relTable), duplicateID)
+	_, _ = config.DB.Exec(fmt.Sprintf(`
+		DELETE FROM %s
+		WHERE id = $1
+		  AND source_site_uuid = $2
+		  AND source_type = 'wordpress'
+		  AND source_id = $3
+	`, metaTable), duplicateID, siteUUID, sourceID)
+	_, _ = config.DB.Exec(fmt.Sprintf(`
+		UPDATE %s
+		SET count = (SELECT COUNT(*) FROM %s WHERE meta_id = $1)
+		WHERE id = $1
+	`, metaTable, relTable), canonicalID)
 }
 
 // ============================================================
 // Resource importers for WordPress sync.
 //
-// Each function accepts a batch of item maps and upserts rows via
-// UNIQUE INDEX on (source_site_uuid, source_type, source_id) so a
-// re-run just updates the same rows. All imported rows get:
+// Each function accepts a batch of item maps. Native categories/tags
+// are reused by name/slug when possible; new synced rows get:
 //   source_site_uuid = <sync site uuid>
 //   source_type      = 'wordpress'
 //   source_id        = <WP original ID>
@@ -69,50 +143,51 @@ func decodeURLSlug(s string) string {
 // "category" or "tag" (written to ul_metas.type).
 func importTerms(jobID, siteUUID, termType string, items []map[string]interface{}) (int, error) {
 	t := config.T("metas")
+	relT := config.T("relationships")
 	now := time.Now().Unix()
 	imported := 0
 
 	for i, item := range items {
 		srcID := itemInt64(item, "source_id")
-		name := itemStr(item, "name")
-		slug := decodeURLSlug(itemStr(item, "slug"))
+		name := strings.TrimSpace(itemStr(item, "name"))
+		slug := normalizeSyncTermSlug(itemStr(item, "slug"), name)
 		if name == "" || slug == "" || srcID == 0 {
 			continue
 		}
 
-		// Upsert by (source_site_uuid, source_type, source_id).
-		// Since ul_metas has no UNIQUE on (type, slug) historically,
-		// we dedupe by source_* only. Users with existing metas
-		// that collide on slug will see WP entries appended with
-		// auto-id — that's fine.
-		var id int
-		err := config.DB.QueryRow(fmt.Sprintf(`
-			INSERT INTO %s (name, slug, type, parent_id, count, order_num,
-			                created_at, updated_at,
-			                source_type, source_id, source_site_uuid)
-			VALUES ($1, $2, $3, 0, 0, $4, $5, $5, 'wordpress', $6, $7)
-			ON CONFLICT (source_site_uuid, source_type, source_id) WHERE source_site_uuid != ''
-			DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, updated_at = EXCLUDED.updated_at
-			RETURNING id
-		`, t),
-			name, slug, termType, i+1, now, srcID, siteUUID).Scan(&id)
-		if err != nil {
-			// Fallback: insert might fail if ON CONFLICT predicate
-			// isn't matched (old PG versions handling partial indexes
-			// differently). Try plain insert + lookup.
-			config.DB.QueryRow(fmt.Sprintf(`
+		sourceMatchedID := findSyncTermBySource(t, termType, siteUUID, srcID)
+		canonicalID := findSyncTermByNameOrSlug(t, termType, name, slug)
+		id := canonicalID
+		if sourceMatchedID > 0 && canonicalID > 0 && sourceMatchedID != canonicalID {
+			mergeSyncTermIntoCanonical(t, relT, sourceMatchedID, canonicalID, now, siteUUID, srcID)
+		}
+		if id == 0 {
+			id = sourceMatchedID
+		}
+		if id > 0 && id == sourceMatchedID {
+			_, _ = config.DB.Exec(fmt.Sprintf(`
+				UPDATE %s
+				SET name = $1, slug = $2, updated_at = $3
+				WHERE id = $4
+			`, t), name, slug, now, id)
+		}
+		if id == 0 {
+			err := config.DB.QueryRow(fmt.Sprintf(`
 				INSERT INTO %s (name, slug, type, parent_id, count, order_num,
 				                created_at, updated_at,
 				                source_type, source_id, source_site_uuid)
 				VALUES ($1, $2, $3, 0, 0, $4, $5, $5, 'wordpress', $6, $7)
-				ON CONFLICT DO NOTHING
+				ON CONFLICT (source_site_uuid, source_type, source_id) WHERE source_site_uuid != ''
+				DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, updated_at = EXCLUDED.updated_at
 				RETURNING id
 			`, t),
 				name, slug, termType, i+1, now, srcID, siteUUID).Scan(&id)
-			if id == 0 {
-				config.DB.Get(&id, fmt.Sprintf(`
-					SELECT id FROM %s WHERE source_site_uuid=$1 AND source_type='wordpress' AND source_id=$2 LIMIT 1
-				`, t), siteUUID, srcID)
+			if err != nil {
+				// Fall back for older schemas or exact slug conflicts.
+				id = findSyncTermBySource(t, termType, siteUUID, srcID)
+				if id == 0 {
+					id = findSyncTermByNameOrSlug(t, termType, name, slug)
+				}
 			}
 		}
 		if id > 0 {
@@ -223,7 +298,7 @@ func importPostsOrPages(jobID, siteUUID, postType string, items []map[string]int
 		// importTerms — otherwise any term with a non-ASCII slug would
 		// never link, and the post↔tag graph would silently collapse.
 		for _, slug := range itemStrSlice(item, "categories") {
-			slug = decodeURLSlug(slug)
+			slug = normalizeSyncTermSlug(slug, "")
 			if termID, ok := syncMapGet(jobID, "term_slug_category:"+slug, 0); ok {
 				config.DB.Exec(fmt.Sprintf(`
 					INSERT INTO %s (post_id, meta_id, created_at) VALUES ($1, $2, $3)
@@ -232,7 +307,7 @@ func importPostsOrPages(jobID, siteUUID, postType string, items []map[string]int
 			}
 		}
 		for _, slug := range itemStrSlice(item, "tags") {
-			slug = decodeURLSlug(slug)
+			slug = normalizeSyncTermSlug(slug, "")
 			if termID, ok := syncMapGet(jobID, "term_slug_tag:"+slug, 0); ok {
 				config.DB.Exec(fmt.Sprintf(`
 					INSERT INTO %s (post_id, meta_id, created_at) VALUES ($1, $2, $3)

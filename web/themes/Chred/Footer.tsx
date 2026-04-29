@@ -252,19 +252,29 @@ export default function Footer() {
   //              label: 'RSS',
   //              href?: '/feed',
   //              copy?: 'https://site/feed' }  — when `copy` set, click copies to clipboard.
-  // Default: single RSS button that copies the feed URL (can be removed via admin).
-  const defaultIcons = [
-    { icon: 'fa-light fa-rss', label: 'RSS', copy: (typeof window !== 'undefined' ? window.location.origin : '') + '/feed' },
-  ];
-  let iconLinks: Array<{ icon: string; label: string; href?: string; copy?: string }> = defaultIcons;
+  // RSS is a fixed theme control; admin-configured icons are appended after it.
+  const feedUrl = (typeof window !== 'undefined' ? window.location.origin : '') + '/feed';
+  const fixedRssIcon = { icon: 'fa-light fa-rss', label: 'RSS', copy: feedUrl };
+  let customIconLinks: Array<{ icon: string; label: string; href?: string; copy?: string }> = [];
   if (siteOptions.theme_footer_icons) {
     try {
       const parsed = typeof siteOptions.theme_footer_icons === 'string'
         ? JSON.parse(siteOptions.theme_footer_icons)
         : siteOptions.theme_footer_icons;
-      if (Array.isArray(parsed) && parsed.length > 0) iconLinks = parsed;
+      if (Array.isArray(parsed)) {
+        customIconLinks = parsed
+          .map((item: any) => ({
+            icon: String(item?.icon || '').trim(),
+            label: String(item?.label || '').trim(),
+            href: item?.href ? String(item.href).trim() : '',
+            copy: item?.copy ? String(item.copy).trim() : '',
+          }))
+          .filter(item => item.icon && item.label)
+          .filter(item => !(item.label.toLowerCase() === 'rss' && item.icon.includes('fa-rss')));
+      }
     } catch {}
   }
+  const iconLinks: Array<{ icon: string; label: string; href?: string; copy?: string }> = [fixedRssIcon, ...customIconLinks];
 
   const avatarUrl = user?.avatar || (user ? `https://gravatar.bluecdn.com/avatar/0?s=64&d=mp` : null);
 
