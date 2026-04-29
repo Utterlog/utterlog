@@ -1,120 +1,163 @@
 # Utterlog
 
 <p>
-  <a href="https://github.com/utterlog/utterlog/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/utterlog/utterlog/ci.yml?branch=main&style=flat-square&label=CI" alt="CI"></a>
-  <a href="https://github.com/utterlog/utterlog/actions/workflows/docker-publish.yml"><img src="https://img.shields.io/github/actions/workflow/status/utterlog/utterlog/docker-publish.yml?branch=main&style=flat-square&label=docker%20images&logo=docker&logoColor=white" alt="Docker images"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/utterlog/utterlog?style=flat-square" alt="License"></a>
-  <a href="https://github.com/utterlog/utterlog/stargazers"><img src="https://img.shields.io/github/stars/utterlog/utterlog?style=flat-square" alt="Stars"></a>
-  <img src="https://img.shields.io/github/go-mod/go-version/utterlog/utterlog?filename=api/go.mod&style=flat-square&logo=go&logoColor=white" alt="Go">
-  <img src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs" alt="Next.js">
-  <img src="https://img.shields.io/badge/PostgreSQL-18-336791?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/ghcr.io-utterlog-2496ED?style=flat-square&logo=docker&logoColor=white" alt="GHCR">
+  <a href="https://github.com/utterlog/utterlog/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/utterlog/utterlog/ci.yml?branch=main&style=flat-square&label=CI" alt="CI">
+  </a>
+  <a href="https://github.com/utterlog/utterlog/actions/workflows/docker-publish.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/utterlog/utterlog/docker-publish.yml?branch=main&style=flat-square&label=Docker%20Images&logo=docker&logoColor=white" alt="Docker Images">
+  </a>
+  <a href="https://github.com/utterlog/utterlog/releases">
+    <img src="https://img.shields.io/github/v/release/utterlog/utterlog?style=flat-square&label=Release" alt="Release">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/github/license/utterlog/utterlog?style=flat-square" alt="License">
+  </a>
+  <a href="https://github.com/utterlog/utterlog/stargazers">
+    <img src="https://img.shields.io/github/stars/utterlog/utterlog?style=flat-square" alt="GitHub Stars">
+  </a>
+  <a href="https://github.com/utterlog/utterlog/issues">
+    <img src="https://img.shields.io/github/issues/utterlog/utterlog?style=flat-square" alt="Issues">
+  </a>
 </p>
 
 <p>
-  <a href="https://demo.utterlog.io"><img src="https://img.shields.io/badge/Live%20Demo-demo.utterlog.io-22c55e?style=for-the-badge&logo=safari&logoColor=white" alt="Live Demo" height="40"></a>
-  <a href="https://utterlog.io"><img src="https://img.shields.io/badge/Project-utterlog.io-3b82f6?style=for-the-badge&logo=hugo&logoColor=white" alt="Project Site" height="40"></a>
-  <a href="https://utterlog.com"><img src="https://img.shields.io/badge/Network-utterlog.com-8b5cf6?style=for-the-badge&logo=mastodon&logoColor=white" alt="Federation Hub" height="40"></a>
+  <a href="https://github.com/utterlog/utterlog/pkgs/container/utterlog-api">
+    <img src="https://img.shields.io/badge/GHCR-utterlog--api-2496ED?style=flat-square&logo=github&logoColor=white" alt="GHCR API image">
+  </a>
+  <a href="https://github.com/utterlog/utterlog/pkgs/container/utterlog-web">
+    <img src="https://img.shields.io/badge/GHCR-utterlog--web-2496ED?style=flat-square&logo=github&logoColor=white" alt="GHCR Web image">
+  </a>
+  <img src="https://img.shields.io/badge/Registry-registry.utterlog.io-0052D9?style=flat-square&logo=docker&logoColor=white" alt="Utterlog Registry">
 </p>
 
-> 为独立作者打造的一体化内容平台。
+<!-- Docker Hub pull-count badges can be enabled after Docker Hub mirrors exist.
+<p>
+  <a href="https://hub.docker.com/r/utterlog/utterlog-api">
+    <img src="https://img.shields.io/docker/pulls/utterlog/utterlog-api?style=flat-square&logo=docker&label=api%20pulls" alt="Docker API pulls">
+  </a>
+  <a href="https://hub.docker.com/r/utterlog/utterlog-web">
+    <img src="https://img.shields.io/docker/pulls/utterlog/utterlog-web?style=flat-square&logo=docker&label=web%20pulls" alt="Docker Web pulls">
+  </a>
+</p>
+-->
 
-## ✨ 特性
+<p>
+  <a href="https://demo.utterlog.io"><img src="https://img.shields.io/badge/Live%20Demo-demo.utterlog.io-22c55e?style=for-the-badge&logo=safari&logoColor=white" alt="Live Demo" height="38"></a>
+  <a href="https://utterlog.io"><img src="https://img.shields.io/badge/Website-utterlog.io-3b82f6?style=for-the-badge&logo=hugo&logoColor=white" alt="Website" height="38"></a>
+  <a href="https://github.com/utterlog/utterlog/releases"><img src="https://img.shields.io/badge/Download-Latest%20Release-0f172a?style=for-the-badge&logo=github&logoColor=white" alt="Latest Release" height="38"></a>
+</p>
 
-- **5 套主题，开箱即用** — Azure / Flux / 2026 / Chred / Westlife，支持上传自定义主题；每个主题可带独立的页脚图标按钮
-- **段落级点评** — 文章任意段落悬浮加号即可点评，不挤评论区，跨站联盟身份可发表
-- **AI Agent** — 内置 AI 摘要 / 阅读助手 / 段落点评生成 / 批处理，多 provider（OpenAI / Claude / DeepSeek / Gemini）
-- **评论系统** — 邮箱验证 + 水印验证码 + Gravatar/Utterlog 头像 + 浏览器/OS/国家旗 + 关注标记
-- **联盟身份（Utterlog Network）** — OAuth 2.0 跨站登录，联盟头像同步，跨站关注 / 评论 / 点评
-- **内容存储集** — 媒体库 + 相册 + 图书 / 电影 / 游戏 / 好物 / 音乐 / 视频，分门类管理
-- **说说** — 微博式卡片流，图片上传 + 关键词 + EXIF 自动解析 + 地图展示
-- **RSS 阅读** — 聚合订阅 + 看板式阅读流
-- **安全** — Passkey / 2FA / IP 封禁 / CC 限流 / 地理封锁
-- **媒体** — 本地 / S3 / R2 / Cloudflare 存储，自动 WebP + EXIF
-- **搜索** — pgvector 语义搜索，embedding 自动生成
+Utterlog is a self-hosted publishing platform for independent writers, bloggers, makers, and small communities.
 
-## 🚀 快速部署
+It gives you a complete personal content hub: long-form posts, custom pages, themes, comments, links, albums, footprints, RSS subscriptions, AI writing tools, analytics, and site settings in one place.
 
-**一行安装**（已有反代或公网域名暂未配 TLS）：
+中文介绍：Utterlog 是为独立作者准备的一体化内容平台。它不只是博客程序，还可以管理页面、评论、友链、相册、足迹、RSS 订阅、AI 辅助写作和站点数据。
+
+## Why Utterlog
+
+- **Own your content**: run your site on your own server, with your own domain and your own data.
+- **Built for real blogs**: posts, pages, categories, tags, feeds, permalinks, archives, comments, media, SEO, and backups are first-class features.
+- **More than articles**: publish albums, moments, reading lists, movies, music, goods, videos, travel footprints, and friend links.
+- **AI where it helps**: generate summaries, tags, slugs, cover prompts, formatting suggestions, comment replies, and article Q&A without turning the product into an AI toy.
+- **Theme-driven publishing**: switch between built-in themes, configure menus and buttons, and keep your content independent from presentation.
+- **Self-hosting friendly**: one install command, Docker-based deployment, single public entry port behind your reverse proxy.
+
+## Product Highlights
+
+### Publishing
+
+Write posts and pages with Markdown, HTML fragments, cover images, excerpts, categories, tags, public post numbers, and custom permalink structures.
+
+Utterlog automatically serves article pages, category pages, tag pages, archive pages, RSS feeds, sitemap, robots.txt, and SEO metadata.
+
+### Themes
+
+Utterlog ships with multiple built-in themes, including Azure, Utterlog, Flux, and Chred. Themes can declare their own menu locations, sidebars, footer buttons, search controls, and page styles.
+
+You can switch themes from the admin panel, upload your logo and favicon, set custom buttons, and keep the writing experience separated from the visual layer.
+
+### Comments and Interaction
+
+The comment system supports nested replies, moderation, email notifications, avatars, country flags, browser and OS labels, captcha, visitor metadata, and admin replies.
+
+Readers can also leave paragraph-level annotations, which is useful for tutorials, translations, prompts, notes, and long-form discussions.
+
+### AI Assistant
+
+Utterlog includes AI tools for summaries, keywords, slugs, formatting, cover prompts, batch generation, smart comment review, and smart replies.
+
+On the public site, you can enable article-level AI reading assistance or a site-wide chat bubble that helps visitors explore your content.
+
+### Footprints and Collections
+
+Mark posts with countries or cities and generate a footprint page with a map and travel timeline. Post hero images can display related country flags.
+
+Utterlog also includes albums, music, movies, books, games, goods, and videos, so personal collections can live beside your writing instead of being scattered across platforms.
+
+### Links and RSS
+
+Friend links support categories, icons, avatars, descriptions, RSS addresses, and multiple display modes. Categories can be displayed as rich cards or compact icon grids.
+
+The feeds page can aggregate RSS from your links, turning your site into a small personal reading hub.
+
+### Analytics and Site Operations
+
+The admin dashboard includes post stats, comments, visits, online users, referrers, visitor locations, recent visitors, word counts, cache actions, media settings, language, timezone, email, security, and third-party service configuration.
+
+## Feature Overview
+
+| Area | Capabilities |
+|---|---|
+| Writing | Markdown, pages, excerpts, covers, categories, tags, permalinks, public post numbers |
+| Themes | Built-in themes, custom menus, sidebar navigation, footer buttons, logo and favicon |
+| Comments | Nested replies, moderation, email notifications, captcha, avatars, country flags |
+| AI | Summaries, tags, slugs, formatting, cover prompts, smart replies, AI reader chat |
+| Footprints | Country/city markers, Mapbox map, travel timeline, post flags |
+| Links | Link categories, icons, avatars, RSS, card and icon display modes |
+| Collections | Albums, music, movies, books, games, goods, videos |
+| Feeds | RSS output, subscription page, friend-link feed aggregation |
+| Analytics | Views, words, visitors, online users, referrers, visitor map |
+| Settings | Language, timezone, SEO, email, media, security, third-party services |
+
+## Quick Start
+
+Install Utterlog on a server with Docker:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | bash
 ```
 
-**带自动 HTTPS**（无现成反代，内置 Caddy 自动签证书）：
+Install with automatic HTTPS:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | DOMAIN=blog.yoursite.com bash
 ```
 
-脚本自动：检查 Docker → clone → 按内存选本地构建 / 拉 GHCR 镜像 → 生成随机密码 → 找空闲端口（默认 9260）→ 启动 → 健康检查 → 打印凭据。
+After installation, open the URL printed by the installer, create the admin account, and finish site setup in the admin panel.
 
-**日后更新**（**不需要装 make**，重跑一行安装命令就是升级）：
+## Documentation
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/utterlog/utterlog/main/install.sh | bash
-```
+- Live demo: [demo.utterlog.io](https://demo.utterlog.io)
+- Product site: [utterlog.io](https://utterlog.io)
+- Installation guide: [INSTALL.md](INSTALL.md)
+- Reverse proxy and deployment notes: [deploy/README.md](deploy/README.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- WordPress import plugin: [utterlog-sync](https://github.com/utterlog/utterlog-sync)
 
-在 `utterlog/` 的上一级目录执行。脚本检测到目录已存在 → `git pull` → 重新部署。升级后浏览器 **⌘+Shift+R** 硬刷清缓存。
+## Container Images
 
-等价写法（任选其一）：
+Utterlog publishes production images to both GitHub Container Registry and the first-party registry:
 
-```bash
-# 无 make，进目录手动
-cd utterlog && git pull && bash scripts/deploy.sh
+| Component | GHCR | First-party registry |
+|---|---|---|
+| API | `ghcr.io/utterlog/utterlog-api` | `registry.utterlog.io/utterlog/utterlog-api` |
+| Web | `ghcr.io/utterlog/utterlog-web` | `registry.utterlog.io/utterlog/utterlog-web` |
 
-# 装了 make 的快捷方式
-cd utterlog && make update
-```
+The installer uses the first-party registry by default and can fall back to GHCR.
 
-## 🔌 反代
+> Docker pull count badges are only reliable for Docker Hub repositories. Utterlog currently publishes to GHCR and `registry.utterlog.io`, which do not expose public pull-count metrics through shields.io.
 
-Utterlog 仅绑 `127.0.0.1:9260`，公网不可见，需反代：
+## License
 
-| 你的环境 | 怎么做 |
-|---|---|
-| 有 1Panel / 宝塔 / AAPanel | GUI 加反向代理，指向 `127.0.0.1:9260` → [deploy/1panel.md](deploy/1panel.md) |
-| 有自建 nginx / Caddy | 复制 [deploy/nginx.conf.example](deploy/nginx.conf.example) 或 [deploy/Caddyfile.example](deploy/Caddyfile.example) |
-| 啥反代都没有 | `DOMAIN=blog.你域名 bash scripts/deploy.sh --tls`（无 make；有 make 用 `make deploy-tls`）—— 自带 Caddy + 自动 TLS |
-
-## 🏗 架构
-
-```
-用户浏览器
-   │
-   ▼
-你的 nginx / 1Panel / Caddy   ← 公网（443）
-   │
-   ▼
-127.0.0.1:9260  ← Utterlog 唯一对外端口（loopback）
-   │
-   ├─ /admin/*    内嵌 Vite SPA（管理后台）
-   ├─ /api/v1/*   Go handlers（数据 / 认证 / 业务）
-   ├─ /uploads/*  本地 / S3 / R2 文件
-   └─ 其他        反代到内网 web:3000（Next.js SSR 博客）
-```
-
-- 公网仅一个端口（你原 nginx/caddy 的 443）
-- 生产内存 ~600MB，1GB VPS 舒适跑
-- Go binary 25MB · Next.js standalone 150MB
-
-## 📦 技术栈
-
-| 层 | 技术 |
-|---|---|
-| 博客前端 | Next.js 16 + React 19 + TypeScript 6 |
-| 管理后台 | Vite + React + Zustand + TanStack Query（go:embed 内嵌） |
-| 后端 | Go 1.26 + Gin + sqlx |
-| 数据 | PostgreSQL 18 (pgvector) + Redis 8 |
-| 部署 | Docker Compose + 可选内置 Caddy |
-
-## 📖 文档
-
-- [INSTALL.md](INSTALL.md) — 安装指南（三种场景 + 故障排查）
-- [deploy/README.md](deploy/README.md) — 反代决策树
-- [deploy/1panel.md](deploy/1panel.md) — 1Panel / 宝塔图形化指南
-- 相关项目：[utterlog-sync](https://github.com/utterlog/utterlog-sync)（WordPress 导入插件）
-
-## ⚖ License
-
-MIT — 详见 [LICENSE](LICENSE)
+Utterlog is released under the [MIT License](LICENSE).
