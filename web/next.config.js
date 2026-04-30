@@ -4,6 +4,7 @@ const nextConfig = {
   // actually used at runtime — smaller images, no need for full node_modules.
   output: 'standalone',
   serverExternalPackages: ['pixi.js'],
+  allowedDevOrigins: ['localhost', '127.0.0.1'],
   async rewrites() {
     const apiHost = process.env.INTERNAL_API_URL ? 'http://api:8080' : 'http://localhost:8080';
     return [

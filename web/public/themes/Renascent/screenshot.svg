@@ -1,0 +1,27 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="760" fill="#FFFFFF"/>
+  <rect x="72" y="56" width="1056" height="72" fill="#FFFFFF" stroke="#D4D4D4"/>
+  <text x="112" y="103" fill="#000000" font-family="Georgia, serif" font-size="30">Renascent</text>
+  <text x="588" y="100" text-anchor="middle" fill="#3A52B8" font-family="Arial, sans-serif" font-size="15">首页</text>
+  <text x="648" y="100" fill="#555555" font-family="Arial, sans-serif" font-size="15">归档</text>
+  <text x="708" y="100" fill="#555555" font-family="Arial, sans-serif" font-size="15">关于</text>
+  <circle cx="1036" cy="92" r="22" stroke="#D4D4D4"/>
+  <path d="M1028 92h16M1036 84v16" stroke="#3A52B8" stroke-width="2"/>
+  <rect x="72" y="176" width="336" height="368" fill="#F5F5F5" stroke="#D4D4D4"/>
+  <text x="112" y="242" fill="#000000" font-family="Georgia, serif" font-size="54">Thoughtful</text>
+  <text x="112" y="306" fill="#000000" font-family="Georgia, serif" font-size="54">Writing</text>
+  <text x="112" y="356" fill="#555555" font-family="Arial, sans-serif" font-size="16">A restrained editorial theme for long-form ideas.</text>
+  <rect x="112" y="410" width="118" height="44" rx="22" fill="#3A52B8"/>
+  <text x="171" y="438" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="14">阅读文章</text>
+  <rect x="456" y="176" width="672" height="1" fill="#D4D4D4"/>
+  <text x="456" y="236" fill="#000000" font-family="Georgia, serif" font-size="44">Renaissance through learning</text>
+  <text x="456" y="280" fill="#555555" font-family="Arial, sans-serif" font-size="16">Structured clarity, generous whitespace, and quiet interactions.</text>
+  <rect x="456" y="344" width="672" height="1" fill="#E8E8E8"/>
+  <text x="456" y="394" fill="#000000" font-family="Georgia, serif" font-size="34">Notes on AI and lifelong learning</text>
+  <text x="456" y="430" fill="#888C93" font-family="Courier New, monospace" font-size="13">2026-04-30 · 12 min read · #knowledge</text>
+  <rect x="456" y="488" width="672" height="1" fill="#E8E8E8"/>
+  <text x="456" y="538" fill="#000000" font-family="Georgia, serif" font-size="34">The discipline of clear thinking</text>
+  <text x="456" y="574" fill="#888C93" font-family="Courier New, monospace" font-size="13">2026-04-29 · 8 min read · #essay</text>
+  <rect x="72" y="616" width="1056" height="1" fill="#D4D4D4"/>
+  <text x="72" y="668" fill="#888C93" font-family="Courier New, monospace" font-size="12">RENASCENT · UTTERLOG THEME</text>
+</svg>

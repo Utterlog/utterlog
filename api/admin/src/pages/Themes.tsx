@@ -126,11 +126,11 @@ export default function Themes() {
         <FooterIconsEditor
           optionKey="theme_header_buttons"
           title="头部图标按钮"
-          emptyText="尚未配置额外按钮，Azure 头部仍会显示固定的随机访问和搜索按钮。"
+          emptyText="尚未配置额外按钮，主题头部仍会显示固定的随机访问和搜索按钮。"
           emptyRow={{ icon: 'fa-light fa-link', label: '按钮', href: '/' }}
           description={
             <>
-              显示在 Azure 主题头部右侧的额外正方形图标按钮；固定随机访问和搜索按钮由主题始终显示，不在这里删除。图标支持 FontAwesome 类名（如 <code>fa-light fa-link</code>）、
+              显示在主题头部右侧的额外正方形图标按钮；固定随机访问和搜索按钮由主题始终显示，不在这里删除。图标支持 FontAwesome 类名（如 <code>fa-light fa-link</code>）、
               图片 URL、内联 SVG、或上传图片。填写「复制文本」后点击按钮会复制内容，优先于链接。
             </>
           }

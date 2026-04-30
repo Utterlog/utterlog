@@ -153,6 +153,18 @@ var builtInThemes = []Extension{
 		},
 	},
 	{
+		ID: "Renascent", Name: "Renascent", Version: "2.0.2",
+		Author:      "Utterlog Team",
+		Description: "学术极简内容主题 — serif 标题、黑白灰体系与克制蓝色强调",
+		Kind:        "theme",
+		Builtin:     true,
+		Preview:     "/themes/Renascent/screenshot.svg",
+		MenuPositions: []MenuPosition{
+			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
+			{Key: "sidebar", Label: "侧栏导航", Description: "首页左侧分类标签导航"},
+		},
+	},
+	{
 		ID: "Flux", Name: "Flux", Version: "2.0.2",
 		Author:      "Utterlog Team",
 		Description: "极简金融科技风 · 单一绿色强调 · 大量留白 · 受 Stripe Link 启发",

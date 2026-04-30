@@ -68,7 +68,7 @@ utterlog/                      # 本仓库根
 ├── web/                       # Next.js 16 博客前台（开源主题 + 插件生态）
 │   ├── app/                   # App Router
 │   ├── components/blog/       # LazyImage / ImageGrid 等
-│   ├── themes/                # Azure / Flux / 2026 / Chred / Westlife
+│   ├── themes/                # Utterlog / Azure / Renascent / Flux / Chred
 │   ├── public/themes/         # 主题动态 styles.css
 │   ├── lib/theme.ts           # 主题注册表
 │   └── middleware.ts          # /install 重定向
@@ -133,6 +133,9 @@ docker compose up -d --build api
 # 改前端 web/
 docker compose up -d --build web
 
+# 改主题源码后，同步到 public 主题资源
+cd web && npm run sync:themes
+
 # 改 admin SPA（需要先 build dist 再让 Go 重新 embed）
 cd api/admin && npm run build && cd ../.. && docker compose restart api
 
@@ -148,6 +151,63 @@ docker compose logs -f web
 **.env 位置**：项目根 `/Users/gentpan/projects/utterlog/.env`。`config.Load()` 用 `godotenv.Overload()`，会覆盖 compose `environment:` 块。
 
 **双阶段启动**：DB 连不上时 `main.go` 进 setup-only 模式，仅暴露 `/admin/setup` + `/api/v1/setup/*`，其它 503。安装向导写完 `.env` 后 `os.Exit(0)`，docker `restart: unless-stopped` 拉起来读新配置。
+
+### 本地构建检查
+
+按改动范围选择最小构建：
+
+```bash
+# 博客前台 / 主题 / Next.js
+cd web && npm run build
+
+# 管理后台
+cd api/admin && npm run build
+
+# 后端 Docker 构建（本地常用验证方式）
+docker compose up -d --build api web
+```
+
+注意：`web npm run build` 会自动改写 `web/next-env.d.ts` 的 routes 引用。构建后要恢复为：
+
+```ts
+import "./.next/dev/types/routes.d.ts";
+```
+
+不要把 `.next/types/routes.d.ts` 这类构建期路径带进提交。
+
+### 主题开发
+
+- 主题源码：`web/themes/<Theme>/`
+- 主题静态资源：`web/public/themes/<Theme>/`
+- 改 `styles.css` 后必须执行 `cd web && npm run sync:themes`
+- 新增内置主题必须同时注册：
+  - `web/lib/theme.ts`
+  - `api/internal/handler/extensions.go`
+- 上传主题运行时目录统一为 `content/themes/<id>/`，不要再写入 api/web 两套重复目录。
+- 菜单位置由主题 `theme.json` 声明；只有 Azure 固定 Hero 分类侧栏，其他主题不要复用 Azure 的菜单侧栏逻辑。
+
+---
+
+## 5.1 当前开发进度（2026-04-30）
+
+当前代码线：`2.0.2`，未发布改动写在 `CHANGELOG.md` 的 `## 未发布`。
+
+已完成或正在本地验证的重点：
+
+- Renascent 主题已新增，按 `lixiaolai.com` / Reborn 学术极简方向重写，不再复用 Azure 页面结构。
+- Renascent 首页已改为文字驱动：Hero、编号指标、CURRENTLY 信息条、目录式文章列表。
+- Renascent 文章页已深度重构：文章编号区、封面题注、元信息侧栏、正文主栏、目录栏、AI 摘要、上下篇、相关文章和评论区统一样式。
+- 上传主题 / 插件运行时目录已统一为 `content/themes/`、`content/plugins/`。
+- 最近访客、足迹、友链、GeoIP、天气、关于页模板、Markdown blockquote、评论 AJAX 等近期改动都要继续以 `CHANGELOG.md` 为准。
+
+每次继续开发前先看：
+
+```bash
+git status --short
+sed -n '1,120p' CHANGELOG.md
+```
+
+不要回滚用户已有改动；只处理当前任务相关文件。
 
 ---
 
@@ -179,11 +239,11 @@ docker compose logs -f web
 
 ## 8. 主题系统
 
-- 当前激活主题：**Azure**（蓝 `#0052D9`）。所有博客前端改动针对 Azure。
-- 内置 5 套：`Azure` / `Flux`（绿 `#00C767`，Stripe Link 风格）/ `2026`（原 Utterlog2026 改名）/ `Chred` / `Westlife`
+- 当前重点开发主题：**Renascent**。Azure 是历史主主题，修改 Azure 时只动 Azure 文件，修改 Renascent 时不要复用 Azure 结构或样式类。
+- 内置 5 套：`Utterlog` / `Azure` / `Renascent` / `Flux`（绿 `#00C767`，Stripe Link 风格）/ `Chred`
 - 注册：`web/lib/theme.ts` + `api/internal/handler/extensions.go` 的 `builtInThemes`
 - 主题切换：admin → `/admin/themes` → 调 Next.js `/api/revalidate` 清缓存
-- 上传 zip：admin 解压到 `web/themes/<name>/`，激活后写 options
+- 上传 zip：admin 解压到 `content/themes/<name>/`，激活后写 options；内置主题源码保留在 `web/themes/<name>/`
 - `:root` 默认变量已固定为 Azure 蓝（`web/app/globals.css`），`[data-theme="steel"]` 也兜底映射到 Azure，避免 localStorage 残留导致灰
 
 **写代码注意**：注释里只能提"当前主题"或泛指，**不要写"和某主题保持一致"**。
@@ -227,7 +287,7 @@ git tag vX.Y.Z && git push origin vX.Y.Z
 
 # 3. 创建 GitHub Release（landing 的 changelog 数据源）
 gh release create vX.Y.Z --notes "..."
-#    Release 正文：只列「新增 / 修复 / 改进」+ Docker tag 引用
+#    Release 正文：只列「新增 / 优化 / 修复 / 移除」
 #    不要放升级命令块（后台已有一键升级按钮，是冗余）
 
 # 4. 进 ../utterlog-landing/ 改 package.json version → push → 自动 deploy
@@ -243,6 +303,41 @@ gh release create vX.Y.Z --notes "..."
 - Go 二进制需 `--platform linux/amd64`（CGO + libwebp，glibc）
 - 不要再找 `api/Dockerfile.build`，已删；用 `api/Dockerfile.prod` 的 `--target go-builder` 取 `/out/utterlog-api`
 - `web/app/layout.tsx` 的 `generateMetadata` 在构建期**不能**直接调 API；必须 gate `INTERNAL_API_URL`，否则 prerender 挂 60s × 3 重试
+
+### 版本号与 Changelog 规则
+
+当前版本号位置：
+
+- `web/package.json`
+- `web/package-lock.json`
+- `api/admin/package.json`
+- `api/admin/package-lock.json`
+- `api/main.go` 健康检查版本字符串
+- `api/internal/handler/install.go` 安装接口版本字符串
+
+发布版本时同步修改以上位置。Docker 镜像版本由 Git tag `vX.Y.Z` 触发 GitHub Actions 生成，不要把镜像地址写进 changelog 或 release notes。
+
+版本策略：
+
+- `1.0.0`：历史版本合并归档，详细旧记录保留在 `RELEASE_HISTORY.md`
+- `2.0.0`：正式发布基线
+- `2.0.x`：同一功能线内的修复和小优化
+- `2.1.0` / `2.x.0`：较完整的新功能或主题能力
+- 破坏性大改才进入下一个大版本
+
+`CHANGELOG.md` 规则：
+
+- 每次改动完成后立刻更新 `## 未发布`，不要等最后发布才补。
+- 每个版本固定保留四个段落：
+  - `### 新增`
+  - `### 优化`
+  - `### 修复`
+  - `### 移除`
+- 没内容写 `暂无。`
+- 只写用户能理解的功能变化，不写过细 commit 细节。
+- 不写 Docker images 列表，不写升级命令块。
+- GitHub Release 标题只写版本号，例如 `v2.0.3`，不要加「正式发布」等额外文字。
+- Release 正文同样使用 `### 新增 / ### 优化 / ### 修复 / ### 移除`，不要用英文 `Changed / Fixed`。
 
 ---
 
@@ -285,6 +380,8 @@ UTTERLOG_DB_MODE=external curl -fsSL https://...install.sh | bash
 部署 secrets（GH Actions）：`UTTERLOG_DEPLOY_SSH_KEY`、`UTTERLOG_DEPLOY_HOST=116.202.171.136`，三仓库共用，path secret 各异。
 
 CDN：`bluecdn.com` 系列（jsd / cdnjs / fonts / gravatar / ico / icons）。
+
+注意：这里记录的是 Utterlog 官方服务与历史服务器信息。用户自己的博客实例可能部署在 OVH 或其他服务器；没有用户明确提供时，不要假设 `/www/wwwroot/utterlog.com/api/.env` 就是目标站点配置。
 
 ---
 
@@ -333,7 +430,7 @@ CDN：`bluecdn.com` 系列（jsd / cdnjs / fonts / gravatar / ico / icons）。
 | 安装向导 | `api/internal/handler/setup.go` + `api/admin/src/pages/Setup.tsx` |
 | 创建管理员 | `api/internal/handler/install.go` + `web/app/install/page.tsx` |
 | 主题注册 | `web/lib/theme.ts` + `api/internal/handler/extensions.go` |
-| 主题源码 | `web/themes/{Azure,Flux,2026,Chred,Westlife}/` |
+| 主题源码 | `web/themes/{Utterlog,Azure,Renascent,Flux,Chred}/` |
 | 设计 token | `api/admin/src/styles/globals.css` |
 | FormC | `api/admin/src/components/form/FormC.tsx` |
 | Sidebar | `api/admin/src/components/layout/Sidebar.tsx` |

@@ -547,7 +547,7 @@ export default function SettingsPage() {
                 <FormRowInputC label={t('admin.settings.general.siteTitle', '站点名称')} register={register('site_title')} placeholder={t('admin.settings.general.siteTitlePlaceholder', '我的博客')} />
                 <FormRowRadioC
                   label={t('admin.settings.general.brandMode', '标题显示方式')}
-                  hint={t('admin.settings.general.brandModeHint', 'Header 处显示文字、Logo 或两者；仅 Utterlog 和 Flux 主题响应')}
+                  hint={t('admin.settings.general.brandModeHint', 'Header 处显示文字、Logo 或两者；支持响应站点标题设置的主题')}
                   register={register('site_brand_mode')}
                   options={[
                     { value: 'text', label: t('admin.settings.general.brandText', '文字') },

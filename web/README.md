@@ -24,7 +24,7 @@ web 仅在 docker 内网可达，**不直接暴露公网端口**。SSR 走 `INTE
 | [app/(blog)/](app/(blog)) | 博客所有公开页（首页 / 文章 / 归档 / 标签 / 链接 / 音乐 / 说说） |
 | [app/install/](app/install) | 首次安装向导（三步） |
 | [app/feed/](app/feed) | RSS 聚合阅读 |
-| [themes/](themes) | 5 套主题（Azure / Flux / 2026 / Chred / Westlife），每套独立组件 + 样式 |
+| [themes/](themes) | 内置主题（Utterlog / Azure / Renascent / Flux / Chred），每套独立清单 + 样式 |
 | [plugins/](plugins) | 第三方扩展加载点，见 [plugins/README.md](plugins/README.md) |
 | [middleware.ts](middleware.ts) | API 不可达时强制跳 `/install` 的 fail-closed 中间件 |
 | [lib/api.ts](lib/api.ts) | 客户端 API 封装（带 token 刷新） |

@@ -125,6 +125,20 @@ export default function DashboardPage() {
 
   const maxS = Math.max(...sparkline.map(s => s.visits), 1);
 
+  const dateLabels = (() => {
+    const result: Array<{ month: string; day: string; showMonth: boolean } | null> = [];
+    let lastMonth = '';
+    for (let i = 0; i < sparkline.length; i++) {
+      const isLabeled = i === 0 || i === sparkline.length - 1 || i % 5 === 4;
+      if (!isLabeled) { result.push(null); continue; }
+      const [month, day] = sparkline[i].date.split('-');
+      const showMonth = month !== lastMonth;
+      lastMonth = month;
+      result.push({ month, day, showMonth });
+    }
+    return result;
+  })();
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
       {/* Stat Cards */}
@@ -192,11 +206,15 @@ export default function DashboardPage() {
                 );
               })}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '11px', color: 'var(--color-text-dim)' }}>
-              {/* label every 5 days */}
-              {sparkline.map((s, i) => (
-                <span key={i} style={{ flex: 1, textAlign: 'center' }}>
-                  {(i === 0 || i === sparkline.length - 1 || i % 5 === 4) ? s.date : ''}
+            <div style={{ display: 'flex', gap: '3px', marginTop: '10px', fontSize: '11px', color: 'var(--color-text-dim)', lineHeight: 1.3 }}>
+              {dateLabels.map((info, i) => (
+                <span key={i} style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-sub)', visibility: info?.showMonth ? 'visible' : 'hidden' }}>
+                    {info?.showMonth ? info.month : '00'}
+                  </span>
+                  <span style={{ visibility: info ? 'visible' : 'hidden' }}>
+                    {info ? info.day : '00'}
+                  </span>
                 </span>
               ))}
             </div>
@@ -280,10 +298,14 @@ export default function DashboardPage() {
                     cursor: 'pointer',
                     transition: 'background-color 0.1s',
                     borderBottom: idx < recentPosts.length - 1 ? '1px solid var(--color-divider)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    minHeight: '72px',
+                    boxSizing: 'border-box',
                   }}
                   onClick={() => navigate(`/posts/edit/${post.id}`)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', width: '100%' }}>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
                         {post.categories?.[0]?.icon && <i className={post.categories[0].icon} style={{ fontSize: '13px', color: 'var(--color-text-dim)', flexShrink: 0 }} />}
@@ -329,19 +351,23 @@ export default function DashboardPage() {
                 style={{
                   padding: '14px 20px',
                   borderBottom: idx < recentComments.length - 1 ? '1px solid var(--color-divider)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  minHeight: '72px',
+                  boxSizing: 'border-box',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
                   {comment.avatar_url ? (
                     <img src={comment.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                   ) : (
                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--color-bg-soft)', fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                      {(comment.author?.name || comment.author_name || '?')[0]}
+                      {(comment.author || '?')[0]}
                     </div>
                   )}
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginBottom: '4px' }}>
-                      <span className="text-sub" style={{ fontSize: '13px', fontWeight: 500, flexShrink: 0 }}>{comment.author?.name || comment.author_name}</span>
+                      <span className="text-sub" style={{ fontSize: '13px', fontWeight: 500, flexShrink: 0 }}>{comment.author}</span>
                       {comment.post_title && (
                         <button
                           type="button"

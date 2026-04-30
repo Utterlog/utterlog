@@ -56,6 +56,7 @@ export interface ThemeComponents {
 // Theme registry — import all themes statically (components + styles)
 import * as Utterlog from '@/themes/Utterlog';
 import * as Azure from '@/themes/Azure';
+import * as Renascent from '@/themes/Renascent';
 import * as Chred from '@/themes/Chred';
 import * as Flux from '@/themes/Flux';
 
@@ -64,12 +65,14 @@ import * as Flux from '@/themes/Flux';
 
 import UtterlogManifest from '@/themes/Utterlog/theme.json';
 import AzureManifest from '@/themes/Azure/theme.json';
+import RenascentManifest from '@/themes/Renascent/theme.json';
 import ChredManifest from '@/themes/Chred/theme.json';
 import FluxManifest from '@/themes/Flux/theme.json';
 
 const themeRegistry: Record<string, ThemeComponents> = {
   Utterlog: Utterlog as unknown as ThemeComponents,
   Azure: Azure as unknown as ThemeComponents,
+  Renascent: Renascent as unknown as ThemeComponents,
   Chred: Chred as unknown as ThemeComponents,
   Flux: Flux as unknown as ThemeComponents,
 };
@@ -77,6 +80,7 @@ const themeRegistry: Record<string, ThemeComponents> = {
 const manifestRegistry: Record<string, ThemeManifest> = {
   Utterlog: UtterlogManifest as ThemeManifest,
   Azure: AzureManifest as ThemeManifest,
+  Renascent: RenascentManifest as ThemeManifest,
   Chred: ChredManifest as ThemeManifest,
   Flux: FluxManifest as ThemeManifest,
 };

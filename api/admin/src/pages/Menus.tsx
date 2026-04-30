@@ -59,6 +59,10 @@ function isFixedAllSidebarItem(item?: MenuItem) {
   return item?.type === 'all' || href === '__all__' || ((label === '全部' || label.toLowerCase() === 'all') && (!href || href === '/' || href === '#'));
 }
 
+function usesFixedHeroSidebar(theme: string) {
+  return theme === 'Azure';
+}
+
 export default function MenusPage() {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
@@ -121,7 +125,7 @@ export default function MenusPage() {
       const next: Record<string, MenuItem[]> = {};
       pos.forEach(p => {
         const parsed = parseMenu(opts[`menu_${p.key}`]);
-        next[p.key] = theme === 'Azure' && p.key === 'sidebar'
+        next[p.key] = usesFixedHeroSidebar(theme) && p.key === 'sidebar'
           ? parsed.filter(item => !isFixedAllSidebarItem(item))
           : parsed;
       });
@@ -134,7 +138,7 @@ export default function MenusPage() {
   };
 
   const normalizeItems = (pos: string, items: MenuItem[]) => {
-    if (activeTheme === 'Azure' && pos === 'sidebar') {
+    if (usesFixedHeroSidebar(activeTheme) && pos === 'sidebar') {
       return items.filter(item => !isFixedAllSidebarItem(item));
     }
     return items;
@@ -249,7 +253,7 @@ export default function MenusPage() {
 
   const items = menus[activePos] || [];
   const posDef = positions.find(p => p.key === activePos);
-  const isAzureSidebar = activeTheme === 'Azure' && activePos === 'sidebar';
+  const isFixedHeroSidebar = usesFixedHeroSidebar(activeTheme) && activePos === 'sidebar';
   const menuTextButtonStyle = { padding: '0 26px', minWidth: 'auto' };
 
   return (
@@ -290,7 +294,7 @@ export default function MenusPage() {
       <p className="text-dim" style={{ fontSize: '12px', marginBottom: '16px' }}>{posDef ? t(`admin.menus.positionHint.${posDef.key}`, posDef.hint) : ''}</p>
 
       <div className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {isAzureSidebar && (
+        {isFixedHeroSidebar && (
           <div style={{ border: '1px solid var(--color-border)', padding: '12px', background: 'var(--color-bg-soft)' }}>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', opacity: 0.35 }}>
@@ -306,7 +310,7 @@ export default function MenusPage() {
                 {t('admin.menus.all', '全部')}
               </div>
               <div className="text-dim" style={{ flex: 1, fontSize: '12px' }}>
-                {t('admin.menus.azureFixedAllHint', 'Azure Hero 固定分类 tab，前台始终显示，不写入菜单配置。')}
+                {t('admin.menus.fixedAllHint', '固定分类 tab，前台始终显示，不写入菜单配置。')}
               </div>
               <button disabled title={t('admin.menus.fixedCannotDelete', '固定项不可删除')}
                 style={{ padding: '6px 10px', fontSize: '12px', background: 'none', border: '1px solid var(--color-border)', cursor: 'not-allowed', color: 'var(--color-text-dim)', opacity: 0.55 }}>
@@ -318,7 +322,7 @@ export default function MenusPage() {
 
         {items.length === 0 ? (
           <div className="text-dim" style={{ padding: '32px', textAlign: 'center', fontSize: '13px' }}>
-            {isAzureSidebar ? t('admin.menus.emptyAzureSidebar', '暂无自定义侧栏项；未添加时前台使用默认分类列表。') : t('admin.menus.empty', '暂无菜单项，点击下方"添加菜单项"开始')}
+            {isFixedHeroSidebar ? t('admin.menus.emptyFixedSidebar', '暂无自定义侧栏项；未添加时前台使用默认分类列表。') : t('admin.menus.empty', '暂无菜单项，点击下方"添加菜单项"开始')}
           </div>
         ) : items.map((item, idx) => (
           <div key={idx} style={{ border: '1px solid var(--color-border)', padding: '12px' }}>
@@ -347,7 +351,7 @@ export default function MenusPage() {
                 onChange={e => updateItem(idx, 'href', e.target.value)}
                 placeholder={t('admin.menus.itemHrefPlaceholder', '/path 或 https://...')}
               />
-              {!isAzureSidebar && (
+              {!isFixedHeroSidebar && (
                 <>
                   <button onClick={() => setPickerOpen({ target: idx })} title={t('admin.menus.addChildFromExisting', '从已有页面添加子菜单')} className="action-btn">
                     <i className="fa-regular fa-list-tree" style={{ fontSize: '12px' }} />
@@ -362,7 +366,7 @@ export default function MenusPage() {
               </button>
             </div>
 
-            {!isAzureSidebar && !!item.children?.length && (
+            {!isFixedHeroSidebar && !!item.children?.length && (
               <div style={{ marginTop: '10px', marginLeft: '40px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {item.children.map((child, cIdx) => (
                   <div key={cIdx} style={{ display: 'flex', gap: '8px' }}>

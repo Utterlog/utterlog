@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
+	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -47,12 +52,14 @@ func webProxyHandler() gin.HandlerFunc {
 	// for absolute URL construction).
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
+		originalHost := req.Host
+		originalProto := forwardedProto(req)
 		originalDirector(req)
 		req.Host = u.Host
 		if req.Header.Get("X-Forwarded-Proto") == "" {
-			req.Header.Set("X-Forwarded-Proto", "http")
+			req.Header.Set("X-Forwarded-Proto", originalProto)
 		}
-		req.Header.Set("X-Forwarded-Host", req.Host)
+		req.Header.Set("X-Forwarded-Host", originalHost)
 	}
 
 	// Short timeout so a broken Next.js doesn't hang Go indefinitely; Next.js
@@ -76,6 +83,119 @@ func webProxyHandler() gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
+		if isWebSocketUpgrade(c.Request) {
+			proxyWebSocket(c, u)
+			return
+		}
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}
+}
+
+func isWebSocketUpgrade(r *http.Request) bool {
+	return strings.EqualFold(r.Header.Get("Upgrade"), "websocket") &&
+		strings.Contains(strings.ToLower(r.Header.Get("Connection")), "upgrade")
+}
+
+func proxyWebSocket(c *gin.Context, target *url.URL) {
+	hijacker, ok := c.Writer.(http.Hijacker)
+	if !ok {
+		http.Error(c.Writer, "websocket proxy unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	upstream, err := dialProxyTarget(ctx, target)
+	if err != nil {
+		log.Printf("web proxy websocket dial error %s %s: %v", c.Request.Method, c.Request.URL.Path, err)
+		http.Error(c.Writer, "websocket upstream unavailable", http.StatusBadGateway)
+		return
+	}
+
+	req := c.Request.Clone(context.Background())
+	req.URL.Scheme = target.Scheme
+	req.URL.Host = target.Host
+	req.RequestURI = ""
+	req.Host = target.Host
+	req.Header.Set("X-Forwarded-Proto", forwardedProto(c.Request))
+	req.Header.Set("X-Forwarded-Host", c.Request.Host)
+	appendForwardedFor(req, c.Request.RemoteAddr)
+
+	if err := req.Write(upstream); err != nil {
+		upstream.Close()
+		log.Printf("web proxy websocket request error %s %s: %v", c.Request.Method, c.Request.URL.Path, err)
+		http.Error(c.Writer, "websocket proxy failed", http.StatusBadGateway)
+		return
+	}
+
+	c.Status(http.StatusSwitchingProtocols)
+	downstream, _, err := hijacker.Hijack()
+	if err != nil {
+		upstream.Close()
+		log.Printf("web proxy websocket hijack error %s %s: %v", c.Request.Method, c.Request.URL.Path, err)
+		return
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go pipeWebSocket(&wg, upstream, downstream)
+	go pipeWebSocket(&wg, downstream, upstream)
+	wg.Wait()
+}
+
+func dialProxyTarget(ctx context.Context, target *url.URL) (net.Conn, error) {
+	address := target.Host
+	if _, _, err := net.SplitHostPort(address); err != nil {
+		if target.Scheme == "https" {
+			address = net.JoinHostPort(address, "443")
+		} else {
+			address = net.JoinHostPort(address, "80")
+		}
+	}
+
+	dialer := &net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}
+	if target.Scheme == "https" {
+		return tls.DialWithDialer(dialer, "tcp", address, &tls.Config{
+			ServerName: targetHostname(target.Host),
+			MinVersion: tls.VersionTLS12,
+		})
+	}
+	return dialer.DialContext(ctx, "tcp", address)
+}
+
+func pipeWebSocket(wg *sync.WaitGroup, dst net.Conn, src net.Conn) {
+	defer wg.Done()
+	_, _ = io.Copy(dst, src)
+	_ = dst.Close()
+	_ = src.Close()
+}
+
+func forwardedProto(r *http.Request) string {
+	if r.TLS != nil {
+		return "https"
+	}
+	return "http"
+}
+
+func appendForwardedFor(req *http.Request, remoteAddr string) {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		host = remoteAddr
+	}
+	if host == "" {
+		return
+	}
+	if prior := req.Header.Get("X-Forwarded-For"); prior != "" {
+		req.Header.Set("X-Forwarded-For", prior+", "+host)
+		return
+	}
+	req.Header.Set("X-Forwarded-For", host)
+}
+
+func targetHostname(host string) string {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		return h
+	}
+	return host
 }

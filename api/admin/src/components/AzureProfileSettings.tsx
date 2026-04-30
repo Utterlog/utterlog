@@ -134,7 +134,7 @@ export default function AzureProfileSettings() {
       <div className="card" style={{ padding: 20, marginTop: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 10 }}>
           <div>
-            <h3 className="text-main" style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Azure 侧边栏资料卡</h3>
+            <h3 className="text-main" style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>主题侧边栏资料卡</h3>
             <p className="text-dim" style={{ fontSize: 12, lineHeight: 1.7, margin: '8px 0 0' }}>
               留空时自动使用博主资料；访客填写过评论表单后，前台会读取同一份缓存显示欢迎回来。
             </p>
@@ -153,7 +153,7 @@ export default function AzureProfileSettings() {
                 checked={form.azure_sidebar_profile_enabled !== 'false'}
                 onChange={(e) => update('azure_sidebar_profile_enabled', e.target.checked ? 'true' : 'false')}
               />
-              启用 Azure 侧边栏资料卡
+              启用主题侧边栏资料卡
             </label>
           </div>
         </div>
@@ -253,7 +253,7 @@ export default function AzureProfileSettings() {
       <div className="card" style={{ padding: 20, marginTop: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 10 }}>
           <div>
-            <h3 className="text-main" style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Azure 侧边栏访客天气</h3>
+            <h3 className="text-main" style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>主题侧边栏访客天气</h3>
             <p className="text-dim" style={{ fontSize: 12, lineHeight: 1.7, margin: '8px 0 0' }}>
               显示在原社交链接条位置。优先按访客 IP 获取城市天气，失败时显示默认城市天气。
             </p>
@@ -328,7 +328,7 @@ export default function AzureProfileSettings() {
         emptyRow={{ icon: 'fa-brands fa-github', label: 'GitHub', href: '' }}
         description={
           <>
-            显示在 Azure 侧边栏资料卡右下角，只渲染这里配置的按钮，不再自动追加站点固定网址。
+            显示在主题侧边栏资料卡右下角，只渲染这里配置的按钮，不再自动追加站点固定网址。
             支持 FontAwesome 类名、图片 URL、内联 SVG；填写「复制文本」后点击按钮会复制内容。
           </>
         }

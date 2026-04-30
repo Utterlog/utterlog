@@ -605,7 +605,7 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
   const { options } = useThemeContext();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [switching, setSwitching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [total, setTotal] = useState(0);
   // 初始排序解析：访客本地切换过 → localStorage；
   // 没切换过 → 后台「常规设置 → 评论设置 → 排序 → 默认排序」option；
@@ -632,9 +632,10 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
     }, 65000);
   }, []);
 
-  const initialLoaded = useRef(false);
-  const fetchComments = async (isSwitch?: boolean) => {
-    if (isSwitch) setSwitching(true); else setLoading(true);
+  const loadedPostId = useRef<number | null>(null);
+  const fetchComments = async (mode: 'initial' | 'background' = 'background') => {
+    if (mode === 'initial') setLoading(true);
+    else setRefreshing(true);
     try {
       const r: any = await api.get('/comments', { params: {
         post_id: postId, status: 'approved', per_page: 500,
@@ -647,13 +648,14 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
       onCommentCountChange?.(count);
     } catch {} finally {
       setLoading(false);
-      setSwitching(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    if (!initialLoaded.current) { initialLoaded.current = true; fetchComments(); }
-    else fetchComments(true);
+    const isNewPost = loadedPostId.current !== postId;
+    loadedPostId.current = postId;
+    fetchComments(isNewPost ? 'initial' : 'background');
   }, [postId, order]);
 
   const tree = buildCommentTree(comments);
@@ -668,10 +670,7 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
 
   const handleCommentSuccess = (commentId?: number) => {
     if (commentId) addEditableId(commentId);
-    fetchComments();
-    setTimeout(() => {
-      listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 300);
+    fetchComments('background');
   };
 
   const topLevelCount = tree.length;
@@ -696,6 +695,7 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
               <span style={{ color: '#ddd' }}>|</span>
               <span><i className="fa-regular fa-users" style={{ marginRight: '4px', fontSize: '12px' }} />{topLevelCount} 人参与</span>
               <span><i className="fa-regular fa-message-lines" style={{ marginRight: '4px', fontSize: '12px' }} />{total} 条评论</span>
+              {refreshing && <LoadingSpinner size={12} style={{ verticalAlign: 'middle' }} />}
             </>
           )}
         </div>
@@ -712,14 +712,9 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
 
       {!loading && tree.length > 0 && (
         <div style={{ position: 'relative' }}>
-          {switching && (
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <LoadingSpinner size={20} />
-            </div>
-          )}
           {tree.map((comment, idx) => {
             const floor = order === 'oldest' ? idx + 1 : tree.length - idx;
-            return <CommentCard key={comment.id} comment={comment} postId={postId} floor={floor} onReplySuccess={(id) => { if (id) addEditableId(id); fetchComments(); }} editableIds={editableIds} />;
+            return <CommentCard key={comment.id} comment={comment} postId={postId} floor={floor} onReplySuccess={(id) => { if (id) addEditableId(id); fetchComments('background'); }} editableIds={editableIds} />;
           })}
         </div>
       )}

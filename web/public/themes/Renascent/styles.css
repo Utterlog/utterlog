@@ -1,0 +1,2139 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap');
+
+[data-theme="Renascent"] {
+  --renascent-blue: #3A52B8;
+  --renascent-blue-dark: #2A3A88;
+  --renascent-black: #000000;
+  --renascent-text: #111111;
+  --renascent-secondary: #555555;
+  --renascent-tertiary: #888C93;
+  --renascent-line: #D4D4D4;
+  --renascent-line-soft: #E8E8E8;
+  --renascent-soft: #F5F5F5;
+  --renascent-white: #FFFFFF;
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Courier New", monospace;
+  --color-primary: var(--renascent-blue);
+  --color-primary-hover: var(--renascent-blue-dark);
+  --color-primary-active: var(--renascent-blue-dark);
+  --color-text-main: var(--renascent-text);
+  --color-text-sub: var(--renascent-secondary);
+  --color-text-dim: var(--renascent-tertiary);
+  --color-border: var(--renascent-line);
+  --color-divider: var(--renascent-line-soft);
+  --color-bg-card: var(--renascent-white);
+  --color-bg-main: var(--renascent-white);
+  --color-bg-soft: var(--renascent-soft);
+  --color-focus-ring: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] body {
+  background: var(--renascent-white);
+}
+
+[data-theme="Renascent"] .renascent-theme {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
+  background: var(--renascent-white);
+  color: var(--renascent-text);
+  font-family: var(--font-ui);
+}
+
+[data-theme="Renascent"] .renascent-main {
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+[data-theme="Renascent"] .renascent-frame {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+[data-theme="Renascent"] .renascent-container {
+  box-sizing: border-box;
+  width: min(1168px, calc(100vw - 64px));
+  margin-inline: auto;
+}
+
+[data-theme="Renascent"] .renascent-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid var(--renascent-line-soft);
+  backdrop-filter: blur(16px);
+}
+
+[data-theme="Renascent"] .renascent-header-inner {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr);
+  align-items: center;
+  gap: 32px;
+  width: min(1168px, calc(100vw - 64px));
+  min-height: 72px;
+  margin-inline: auto;
+}
+
+[data-theme="Renascent"] .renascent-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--renascent-black);
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .renascent-brand-logo {
+  display: block;
+  max-width: 172px;
+  height: 34px;
+  object-fit: contain;
+}
+
+[data-theme="Renascent"] .renascent-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--renascent-black);
+  border-radius: 999px;
+  font-family: var(--font-serif);
+  font-size: 21px;
+  line-height: 1;
+}
+
+[data-theme="Renascent"] .renascent-brand-title {
+  overflow: hidden;
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="Renascent"] .renascent-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  min-width: 0;
+}
+
+[data-theme="Renascent"] .renascent-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--renascent-black);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+[data-theme="Renascent"] .renascent-nav-link::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 7px;
+  left: 0;
+  height: 2px;
+  background: var(--renascent-blue);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 180ms ease;
+}
+
+[data-theme="Renascent"] .renascent-nav-link:hover,
+[data-theme="Renascent"] .renascent-nav-link.active {
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .renascent-nav-link:hover::after,
+[data-theme="Renascent"] .renascent-nav-link.active::after {
+  transform: scaleX(1);
+}
+
+[data-theme="Renascent"] .renascent-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+[data-theme="Renascent"] .renascent-icon-button,
+[data-theme="Renascent"] .renascent-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  border: 1px solid var(--renascent-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--renascent-black);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+[data-theme="Renascent"] .renascent-icon-button:hover,
+[data-theme="Renascent"] .renascent-search-trigger:hover {
+  border-color: var(--renascent-tertiary);
+  background: var(--renascent-soft);
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .renascent-icon-button i,
+[data-theme="Renascent"] .renascent-action-icon {
+  font-size: 15px;
+}
+
+[data-theme="Renascent"] .renascent-action-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+[data-theme="Renascent"] .renascent-search-trigger {
+  gap: 9px;
+  width: auto;
+  padding: 0 12px 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+[data-theme="Renascent"] .renascent-search-trigger kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  border: 1px solid var(--renascent-line-soft);
+  border-radius: 999px;
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+[data-theme="Renascent"] .renascent-menu-button {
+  display: none;
+}
+
+[data-theme="Renascent"] .renascent-mobile-nav {
+  display: none;
+}
+
+[data-theme="Renascent"] .renascent-search-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: start center;
+  padding-top: 12vh;
+}
+
+[data-theme="Renascent"] .renascent-search-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="Renascent"] .renascent-search-panel {
+  position: relative;
+  width: min(680px, calc(100vw - 32px));
+  border: 1px solid var(--renascent-line);
+  background: var(--renascent-white);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="Renascent"] .renascent-search-form {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  min-height: 64px;
+  border-bottom: 1px solid var(--renascent-line-soft);
+}
+
+[data-theme="Renascent"] .renascent-search-form i {
+  justify-self: center;
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .renascent-search-form input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: var(--renascent-black);
+  font-family: var(--font-ui);
+  font-size: 16px;
+}
+
+[data-theme="Renascent"] .renascent-search-form button {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--renascent-tertiary);
+  cursor: pointer;
+}
+
+[data-theme="Renascent"] .renascent-search-results {
+  max-height: min(420px, 54vh);
+  overflow: auto;
+  padding: 8px;
+}
+
+[data-theme="Renascent"] .renascent-search-empty,
+[data-theme="Renascent"] .renascent-search-result {
+  display: block;
+  padding: 14px 16px;
+  color: var(--renascent-secondary);
+  font-size: 14px;
+}
+
+[data-theme="Renascent"] .renascent-search-result {
+  color: var(--renascent-black);
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .renascent-search-result:hover {
+  background: var(--renascent-soft);
+}
+
+[data-theme="Renascent"] .renascent-search-result span,
+[data-theme="Renascent"] .renascent-search-result small {
+  display: block;
+}
+
+[data-theme="Renascent"] .renascent-search-result span {
+  overflow: hidden;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  line-height: 1.24;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="Renascent"] .renascent-search-result small {
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="Renascent"] .renascent-home {
+  padding: 56px 0 88px;
+}
+
+[data-theme="Renascent"] .renascent-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 64px;
+  align-items: start;
+  padding-bottom: 56px;
+  border-bottom: 1px solid var(--renascent-line);
+}
+
+[data-theme="Renascent"] .renascent-eyebrow,
+[data-theme="Renascent"] .renascent-card-kicker,
+[data-theme="Renascent"] .renascent-card-meta,
+[data-theme="Renascent"] .renascent-article-meta,
+[data-theme="Renascent"] .renascent-article-stats {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--renascent-tertiary);
+}
+
+[data-theme="Renascent"] .renascent-eyebrow {
+  margin: 0 0 24px;
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .renascent-hero-copy h1 {
+  max-width: 760px;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(64px, 8vw, 96px);
+  font-weight: 400;
+  line-height: 0.95;
+  color: var(--renascent-black);
+}
+
+[data-theme="Renascent"] .renascent-hero-copy > p:not(.renascent-eyebrow) {
+  max-width: 520px;
+  margin: 28px 0 0;
+  color: var(--renascent-secondary);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1.45;
+}
+
+[data-theme="Renascent"] .renascent-hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 36px;
+}
+
+[data-theme="Renascent"] .renascent-hero-stats span,
+[data-theme="Renascent"] .renascent-dashboard-item,
+[data-theme="Renascent"] .renascent-category-strip a,
+[data-theme="Renascent"] .renascent-read-link,
+[data-theme="Renascent"] .renascent-pagination a,
+[data-theme="Renascent"] .renascent-tags a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--renascent-line);
+  border-radius: 999px;
+  color: var(--renascent-black);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .renascent-dashboard {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-top: 1px solid var(--renascent-line);
+}
+
+[data-theme="Renascent"] .renascent-dashboard-item {
+  display: grid;
+  grid-template-columns: 40px minmax(76px, 0.28fr) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 16px;
+  min-height: 72px;
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid var(--renascent-line);
+  border-radius: 0;
+  color: var(--renascent-black);
+  font-family: var(--font-ui);
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .renascent-dashboard-item:hover {
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .renascent-dashboard-item span {
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+[data-theme="Renascent"] .renascent-dashboard-item strong {
+  color: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+[data-theme="Renascent"] .renascent-dashboard-item em {
+  overflow: hidden;
+  color: inherit;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="Renascent"] .renascent-ticker {
+  overflow: hidden;
+  margin: 24px calc((100vw - min(1168px, calc(100vw - 64px))) / -2) 0;
+  border-block: 1px solid var(--renascent-line-soft);
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+[data-theme="Renascent"] .renascent-ticker div {
+  display: inline-flex;
+  gap: 24px;
+  min-width: 100%;
+  padding: 10px 0;
+  animation: renascentTicker 38s linear infinite;
+}
+
+[data-theme="Renascent"] .renascent-ticker span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@keyframes renascentTicker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+[data-theme="Renascent"] .renascent-featured {
+  display: grid;
+  grid-template-rows: minmax(260px, 1fr) auto;
+  min-height: 100%;
+  border: 1px solid var(--renascent-line);
+  background: var(--renascent-soft);
+}
+
+[data-theme="Renascent"] .renascent-featured-cover,
+[data-theme="Renascent"] .renascent-card-cover,
+[data-theme="Renascent"] .renascent-article-cover {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: var(--renascent-soft);
+}
+
+[data-theme="Renascent"] .renascent-featured-cover img,
+[data-theme="Renascent"] .renascent-card-cover img,
+[data-theme="Renascent"] .renascent-article-cover img {
+  transition: transform 200ms ease;
+}
+
+[data-theme="Renascent"] .renascent-featured:hover img,
+[data-theme="Renascent"] .renascent-post-card:hover .renascent-card-cover img {
+  transform: scale(1.025);
+}
+
+[data-theme="Renascent"] .renascent-featured-body {
+  padding: 36px 32px 30px;
+}
+
+[data-theme="Renascent"] .renascent-card-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+[data-theme="Renascent"] .renascent-card-kicker a,
+[data-theme="Renascent"] .renascent-article-meta a {
+  color: var(--renascent-blue);
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .renascent-featured h2,
+[data-theme="Renascent"] .renascent-card-title,
+[data-theme="Renascent"] .renascent-section-heading h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  color: var(--renascent-black);
+}
+
+[data-theme="Renascent"] .renascent-featured h2 {
+  font-size: clamp(38px, 4vw, 56px);
+  line-height: 1.02;
+}
+
+[data-theme="Renascent"] .renascent-featured h2 a,
+[data-theme="Renascent"] .renascent-card-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .renascent-featured h2 a:hover,
+[data-theme="Renascent"] .renascent-card-title a:hover {
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .renascent-featured p {
+  margin: 22px 0 0;
+  color: var(--renascent-secondary);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+[data-theme="Renascent"] .renascent-read-link {
+  width: fit-content;
+  margin-top: 28px;
+  background: var(--renascent-blue);
+  border-color: var(--renascent-blue);
+  color: var(--renascent-white);
+}
+
+[data-theme="Renascent"] .renascent-read-link:hover {
+  background: var(--renascent-blue-dark);
+  border-color: var(--renascent-blue-dark);
+}
+
+[data-theme="Renascent"] .renascent-category-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 32px 0 0;
+}
+
+[data-theme="Renascent"] .renascent-category-strip a.active,
+[data-theme="Renascent"] .renascent-category-strip a:hover,
+[data-theme="Renascent"] .renascent-tags a:hover,
+[data-theme="Renascent"] .renascent-pagination a:hover {
+  border-color: var(--renascent-black);
+}
+
+[data-theme="Renascent"] .renascent-category-strip a span {
+  margin-left: 8px;
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+[data-theme="Renascent"] .renascent-section-heading {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 24px;
+  margin: 56px 0 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--renascent-line-soft);
+}
+
+[data-theme="Renascent"] .renascent-section-heading span {
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+[data-theme="Renascent"] .renascent-section-heading h2 {
+  font-size: 38px;
+  line-height: 1.05;
+}
+
+[data-theme="Renascent"] .renascent-section-heading p {
+  max-width: 360px;
+  margin: 0;
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.55;
+  text-align: right;
+}
+
+[data-theme="Renascent"] .renascent-post-list {
+  border-top: 1px solid var(--renascent-line);
+}
+
+[data-theme="Renascent"] .renascent-post-card {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 44px;
+  gap: 24px;
+  align-items: start;
+  min-width: 0;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--renascent-line-soft);
+}
+
+[data-theme="Renascent"] .renascent-card-title {
+  overflow: hidden;
+  display: -webkit-box;
+  font-size: 28px;
+  line-height: 1.12;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+[data-theme="Renascent"] .renascent-card-excerpt {
+  overflow: hidden;
+  display: -webkit-box;
+  max-width: 760px;
+  margin: 10px 0 0;
+  color: var(--renascent-secondary);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+[data-theme="Renascent"] .renascent-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+[data-theme="Renascent"] .renascent-card-index {
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+[data-theme="Renascent"] .renascent-card-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-size: 28px;
+  line-height: 1;
+  text-decoration: none;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+[data-theme="Renascent"] .renascent-post-card:hover .renascent-card-title,
+[data-theme="Renascent"] .renascent-post-card:hover .renascent-card-arrow {
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .renascent-post-card:hover .renascent-card-arrow {
+  transform: translateX(4px);
+}
+
+[data-theme="Renascent"] .renascent-empty {
+  grid-column: 1 / -1;
+  padding: 64px;
+  border: 1px solid var(--renascent-line-soft);
+  color: var(--renascent-tertiary);
+  text-align: center;
+}
+
+[data-theme="Renascent"] .renascent-pagination {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-top: 56px;
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+[data-theme="Renascent"] .renascent-pagination a:last-child {
+  justify-self: end;
+}
+
+[data-theme="Renascent"] .renascent-article {
+  background:
+    linear-gradient(var(--renascent-line-soft), var(--renascent-line-soft)) center top / min(1168px, calc(100vw - 64px)) 1px no-repeat,
+    var(--renascent-white);
+}
+
+[data-theme="Renascent"] .renascent-article-hero {
+  padding: 64px 0 56px;
+  border-bottom: 1px solid var(--renascent-line-soft);
+}
+
+[data-theme="Renascent"] .renascent-article-hero-grid {
+  display: grid;
+  grid-template-columns: 144px minmax(0, 1fr);
+  gap: 56px;
+  align-items: start;
+}
+
+[data-theme="Renascent"] .renascent-article-issue {
+  position: sticky;
+  top: 104px;
+  display: grid;
+  gap: 12px;
+  padding: 14px 0 18px;
+  border-top: 2px solid var(--renascent-black);
+  border-bottom: 1px solid var(--renascent-line);
+}
+
+[data-theme="Renascent"] .renascent-article-issue span,
+[data-theme="Renascent"] .renascent-article-issue em,
+[data-theme="Renascent"] .renascent-article-meta,
+[data-theme="Renascent"] .renascent-article-stats {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  letter-spacing: 0;
+}
+
+[data-theme="Renascent"] .renascent-article-issue span {
+  color: var(--renascent-blue);
+  font-weight: 700;
+}
+
+[data-theme="Renascent"] .renascent-article-issue strong {
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-size: 74px;
+  font-weight: 400;
+  line-height: 0.9;
+}
+
+[data-theme="Renascent"] .renascent-article-issue em {
+  color: var(--renascent-tertiary);
+  font-style: normal;
+}
+
+[data-theme="Renascent"] .renascent-article-title-block {
+  min-width: 0;
+}
+
+[data-theme="Renascent"] .renascent-article-meta,
+[data-theme="Renascent"] .renascent-article-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  color: var(--renascent-tertiary);
+}
+
+[data-theme="Renascent"] .renascent-article-meta a,
+[data-theme="Renascent"] .renascent-article-rail a {
+  color: var(--renascent-blue);
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .renascent-article-meta a:hover,
+[data-theme="Renascent"] .renascent-article-rail a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+[data-theme="Renascent"] .renascent-article-title-block h1 {
+  max-width: 960px;
+  margin: 18px 0 0;
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-size: clamp(54px, 7vw, 104px);
+  font-weight: 400;
+  line-height: 0.95;
+}
+
+[data-theme="Renascent"] .renascent-article-title-block p {
+  max-width: 760px;
+  margin: 28px 0 0;
+  color: var(--renascent-secondary);
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1.42;
+}
+
+[data-theme="Renascent"] .renascent-article-stats {
+  margin-top: 32px;
+}
+
+[data-theme="Renascent"] .renascent-article-stats span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--renascent-line-soft);
+  border-radius: 999px;
+  color: var(--renascent-secondary);
+  background: var(--renascent-white);
+}
+
+[data-theme="Renascent"] .renascent-article-cover-wrap {
+  width: min(1168px, calc(100vw - 64px));
+  margin: 48px auto 0;
+}
+
+[data-theme="Renascent"] .renascent-article-cover {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 7;
+  border: 1px solid var(--renascent-line);
+  background: var(--renascent-soft);
+}
+
+[data-theme="Renascent"] .renascent-article-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-theme="Renascent"] .renascent-article-cover-wrap figcaption {
+  margin-top: 10px;
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+[data-theme="Renascent"] .renascent-article-cover .post-hero-footprint-flags {
+  right: 18px;
+  bottom: 18px;
+  gap: 8px;
+}
+
+[data-theme="Renascent"] .renascent-article-cover .post-hero-footprint-flag,
+[data-theme="Renascent"] .renascent-article-cover .post-hero-footprint-more {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  box-shadow: none;
+}
+
+[data-theme="Renascent"] .renascent-article-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 56px;
+  align-items: start;
+  padding: 64px 0 40px;
+}
+
+[data-theme="Renascent"] .renascent-article-rail {
+  position: sticky;
+  top: 104px;
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  border-top: 2px solid var(--renascent-black);
+}
+
+[data-theme="Renascent"] .renascent-article-toc-wrap {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--renascent-line-soft);
+}
+
+[data-theme="Renascent"] .renascent-article-rail div {
+  display: grid;
+  gap: 7px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--renascent-line-soft);
+}
+
+[data-theme="Renascent"] .renascent-article-rail span {
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+[data-theme="Renascent"] .renascent-article-rail strong,
+[data-theme="Renascent"] .renascent-article-rail a {
+  overflow-wrap: anywhere;
+  color: var(--renascent-black);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+[data-theme="Renascent"] .renascent-article-content {
+  min-width: 0;
+  max-width: 760px;
+}
+
+[data-theme="Renascent"] .renascent-content-frame {
+  min-width: 0;
+  padding-top: 6px;
+  border-top: 2px solid var(--renascent-black);
+}
+
+[data-theme="Renascent"] .blog-prose {
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.78;
+  word-break: break-word;
+}
+
+[data-theme="Renascent"] .blog-prose > p:first-child,
+[data-theme="Renascent"] .blog-prose > div:first-child > p:first-child {
+  margin-top: 0;
+  color: var(--renascent-text);
+  font-size: 22px;
+  line-height: 1.6;
+}
+
+[data-theme="Renascent"] .blog-prose h1,
+[data-theme="Renascent"] .blog-prose h2 {
+  position: relative;
+  margin: 2.35em 0 0.8em;
+  padding-left: 20px;
+  border-left: 3px solid var(--renascent-blue);
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+[data-theme="Renascent"] .blog-prose h2 {
+  font-size: 40px;
+  line-height: 1.05;
+}
+
+[data-theme="Renascent"] .blog-prose h3,
+[data-theme="Renascent"] .blog-prose h4 {
+  margin: 2.2em 0 0.75em;
+  color: var(--renascent-black);
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+[data-theme="Renascent"] .blog-prose p,
+[data-theme="Renascent"] .blog-prose ul,
+[data-theme="Renascent"] .blog-prose ol,
+[data-theme="Renascent"] .blog-prose blockquote,
+[data-theme="Renascent"] .blog-prose pre,
+[data-theme="Renascent"] .blog-prose table {
+  margin: 1.2em 0;
+}
+
+[data-theme="Renascent"] .blog-prose > div[style*="margin-left"] {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+[data-theme="Renascent"] .blog-prose ul,
+[data-theme="Renascent"] .blog-prose ol {
+  padding-left: 1.4em;
+}
+
+[data-theme="Renascent"] .blog-prose li + li {
+  margin-top: 0.35em;
+}
+
+[data-theme="Renascent"] .blog-prose a {
+  color: var(--renascent-blue);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+[data-theme="Renascent"] .blog-prose blockquote {
+  padding: 22px 28px;
+  border: 0;
+  border-left: 3px solid var(--renascent-blue);
+  background: var(--renascent-soft);
+  color: var(--renascent-secondary);
+  font-size: 20px;
+}
+
+[data-theme="Renascent"] .blog-prose blockquote p:first-child {
+  margin-top: 0;
+}
+
+[data-theme="Renascent"] .blog-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+[data-theme="Renascent"] .blog-prose code {
+  padding: 0.12em 0.35em;
+  border: 1px solid var(--renascent-line-soft);
+  background: var(--renascent-soft);
+  color: var(--renascent-black);
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+}
+
+[data-theme="Renascent"] .blog-prose pre {
+  overflow-x: auto;
+  padding: 22px 24px;
+  border: 1px solid var(--renascent-line);
+  background: #111111;
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+[data-theme="Renascent"] .blog-prose pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+}
+
+[data-theme="Renascent"] .code-block-wrapper {
+  position: relative;
+  margin: 2em 0;
+  border: 1px solid var(--renascent-line);
+  background: #111111;
+}
+
+[data-theme="Renascent"] .code-block-wrapper pre {
+  margin: 0;
+  border: 0;
+}
+
+[data-theme="Renascent"] .code-copy-btn,
+[data-theme="Renascent"] .code-expand-btn {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-family: var(--font-mono);
+}
+
+[data-theme="Renascent"] .code-copy-btn:hover,
+[data-theme="Renascent"] .code-expand-btn:hover {
+  border-color: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="Renascent"] .blog-prose img,
+[data-theme="Renascent"] .blog-prose video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--renascent-line);
+  border-radius: 0;
+  background: var(--renascent-soft);
+}
+
+[data-theme="Renascent"] .blog-prose .blog-image {
+  position: relative;
+  display: block;
+  margin: 2em 0;
+}
+
+[data-theme="Renascent"] .blog-prose .blog-image img {
+  width: 100%;
+}
+
+[data-theme="Renascent"] .blog-image-loader {
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .blog-prose figure {
+  margin: 2em 0;
+}
+
+[data-theme="Renascent"] .blog-prose figcaption {
+  margin-top: 10px;
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: left;
+}
+
+[data-theme="Renascent"] .blog-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+
+[data-theme="Renascent"] .blog-prose th,
+[data-theme="Renascent"] .blog-prose td {
+  padding: 12px 14px;
+  border: 1px solid var(--renascent-line-soft);
+  text-align: left;
+}
+
+[data-theme="Renascent"] .blog-prose th {
+  background: var(--renascent-soft);
+  font-weight: 500;
+}
+
+[data-theme="Renascent"] .blog-ai-summary {
+  margin: 0 0 40px;
+  padding: 22px 24px;
+  border: 1px solid var(--renascent-line);
+  border-radius: 0;
+  background: var(--renascent-soft);
+  box-shadow: none;
+}
+
+[data-theme="Renascent"] .blog-ai-summary-header {
+  margin-bottom: 12px;
+  color: var(--renascent-blue);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+[data-theme="Renascent"] .blog-ai-summary-body {
+  color: var(--renascent-secondary);
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 300;
+  line-height: 1.62;
+}
+
+[data-theme="Renascent"] .renascent-article-toc .blog-toc {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  padding: 0;
+  border: 0;
+  border-top: 2px solid var(--renascent-black);
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-theme="Renascent"] .blog-toc-header {
+  margin: 0;
+  padding: 14px 0 12px;
+  border-bottom: 1px solid var(--renascent-line-soft);
+  color: var(--renascent-black);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+[data-theme="Renascent"] .blog-toc-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+[data-theme="Renascent"] .blog-toc-item {
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  text-decoration: none;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+[data-theme="Renascent"] .blog-toc-item:hover,
+[data-theme="Renascent"] .blog-toc-item.active {
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .blog-toc-item:hover {
+  transform: translateX(3px);
+}
+
+[data-theme="Renascent"] .renascent-article-taxonomy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 26px 0;
+  border-top: 1px solid var(--renascent-line);
+  border-bottom: 1px solid var(--renascent-line-soft);
+  color: var(--renascent-secondary);
+  font-size: 14px;
+}
+
+[data-theme="Renascent"] .renascent-article-taxonomy strong {
+  color: var(--renascent-black);
+  font-weight: 500;
+}
+
+[data-theme="Renascent"] .renascent-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+[data-theme="Renascent"] .renascent-tags a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--renascent-black);
+  color: var(--renascent-white);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .renascent-related-wrap {
+  padding-top: 56px;
+}
+
+[data-theme="Renascent"] .post-nav-section {
+  margin: 0 0 56px;
+  padding-top: 24px;
+  border-top: 2px solid var(--renascent-black);
+}
+
+[data-theme="Renascent"] .post-prev-next {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+[data-theme="Renascent"] .post-prev-next-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  gap: 20px;
+  align-items: stretch;
+  min-height: 132px;
+  padding: 20px;
+  border: 1px solid var(--renascent-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--renascent-black);
+  text-decoration: none;
+  box-shadow: none;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+[data-theme="Renascent"] .post-prev-next-link:hover {
+  border-color: var(--renascent-tertiary);
+  background: var(--renascent-soft);
+}
+
+[data-theme="Renascent"] .post-prev-next-link.next {
+  grid-template-columns: 118px minmax(0, 1fr);
+}
+
+[data-theme="Renascent"] .post-prev-next-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+[data-theme="Renascent"] .post-prev-next-cover {
+  overflow: hidden;
+  min-height: 92px;
+  border: 1px solid var(--renascent-line-soft);
+  background: var(--renascent-soft);
+}
+
+[data-theme="Renascent"] .post-prev-next-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-theme="Renascent"] .post-prev-next-label,
+[data-theme="Renascent"] .post-related-card-date,
+[data-theme="Renascent"] .post-related-card-cat,
+[data-theme="Renascent"] .post-related-card-stats {
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+[data-theme="Renascent"] .post-prev-next-title {
+  margin-top: 10px;
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+[data-theme="Renascent"] .post-related-section {
+  margin-top: 48px;
+}
+
+[data-theme="Renascent"] .post-related-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+[data-theme="Renascent"] .post-related-tab,
+[data-theme="Renascent"] .post-related-refresh {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--renascent-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--renascent-black);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+[data-theme="Renascent"] .post-related-tab.active,
+[data-theme="Renascent"] .post-related-tab:hover,
+[data-theme="Renascent"] .post-related-refresh:hover {
+  border-color: var(--renascent-blue);
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .post-related-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+[data-theme="Renascent"] .post-related-card {
+  overflow: hidden;
+  border: 1px solid var(--renascent-line-soft);
+  border-radius: 0;
+  background: var(--renascent-white);
+  color: var(--renascent-black);
+  text-decoration: none;
+  box-shadow: none;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+[data-theme="Renascent"] .post-related-card:hover {
+  border-color: var(--renascent-tertiary);
+  background: var(--renascent-soft);
+}
+
+[data-theme="Renascent"] .post-related-card-cover {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: var(--renascent-soft);
+}
+
+[data-theme="Renascent"] .post-related-card-cover > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-theme="Renascent"] .post-related-card-date,
+[data-theme="Renascent"] .post-related-card-cat {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--renascent-black);
+}
+
+[data-theme="Renascent"] .post-related-card-date {
+  top: 10px;
+  left: 10px;
+  margin: 0;
+}
+
+[data-theme="Renascent"] .post-related-card-cat {
+  right: 10px;
+  bottom: 10px;
+  margin: 0;
+}
+
+[data-theme="Renascent"] .post-related-card-overlay {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  padding: 36px 14px 14px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.68));
+}
+
+[data-theme="Renascent"] .post-related-card-bottom {
+  display: grid;
+  gap: 8px;
+}
+
+[data-theme="Renascent"] .post-related-card-title {
+  overflow: hidden;
+  display: -webkit-box;
+  margin: 0;
+  color: #ffffff;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.15;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+[data-theme="Renascent"] .post-related-card-stats {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+[data-theme="Renascent"] .renascent-comments-wrap {
+  padding: 56px 0 80px;
+  border-top: 1px solid var(--renascent-line);
+}
+
+[data-theme="Renascent"] .renascent-comments-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+[data-theme="Renascent"] .renascent-comments-heading span {
+  color: var(--renascent-blue);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+[data-theme="Renascent"] .renascent-comments-heading strong {
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-size: 38px;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+[data-theme="Renascent"] .renascent-comments {
+  min-width: 0;
+}
+
+[data-theme="Renascent"] .renascent-comments input,
+[data-theme="Renascent"] .renascent-comments textarea {
+  border-radius: 0 !important;
+  font-family: var(--font-ui) !important;
+}
+
+[data-theme="Renascent"] .renascent-comments button {
+  border-radius: 999px !important;
+  font-family: var(--font-ui) !important;
+}
+
+[data-theme="Renascent"] .blog-page-title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: min(1168px, calc(100vw - 64px));
+  margin: 56px auto 32px;
+  padding: 0 0 24px 18px;
+  border-bottom: 1px solid var(--renascent-line-soft);
+  background: transparent;
+}
+
+[data-theme="Renascent"] .blog-page-title-rail {
+  position: absolute;
+  top: 0;
+  bottom: 24px;
+  left: 0;
+  width: 3px;
+  background: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .blog-page-title-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+[data-theme="Renascent"] .blog-page-title-icon {
+  color: var(--renascent-blue);
+  font-size: 22px;
+  transition: transform 160ms ease;
+}
+
+[data-theme="Renascent"] .blog-page-title-icon:hover {
+  transform: scale(1.14);
+}
+
+[data-theme="Renascent"] .blog-page-title-text {
+  margin: 0;
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-size: 38px;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+[data-theme="Renascent"] .blog-page-title-subtitle,
+[data-theme="Renascent"] .blog-page-title-meta {
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+[data-theme="Renascent"] .renascent-footer {
+  border-top: 1px solid var(--renascent-line);
+  background: var(--renascent-white);
+}
+
+[data-theme="Renascent"] .renascent-footer-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 32px;
+  align-items: center;
+  padding: 40px 0;
+}
+
+[data-theme="Renascent"] .renascent-footer-brand {
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-size: 26px;
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .renascent-footer-bio {
+  margin: 8px 0 0;
+  color: var(--renascent-tertiary);
+  font-size: 14px;
+}
+
+[data-theme="Renascent"] .renascent-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+[data-theme="Renascent"] .renascent-footer-links a,
+[data-theme="Renascent"] .renascent-footer-meta {
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .renascent-footer-links a:hover {
+  color: var(--renascent-blue);
+}
+
+[data-theme="Renascent"] .renascent-reader-button {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 120;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--renascent-line);
+  border-radius: 999px;
+  background: var(--renascent-white);
+  color: var(--renascent-blue);
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.06);
+}
+
+@media (max-width: 999px) {
+  [data-theme="Renascent"] .renascent-container,
+  [data-theme="Renascent"] .renascent-header-inner,
+  [data-theme="Renascent"] .renascent-article-cover-wrap,
+  [data-theme="Renascent"] .blog-page-title {
+    width: min(100vw - 32px, 720px);
+  }
+
+  [data-theme="Renascent"] .renascent-header-inner {
+    grid-template-columns: 1fr auto;
+    min-height: 64px;
+  }
+
+  [data-theme="Renascent"] .renascent-nav {
+    display: none;
+  }
+
+  [data-theme="Renascent"] .renascent-menu-button {
+    display: inline-flex;
+  }
+
+  [data-theme="Renascent"] .renascent-mobile-nav {
+    display: grid;
+    gap: 4px;
+    width: min(100vw - 32px, 720px);
+    margin: 0 auto 16px;
+    padding: 12px;
+    border: 1px solid var(--renascent-line-soft);
+    background: var(--renascent-white);
+  }
+
+  [data-theme="Renascent"] .renascent-mobile-nav .renascent-nav-link {
+    justify-content: space-between;
+    padding: 0 10px;
+  }
+
+  [data-theme="Renascent"] .renascent-search-trigger span,
+  [data-theme="Renascent"] .renascent-search-trigger kbd,
+  [data-theme="Renascent"] .renascent-actions > .renascent-icon-button:not(.renascent-menu-button):nth-of-type(n+3) {
+    display: none;
+  }
+
+  [data-theme="Renascent"] .renascent-search-trigger {
+    width: 44px;
+    padding: 0;
+  }
+
+  [data-theme="Renascent"] .renascent-hero {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  [data-theme="Renascent"] .renascent-dashboard-item {
+    grid-template-columns: 40px minmax(86px, 0.24fr) minmax(0, 1fr);
+  }
+
+  [data-theme="Renascent"] .renascent-section-heading {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  [data-theme="Renascent"] .renascent-section-heading p {
+    text-align: left;
+  }
+
+  [data-theme="Renascent"] .renascent-article {
+    background-size: min(100vw - 32px, 720px) 1px, auto;
+  }
+
+  [data-theme="Renascent"] .renascent-article-hero {
+    padding: 48px 0 40px;
+  }
+
+  [data-theme="Renascent"] .renascent-article-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  [data-theme="Renascent"] .renascent-article-issue {
+    position: static;
+    grid-template-columns: auto 1fr auto;
+    align-items: end;
+  }
+
+  [data-theme="Renascent"] .renascent-article-issue strong {
+    font-size: 56px;
+  }
+
+  [data-theme="Renascent"] .renascent-article-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding-top: 44px;
+  }
+
+  [data-theme="Renascent"] .renascent-article-rail {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 24px;
+  }
+
+  [data-theme="Renascent"] .renascent-article-toc-wrap {
+    grid-column: span 2;
+    display: none;
+  }
+
+  [data-theme="Renascent"] .post-related-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  [data-theme="Renascent"] .renascent-footer-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 599px) {
+  [data-theme="Renascent"] .renascent-home {
+    padding-top: 32px;
+  }
+
+  [data-theme="Renascent"] .renascent-actions {
+    gap: 6px;
+  }
+
+  [data-theme="Renascent"] .renascent-brand-title {
+    max-width: 150px;
+    font-size: 22px;
+  }
+
+  [data-theme="Renascent"] .renascent-hero-copy h1 {
+    font-size: 56px;
+  }
+
+  [data-theme="Renascent"] .renascent-dashboard-item {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 6px 14px;
+    min-height: auto;
+  }
+
+  [data-theme="Renascent"] .renascent-dashboard-item em {
+    grid-column: 2;
+    font-size: 19px;
+  }
+
+  [data-theme="Renascent"] .renascent-featured h2,
+  [data-theme="Renascent"] .renascent-article-title-block h1 {
+    font-size: 44px;
+  }
+
+  [data-theme="Renascent"] .renascent-post-card {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  [data-theme="Renascent"] .renascent-card-title {
+    font-size: 24px;
+  }
+
+  [data-theme="Renascent"] .renascent-card-arrow {
+    grid-column: 2;
+    justify-content: flex-start;
+    font-size: 22px;
+  }
+
+  [data-theme="Renascent"] .renascent-section-heading p {
+    margin-top: 8px;
+    text-align: left;
+  }
+
+  [data-theme="Renascent"] .renascent-featured-body {
+    padding: 28px 22px 24px;
+  }
+
+  [data-theme="Renascent"] .renascent-article-hero {
+    padding: 40px 0 32px;
+  }
+
+  [data-theme="Renascent"] .renascent-article-cover-wrap {
+    margin-top: 24px;
+  }
+
+  [data-theme="Renascent"] .renascent-article-cover {
+    aspect-ratio: 16 / 9;
+  }
+
+  [data-theme="Renascent"] .renascent-article-rail {
+    grid-template-columns: 1fr;
+  }
+
+  [data-theme="Renascent"] .blog-prose {
+    font-size: 18px;
+  }
+
+  [data-theme="Renascent"] .blog-prose > p:first-child {
+    font-size: 20px;
+  }
+
+  [data-theme="Renascent"] .blog-prose h2,
+  [data-theme="Renascent"] .blog-page-title-text {
+    font-size: 30px;
+  }
+
+  [data-theme="Renascent"] .post-prev-next,
+  [data-theme="Renascent"] .post-related-grid {
+    grid-template-columns: 1fr;
+  }
+
+  [data-theme="Renascent"] .post-prev-next-link,
+  [data-theme="Renascent"] .post-prev-next-link.next {
+    grid-template-columns: 1fr;
+  }
+
+  [data-theme="Renascent"] .post-prev-next-cover {
+    min-height: 150px;
+    order: -1;
+  }
+
+  [data-theme="Renascent"] .renascent-article-taxonomy {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* ========================================
+   Renascent — shared blog primitives
+   覆盖默认页面（archive / category / tag / about / links / moments / feeds / search）
+   的圆角/阴影/字体，统一为 serif 标题 + 直角边 + 单线分隔
+   ======================================== */
+
+/* 全局直角化与字体接管 */
+[data-theme="Renascent"] .blog-card,
+[data-theme="Renascent"] .archive-cat-card,
+[data-theme="Renascent"] .friend-link-card-item,
+[data-theme="Renascent"] .friend-link-compact-item {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+[data-theme="Renascent"] button,
+[data-theme="Renascent"] input,
+[data-theme="Renascent"] select,
+[data-theme="Renascent"] textarea {
+  font-family: var(--font-ui);
+}
+
+/* PageTitle 体系：让所有 default 页面顶部的 PageTitle 风格一致 */
+[data-theme="Renascent"] .blog-page-title-icon,
+[data-theme="Renascent"] .blog-page-title-stat strong,
+[data-theme="Renascent"] .blog-page-title-stat {
+  font-family: var(--font-ui);
+}
+
+[data-theme="Renascent"] .blog-page-title-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 14px 0 0;
+  margin-right: 0;
+  border-right: 1px solid var(--renascent-line-soft);
+  color: var(--renascent-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+[data-theme="Renascent"] .blog-page-title-stat:last-child {
+  border-right: 0;
+  padding-right: 0;
+}
+
+[data-theme="Renascent"] .blog-page-title-stat strong {
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+[data-theme="Renascent"] .blog-page-title-side {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+
+[data-theme="Renascent"] .blog-page-title-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+
+/* 通用页面正文容器（多数页面用 padding: 0 32px 32px 包裹） */
+[data-theme="Renascent"] .blog-main > main {
+  width: min(1168px, calc(100vw - 64px));
+  margin: 0 auto;
+}
+
+/* archive 分类卡 */
+[data-theme="Renascent"] .archive-cat-card {
+  border: 1px solid var(--renascent-line);
+  background: var(--renascent-white);
+  transition: border-color 160ms ease;
+}
+
+[data-theme="Renascent"] .archive-cat-card:hover {
+  border-color: var(--renascent-black);
+}
+
+[data-theme="Renascent"] .archive-cat-card a {
+  font-family: var(--font-serif);
+  letter-spacing: 0;
+}
+
+/* 默认归档/分类详情页里的"年份/月份/文章行"边框 */
+[data-theme="Renascent"] [class*="renascent"] ~ * [style*="border: 1px solid var(--color-border)"],
+[data-theme="Renascent"] [style*="border: 1px solid var(--color-border)"] {
+  border-radius: 0 !important;
+}
+
+/* archive 标签云 */
+[data-theme="Renascent"] [data-archive] a,
+[data-theme="Renascent"] .blog-main a[class*="hover:border-primary"] {
+  border-radius: 0 !important;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* 友链 */
+[data-theme="Renascent"] .friend-link-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+[data-theme="Renascent"] .friend-link-card-item {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  border: 1px solid var(--renascent-line);
+  background: var(--renascent-white);
+  transition: border-color 160ms ease, transform 160ms ease;
+  text-decoration: none;
+}
+
+[data-theme="Renascent"] .friend-link-card-item:hover {
+  border-color: var(--renascent-black);
+  transform: translateY(-1px);
+}
+
+[data-theme="Renascent"] .friend-link-logo {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--renascent-line-soft);
+  border-radius: 0 !important;
+  background: var(--renascent-soft);
+  object-fit: cover;
+}
+
+[data-theme="Renascent"] .friend-link-name {
+  color: var(--renascent-black);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="Renascent"] .friend-link-description {
+  margin-top: 2px;
+  color: var(--renascent-tertiary);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="Renascent"] .friend-link-external {
+  color: var(--renascent-tertiary);
+  font-size: 12px;
+}
+
+[data-theme="Renascent"] .friend-link-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+[data-theme="Renascent"] .friend-link-compact-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--renascent-line-soft);
+  background: var(--renascent-white);
+  text-decoration: none;
+  color: var(--renascent-black);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  transition: border-color 160ms ease;
+}
+
+[data-theme="Renascent"] .friend-link-compact-item:hover {
+  border-color: var(--renascent-black);
+}
+
+/* 足迹页 */
+[data-theme="Renascent"] .footprint-page {
+  width: min(1168px, calc(100vw - 64px));
+  margin: 0 auto;
+  padding: 0 0 40px;
+}
+
+[data-theme="Renascent"] .footprint-search input,
+[data-theme="Renascent"] .footprint-search select {
+  border-radius: 0 !important;
+  border: 1px solid var(--renascent-line);
+  background: var(--renascent-white);
+  font-family: var(--font-ui);
+}
+
+[data-theme="Renascent"] .footprint-search button {
+  border-radius: 0 !important;
+  font-family: var(--font-ui);
+  letter-spacing: 0.02em;
+}
+
+[data-theme="Renascent"] .footprint-disabled {
+  border: 1px solid var(--renascent-line-soft);
+  background: var(--renascent-soft);
+  color: var(--renascent-secondary);
+  font-family: var(--font-ui);
+}
+
+/* About 页：直角化、serif 标题 */
+[data-theme="Renascent"] .blog-main [class*="AboutContent_hero"],
+[data-theme="Renascent"] .blog-main [class*="AboutContent_section"],
+[data-theme="Renascent"] .blog-main [class*="AboutContent_avatar"] {
+  border-radius: 0 !important;
+}
+
+[data-theme="Renascent"] .blog-main [class*="AboutContent_heroCopy"] h2 {
+  font-family: var(--font-serif);
+  font-weight: 500 !important;
+  letter-spacing: 0;
+}
+
+/* Moments 卡片 — 重写为单线条便签 */
+[data-theme="Renascent"] .blog-main [style*="background: linear-gradient"],
+[data-theme="Renascent"] .blog-main [style*="background:linear-gradient"] {
+  background: var(--renascent-white) !important;
+  border: 1px solid var(--renascent-line) !important;
+}
+
+/* 搜索输入框 */
+[data-theme="Renascent"] .blog-main input[type="search"],
+[data-theme="Renascent"] .blog-main input[type="text"][placeholder*="搜索"] {
+  border-radius: 0 !important;
+  border: 1px solid var(--renascent-line);
+  font-family: var(--font-ui);
+}
+
+[data-theme="Renascent"] .blog-main input[type="search"]:focus,
+[data-theme="Renascent"] .blog-main input[type="text"][placeholder*="搜索"]:focus {
+  outline: none;
+  border-color: var(--renascent-black);
+}
+
+/* 评论区直角化 */
+[data-theme="Renascent"] .renascent-comments .comment-item,
+[data-theme="Renascent"] .renascent-comments [class*="comment"] {
+  border-radius: 0 !important;
+}
+
+[data-theme="Renascent"] .renascent-comments [style*="border-radius"] {
+  border-radius: 0 !important;
+}
+
+/* AI 陪读卡片直角化 */
+[data-theme="Renascent"] [class*="ai-reader"],
+[data-theme="Renascent"] .blog-main .ai-chat-bubble,
+[data-theme="Renascent"] .blog-main [data-ai-reader] {
+  border-radius: 0 !important;
+}
+
+/* Pagination */
+[data-theme="Renascent"] .blog-pagination,
+[data-theme="Renascent"] [class*="pagination"] {
+  font-family: var(--font-mono);
+}
+
+[data-theme="Renascent"] [class*="pagination"] a,
+[data-theme="Renascent"] [class*="pagination"] button {
+  border-radius: 0 !important;
+}
+
+/* 链接（在博文外）默认下划线偏移 */
+[data-theme="Renascent"] .blog-main a {
+  text-underline-offset: 3px;
+}
+
+/* 默认页 grid 卡片（categories 列表）*/
+[data-theme="Renascent"] [class*="grid-cols-"] > a,
+[data-theme="Renascent"] .blog-main [class*="bg-card"][class*="border"] {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+[data-theme="Renascent"] .blog-main [class*="bg-card"][class*="border"]:hover {
+  border-color: var(--renascent-black) !important;
+  box-shadow: none !important;
+}
+
+/* feeds 卡片 */
+[data-theme="Renascent"] .blog-main [data-feed-card],
+[data-theme="Renascent"] .blog-main article {
+  border-radius: 0 !important;
+}
