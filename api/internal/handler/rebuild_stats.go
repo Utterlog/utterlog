@@ -14,6 +14,7 @@ import (
 // `webauthn:*` (in-flight passkey challenges — clearing would break a
 // user mid-login). Also skips JWT/session keys.
 func SystemClearCache(c *gin.Context) {
+	clearCodingMemoryCache()
 	if config.RDB == nil {
 		util.Success(c, gin.H{"cleared": 0, "note": "redis 未配置，无缓存可清"})
 		return
@@ -26,6 +27,7 @@ func SystemClearCache(c *gin.Context) {
 		"stats:*",  // any stats caches we might add later
 		"views:*",  // per-post view counter cache
 		"geo:*",    // ip→country cache, rebuilds on next comment
+		"coding:*", // GitHub/Coding page cache, rebuilds from GitHub API
 	}
 	for _, pat := range patterns {
 		iter := config.RDB.Scan(config.Ctx, 0, pat, 500).Iterator()

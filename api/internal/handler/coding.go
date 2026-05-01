@@ -25,7 +25,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const codingCacheTTL = 10 * time.Minute
+const (
+	codingCacheTTL                = time.Hour
+	codingCacheStaleTTL           = 6 * time.Hour
+	codingCacheRedisTTL           = codingCacheTTL + codingCacheStaleTTL
+	codingAllContributionCacheTTL = 24 * time.Hour
+	codingGitHubRefreshTimeout    = 45 * time.Second
+)
 
 var githubUsernamePattern = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$`)
 var githubRepoNamePattern = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
@@ -36,13 +42,27 @@ var contributionCountPattern = regexp.MustCompile(`(?i)([0-9][0-9,]*)\s+contribu
 
 var codingCache = struct {
 	sync.Mutex
-	items map[string]cachedCodingData
+	items      map[string]cachedCodingData
+	refreshing map[string]bool
 }{
-	items: map[string]cachedCodingData{},
+	items:      map[string]cachedCodingData{},
+	refreshing: map[string]bool{},
 }
 
 type cachedCodingData struct {
-	data    codingPageData
+	Data    codingPageData `json:"data"`
+	Expires time.Time      `json:"expires"`
+}
+
+var codingContributionTotalCache = struct {
+	sync.Mutex
+	items map[string]cachedCodingContributionTotal
+}{
+	items: map[string]cachedCodingContributionTotal{},
+}
+
+type cachedCodingContributionTotal struct {
+	total   int
 	expires time.Time
 }
 
@@ -419,25 +439,42 @@ func isReservedGitHubPath(value string) bool {
 func loadCodingGitHubData(ctx context.Context, usernames []string, sourceRepos map[string]bool) (codingPageData, error) {
 	key := strings.Join(normalizeCodingUsernames(usernames), ",") + ":" + normalizeCodingRepoSelection(sourceRepos) + ":" + strings.TrimSpace(model.GetOption("coding_selected_repos")) + ":" + githubTokenCacheKey()
 	now := time.Now()
+
 	codingCache.Lock()
-	if item, ok := codingCache.items[key]; ok && now.Before(item.expires) {
-		data := item.data
-		codingCache.Unlock()
-		return data, nil
-	}
+	item, ok := codingCache.items[key]
 	codingCache.Unlock()
+	if ok {
+		if now.Before(item.Expires) {
+			return item.Data, nil
+		}
+		if now.Before(item.Expires.Add(codingCacheStaleTTL)) {
+			startCodingRefresh(key, usernames, sourceRepos)
+			return item.Data, nil
+		}
+	}
+
+	if item, ok := readCodingCacheFromRedis(ctx, key); ok {
+		codingCache.Lock()
+		codingCache.items[key] = item
+		codingCache.Unlock()
+		if now.Before(item.Expires) {
+			return item.Data, nil
+		}
+		if now.Before(item.Expires.Add(codingCacheStaleTTL)) {
+			startCodingRefresh(key, usernames, sourceRepos)
+			return item.Data, nil
+		}
+	}
 
 	data, err := fetchCodingGitHubData(ctx, usernames, sourceRepos)
 	if err != nil {
 		if data.Profile != nil || len(data.Profiles) > 0 {
-			codingCache.Lock()
-			codingCache.items[key] = cachedCodingData{data: data, expires: now.Add(codingCacheTTL)}
-			codingCache.Unlock()
+			storeCodingCache(ctx, key, data)
 			return data, err
 		}
 		codingCache.Lock()
 		if item, ok := codingCache.items[key]; ok {
-			data = item.data
+			data = item.Data
 			codingCache.Unlock()
 			return data, err
 		}
@@ -452,10 +489,103 @@ func loadCodingGitHubData(ctx context.Context, usernames []string, sourceRepos m
 		}, err
 	}
 
-	codingCache.Lock()
-	codingCache.items[key] = cachedCodingData{data: data, expires: now.Add(codingCacheTTL)}
-	codingCache.Unlock()
+	storeCodingCache(ctx, key, data)
 	return data, nil
+}
+
+func startCodingRefresh(key string, usernames []string, sourceRepos map[string]bool) {
+	codingCache.Lock()
+	if codingCache.refreshing[key] {
+		codingCache.Unlock()
+		return
+	}
+	codingCache.refreshing[key] = true
+	codingCache.Unlock()
+
+	usernamesCopy := append([]string(nil), usernames...)
+	sourceReposCopy := cloneCodingRepoSelection(sourceRepos)
+	go func() {
+		defer func() {
+			codingCache.Lock()
+			delete(codingCache.refreshing, key)
+			codingCache.Unlock()
+		}()
+
+		ctx, cancel := context.WithTimeout(context.Background(), codingGitHubRefreshTimeout)
+		defer cancel()
+		data, err := fetchCodingGitHubData(ctx, usernamesCopy, sourceReposCopy)
+		if err != nil && data.Profile == nil && len(data.Profiles) == 0 {
+			return
+		}
+		if err != nil {
+			data.Error = err.Error()
+		}
+		storeCodingCache(ctx, key, data)
+	}()
+}
+
+func cloneCodingRepoSelection(selected map[string]bool) map[string]bool {
+	if len(selected) == 0 {
+		return nil
+	}
+	out := make(map[string]bool, len(selected))
+	for key, value := range selected {
+		out[key] = value
+	}
+	return out
+}
+
+func storeCodingCache(ctx context.Context, key string, data codingPageData) {
+	item := cachedCodingData{Data: data, Expires: time.Now().Add(codingCacheTTL)}
+	codingCache.Lock()
+	codingCache.items[key] = item
+	codingCache.Unlock()
+	writeCodingCacheToRedis(ctx, key, item)
+}
+
+func readCodingCacheFromRedis(ctx context.Context, key string) (cachedCodingData, bool) {
+	if config.RDB == nil {
+		return cachedCodingData{}, false
+	}
+	raw, err := config.RDB.Get(ctx, codingRedisCacheKey(key)).Bytes()
+	if err != nil || len(raw) == 0 {
+		return cachedCodingData{}, false
+	}
+	var item cachedCodingData
+	if err := json.Unmarshal(raw, &item); err != nil {
+		return cachedCodingData{}, false
+	}
+	if item.Data.UpdatedAt == 0 {
+		return cachedCodingData{}, false
+	}
+	return item, true
+}
+
+func writeCodingCacheToRedis(ctx context.Context, key string, item cachedCodingData) {
+	if config.RDB == nil {
+		return
+	}
+	raw, err := json.Marshal(item)
+	if err != nil {
+		return
+	}
+	_ = config.RDB.Set(ctx, codingRedisCacheKey(key), raw, codingCacheRedisTTL).Err()
+}
+
+func codingRedisCacheKey(key string) string {
+	sum := sha256.Sum256([]byte(key))
+	return "coding:page:" + fmt.Sprintf("%x", sum)
+}
+
+func clearCodingMemoryCache() {
+	codingCache.Lock()
+	codingCache.items = map[string]cachedCodingData{}
+	codingCache.refreshing = map[string]bool{}
+	codingCache.Unlock()
+
+	codingContributionTotalCache.Lock()
+	codingContributionTotalCache.items = map[string]cachedCodingContributionTotal{}
+	codingContributionTotalCache.Unlock()
 }
 
 func normalizeCodingUsernames(usernames []string) []string {
@@ -1447,6 +1577,16 @@ func fetchGitHubContributionCalendarViaGraphQL(ctx context.Context, username str
 }
 
 func fetchGitHubAllContributionTotal(ctx context.Context, username string, createdAt string, now time.Time) (int, error) {
+	cacheKey := codingAllContributionCacheKey(username, createdAt)
+	codingContributionTotalCache.Lock()
+	cached, hasCached := codingContributionTotalCache.items[cacheKey]
+	if hasCached && now.Before(cached.expires) {
+		total := cached.total
+		codingContributionTotalCache.Unlock()
+		return total, nil
+	}
+	codingContributionTotalCache.Unlock()
+
 	startYear := now.Year()
 	if t, err := time.Parse(time.RFC3339, createdAt); err == nil && t.Year() > 0 {
 		startYear = t.Year()
@@ -1462,11 +1602,24 @@ func fetchGitHubAllContributionTotal(ctx context.Context, username string, creat
 	for year := startYear; year <= now.Year(); year++ {
 		count, err := fetchGitHubContributionYearTotal(ctx, username, year, now)
 		if err != nil {
+			if hasCached {
+				return cached.total, nil
+			}
 			return 0, err
 		}
 		total += count
 	}
+	codingContributionTotalCache.Lock()
+	codingContributionTotalCache.items[cacheKey] = cachedCodingContributionTotal{
+		total:   total,
+		expires: now.Add(codingAllContributionCacheTTL),
+	}
+	codingContributionTotalCache.Unlock()
 	return total, nil
+}
+
+func codingAllContributionCacheKey(username string, createdAt string) string {
+	return strings.ToLower(strings.TrimSpace(username)) + ":" + strings.TrimSpace(createdAt) + ":" + githubTokenCacheKey()
 }
 
 func fetchGitHubContributionYearTotal(ctx context.Context, username string, year int, now time.Time) (int, error) {

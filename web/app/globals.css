@@ -2063,7 +2063,7 @@ html[data-img-effect="none"] :where([data-blog-image] img, img[data-blog-image])
   grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
   align-items: end;
   gap: 28px;
-  padding: 46px 32px 44px;
+  padding: 14px 32px 44px;
   border-bottom: 1px solid var(--color-border, #d4d4d4);
   background-color: var(--color-bg-card, #fff);
   background-image:
@@ -2707,7 +2707,7 @@ html[data-img-effect="none"] :where([data-blog-image] img, img[data-blog-image])
   }
   .coding-hero {
     grid-template-columns: 1fr;
-    padding: 34px 20px;
+    padding: 18px 20px 34px;
   }
   .coding-hero-title {
     gap: 12px;

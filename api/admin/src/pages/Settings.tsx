@@ -153,6 +153,8 @@ export default function SettingsPage() {
     disk?: { total: number; used: number; free: number; percent: number; path?: string };
   }>({ files: 0, size: 0 });
   const [testingStorage, setTestingStorage] = useState(false);
+  const [cleaningDatabase, setCleaningDatabase] = useState(false);
+  const [databaseCleanupResult, setDatabaseCleanupResult] = useState<Record<string, number> | null>(null);
   const [tgChats, setTgChats] = useState<{ id: string; type: string; name: string }[]>([]);
   const [fetchingChatId, setFetchingChatId] = useState(false);
 
@@ -446,6 +448,24 @@ export default function SettingsPage() {
       toast.error(msg);
     } finally {
       setTestingStorage(false);
+    }
+  };
+
+  const cleanupDatabase = async () => {
+    if (!window.confirm(t('admin.settings.media.cleanup.confirm', '清理会删除数据库里可以确认无效的残留记录，例如缺失文件的媒体记录、失效相册关联、孤儿文章关联和过期令牌。是否继续？'))) {
+      return;
+    }
+    setCleaningDatabase(true);
+    try {
+      const response: any = await api.post('/admin/system/cleanup-database');
+      const data = response.data || {};
+      setDatabaseCleanupResult(data);
+      toast.success(t('admin.settings.media.cleanup.success', '数据库清理完成，处理 {count} 条残留', { count: Number(data.total || 0) }));
+      fetchSettings();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error?.message || t('admin.settings.media.cleanup.failed', '数据库清理失败'));
+    } finally {
+      setCleaningDatabase(false);
     }
   };
 
@@ -1204,6 +1224,40 @@ export default function SettingsPage() {
                     </>);
                   })()}
                 </div>
+              </div>
+
+              <div className="card settings-panel" style={cardStyle}>
+                <div style={{ ...subTitleRow, alignItems: 'flex-start', gap: '24px' }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ ...sectionTitleStyle, marginBottom: '8px' }}>{t('admin.settings.media.cleanup.section', '数据库清理')}</h3>
+                    <p className="text-dim" style={{ fontSize: '12px', lineHeight: 1.7, margin: 0 }}>
+                      {t('admin.settings.media.cleanup.description', '清理媒体库缺失文件记录、失效相册关联、孤儿文章关系、孤儿评论、足迹残留和过期授权数据。不会删除正文内容，也不会删除远程对象存储里的文件。')}
+                    </p>
+                  </div>
+                  <Button type="button" variant="secondary" loading={cleaningDatabase} onClick={cleanupDatabase} style={{ minWidth: '148px' }}>
+                    <i className="fa-regular fa-broom" style={{ fontSize: '13px' }} />
+                    {t('admin.settings.media.cleanup.button', '清理数据库')}
+                  </Button>
+                </div>
+                {databaseCleanupResult && (
+                  <div style={{ marginTop: '18px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '8px' }}>
+                    {[
+                      ['media_missing_files', t('admin.settings.media.cleanup.mediaMissingFiles', '缺失媒体')],
+                      ['album_links_reset', t('admin.settings.media.cleanup.albumLinksReset', '相册关联')],
+                      ['relationships_deleted', t('admin.settings.media.cleanup.relationshipsDeleted', '文章关系')],
+                      ['comments_deleted', t('admin.settings.media.cleanup.commentsDeleted', '孤儿评论')],
+                      ['footprints_deleted', t('admin.settings.media.cleanup.footprintsDeleted', '足迹关联')],
+                      ['expired_tokens_deleted', t('admin.settings.media.cleanup.expiredTokensDeleted', '过期令牌')],
+                      ['expired_bans_deleted', t('admin.settings.media.cleanup.expiredBansDeleted', '过期封禁')],
+                      ['total', t('admin.settings.media.cleanup.total', '合计')],
+                    ].map(([key, label]) => (
+                      <div key={key} style={{ border: '1px solid var(--color-border)', padding: '10px 12px', background: key === 'total' ? 'color-mix(in srgb, var(--color-primary) 5%, transparent)' : 'var(--color-bg-soft)' }}>
+                        <div className="font-mono" style={{ fontSize: '18px', color: key === 'total' ? 'var(--color-primary)' : 'var(--color-text-main)', lineHeight: 1.2 }}>{Number(databaseCleanupResult[key] || 0)}</div>
+                        <div className="text-dim" style={{ fontSize: '11px', marginTop: '4px' }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="card settings-panel" style={cardStyle}>

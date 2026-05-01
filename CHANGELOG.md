@@ -23,6 +23,26 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.0.6] - 2026-05-01
+
+### 新增
+
+- 新增后台数据库清理按钮，可清理媒体库缺失文件记录、失效相册关联、孤儿文章关联、孤儿评论、足迹残留和过期授权数据。
+
+### 优化
+
+- 优化 Coding 页面 Hero 顶部间距，删除标题上方多余空白。
+- 优化 Coding 页面 GitHub 数据缓存，支持 Redis 持久缓存、过期旧数据立即返回和后台刷新，减少打开页面时等待 GitHub API 的情况。
+- 优化 Coding 页面前端数据缓存，后台保存设置时会同步刷新 Coding 页面缓存。
+
+### 修复
+
+暂无。
+
+### 移除
+
+暂无。
+
 ## [2.0.5] - 2026-05-01
 
 ### 新增
@@ -272,7 +292,8 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
-[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.5...HEAD
+[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.6...HEAD
+[2.0.6]: https://github.com/utterlog/utterlog/releases/tag/v2.0.6
 [2.0.5]: https://github.com/utterlog/utterlog/releases/tag/v2.0.5
 [2.0.4]: https://github.com/utterlog/utterlog/releases/tag/v2.0.4
 [2.0.3]: https://github.com/utterlog/utterlog/releases/tag/v2.0.3

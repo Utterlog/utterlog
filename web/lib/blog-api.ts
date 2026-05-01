@@ -2,6 +2,7 @@
  * 博客前台 API — 服务端调用，无需认证
  * 用于 Server Components 获取数据
  */
+import { unstable_cache } from 'next/cache';
 
 const API_BASE = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
@@ -109,8 +110,14 @@ export async function getFootprints(params?: { city?: string; country?: string; 
   return fetchAPI<any>(`/footprints${q ? `?${q}` : ''}`);
 }
 
+const getCodingCached = unstable_cache(
+  () => fetchAPI<any>('/coding', { cache: 'force-cache' as const }),
+  ['blog-coding'],
+  { tags: ['coding'], revalidate: 300 },
+);
+
 export async function getCoding() {
-  return fetchAPI<any>('/coding');
+  return getCodingCached();
 }
 
 // 说说

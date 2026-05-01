@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import PageTitle from '@/components/blog/PageTitle';
 import { getCoding } from '@/lib/blog-api';
 
-export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Coding' };
 
 type CodingProfile = {

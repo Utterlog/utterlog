@@ -144,7 +144,11 @@ export const mediaApi = {
 
 // Revalidate frontend cache (called after settings/theme/plugin changes)
 function revalidateCache() {
-  fetch('/api/revalidate', { method: 'POST' }).catch(() => {});
+  fetch('/api/revalidate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths: ['/', '/coding'], tags: ['options', 'coding'] }),
+  }).catch(() => {});
 }
 
 // Options API

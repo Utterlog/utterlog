@@ -150,7 +150,7 @@ func main() {
 
 	// Health
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.0.5-go"}})
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.0.6-go"}})
 	})
 
 	// ===================== Install Wizard (public, unauth) =====================
@@ -485,6 +485,7 @@ func main() {
 		authed.POST("/admin/system/rebuild-stats", handler.SystemRebuildStats)
 		authed.POST("/admin/system/clear-cache", handler.SystemClearCache)
 		authed.POST("/admin/system/clear-rss-cache", handler.SystemClearRSSCache)
+		authed.POST("/admin/system/cleanup-database", handler.SystemCleanupDatabase)
 
 		// Analytics maintenance — purge bots / dedup rows / drop aged
 		// data; stats preview so the dialog can show what will be

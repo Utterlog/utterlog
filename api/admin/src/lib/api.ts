@@ -167,14 +167,14 @@ export const mediaApi = {
 };
 
 // Revalidate frontend cache (called after settings/theme/plugin changes).
-// Sends `tags: ['options']` so the web tier's tagged getOptions() fetch
+// Sends `tags: ['options', 'coding']` so the web tier's tagged fetches
 // flushes immediately — otherwise the 10s time-based revalidate keeps
 // serving the old value and admin changes look like they didn't apply.
 function revalidateCache() {
   fetch('/api/revalidate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paths: ['/'], tags: ['options'] }),
+    body: JSON.stringify({ paths: ['/', '/coding'], tags: ['options', 'coding'] }),
   }).catch(() => {});
 }
 
