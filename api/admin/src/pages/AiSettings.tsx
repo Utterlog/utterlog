@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Button, Input, Textarea, Select, Modal, Toggle } from '@/components/ui';
+import { Button, Input, Textarea, Select, Modal, Toggle, SettingsTabs } from '@/components/ui';
 import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC, FormRowRangeC } from '@/components/form/FormC';
 import { useAuthStore } from '@/lib/store';
 import { useI18n } from '@/lib/i18n';
@@ -39,19 +39,17 @@ const settingsTabs = [
   { id: '批量任务',   label: '批量任务',   key: 'admin.aiSettings.tabs.batch', icon: 'fa-regular fa-list-check' },
 ];
 
-// Align with Settings.tsx: 28px padding, 24px bottom margin between cards
-const cardStyle: React.CSSProperties = { padding: '28px', marginBottom: '24px' };
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '15px', fontWeight: 600, marginBottom: '20px',
-  display: 'flex', alignItems: 'center', gap: '8px',
+const cardStyle: React.CSSProperties = {
+  padding: 'var(--settings-panel-padding)',
+  marginBottom: 'var(--settings-section-gap)',
 };
 
 // Lightweight icon-prefixed section title — matches Settings.tsx visual style
 function SectionTitle({ icon, children, as = 'h3' }: { icon: string; children: React.ReactNode; as?: 'h2' | 'h3' }) {
   const Tag = as as any;
   return (
-    <Tag style={sectionTitleStyle}>
-      <i className={icon} style={{ fontSize: '14px', color: 'var(--color-primary)' }} />
+    <Tag className="settings-panel-title" style={as === 'h2' ? { margin: 0 } : undefined}>
+      <i className={icon} />
       {children}
     </Tag>
   );
@@ -370,27 +368,17 @@ export default function AiSettingsPage() {
   if (loading) return <div className="p-6 text-dim">{t('admin.common.loading', '加载中...')}</div>;
 
   return (
-    <div>
+    <div className="settings-page">
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--color-border)', marginBottom: '28px', overflowX: 'auto' }}>
-        {settingsTabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              padding: '10px 18px', fontSize: '13px', fontWeight: activeTab === tab.id ? 600 : 400,
-              color: activeTab === tab.id ? 'var(--color-primary)' : 'var(--color-text-sub)',
-              borderTop: 'none', borderLeft: 'none', borderRight: 'none',
-              borderBottom: activeTab === tab.id ? '2px solid var(--color-primary)' : '2px solid transparent',
-              background: 'none', cursor: 'pointer', transition: 'all 0.15s',
-              whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px',
-            }}
-          >
-            <i className={tab.icon} style={{ fontSize: '13px' }} />
-            {t(tab.key, tab.label)}
-          </button>
-        ))}
-      </div>
+      <SettingsTabs
+        items={settingsTabs.map(tab => ({
+          id: tab.id,
+          icon: tab.icon,
+          label: t(tab.key, tab.label),
+        }))}
+        activeId={activeTab}
+        onChange={setActiveTab}
+      />
 
       {/* ── 提供商 ── */}
       {activeTab === '提供商' && (
@@ -599,7 +587,7 @@ export default function AiSettingsPage() {
       {activeTab === '文章设置' && (
         <>
           {/* 功能开关 */}
-          <div className="card" style={cardStyle}>
+          <div className="card settings-panel" style={cardStyle}>
             <SectionTitle icon="fa-regular fa-bolt">{t('admin.aiSettings.posts.automationTitle', 'AI 自动化功能')}</SectionTitle>
             <p className="text-xs text-dim" style={{ marginTop: '-12px', marginBottom: '20px' }}>{t('admin.aiSettings.posts.automationHint', '开启后，发布或更新文章时 AI 将自动执行对应任务')}</p>
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -886,7 +874,7 @@ export default function AiSettingsPage() {
       {activeTab === '批量任务' && (
         <>
           {/* 一键全部生成 */}
-          <div className="card" style={{ ...cardStyle, background: 'color-mix(in srgb, var(--color-primary) 3%, transparent)' }}>
+          <div className="card settings-panel" style={{ ...cardStyle, background: 'color-mix(in srgb, var(--color-primary) 3%, transparent)' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
               <div style={{
                 width: '44px', height: '44px', flexShrink: 0,
@@ -940,7 +928,7 @@ export default function AiSettingsPage() {
           </div>
 
           {/* 单独生成 - 摘要 */}
-          <div className="card" style={cardStyle}>
+          <div className="card settings-panel" style={cardStyle}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
               <div style={{
                 width: '40px', height: '40px', flexShrink: 0,
@@ -975,7 +963,7 @@ export default function AiSettingsPage() {
           </div>
 
           {/* 单独生成 - 陪读问题 */}
-          <div className="card" style={cardStyle}>
+          <div className="card settings-panel" style={cardStyle}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
               <div style={{
                 width: '40px', height: '40px', flexShrink: 0,

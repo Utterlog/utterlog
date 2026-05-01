@@ -16,6 +16,7 @@ export default function Header() {
     ? ctx.menus.header
     : [
         { href: '/', label: '首页' },
+        { href: '/coding', label: 'Coding' },
         { href: '/moments', label: '说说' },
         { href: '/archives', label: '归档' },
         { href: '/links', label: '友链' },

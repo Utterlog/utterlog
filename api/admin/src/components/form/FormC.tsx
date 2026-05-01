@@ -25,38 +25,29 @@ export function FormSectionC({
   footerHint?: string;
 }) {
   return (
-    <section style={{ marginBottom: 24 }}>
+    <section className="settings-section">
       {title && (
-        <div style={{ padding: '0 16px 10px' }}>
+        <div className="settings-section-head">
           {/* 标题行：icon + title 同行；description 长短不一，单独换行
               避免 inline 显示时长 description 把标题挤变形（例如 AI 设置
               的「自定义提示词」section description 文本几百字，原 flex
               布局直接压扁标题）。 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="settings-section-title-row">
             {icon && (
-              <i className={icon} style={{ fontSize: 13, color: 'var(--color-primary)' }} />
+              <i className={`${icon} settings-section-icon`} />
             )}
-            <h3 style={{
-              fontSize: 13, fontWeight: 600, margin: 0,
-              color: 'var(--color-text-main)',
-              letterSpacing: 0.2,
-            }}>
+            <h3 className="settings-section-title">
               {title}
             </h3>
           </div>
           {description && (
-            <p className="text-sub" style={{
-              fontSize: 12, margin: '6px 0 0',
-              // 跟标题文字左对齐：icon 13px + gap 8px = 21px
-              paddingLeft: icon ? 21 : 0,
-              lineHeight: 1.7,
-            }}>
+            <p className={`settings-section-description${icon ? ' has-icon' : ''}`}>
               {description}
             </p>
           )}
         </div>
       )}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card settings-card">
         {children}
       </div>
       {footerHint && (
@@ -84,40 +75,24 @@ export function FormRowC({
   return (
     <div
       onClick={onClick}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 16px',
-        borderBottom: '1px solid var(--color-divider)',
-        cursor: clickable ? 'pointer' : 'default',
-        transition: 'background 0.15s',
-      }}
-      onMouseEnter={(e) => { if (clickable) e.currentTarget.style.background = 'var(--color-bg-soft)'; }}
-      onMouseLeave={(e) => { if (clickable) e.currentTarget.style.background = 'transparent'; }}
-      className="form-row-c-item"
+      className={`settings-display-row form-row-c-item${clickable ? ' is-clickable' : ''}`}
     >
       {icon && (
-        <div style={{
-          width: 28, height: 28, flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: danger ? '#fef2f2' : 'var(--color-bg-soft)',
-        }}>
-          <i className={icon} style={{ fontSize: 13, color: danger ? '#dc2626' : 'var(--color-primary)' }} />
+        <div className={`settings-display-icon${danger ? ' is-danger' : ''}`}>
+          <i className={icon} />
         </div>
       )}
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 13, fontWeight: 500,
-          color: danger ? '#dc2626' : 'var(--color-text-main)',
-        }}>
+      <div className="settings-display-main">
+        <div className={`settings-display-label${danger ? ' is-danger' : ''}`}>
           {label}
         </div>
         {hint && (
-          <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.5 }}>{hint}</div>
+          <div className="settings-field-hint">{hint}</div>
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      <div className="settings-display-side">
         {value != null && (
           <span className="text-sub" style={{ fontSize: 13 }}>{value}</span>
         )}
@@ -149,16 +124,6 @@ export const FORM_ROW_MIN_HEIGHT = 56;
 export const FORM_LABEL_PADDING = '10px 14px';
 export const FORM_VALUE_PADDING = '10px 14px';
 
-// Internal aliases for the FormRow* components below
-const LABEL_WIDTH = FORM_LABEL_WIDTH;
-const ROW_BORDER = FORM_ROW_BORDER;
-// Same surface left and right — the earlier grey right column + vertical
-// divider made every simple toggle / input look like a 2-column data
-// table. Keep horizontal row borders only, so sections read as a single
-// unified surface like iOS Settings.
-const VERT_DIVIDER = 'none';
-const RIGHT_BG = 'transparent';
-
 // Inline editable text row — table-style
 export function FormRowInputC({
   label, value, onChange, placeholder, type = 'text', hint, register, last,
@@ -173,40 +138,21 @@ export function FormRowInputC({
   last?: boolean;
 }) {
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: `${LABEL_WIDTH} 1fr`,
-      borderBottom: last ? 'none' : ROW_BORDER,
-      minHeight: 56,
-    }}>
+    <div className={`settings-row${last ? ' is-last' : ''}`}>
       {/* Label cell */}
-      <div style={{
-        padding: '10px 14px',
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        borderRight: VERT_DIVIDER,
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>{label}</div>
-        {hint && <div className="text-dim" style={{ fontSize: 11, marginTop: 2 }}>{hint}</div>}
+      <div className="settings-row-label-cell">
+        <div className="settings-field-label">{label}</div>
+        {hint && <div className="settings-field-hint">{hint}</div>}
       </div>
 
       {/* Value cell */}
-      <div style={{ padding: '6px 14px', background: RIGHT_BG, display: 'flex', alignItems: 'center' }}>
+      <div className="settings-row-control-cell">
         <input
           type={type}
           placeholder={placeholder}
           {...(register || {})}
           {...(register ? {} : { value: value ?? '', onChange: (e) => onChange?.(e.target.value) })}
-          style={{
-            width: '100%', height: 40, padding: '0 12px', fontSize: 13,
-            background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-main)',
-            outline: 'none', transition: 'border 0.15s',
-          }}
-          onFocus={(e) => { e.currentTarget.style.border = '1px solid var(--color-primary)'; }}
-          onBlur={(e) => {
-            e.currentTarget.style.border = '1px solid var(--color-border)';
-            register?.onBlur?.(e);
-          }}
+          className="settings-input"
         />
       </div>
     </div>
@@ -236,38 +182,26 @@ export function FormRowTextareaC({
   mono?: boolean;
 }) {
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: `${LABEL_WIDTH} 1fr`,
-      borderBottom: last ? 'none' : ROW_BORDER,
-    }}>
-      <div style={{
-        padding: '10px 14px',
-        borderRight: VERT_DIVIDER,
-      }}>
+    <div className={`settings-row${last ? ' is-last' : ''}`}>
+      <div className="settings-row-label-cell" style={{ justifyContent: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>{label}</div>
+          <div className="settings-field-label">{label}</div>
           {labelExtra}
         </div>
-        {hint && <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.6 }}>{hint}</div>}
+        {hint && <div className="settings-field-hint">{hint}</div>}
       </div>
 
-      <div style={{ padding: '10px 14px', background: RIGHT_BG }}>
+      <div className="settings-row-control-cell is-column">
         <textarea
           rows={rows}
           placeholder={placeholder}
           {...(register || {})}
           {...(register ? {} : { value: value ?? '', onChange: (e) => onChange?.(e.target.value) })}
+          className="settings-input"
           style={{
-            width: '100%', minHeight: 80, padding: '10px 12px',
             fontSize: mono ? 12 : 13,
-            background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
-            color: 'var(--color-text-main)', outline: 'none', resize: 'vertical',
             fontFamily: mono ? 'var(--font-mono, monospace)' : 'inherit',
-            lineHeight: 1.6,
-            transition: 'border 0.15s',
           }}
-          onFocus={(e) => { e.currentTarget.style.border = '1px solid var(--color-primary)'; }}
-          onBlur={(e) => { e.currentTarget.style.border = '1px solid var(--color-border)'; register?.onBlur?.(e); }}
         />
       </div>
     </div>
@@ -289,36 +223,21 @@ export function FormRowSelectC({
   controlWidth?: string;
 }) {
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: `${LABEL_WIDTH} 1fr`,
-      borderBottom: last ? 'none' : ROW_BORDER,
-      minHeight: 56,
-    }}>
-      <div style={{
-        padding: '10px 14px',
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        borderRight: VERT_DIVIDER,
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>{label}</div>
-        {hint && <div className="text-dim" style={{ fontSize: 11, marginTop: 2 }}>{hint}</div>}
+    <div className={`settings-row${last ? ' is-last' : ''}`}>
+      <div className="settings-row-label-cell">
+        <div className="settings-field-label">{label}</div>
+        {hint && <div className="settings-field-hint">{hint}</div>}
       </div>
 
-      <div style={{
-        padding: '6px 14px',
-        background: RIGHT_BG,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: controlAlign === 'right' ? 'flex-end' : 'flex-start',
-      }}>
+      <div className={`settings-row-control-cell${controlAlign === 'right' ? ' is-right' : ''}`}>
         <select
           {...(register || {})}
           {...(register ? {} : { value: value ?? '', onChange: (e) => onChange?.(e.target.value) })}
+          className="settings-input"
           style={{
             width: controlWidth,
             maxWidth: '100%',
-            height: 40, padding: '0 12px', fontSize: 13,
-            background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
-            color: 'var(--color-text-main)', outline: 'none', cursor: 'pointer',
+            cursor: 'pointer',
           }}
         >
           {options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -343,24 +262,16 @@ export function FormRowToggleC({
   last?: boolean;
 }) {
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: `${LABEL_WIDTH} 1fr`,
-      borderBottom: last ? 'none' : ROW_BORDER,
-      minHeight: 56,
-    }}>
-      <div style={{
-        padding: '10px 14px',
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        borderRight: VERT_DIVIDER,
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>{label}</div>
-        {hint && <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.6 }}>{hint}</div>}
+    <div className={`settings-row${last ? ' is-last' : ''}`}>
+      <div className="settings-row-label-cell">
+        <div className="settings-field-label">{label}</div>
+        {hint && <div className="settings-field-hint">{hint}</div>}
       </div>
       {/* Right cell: just the switch, flush to the right edge — the
           inner <Toggle>'s default `justify-between` plus width:100%
           makes its empty flex-1 label div eat all the space on the
           left, so the switch hugs the right like iOS-style settings. */}
-      <div style={{ padding: '6px 14px', background: RIGHT_BG, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+      <div className="settings-row-control-cell is-right">
         <Toggle
           {...(register || {})}
           {...(register ? {} : {
@@ -388,28 +299,20 @@ export function FormRowRangeC({
   last?: boolean;
 }) {
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: `${LABEL_WIDTH} 1fr`,
-      borderBottom: last ? 'none' : ROW_BORDER,
-      minHeight: 56,
-    }}>
-      <div style={{
-        padding: '10px 14px',
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        borderRight: VERT_DIVIDER,
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>
+    <div className={`settings-row${last ? ' is-last' : ''}`}>
+      <div className="settings-row-label-cell">
+        <div className="settings-field-label">
           {label} <span className="text-dim" style={{ fontSize: 12 }}>({value})</span>
         </div>
-        {hint && <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.6 }}>{hint}</div>}
+        {hint && <div className="settings-field-hint">{hint}</div>}
       </div>
-      <div style={{ padding: '10px 14px', background: RIGHT_BG, display: 'flex', alignItems: 'center' }}>
+      <div className="settings-row-control-cell">
         <input
           type="range"
           min={min} max={max} step={step}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          style={{ width: '100%' }}
+          className="settings-input"
         />
       </div>
     </div>
@@ -435,29 +338,15 @@ export function FormRowRadioC({
   last?: boolean;
 }) {
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: `${LABEL_WIDTH} 1fr`,
-      borderBottom: last ? 'none' : ROW_BORDER,
-      minHeight: FORM_ROW_MIN_HEIGHT,
-    }}>
-      <div style={{
-        padding: FORM_LABEL_PADDING,
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        borderRight: VERT_DIVIDER,
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-main)' }}>{label}</div>
-        {hint && <div className="text-dim" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.6 }}>{hint}</div>}
+    <div className={`settings-row${last ? ' is-last' : ''}`}>
+      <div className="settings-row-label-cell">
+        <div className="settings-field-label">{label}</div>
+        {hint && <div className="settings-field-hint">{hint}</div>}
       </div>
-      <div style={{
-        padding: FORM_VALUE_PADDING, background: RIGHT_BG,
-        display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap',
-      }}>
+      <div className="settings-row-control-cell">
+        <div className="settings-radio-group">
         {options.map(opt => (
-          <label key={opt.value} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            cursor: 'pointer', fontSize: 13, color: 'var(--color-text-main)',
-            userSelect: 'none',
-          }}>
+          <label key={opt.value} className="settings-radio-item">
             <input
               type="radio"
               value={opt.value}
@@ -467,6 +356,7 @@ export function FormRowRadioC({
             <span>{opt.label}</span>
           </label>
         ))}
+        </div>
       </div>
     </div>
   );

@@ -23,6 +23,52 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.0.4] - 2026-05-01
+
+### 新增
+
+- 新增 Coding/GitHub 内置页面，支持从个人资料社交链接自动识别 GitHub 地址，也可在页面管理中单独配置 GitHub 用户名或主页地址。
+- 新增 Coding/GitHub 页面 GitHub Token 配置，用于贡献统计 GraphQL 查询和提升 GitHub API 速率。
+
+### 优化
+
+- 优化 Coding/GitHub 页面热力图，改为当前自然年贡献口径；配置 GitHub Token 后优先通过 GraphQL 读取授权可见贡献数据，并补齐全年网格避免格子比例异常。
+- 优化 Coding/GitHub 页面最近仓库列表，仓库标题只显示项目名，不再重复显示用户名。
+- 优化 Coding/GitHub 页面项目展示方式，后台可从 GitHub 公开仓库中选择要展示的项目，前台按项目展示且每个项目最多显示 5 条最近动作。
+- 优化 Coding/GitHub 页面 GitHub 组织账号支持，组织项目改用组织公开仓库接口读取，并按项目拉取最近动作。
+- 优化 Coding/GitHub 页面用户来源解析，填写 GitHub 用户地址时会自动合并该用户所属组织的公开仓库，仍不读取私有仓库。
+- 优化 Coding/GitHub 页面多 GitHub 地址支持，可同时配置多个用户或组织地址并汇总公开项目。
+- 优化 Coding/GitHub 页面标题区，移除 `View on GitHub` 链接，改为直接展示贡献数、仓库数和关注者统计。
+- 优化 Coding/GitHub 页面标题栏统计样式，避免统计项换行撑高标题栏，保持与其他页面标题栏高度一致。
+- 优化 Coding/GitHub 页面标题内容，标题改为 `@用户名`，副标题显示 GitHub 简介，并将 GitHub 头像移动到热力图右侧。
+- 优化 Coding/GitHub 页面标题栏排版，用户名和 GitHub 简介改为同一行显示。
+- 优化 Coding/GitHub 页面结构，移除中间重复的 GitHub 资料卡。
+- 优化 Coding/GitHub 页面标题栏用户名，改为 GitHub 链接并保持标题原色和无下划线样式，同时使用页面 serif 标题字体。
+- 优化 Coding/GitHub 页面 Hero 文案和版式，改为更清晰的 GitHub Journal 标题区与右侧数据摘要。
+- 优化 Coding/GitHub 页面贡献统计，标题栏 `total contributions` 改为全部历史贡献数，热力图图例明确显示当前自然年贡献数。
+- 优化 Coding/GitHub 页面 Hero 右侧数据摘要，改为显示今天的 GitHub contributions 数值。
+- 优化 Coding/GitHub 页面 Hero 文案，改为中英双语标题和说明。
+- 优化 Coding/GitHub 页面 section 编号，活动和项目区改为 `§ 01`、`§ 02`。
+- 优化 Coding/GitHub 页面项目元信息样式，移除语言、Star 和 Fork 的外边框，改为轻量 inline 信息。
+- 优化 Coding/GitHub 页面 Hero 区域，移除 `GitHub Journal` 标签并压缩上下留白。
+- 优化 Coding/GitHub 页面活动短标签，明确区分 `PUSH`、`COM`、`CMT` 等事件类型，避免 commit 和 comment 缩写混淆。
+- 优化 Coding/GitHub 页面活动短标签样式，不同 GitHub 事件类型使用不同的低饱和标签颜色。
+- 优化 Coding/GitHub 页面 Projects 区块，改为按日期聚合的 Shipping Log，按天展示涉及仓库和动作数量，并适配移动端单列阅读。
+- 优化 Coding/GitHub 页面 Shipping Log 卡片，移除与 `ACROSS / REPOS` 和徽章重复的中文文字总结。
+- 优化 Coding/GitHub 页面配置提示，明确组织仓库需要填写组织地址或仓库 URL，项目列表固定只读取公开仓库。
+- 优化后台文章管理导航结构，分类和标签从左侧子菜单移入文章模块顶部 tabs，左侧只保留文章一级入口。
+- 优化项目 README 文案，改为更偏产品介绍和使用场景的表达，减少过多技术细节。
+- 统一后台设置页与 AI 设置页的 tabs、section、卡片和表单行风格，沉淀为同一套 settings 设计组件与样式 token。
+
+### 修复
+
+- 修复 Coding/GitHub 页面配置中填写 GitHub 仓库 URL 时只截取 owner，导致组织仓库筛选混乱的问题；仓库 URL 现在会自动解析为 owner 来源和项目筛选。
+- 修复关于页面编辑器在站点记录条目过多时弹窗内容不能滚动，导致上方配置区域被挤出视窗的问题。
+
+### 移除
+
+暂无。
+
 ## [2.0.3] - 2026-05-01
 
 ### 新增
@@ -208,7 +254,8 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
-[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.3...HEAD
+[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.4...HEAD
+[2.0.4]: https://github.com/utterlog/utterlog/releases/tag/v2.0.4
 [2.0.3]: https://github.com/utterlog/utterlog/releases/tag/v2.0.3
 [2.0.2]: https://github.com/utterlog/utterlog/releases/tag/v2.0.2
 [2.0.1]: https://github.com/utterlog/utterlog/releases/tag/v2.0.1

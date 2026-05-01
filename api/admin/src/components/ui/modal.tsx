@@ -34,6 +34,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={onClose} />
       <div style={{
         position: 'relative', width: '100%', maxWidth: sizeMap[size],
+        maxHeight: 'calc(100vh - 32px)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
         backgroundColor: 'var(--color-bg-card)', borderRadius: '1px',
         border: '1px solid var(--color-border)',
         boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
@@ -42,6 +46,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '16px 20px', borderBottom: '1px solid var(--color-border)',
+            flex: '0 0 auto',
           }}>
             <h3 className="text-main" style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>{title}</h3>
             <button onClick={onClose} className="btn-ghost" style={{ padding: '4px', borderRadius: '1px', border: 'none', cursor: 'pointer' }}>
@@ -49,7 +54,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             </button>
           </div>
         )}
-        <div style={{ padding: '20px' }}>{children}</div>
+        <div style={{ flex: '1 1 auto', padding: '20px', minHeight: 0, overflowY: 'auto' }}>{children}</div>
       </div>
     </div>
   );

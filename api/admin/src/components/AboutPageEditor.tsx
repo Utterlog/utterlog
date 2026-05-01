@@ -434,8 +434,15 @@ export default function AboutPageEditor({ open, onClose }: { open: boolean; onCl
 
   return (
     <Modal isOpen={open} onClose={onClose} title="关于页面配置" size="xl">
-      <div style={{ display: 'grid', gridTemplateColumns: '180px minmax(0, 1fr)', gap: 20, minHeight: 520 }}>
-        <div style={{ borderRight: '1px solid var(--color-border)', paddingRight: 14 }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '180px minmax(0, 1fr)',
+        gap: 20,
+        height: 'clamp(420px, calc(100vh - 148px), 680px)',
+        minHeight: 0,
+        overflow: 'hidden',
+      }}>
+        <div style={{ borderRight: '1px solid var(--color-border)', paddingRight: 14, minHeight: 0, overflowY: 'auto' }}>
           <div style={{ display: 'grid', gap: 6 }}>
             {tabs.map(item => (
               <button
@@ -465,11 +472,11 @@ export default function AboutPageEditor({ open, onClose }: { open: boolean; onCl
             ))}
           </div>
         </div>
-        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, overflow: 'auto', paddingRight: 4 }}>
+        <div style={{ minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: 4 }}>
             {renderBody()}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 18, marginTop: 18, borderTop: '1px solid var(--color-border)' }}>
+          <div style={{ flex: '0 0 auto', display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 18, marginTop: 18, borderTop: '1px solid var(--color-border)' }}>
             <Button variant="secondary" onClick={onClose} disabled={saving}>取消</Button>
             <Button onClick={handleSave} loading={saving}>保存</Button>
           </div>

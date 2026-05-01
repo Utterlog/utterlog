@@ -109,6 +109,10 @@ export async function getFootprints(params?: { city?: string; country?: string; 
   return fetchAPI<any>(`/footprints${q ? `?${q}` : ''}`);
 }
 
+export async function getCoding() {
+  return fetchAPI<any>('/coding');
+}
+
 // 说说
 export async function getMoments(params?: { page?: number; per_page?: number }) {
   const sp = new URLSearchParams();

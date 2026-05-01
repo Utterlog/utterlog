@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { optionsApi } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Button, Input, Toggle } from '@/components/ui';
+import { Button, Input, SettingsTabs, Toggle } from '@/components/ui';
 import api from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { invalidateSiteOptions, loadSiteOptions } from '@/lib/site';
@@ -12,8 +12,14 @@ import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowT
 import SystemUpdatePanel from '@/components/SystemUpdatePanel';
 
 // Shared style constants
-const cardStyle = { padding: '28px', marginBottom: '20px' } as const;
-const sectionTitleStyle = { fontSize: '15px', fontWeight: 600, marginBottom: '24px' } as const;
+const cardStyle = { padding: 'var(--settings-panel-padding)', marginBottom: 'var(--settings-section-gap)' } as const;
+const sectionTitleStyle = {
+  fontSize: '13px',
+  fontWeight: 600,
+  marginBottom: '20px',
+  color: 'var(--color-text-main)',
+  letterSpacing: '0.2px',
+} as const;
 const subSectionStyle = 'p-5 space-y-4 border border-line';
 const subTitleRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } as const;
 
@@ -281,6 +287,7 @@ export default function SettingsPage() {
         // 第三方服务
         mapbox_access_token: s.mapbox_access_token || s.footprint_mapbox_token || '',
         mapbox_api_url: s.mapbox_api_url || 'https://api.mapbox.com',
+        github_access_token: s.github_access_token || s.coding_github_token || '',
         google_maps_api_key: s.google_maps_api_key || '',
         tinypng_api_key: s.tinypng_api_key || '',
         // S3/R2
@@ -376,7 +383,7 @@ export default function SettingsPage() {
       'image_display_effect', 'image_display_duration',
       'image_lazy_load', 'image_lightbox',
     ],
-    services: ['mapbox_access_token', 'mapbox_api_url', 'google_maps_api_key', 'tinypng_api_key'],
+    services: ['mapbox_access_token', 'mapbox_api_url', 'github_access_token', 'google_maps_api_key', 'tinypng_api_key'],
   };
 
   const onSubmit = async (data: any) => {
@@ -393,6 +400,9 @@ export default function SettingsPage() {
         // mapbox_access_token becomes the canonical site-wide key.
         if (activeTab === 'services' && 'mapbox_access_token' in filtered) {
           filtered.footprint_mapbox_token = filtered.mapbox_access_token;
+        }
+        if (activeTab === 'services' && 'github_access_token' in filtered) {
+          filtered.coding_github_token = filtered.github_access_token;
         }
         await optionsApi.updateMany(filtered);
       } else {
@@ -517,27 +527,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div>
+    <div className="settings-page">
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--color-border)', marginBottom: '28px' }}>
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              padding: '10px 18px', fontSize: '13px', fontWeight: activeTab === tab.id ? 600 : 400,
-              color: activeTab === tab.id ? 'var(--color-primary)' : 'var(--color-text-sub)',
-              borderTop: 'none', borderLeft: 'none', borderRight: 'none',
-              borderBottom: activeTab === tab.id ? '2px solid var(--color-primary)' : '2px solid transparent',
-              background: 'none', cursor: 'pointer', transition: 'all 0.15s',
-              whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px',
-            }}
-          >
-            <i className={tab.icon} style={{ fontSize: '13px' }} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <SettingsTabs items={tabs} activeId={activeTab} onChange={setActiveTab} />
 
       {/* Content */}
       <div>
@@ -730,7 +722,7 @@ export default function SettingsPage() {
           {/* ==================== 邮件设置 ==================== */}
           {activeTab === 'email' && (
             <>
-              <div className="card" style={cardStyle}>
+              <div className="card settings-panel" style={cardStyle}>
                 <h3 style={sectionTitleStyle}>{t('admin.settings.email.sender.section', '发件人信息')}</h3>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-6">
                   <Input label={t('admin.settings.email.sender.email', '发件人邮箱')} placeholder="noreply@yourdomain.com" {...register('email_from')} />
@@ -738,7 +730,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="card" style={cardStyle}>
+              <div className="card settings-panel" style={cardStyle}>
                 <h3 style={sectionTitleStyle}>{t('admin.settings.email.provider.section', '邮件服务商')}</h3>
                 <div style={{ marginBottom: '24px' }}>
                   <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>{t('admin.settings.email.provider.choose', '选择服务商')}</label>
@@ -845,7 +837,7 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              <div className="card" style={cardStyle}>
+              <div className="card settings-panel" style={cardStyle}>
                 <h3 style={sectionTitleStyle}>{t('admin.settings.email.test.section', '测试邮件')}</h3>
                 <p className="text-xs text-dim" style={{ marginTop: '-16px', marginBottom: '16px' }}>{t('admin.settings.email.test.description', '保存设置后发送测试邮件，验证邮件服务是否正常')}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -879,7 +871,7 @@ export default function SettingsPage() {
           {/* ==================== Telegram ==================== */}
           {activeTab === 'telegram' && (
             <>
-              <div className="card" style={cardStyle}>
+              <div className="card settings-panel" style={cardStyle}>
                 <h3 style={sectionTitleStyle}>{t('admin.settings.telegram.connection.section', 'Bot 连接')}</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div>
@@ -1143,7 +1135,7 @@ export default function SettingsPage() {
           {/* ==================== 存储设置 ==================== */}
           {activeTab === 'media' && (
             <>
-              <div className="card" style={cardStyle}>
+              <div className="card settings-panel" style={cardStyle}>
                 <h3 style={sectionTitleStyle}>{t('admin.settings.media.usage.section', '存储用量')}</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {(() => {
@@ -1214,7 +1206,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="card" style={cardStyle}>
+              <div className="card settings-panel" style={cardStyle}>
                 <h3 style={sectionTitleStyle}>{t('admin.settings.media.driver.section', '存储方式')}</h3>
                 <div style={{ marginBottom: '24px' }}>
                   <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>{t('admin.settings.media.driver.label', '存储驱动')}</label>
@@ -1304,7 +1296,7 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              <div className="card" style={cardStyle}>
+              <div className="card settings-panel" style={cardStyle}>
                 <h3 style={sectionTitleStyle}>{t('admin.settings.media.folderRouting.section', '分类存储路由')}</h3>
                 <p className="text-dim" style={{ fontSize: '12px', marginBottom: '20px', lineHeight: 1.7 }}>
                   {t('admin.settings.media.folderRouting.description', '为每个上传分类单独指定存储位置。选择「云端」时，该分类的文件将上传至已配置的 S3/R2；选择「本地」时始终保存在服务器本地。「跟随全局」使用上方存储方式设置。')}
@@ -1335,7 +1327,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="card" style={cardStyle}>
+              <div className="card settings-panel" style={cardStyle}>
                 <h3 style={sectionTitleStyle}>{t('admin.settings.media.uploadLimits.section', '上传限制')}</h3>
                 <div className="grid gap-y-6">
                   <Input label={t('admin.settings.media.uploadLimits.maxSize', '最大上传大小 (MB)')} type="number" {...register('max_upload_size')} />
@@ -1386,7 +1378,7 @@ export default function SettingsPage() {
                 />
               </FormSectionC>
 
-              <div className="card" style={cardStyle}>
+              <div className="card settings-panel" style={cardStyle}>
                 <div style={subTitleRow}>
                   <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>{t('admin.settings.image.random.section', '随机图片 API')}</h3>
                   <Toggle {...register('random_image_enabled')} />
@@ -1395,7 +1387,7 @@ export default function SettingsPage() {
                 <ImgEtBuilder register={register} watch={watch} setValue={setValue} />
               </div>
 
-              <div className="card" style={cardStyle}>
+              <div className="card settings-panel" style={cardStyle}>
                 <h3 style={sectionTitleStyle}>{t('admin.settings.image.display.section', '图片显示效果')}</h3>
                 <p className="text-xs text-dim" style={{ marginTop: '-16px', marginBottom: '20px' }}>{t('admin.settings.image.display.description', '前端文章特色图片和正文图片的加载动画效果')}</p>
                 <div className="grid gap-y-6">
@@ -1467,6 +1459,21 @@ export default function SettingsPage() {
               </FormSectionC>
 
               <FormSectionC
+                title={t('admin.settings.services.github.section', 'GitHub')}
+                icon="fa-brands fa-github"
+                description={t('admin.settings.services.github.description', '全站统一 GitHub Token。Coding 页面读取公开项目时可不填；填写后用于贡献统计 GraphQL 查询和提升 GitHub API 速率。')}
+                footerHint={t('admin.settings.services.github.footer', 'Coding 页面项目列表固定只读取公开仓库。Token 可用于识别当前登录账号所属组织、贡献统计和提升 API 速率，但不会让前台混入私有仓库。')}
+              >
+                <FormRowInputC
+                  label={t('admin.settings.services.github.token', 'GitHub Token')}
+                  type="password"
+                  register={register('github_access_token')}
+                  placeholder="github_pat_..."
+                  last
+                />
+              </FormSectionC>
+
+              <FormSectionC
                 title={t('admin.settings.services.google.section', 'Google Maps')}
                 icon="fa-brands fa-google"
                 description={t('admin.settings.services.google.description', '预留给后续地理编码、地图或地址服务使用。当前足迹地理编码仍使用足迹页配置的临时服务。')}
@@ -1525,7 +1532,7 @@ export default function SettingsPage() {
 
           {/* Save button — only shows on editable tabs (not read-only "update" tab) */}
           {activeTab !== 'update' && (
-            <div style={{ paddingTop: '24px', borderTop: '1px solid var(--color-border)', marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="settings-actions">
               <Button onClick={handleSubmit(onSubmit)} loading={saving}>
                 {t('admin.settings.saveSettings', '保存设置')}
               </Button>

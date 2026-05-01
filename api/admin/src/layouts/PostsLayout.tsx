@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useI18n } from '@/lib/i18n';
 
 const ToolbarContext = createContext<{ setToolbar: (node: ReactNode) => void }>({ setToolbar: () => {} });
 
@@ -7,11 +8,16 @@ export function usePostsToolbar() {
   return useContext(ToolbarContext);
 }
 
-// 文章 / 分类 / 标签 三个 tab 现在挂在 Sidebar 的 "文章" 菜单下
-// (见 components/layout/Sidebar.tsx 的 children)，这里不再重复渲染。
-// 只保留 toolbar 插槽，让 Posts / PostCategories / PostTags 在自己的
-// 页面顶部右侧渲染 filter / search / new button 等。
+const tabs = [
+  { to: '/posts', label: '全部文章', key: 'admin.posts.tabs.all', icon: 'fa-regular fa-file-lines', end: true },
+  { to: '/posts/categories', label: '分类', key: 'admin.nav.categories', icon: 'fa-regular fa-folder' },
+  { to: '/posts/tags', label: '标签', key: 'admin.nav.tags', icon: 'fa-regular fa-tag' },
+];
+
+// 文章 / 分类 / 标签属于同一个文章模块：左侧只保留「文章」
+// 一级入口，这里负责模块内 tabs 和各页面 toolbar 插槽。
 export default function PostsLayout() {
+  const { t } = useI18n();
   const { pathname } = useLocation();
   const [toolbar, setToolbar] = useState<ReactNode>(null);
 
@@ -21,11 +27,50 @@ export default function PostsLayout() {
   return (
     <ToolbarContext.Provider value={{ setToolbar }}>
       <div>
-        {toolbar && (
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-            {toolbar}
+        <div style={{ marginBottom: 16 }}>
+          <div
+            role="tablist"
+            aria-label={t('admin.nav.posts', '文章')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              borderBottom: '1px solid var(--color-border)',
+              overflowX: 'auto',
+            }}
+          >
+            {tabs.map(tab => (
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                end={tab.end}
+                role="tab"
+                style={({ isActive }) => ({
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 7,
+                  minHeight: 40,
+                  padding: '0 16px',
+                  color: isActive ? 'var(--color-primary)' : 'var(--color-text-sub)',
+                  fontSize: 13,
+                  fontWeight: isActive ? 700 : 500,
+                  textDecoration: 'none',
+                  borderBottom: `2px solid ${isActive ? 'var(--color-primary)' : 'transparent'}`,
+                  whiteSpace: 'nowrap',
+                })}
+              >
+                <i className={tab.icon} style={{ fontSize: 14 }} />
+                <span>{t(tab.key, tab.label)}</span>
+              </NavLink>
+            ))}
           </div>
-        )}
+          {toolbar && (
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: 12 }}>
+              {toolbar}
+            </div>
+          )}
+        </div>
         <Outlet />
       </div>
     </ToolbarContext.Provider>

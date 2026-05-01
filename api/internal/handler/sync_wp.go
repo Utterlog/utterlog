@@ -111,7 +111,7 @@ func SyncWPPing(c *gin.Context) {
 		"source_url":     site.SourceURL,
 		"last_seen_at":   site.LastSeenAt,
 		"server_time":    time.Now().Unix(),
-		"server_version": "2.0.2",
+		"server_version": "2.0.4",
 	})
 }
 
