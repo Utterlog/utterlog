@@ -23,22 +23,32 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
-## [34fbff7] - 2026-04-30
-
-> 本条目以 commit `34fbff7` 标识，版本号沿用 2.0.2，未发布新版本。
+## [2.0.3] - 2026-05-01
 
 ### 新增
 
 - 新增 Renascent 主题，基于学术极简风格提供 serif 标题、黑白灰排版和克制蓝色强调。
+- 新增文章内嵌说说短代码 `[moment id="123"][/moment]`，文章编辑器插入说说时改为引用原始说说 ID，并在前台使用独立卡片样式渲染。
+- 新增 Markdown GitHub 仓库链接自动卡片化，正文中单独一行 `https://github.com/owner/repo` 会展示项目名称、描述、语言、版本号、Star、Fork 和作者头像。
+- 新增 Markdown X/Twitter 帖子自动嵌入，正文中单独一行 X 或 Twitter 状态链接会使用官方 widgets 渲染帖子。
 
 ### 优化
 
-- Renascent 主题改为独立组件和独立样式结构，按学术极简设计系统重写首页、文章页、页头、页脚和文章卡片,不再复用 Azure 的页面结构。
+- Renascent 主题改为独立组件和独立样式结构，按学术极简设计系统重写首页、文章页、页头、页脚和文章卡片，不再复用 Azure 的页面结构。
 - Renascent 首页进一步对齐 `lixiaolai.com` 的 Reborn 风格，改为文字驱动的 Hero、编号指标列表、CURRENTLY 信息条和文章目录式列表。
 - Renascent 文章页深度重构为出版式阅读版式，新增文章编号区、元信息侧栏、正文主栏、目录栏、封面题注、AI 摘要、上下篇、相关文章和评论区的统一视觉层级。
 - 补充 `AGENT.md` 项目协作说明，明确本地开发、主题同步、当前进度、部署、版本号和更新日志维护规则。
 - 主题菜单和资料卡设置文案改为通用描述，适配多套具备侧栏功能的主题。
 - 后台仪表盘最近文章 / 最新评论改为左右逐行严格对齐，并把 30 天访问趋势的日期标签改为月份加粗 + 日期两行、跨月才显示月份的紧凑布局。
+- 优化文章页边读边聊入口的显示时机，默认隐藏，阅读进度超过 40% 后再显示。
+- 优化 GitHub 仓库卡片的数据加载时机，改为页面加载完成后异步拉取仓库信息，并增加 5 秒兜底和加载状态。
+- 优化 GitHub 仓库卡片右侧视觉区，移除重复内容的 OpenGraph 预览图，改为 GitHub 用户头像和按语言占比渲染的全宽色条。
+- 优化 GitHub 仓库卡片元信息展示，新增 latest release 或最新 tag 版本号。
+- 优化 X/Twitter 帖子嵌入样式，恢复官方原始 widgets 渲染，不再对 iframe 做高度裁切和缩放。
+- 优化统计页面最近访客卡片的分页体验，翻页时保留表格和页面位置，只替换访客列表内容。
+- 优化 GitHub 仓库卡片为固定高度，描述改为单行省略，右侧视觉区改为轻量头像展示。
+- 优化 GitHub 仓库卡片头像定位，避免主题正文图片样式干扰，头像始终显示在右侧区域正中心。
+- 优化 GitHub 仓库卡片悬浮状态，保留边框和阴影反馈，不再产生位移。
 
 ### 修复
 
@@ -46,6 +56,9 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 - 修复 Azure 主题评论提交或回复后整块评论区进入加载状态，导致页面出现重载感的问题。
 - 修复本地单端口开发时 Next.js HMR WebSocket 被开发源校验和 Go 反代升级处理阻断，导致控制台持续出现 `/_next/webpack-hmr` 连接失败的问题。
 - 修复 Renascent 切换后仍输出大量 Azure 组件结构和样式类名的问题。
+- 修复后台评论管理、文章预览、仪表盘最近文章和最新评论中的文章链接仍写死 `/posts/slug` 或跳转编辑页的问题，统一跟随站点固定连接打开真实文章页，并在基础设置保存后刷新后台站点链接缓存。
+- 修复 GitHub 仓库卡片被主题文章链接样式覆盖，导致卡片标题、描述和元信息出现下划线的问题。
+- 修复 GitHub 仓库卡片右侧视觉区被内容高度拉伸导致布局异常的问题。
 
 ### 移除
 
@@ -195,7 +208,8 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
-[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.2...HEAD
+[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.3...HEAD
+[2.0.3]: https://github.com/utterlog/utterlog/releases/tag/v2.0.3
 [2.0.2]: https://github.com/utterlog/utterlog/releases/tag/v2.0.2
 [2.0.1]: https://github.com/utterlog/utterlog/releases/tag/v2.0.1
 [2.0.0]: https://github.com/utterlog/utterlog/releases/tag/v2.0.0

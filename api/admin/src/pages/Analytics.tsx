@@ -408,18 +408,22 @@ function RecentVisitorsPanel() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const fetchVisitors = async () => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    try {
-      const r: any = await api.get('/analytics/visitors', { params: { page, per_page: 10 } });
-      setVisitors(r.data || []);
-      setTotal(r.meta?.total || 0);
-      setTotalPages(r.meta?.total_pages || 1);
-    } catch {}
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchVisitors(); }, [page]);
+    api.get('/analytics/visitors', { params: { page, per_page: 10 } })
+      .then((r: any) => {
+        if (cancelled) return;
+        setVisitors(r.data || []);
+        setTotal(r.meta?.total || 0);
+        setTotalPages(r.meta?.total_pages || 1);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [page]);
 
   const formatTime = (ts: number) => {
     if (!ts) return '';
@@ -433,6 +437,9 @@ function RecentVisitorsPanel() {
     return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
   };
 
+  const initialLoading = loading && visitors.length === 0;
+  const skeletonRows = Array.from({ length: 10 });
+
   return (
     <div className="card" style={{ overflow: 'visible' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -443,16 +450,7 @@ function RecentVisitorsPanel() {
         <span className="text-dim" style={{ fontSize: '12px' }}>共 {total} 条</span>
       </div>
 
-      {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="var(--color-primary)">
-            <path d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z" opacity=".25"/>
-            <path d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z">
-              <animateTransform attributeName="transform" type="rotate" dur="0.75s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
-            </path>
-          </svg>
-        </div>
-      ) : (
+      <div style={{ position: 'relative', minHeight: '486px' }}>
         <table className="table" style={{ width: '100%', fontSize: '12px' }}>
           <thead>
             <tr>
@@ -465,7 +463,22 @@ function RecentVisitorsPanel() {
             </tr>
           </thead>
           <tbody>
-            {visitors.map((v: any, i: number) => (
+            {initialLoading && skeletonRows.map((_, i) => (
+              <tr key={`visitor-skeleton-${i}`}>
+                <td style={{ padding: '10px 12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '24px', height: '24px', background: 'var(--color-bg-soft)', display: 'inline-block', clipPath: 'url(#squircle)' }} />
+                    <span style={{ width: '72px', height: '12px', background: 'var(--color-bg-soft)', display: 'inline-block' }} />
+                  </div>
+                </td>
+                <td><span style={{ width: '96px', height: '12px', background: 'var(--color-bg-soft)', display: 'inline-block' }} /></td>
+                <td><span style={{ width: '80px', height: '12px', background: 'var(--color-bg-soft)', display: 'inline-block' }} /></td>
+                <td><span style={{ width: '120px', height: '12px', background: 'var(--color-bg-soft)', display: 'inline-block' }} /></td>
+                <td><span style={{ width: '42px', height: '12px', background: 'var(--color-bg-soft)', display: 'inline-block' }} /></td>
+                <td><span style={{ width: '72px', height: '12px', background: 'var(--color-bg-soft)', display: 'inline-block' }} /></td>
+              </tr>
+            ))}
+            {!initialLoading && visitors.map((v: any, i: number) => (
               <tr key={i}>
                 <td style={{ padding: '6px 12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -509,19 +522,47 @@ function RecentVisitorsPanel() {
                 <td className="text-dim">{formatTime(v.created_at)}</td>
               </tr>
             ))}
+            {!initialLoading && visitors.length === 0 && (
+              <tr>
+                <td colSpan={6} className="text-dim" style={{ padding: '40px 12px', textAlign: 'center' }}>暂无数据</td>
+              </tr>
+            )}
           </tbody>
         </table>
-      )}
+        {loading && !initialLoading && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(255,255,255,0.42)',
+            backdropFilter: 'blur(1px)',
+            WebkitBackdropFilter: 'blur(1px)',
+            pointerEvents: 'none',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', fontSize: '12px', color: 'var(--color-text-sub)' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="var(--color-primary)">
+                <path d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z" opacity=".25"/>
+                <path d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z">
+                  <animateTransform attributeName="transform" type="rotate" dur="0.75s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
+                </path>
+              </svg>
+              更新中
+            </div>
+          </div>
+        )}
+      </div>
 
       {totalPages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', padding: '10px 16px', borderTop: '1px solid var(--color-border)' }}>
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-            style={{ padding: '4px 10px', fontSize: '12px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', cursor: page <= 1 ? 'default' : 'pointer', opacity: page <= 1 ? 0.4 : 1 }}>
+          <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1 || loading}
+            style={{ padding: '4px 10px', fontSize: '12px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', cursor: page <= 1 || loading ? 'default' : 'pointer', opacity: page <= 1 || loading ? 0.4 : 1 }}>
             <i className="fa-solid fa-chevron-left" style={{ fontSize: '10px' }} />
           </button>
           <span className="text-sub" style={{ fontSize: '12px', padding: '4px 8px' }}>{page} / {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-            style={{ padding: '4px 10px', fontSize: '12px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', cursor: page >= totalPages ? 'default' : 'pointer', opacity: page >= totalPages ? 0.4 : 1 }}>
+          <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages || loading}
+            style={{ padding: '4px 10px', fontSize: '12px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', cursor: page >= totalPages || loading ? 'default' : 'pointer', opacity: page >= totalPages || loading ? 0.4 : 1 }}>
             <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px' }} />
           </button>
         </div>

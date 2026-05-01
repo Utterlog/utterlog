@@ -13,6 +13,10 @@ import { AnnotationProvider } from './AnnotationProvider';
 import BlockAnnotation from './BlockAnnotation';
 import LazyImage from './LazyImage';
 import ImageGrid from './ImageGrid';
+import MomentEmbed from './MomentEmbed';
+import GitHubRepoCard from './GitHubRepoCard';
+import XPostEmbed from './XPostEmbed';
+import { processGithubRepoLinks } from './shortcodes';
 
 interface PostContentProps {
   content: string;
@@ -359,6 +363,11 @@ function processShortcodes(text: string): string {
       return `<div data-music-player data-platform="${platform}" data-id="${id}" data-title="${title}" data-artist="${artist}" data-cover="${coverUrl}" data-url="${streamUrl}"></div>`;
     }
   );
+  // [moment id="123"][/moment]
+  text = text.replace(/\[moment\s+id=(?:"([^"]+)"|'([^']+)'|([^\]\s]+))\]\s*\[\/moment\]/g, (_, doubleQuoted, singleQuoted, bare) => {
+    const id = String(doubleQuoted || singleQuoted || bare || '').replace(/[^0-9]/g, '');
+    return id ? `<div data-moment-embed data-id="${id}"></div>` : '';
+  });
   // [video]url[/video]
   //
   // Embedded iframes don't expose their intrinsic aspect ratio, so we
@@ -407,7 +416,7 @@ function processShortcodes(text: string): string {
     ).join('');
     return `<div data-image-grid data-count="${images.length}"${colsAttr}>${imgs}</div>`;
   });
-  return text;
+  return processGithubRepoLinks(text);
 }
 
 export default function PostContent({ content, postId }: PostContentProps) {
@@ -540,6 +549,18 @@ export default function PostContent({ content, postId }: PostContentProps) {
           platform={el['data-platform'] || 'netease'}
           id={el['data-id'] || ''}
         />;
+      }
+      // Moment shortcode
+      if (el['data-moment-embed'] !== undefined) {
+        return <MomentEmbed id={el['data-id'] || ''} />;
+      }
+      // GitHub repo card
+      if (el['data-github-repo-card'] !== undefined) {
+        return <GitHubRepoCard owner={el['data-owner'] || ''} repo={el['data-repo'] || ''} url={el['data-url'] || ''} />;
+      }
+      // X/Twitter post embed
+      if (el['data-x-post-embed'] !== undefined) {
+        return <XPostEmbed url={el['data-url'] || ''} />;
       }
       return <div {...props} />;
     },

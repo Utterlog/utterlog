@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useThemeContext } from '@/lib/theme-context';
 import { useReaderChatStore } from '@/lib/store';
+import { useReaderScrollReveal } from '@/components/blog/useReaderScrollReveal';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -30,6 +31,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   // and apply the admin's left/right preference.
   
   const { owner, options } = useThemeContext();
+  const readerRevealed = useReaderScrollReveal();
   // 陪读卡片可见性 store —— 用户点 X 关闭后由 footer 上的小按钮重新开启。
   // 选 dismissed 单字段而不是整对象，避免每次 store 任意字段变都触发重渲。
   const dismissed = useReaderChatStore(s => s.dismissed);
@@ -38,7 +40,14 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   const dismiss = useReaderChatStore(s => s.dismiss);
   // 挂载时通知 footer「现在文章页有陪读」，卸载时清掉，避免离开文章后
   // footer 还误以为陪读还在、显示重开按钮。
-  useEffect(() => { mount(); return () => { unmount(); }; }, [mount, unmount]);
+  useEffect(() => {
+    if (!readerRevealed) {
+      unmount();
+      return;
+    }
+    mount();
+    return () => { unmount(); };
+  }, [readerRevealed, mount, unmount]);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -201,6 +210,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
     : { right: 24 };
 
   // 用户点过 X 后整个组件让位 —— 由 footer 上「重新打开陪读」的小按钮接管。
+  if (!readerRevealed) return null;
   if (dismissed) return null;
 
   // ━━ 折叠状态：卡片 ━━

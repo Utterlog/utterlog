@@ -232,6 +232,17 @@ function renderableMarkdown(text: string) {
   return text.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>');
 }
 
+const githubRepoLinePattern = /(^|\n)[ \t]{0,3}(https?:\/\/github\.com\/([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+)(?:\/)?(?:[?#][^\s]*)?)[ \t]*(?=\n|$)/;
+const xPostLinePattern = /(^|\n)[ \t]{0,3}(https?:\/\/(?:x\.com|twitter\.com|mobile\.twitter\.com)\/[^/\s]+\/status(?:es)?\/\d+(?:[/?#][^\s]*)?)[ \t]*(?=\n|$)/i;
+
+function isInsideMarkdownFence(text: string, index: number) {
+  let inFence = false;
+  for (const line of text.slice(0, index).split('\n')) {
+    if (/^(```|~~~)/.test(line.trimStart())) inFence = !inFence;
+  }
+  return inFence;
+}
+
 function ToolbarDropdown({
   open,
   anchorRef,
@@ -326,7 +337,7 @@ interface MarkdownEditorProps {
 /* ── Shortcode renderer: splits content into markdown + shortcode blocks ── */
 function ShortcodeRenderer({ content }: { content: string }) {
   // Split by shortcodes, render each part
-  const parts: { type: 'md' | 'collapse' | 'download' | 'video'; content: string; attrs?: Record<string, string> }[] = [];
+  const parts: { type: 'md' | 'collapse' | 'download' | 'video' | 'moment' | 'github' | 'x'; content: string; attrs?: Record<string, string> }[] = [];
   let remaining = content;
 
   while (remaining.length > 0) {
@@ -334,11 +345,19 @@ function ShortcodeRenderer({ content }: { content: string }) {
     const collapseMatch = remaining.match(/\[collapse\s+title="([^"]*)"?\]\n?([\s\S]*?)\[\/collapse\]/);
     const downloadMatch = remaining.match(/\[download\s+title="([^"]*)"\s+desc="([^"]*)"\s+url="([^"]*)"\]/);
     const videoMatch = remaining.match(/\[video\]([\s\S]*?)\[\/video\]/);
+    const momentMatch = remaining.match(/\[moment\s+id=(?:"([^"]+)"|'([^']+)'|([^\]\s]+))\]\s*\[\/moment\]/);
+    const rawGithubMatch = remaining.match(githubRepoLinePattern);
+    const githubMatch = rawGithubMatch && !isInsideMarkdownFence(remaining, rawGithubMatch.index || 0) ? rawGithubMatch : null;
+    const rawXPostMatch = remaining.match(xPostLinePattern);
+    const xPostMatch = rawXPostMatch && !isInsideMarkdownFence(remaining, rawXPostMatch.index || 0) ? rawXPostMatch : null;
 
     const matches = [
       collapseMatch ? { m: collapseMatch, type: 'collapse' as const } : null,
       downloadMatch ? { m: downloadMatch, type: 'download' as const } : null,
       videoMatch ? { m: videoMatch, type: 'video' as const } : null,
+      momentMatch ? { m: momentMatch, type: 'moment' as const } : null,
+      githubMatch ? { m: githubMatch, type: 'github' as const } : null,
+      xPostMatch ? { m: xPostMatch, type: 'x' as const } : null,
     ].filter(Boolean).sort((a, b) => (a!.m!.index || 0) - (b!.m!.index || 0));
 
     if (matches.length === 0) {
@@ -356,6 +375,13 @@ function ShortcodeRenderer({ content }: { content: string }) {
       parts.push({ type: 'download', content: '', attrs: { title: first.m![1], desc: first.m![2], url: first.m![3] } });
     } else if (first.type === 'video') {
       parts.push({ type: 'video', content: first.m![1].trim() });
+    } else if (first.type === 'moment') {
+      parts.push({ type: 'moment', content: '', attrs: { id: first.m![1] || first.m![2] || first.m![3] || '' } });
+    } else if (first.type === 'github') {
+      const repo = String(first.m![4] || '').replace(/\.git$/i, '');
+      parts.push({ type: 'github', content: '', attrs: { url: `https://github.com/${first.m![3]}/${repo}`, owner: first.m![3], repo } });
+    } else if (first.type === 'x') {
+      parts.push({ type: 'x', content: '', attrs: { url: first.m![2] || '' } });
     }
 
     remaining = remaining.slice(idx + first.m![0].length);
@@ -411,6 +437,40 @@ function ShortcodeRenderer({ content }: { content: string }) {
             </div>
           );
         }
+        if (part.type === 'moment') {
+          return (
+            <aside key={i} className="utter-moment-embed utter-moment-embed--preview">
+              <div className="utter-moment-embed__head">
+                <span className="utter-moment-embed__icon"><i className="fa-regular fa-comment-dots" /></span>
+                <span className="utter-moment-embed__label">说说</span>
+                <span className="utter-moment-embed__meta">#{part.attrs?.id || '?'}</span>
+              </div>
+              <div className="utter-moment-embed__content">保存后前台会自动读取这条说说。</div>
+            </aside>
+          );
+        }
+        if (part.type === 'github') {
+          const fullName = `${part.attrs?.owner || ''}/${part.attrs?.repo || ''}`;
+          return (
+            <a key={i} className="github-repo-card" href={part.attrs?.url || '#'} target="_blank" rel="noopener noreferrer">
+              <div className="github-repo-card__content">
+                <div className="github-repo-card__kicker"><i className="fa-brands fa-github" />GitHub</div>
+                <div className="github-repo-card__title">{fullName}</div>
+                <p className="github-repo-card__desc">保存后前台会自动读取仓库描述、Star、Fork 和预览图。</p>
+                <div className="github-repo-card__meta"><span>repo preview</span></div>
+              </div>
+              <div className="github-repo-card__visual" />
+            </a>
+          );
+        }
+        if (part.type === 'x') {
+          return (
+            <a key={i} className="x-post-embed__fallback" href={part.attrs?.url || '#'} target="_blank" rel="noopener noreferrer">
+              <span><i className="fa-brands fa-x-twitter" />X</span>
+              <strong>保存后前台会显示 X 帖子长方形卡片</strong>
+            </a>
+          );
+        }
         return null;
       })}
     </>
@@ -438,9 +498,7 @@ class PreviewErrorBoundary extends Component<{ children: ReactNode }, { error: s
 function SafePreview({ value }: { value: string }) {
   return (
     <PreviewErrorBoundary>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, [rehypeSanitize, previewSanitizeSchema], rehypeHighlight, rehypeSlug]}>
-        {renderableMarkdown(value)}
-      </ReactMarkdown>
+      <ShortcodeRenderer content={value} />
     </PreviewErrorBoundary>
   );
 }

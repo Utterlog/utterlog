@@ -7,6 +7,7 @@ import { Button, Input, Table, Pagination, Badge, ConfirmDialog, Modal } from '@
 import { formatDate } from '@/lib/utils';
 import { usePostsToolbar } from '@/layouts/PostsLayout';
 import { useI18n } from '@/lib/i18n';
+import { invalidateSiteOptions, loadSiteOptions, postUrlOf } from '@/lib/site';
 
 // Mirrors web/lib/permalink.ts. Kept inline so the admin SPA can
 // render a preview without reaching into the web/ tree.
@@ -94,6 +95,8 @@ export default function PostsPage() {
         posts_per_page: postsPerPage,
         permalink_structure: permalinkStructure,
       });
+      invalidateSiteOptions();
+      await loadSiteOptions();
       toast.success(t('admin.settings.toast.saved', '设置已保存'));
       setSettingsOpen(false);
     } catch { toast.error(t('admin.settings.toast.saveFailed', '保存失败')); }
@@ -233,7 +236,7 @@ export default function PostsPage() {
     { key: 'actions', title: <span style={{ textAlign: 'right', display: 'block' }}>{t('admin.posts.columns.actions', '操作')}</span>, width: '190px', render: (row: any) => (
       <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
         <button onClick={() => navigate(`/posts/edit/${row.id}`)} className="action-btn primary" title={t('admin.common.edit', '编辑')}><i className="fa-regular fa-pen" style={{ fontSize: '14px' }} /></button>
-        <button onClick={() => window.open(`/posts/${row.slug}`, '_blank')} className="action-btn" title={t('admin.common.preview', '预览')}><i className="fa-regular fa-eye" style={{ fontSize: '14px' }} /></button>
+        <button onClick={() => window.open(postUrlOf(row), '_blank', 'noopener,noreferrer')} className="action-btn" title={t('admin.common.preview', '预览')}><i className="fa-regular fa-eye" style={{ fontSize: '14px' }} /></button>
         <button
           onClick={async () => {
             const newStatus = row.status === 'draft' ? 'publish' : 'draft';

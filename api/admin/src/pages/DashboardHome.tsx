@@ -29,9 +29,10 @@ function AnimatedNumber({ value }: { value: number }) {
 import api, { postsApi, commentsApi, linksApi, networkApi } from '@/lib/api';
 import { formatRelativeTime } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
+import { postUrlOf } from '@/lib/site';
 
 interface Stats { posts: number; comments: number; links: number; views: number; today: number; words: number; days: number; categories: number; tags: number }
-interface RecentPost { id: number; title: string; status: string; created_at: string; view_count?: number; comment_count?: number; categories?: { id: number; name: string; slug: string; icon?: string }[] }
+interface RecentPost { id: number; display_id?: number; title: string; slug: string; status: string; created_at: string; published_at?: string | null; view_count?: number; comment_count?: number; categories?: { id: number; name: string; slug: string; icon?: string }[] }
 interface NetworkActivity { type: string; site: string; site_name: string; title: string; content_type: string; created_at: string }
 interface NetworkSite { name: string; url: string; logo: string; description: string }
 
@@ -55,7 +56,7 @@ export default function DashboardPage() {
     try {
       const [dashRes, postsRes, commentsRes]: any = await Promise.all([
         api.get('/admin/stats'),
-        postsApi.list({ limit: 5 }),
+        postsApi.list({ limit: 5, status: 'publish' }),
         commentsApi.list({ per_page: 15, status: 'approved' }),
       ]);
       const d = dashRes.data || dashRes;
@@ -97,6 +98,21 @@ export default function DashboardPage() {
         setNetworkSites((sitesRes.data?.sites || sitesRes.sites || []).slice(0, 4));
       }
     } catch {}
+  };
+
+  const openPostPage = (post: any) => {
+    window.open(postUrlOf(post), '_blank', 'noopener,noreferrer');
+  };
+
+  const openCommentPostPage = (comment: any) => {
+    openPostPage({
+      id: comment.post_id,
+      display_id: comment.post_display_id,
+      slug: comment.post_slug,
+      created_at: comment.post_created_at,
+      published_at: comment.post_published_at,
+      categories: comment.post_categories || [],
+    });
   };
 
   const statCards = [
@@ -303,7 +319,7 @@ export default function DashboardPage() {
                     minHeight: '72px',
                     boxSizing: 'border-box',
                   }}
-                  onClick={() => navigate(`/posts/edit/${post.id}`)}
+                  onClick={() => openPostPage(post)}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', width: '100%' }}>
                     <div style={{ minWidth: 0, flex: 1 }}>
@@ -371,7 +387,7 @@ export default function DashboardPage() {
                       {comment.post_title && (
                         <button
                           type="button"
-                          onClick={e => { e.stopPropagation(); navigate(`/posts/edit/${comment.post_id}`); }}
+                          onClick={e => { e.stopPropagation(); openCommentPostPage(comment); }}
                           style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '12px', color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 6px', minWidth: 0, overflow: 'hidden' }}
                         >
                           {comment.post_categories?.[0]?.icon

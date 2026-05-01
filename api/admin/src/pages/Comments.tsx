@@ -7,8 +7,20 @@ import toast from 'react-hot-toast';
 import { Button, Table, Pagination, ConfirmDialog, Modal } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
+import { postUrlOf } from '@/lib/site';
 
 const defaultAvatar = 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=64';
+
+function commentPostUrl(row: any) {
+  return postUrlOf({
+    id: row.post_id,
+    display_id: row.post_display_id,
+    slug: row.post_slug,
+    created_at: row.post_created_at,
+    published_at: row.post_published_at,
+    categories: row.post_categories || [],
+  });
+}
 
 // IPv6 too long — truncate to first 4 groups
 function formatIP(ip: string) {
@@ -404,7 +416,7 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
       render: (row: any) => (
         <div style={{ fontSize: '12px' }}>
           {row.post_slug ? (
-            <a href={`/posts/${row.post_slug}`} target="_blank" rel="noopener noreferrer" className="text-primary-themed" style={{ fontWeight: 500, fontSize: '13px', textDecoration: 'none' }}>
+            <a href={commentPostUrl(row)} target="_blank" rel="noopener noreferrer" className="text-primary-themed" style={{ fontWeight: 500, fontSize: '13px', textDecoration: 'none' }}>
               {row.post_title || '-'}
               {row.post_comment_count > 0 && <sup style={{ fontSize: '10px', color: 'var(--color-text-dim)', fontWeight: 400, marginLeft: '1px' }}>{row.post_comment_count}</sup>}
             </a>

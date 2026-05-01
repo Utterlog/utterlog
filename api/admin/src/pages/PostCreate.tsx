@@ -465,7 +465,7 @@ export default function CreatePostPage() {
                     } else if (insertType === '电影') {
                       md = '\n> **' + (item.title || '') + '**' + (item.rating ? ' ' + item.rating + '/5' : '') + (item.comment ? '\n> ' + item.comment : '') + '\n';
                     } else if (insertType === '说说') {
-                      md = '\n> ' + (item.content || '') + '\n';
+                      md = '\n[moment id="' + item.id + '"][/moment]\n';
                     }
                     if (md) {
                       setContent(content + md);

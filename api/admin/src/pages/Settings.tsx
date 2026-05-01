@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Button, Input, Toggle } from '@/components/ui';
 import api from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { invalidateSiteOptions, loadSiteOptions } from '@/lib/site';
 import { setAdminTimeZone } from '@/lib/timezone';
 import { useForm } from 'react-hook-form';
 import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC, FormRowRadioC } from '@/components/form/FormC';
@@ -398,6 +399,8 @@ export default function SettingsPage() {
         await optionsApi.updateMany(data);
       }
       if (activeTab === 'general') {
+        invalidateSiteOptions();
+        await loadSiteOptions();
         setAdminTimeZone(data.site_timezone, data.site_timezone || effectiveSiteTimezone);
         await reloadI18n();
       }

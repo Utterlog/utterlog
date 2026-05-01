@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/lib/store';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { useI18n } from '@/lib/i18n';
+import { loadSiteOptions } from '@/lib/site';
 
 /**
  * ChunkErrorBoundary — auto-reloads the page when a lazy-loaded chunk 404s.
@@ -115,7 +116,7 @@ function AuthGate() {
       }
       checkAuth().then((valid) => {
         if (!valid) navigate('/login', { replace: true });
-        else setReady(true);
+        else loadSiteOptions().finally(() => setReady(true));
       });
     };
     if (useAuthStore.persist.hasHydrated()) {

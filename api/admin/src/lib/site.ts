@@ -12,8 +12,50 @@
 
 import { optionsApi } from './api';
 
-let cached: { site_url: string; site_title: string } | null = null;
+const DEFAULT_PERMALINK = '/posts/%postname%';
+
+type PostLike = {
+  id?: number;
+  display_id?: number;
+  slug?: string;
+  created_at?: string | number;
+  published_at?: string | null;
+  categories?: { slug?: string }[];
+};
+
+let cached: { site_url: string; site_title: string; permalink_structure: string } | null = null;
 let loadPromise: Promise<void> | null = null;
+
+const pad2 = (value: number) => String(value).padStart(2, '0');
+
+function postDate(post: PostLike): Date | null {
+  if (post.published_at) {
+    const d = new Date(post.published_at);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  if (post.created_at != null) {
+    const n = Number(post.created_at);
+    if (!Number.isNaN(n) && n > 1e9 && n < 1e10) return new Date(n * 1000);
+    const d = new Date(post.created_at as any);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return null;
+}
+
+export function buildPostPermalink(post: PostLike, template?: string): string {
+  const tpl = (template && template.trim()) || DEFAULT_PERMALINK;
+  const d = postDate(post);
+  const cat = post.categories?.[0]?.slug || 'uncategorized';
+
+  return tpl
+    .replace(/%postname%/g, encodeURIComponent(post.slug || ''))
+    .replace(/%post_id%/g, String(post.id ?? ''))
+    .replace(/%display_id%/g, String(post.display_id ?? post.id ?? ''))
+    .replace(/%year%/g, d ? String(d.getFullYear()) : '')
+    .replace(/%month%/g, d ? pad2(d.getMonth() + 1) : '')
+    .replace(/%day%/g, d ? pad2(d.getDate()) : '')
+    .replace(/%category%/g, encodeURIComponent(cat));
+}
 
 async function doLoad(): Promise<void> {
   try {
@@ -22,9 +64,10 @@ async function doLoad(): Promise<void> {
     cached = {
       site_url: (opts.site_url || '').replace(/\/$/, ''),
       site_title: opts.site_title || 'Utterlog',
+      permalink_structure: (opts.permalink_structure || DEFAULT_PERMALINK).toString(),
     };
   } catch {
-    cached = { site_url: '', site_title: 'Utterlog' };
+    cached = { site_url: '', site_title: 'Utterlog', permalink_structure: DEFAULT_PERMALINK };
   }
 }
 
@@ -48,6 +91,10 @@ export function getSiteUrl(): string {
 
 export function getSiteTitle(): string {
   return cached?.site_title || 'Utterlog';
+}
+
+export function getPermalinkStructure(): string {
+  return cached?.permalink_structure || DEFAULT_PERMALINK;
 }
 
 /**
@@ -76,7 +123,10 @@ export function siteUrlOf(path = '/'): string {
 }
 
 /** Convenience builders */
-export const postUrlOf = (slug: string) => siteUrlOf(`/posts/${slug}`);
+export const postUrlOf = (post: PostLike | string) => {
+  if (typeof post === 'string') return siteUrlOf(`/posts/${post}`);
+  return siteUrlOf(buildPostPermalink(post, getPermalinkStructure()));
+};
 export const pageUrlOf = (slug: string) => siteUrlOf(`/pages/${slug}`);
 export const momentsUrl = () => siteUrlOf('/moments');
 export const siteHomeUrl = () => siteUrlOf('/');

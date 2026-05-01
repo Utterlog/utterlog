@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 	"utterlog-go/config"
 	"utterlog-go/internal/geoip"
 )
@@ -107,6 +108,9 @@ type CommentWithPost struct {
 	Comment
 	PostTitle        string         `json:"post_title"`
 	PostSlug         string         `json:"post_slug"`
+	PostDisplayID    int            `json:"post_display_id"`
+	PostCreatedAt    int64          `json:"post_created_at"`
+	PostPublishedAt  *time.Time     `json:"post_published_at,omitempty"`
 	PostCommentCount int            `json:"post_comment_count"`
 	PostCategories   []MetaBrief    `json:"post_categories,omitempty"`
 	AvatarURL        string         `json:"avatar_url"`
@@ -426,6 +430,9 @@ func FormatComments(comments []Comment) []CommentWithPost {
 		if p, ok := postCache[c.PostID]; ok {
 			result[i].PostTitle = p.Title
 			result[i].PostSlug = p.Slug
+			result[i].PostDisplayID = p.DisplayID
+			result[i].PostCreatedAt = p.CreatedAt
+			result[i].PostPublishedAt = p.PublishedAt
 			result[i].PostCommentCount = p.CommentCount
 			result[i].PostCategories = PostCategories(p.ID)
 		}

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useThemeContext } from '@/lib/theme-context';
+import { useReaderScrollReveal } from './useReaderScrollReveal';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -28,6 +29,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   // Also pull options so we can read ai_chat_position later in the file
   // and apply the admin's left/right preference.
   const { owner, options } = useThemeContext();
+  const readerRevealed = useReaderScrollReveal();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -159,6 +161,8 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   const positionStyle: React.CSSProperties = positionLeft
     ? { left: 24 }
     : { right: 24 };
+
+  if (!readerRevealed) return null;
 
   // ━━ 折叠状态：卡片 ━━
   if (!open) {
