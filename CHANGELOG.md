@@ -23,6 +23,24 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.0.5] - 2026-05-01
+
+### 新增
+
+暂无。
+
+### 优化
+
+暂无。
+
+### 修复
+
+- 修复后台保存主题菜单或站点设置后 `/api/revalidate` 没有转发到 Next.js，导致前台菜单需要等待 options 缓存过期才生效的问题。
+
+### 移除
+
+暂无。
+
 ## [2.0.4] - 2026-05-01
 
 ### 新增
@@ -254,7 +272,8 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
-[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.4...HEAD
+[Unreleased]: https://github.com/utterlog/utterlog/compare/v2.0.5...HEAD
+[2.0.5]: https://github.com/utterlog/utterlog/releases/tag/v2.0.5
 [2.0.4]: https://github.com/utterlog/utterlog/releases/tag/v2.0.4
 [2.0.3]: https://github.com/utterlog/utterlog/releases/tag/v2.0.3
 [2.0.2]: https://github.com/utterlog/utterlog/releases/tag/v2.0.2

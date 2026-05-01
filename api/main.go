@@ -83,6 +83,13 @@ func main() {
 
 	// ---- Full mode from here on ----
 	webProxy := webProxyHandler()
+	if webProxy != nil {
+		// Admin settings save calls Next.js /api/revalidate to invalidate
+		// tagged frontend caches. The generic NoRoute guard below blocks
+		// unknown /api/* paths, so expose this exact Next route explicitly.
+		r.POST("/api/revalidate", webProxy)
+		r.OPTIONS("/api/revalidate", webProxy)
+	}
 
 	// Static files
 	r.Static("/uploads", "./public/uploads")
@@ -143,7 +150,7 @@ func main() {
 
 	// Health
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.0.4-go"}})
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.0.5-go"}})
 	})
 
 	// ===================== Install Wizard (public, unauth) =====================
