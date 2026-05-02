@@ -284,7 +284,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                       );
                     }
                     return (
-                      <Link key={i} href={item.href || '#'} className="azure-hero-tab link">
+                      <Link key={i} href={item.href || '#'} prefetch={false} className="azure-hero-tab link">
                         <span className="azure-hero-tab-label">{item.label}</span>
                         <i className={`${item.icon || 'fa-sharp fa-light fa-circle-arrow-right'} azure-hero-tab-icon`} aria-hidden="true" />
                       </Link>

@@ -66,7 +66,7 @@ export default function PostCard({ post }: PostCardProps) {
           <>
             <span>&middot;</span>
             {post.categories.map((cat, i) => (
-              <Link key={cat.id} href={`/categories/${cat.slug}`} className="text-dim hover:text-primary-themed" style={{ textDecoration: 'none', transition: 'color 0.15s' }}>
+              <Link key={cat.id} href={`/categories/${cat.slug}`} prefetch={false} className="text-dim hover:text-primary-themed" style={{ textDecoration: 'none', transition: 'color 0.15s' }}>
                 {cat.name}
               </Link>
             ))}
@@ -81,6 +81,7 @@ export default function PostCard({ post }: PostCardProps) {
             <Link
               key={tag.id}
               href={`/tags/${tag.slug}`}
+              prefetch={false}
               className="bg-soft text-dim hover:text-primary-themed"
               style={{ display: 'inline-block', padding: '2px 8px', fontSize: '12px', borderRadius: '3px', textDecoration: 'none', transition: 'color 0.15s' }}
             >

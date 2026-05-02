@@ -31,12 +31,12 @@ interface PostLinkProps extends LinkPropsNoHref {
  * Lives outside the `(blog)` group so PostNavigation (shared with
  * admin previews) can import it without a circular path.
  */
-export default function PostLink({ post, hash, children, ...rest }: PostLinkProps) {
+export default function PostLink({ post, hash, children, prefetch = false, ...rest }: PostLinkProps) {
   const { options } = useThemeContext();
   let href = buildPermalink(post, options?.permalink_structure);
   if (hash) href += '#' + hash;
   return (
-    <Link href={href} {...rest}>
+    <Link href={href} prefetch={prefetch} {...rest}>
       {children}
     </Link>
   );

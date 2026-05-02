@@ -40,7 +40,7 @@ export default async function DayArchive({ params }: Props) {
         icon="fa-regular fa-calendar-day"
         meta={<><strong>{posts.length}</strong> 篇文章</>}
         actions={
-          <Link href={`/date/${year}/${month}`} style={{ fontSize: '13px', color: 'var(--color-primary)', textDecoration: 'none' }}>
+          <Link href={`/date/${year}/${month}`} prefetch={false} style={{ fontSize: '13px', color: 'var(--color-primary)', textDecoration: 'none' }}>
           <i className="fa-solid fa-arrow-left fa-fw" /> 返回 {parseInt(month)} 月
           </Link>
         }

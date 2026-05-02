@@ -163,7 +163,7 @@ export default function FootprintTimeline({ items }: { items: FootprintTimelineI
               onFocus={() => setActiveItemId(item.id)}
               onBlur={() => setActiveItemId(null)}
             >
-              <Link href={item.href} className="footprint-card-cover" onClick={(event) => event.stopPropagation()}>
+              <Link href={item.href} prefetch={false} className="footprint-card-cover" onClick={(event) => event.stopPropagation()}>
                 <img src={item.cover} alt="" loading="lazy" onLoad={updateLines} />
                 {item.id === activeItemId && (
                   <span className="footprint-card-pulse" aria-hidden="true">
@@ -189,7 +189,7 @@ export default function FootprintTimeline({ items }: { items: FootprintTimelineI
                 <span className="footprint-card-order">{item.order}</span>
               </Link>
               <div className="footprint-card-body">
-                <Link href={item.href} className="footprint-card-title" onClick={(event) => event.stopPropagation()}>
+                <Link href={item.href} prefetch={false} className="footprint-card-title" onClick={(event) => event.stopPropagation()}>
                   <strong>{item.title}</strong>
                 </Link>
                 <div className="footprint-card-meta">

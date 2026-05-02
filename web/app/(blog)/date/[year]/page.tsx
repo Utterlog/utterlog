@@ -61,7 +61,7 @@ export default async function YearArchive({ params }: Props) {
       <div style={{ padding: '0 32px 32px' }}>
       {months.map(([month, posts]) => (
         <div key={month} style={{ border: '1px solid var(--color-border)', marginBottom: '16px' }}>
-          <Link href={`/date/${year}/${String(month).padStart(2, '0')}`} style={{
+          <Link href={`/date/${year}/${String(month).padStart(2, '0')}`} prefetch={false} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '10px 20px', background: 'var(--color-bg-soft)', borderBottom: '1px solid var(--color-border)',
             textDecoration: 'none', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-main)',

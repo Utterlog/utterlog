@@ -36,11 +36,11 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         <div className="azure-post-hero-overlay">
           {/* Breadcrumb */}
           <div className="azure-breadcrumb">
-            <Link href="/">首页</Link>
+            <Link href="/" prefetch={false}>首页</Link>
             <span>/</span>
             {catName && (
               <>
-                <Link href={`/categories/${post.categories[0].slug}`}>{catName}</Link>
+                <Link href={`/categories/${post.categories[0].slug}`} prefetch={false}>{catName}</Link>
                 <span>/</span>
               </>
             )}
@@ -70,7 +70,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         )}
         <span className="azure-post-meta-item"><i className="fa-regular fa-clock" aria-hidden="true" />{Math.max(1, Math.ceil((post.word_count || 0) / 400))} 分钟</span>
         {catName && (
-          <Link href={`/categories/${post.categories[0].slug}`} className="azure-post-meta-category">
+          <Link href={`/categories/${post.categories[0].slug}`} prefetch={false} className="azure-post-meta-category">
             <i className={catIcon} aria-hidden="true" /> {catName}
           </Link>
         )}
@@ -101,7 +101,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
             referrerPolicy="no-referrer"
             className="azure-post-author-avatar"
           />
-          <Link href="/" className="azure-post-author-link">{post.author?.nickname || post.author?.username || '匿名'}</Link>
+          <Link href="/" prefetch={false} className="azure-post-author-link">{post.author?.nickname || post.author?.username || '匿名'}</Link>
           <span>本文采用</span>
           <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer" className="azure-post-license-link">
             <i className="fa-brands fa-creative-commons" aria-hidden="true" />
@@ -113,7 +113,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
           <div className="azure-post-tags">
             {post.tags.map((tag: any, idx: number) => (
               <span key={tag.id} className="azure-post-tag-wrap">
-                <Link href={`/tags/${tag.slug}`} className="azure-post-tag">
+                <Link href={`/tags/${tag.slug}`} prefetch={false} className="azure-post-tag">
                   <span className="azure-post-tag-hash">#</span>
                   <span className="azure-post-tag-name">{tag.name}</span>
                   {tag.count > 0 && (

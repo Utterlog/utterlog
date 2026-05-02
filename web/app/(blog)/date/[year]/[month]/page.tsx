@@ -40,7 +40,7 @@ export default async function MonthArchive({ params }: Props) {
         icon="fa-regular fa-calendar"
         meta={<><strong>{posts.length}</strong> 篇文章</>}
         actions={
-          <Link href={`/date/${year}`} style={{ fontSize: '13px', color: 'var(--color-primary)', textDecoration: 'none' }}>
+          <Link href={`/date/${year}`} prefetch={false} style={{ fontSize: '13px', color: 'var(--color-primary)', textDecoration: 'none' }}>
           <i className="fa-solid fa-arrow-left fa-fw" /> 返回 {year} 年
           </Link>
         }

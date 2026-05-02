@@ -242,6 +242,7 @@ export default function Header() {
       <Link
         key={`${item.label}-${index}`}
         href={href}
+        prefetch={false}
         className={className}
         title={item.label}
         aria-label={item.label}
@@ -255,7 +256,7 @@ export default function Header() {
     <header className="azure-header">
       <div className="azure-header-inner">
         {/* Logo / Brand lockup — 由 site_brand_mode 决定显示哪些 */}
-        <Link href="/" className="azure-brand" onClick={() => setMenuOpen(false)}>
+        <Link href="/" prefetch={false} className="azure-brand" onClick={() => setMenuOpen(false)}>
           {showMark && (
             site.logo ? (
               <img
@@ -293,7 +294,7 @@ export default function Header() {
                   {item.children.map((child: any) => {
                     const childHref = child.href || '#';
                     return (
-                      <Link key={childHref || child.label} href={childHref} className={`azure-nav-dropdown-link${isActive(childHref) ? ' active' : ''}`}>
+                      <Link key={childHref || child.label} href={childHref} prefetch={false} className={`azure-nav-dropdown-link${isActive(childHref) ? ' active' : ''}`}>
                         {child.label}
                       </Link>
                     );
@@ -304,6 +305,7 @@ export default function Header() {
               <Link
                 key={href || item.label}
                 href={href}
+                prefetch={false}
                 className={`azure-nav-item${parentActive ? ' active' : ''}`}
               >
                 {item.label}
@@ -376,6 +378,7 @@ export default function Header() {
         <div className="azure-mobile-actions">
           <Link
             href="/categories"
+            prefetch={false}
             className={`azure-mobile-bar-button${isActive('/categories') ? ' active' : ''}`}
             aria-label="分类"
             onClick={() => setMenuOpen(false)}
@@ -473,6 +476,7 @@ export default function Header() {
                       <Link
                         key={childHref || child.label}
                         href={childHref}
+                        prefetch={false}
                         onClick={() => setMenuOpen(false)}
                         className={`azure-mobile-menu-link child${isActive(childHref) ? ' active' : ''}`}
                       >
@@ -485,6 +489,7 @@ export default function Header() {
                 <Link
                   key={href || item.label}
                   href={href}
+                  prefetch={false}
                   onClick={() => setMenuOpen(false)}
                   className={`azure-mobile-menu-link${isActive(href) ? ' active' : ''}`}
                 >

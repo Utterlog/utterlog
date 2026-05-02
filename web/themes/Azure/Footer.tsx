@@ -477,7 +477,7 @@ export default function Footer() {
               );
             }
             return (
-              <Link key={i} href={item.href || '#'} title={item.label}
+              <Link key={i} href={item.href || '#'} prefetch={false} title={item.label}
                 style={baseStyle} onMouseEnter={onEnter} onMouseLeave={onLeave}>
                 {renderIcon(item.icon)}
               </Link>
@@ -654,7 +654,7 @@ export default function Footer() {
                 background: '#fff', border: '1px solid #e0e0e0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
                 padding: '8px 0', minWidth: '120px',
               }}>
-                <Link href="/admin" style={{ display: 'block', padding: '8px 16px', fontSize: '13px', color: '#333', textDecoration: 'none' }}>
+                <Link href="/admin" prefetch={false} style={{ display: 'block', padding: '8px 16px', fontSize: '13px', color: '#333', textDecoration: 'none' }}>
                   <i className="fa-light fa-gauge" style={{ marginRight: '6px' }} />控制台
                 </Link>
                 <button onClick={handleLogout} style={{

@@ -26,6 +26,7 @@ export default function DefaultCategoriesPage({ categories }: DefaultCategoriesP
             <Link
               key={cat.id}
               href={`/categories/${cat.slug}`}
+              prefetch={false}
               className="group flex items-center gap-4 p-5 bg-card border border-line hover:shadow-card transition-all"
               style={{ borderRadius: 0 }}
             >

@@ -149,7 +149,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats, tim
                 {/* Header */}
                 <div style={{ padding: '16px 20px 0', position: 'relative', zIndex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Link href={`/categories/${cat.slug}`} style={{
+                    <Link href={`/categories/${cat.slug}`} prefetch={false} style={{
                       display: 'flex', alignItems: 'center', gap: '8px',
                       color: 'var(--color-text-main)', textDecoration: 'none',
                     }}>
@@ -207,7 +207,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats, tim
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {sortedTags.map((tag: any) => (
-            <Link key={tag.id} href={`/tags/${tag.slug}`} style={{
+            <Link key={tag.id} href={`/tags/${tag.slug}`} prefetch={false} style={{
               padding: '4px 10px', fontSize: '13px',
               border: '1px solid var(--color-divider)', textDecoration: 'none',
               color: 'var(--color-text-sub)', transition: 'all 0.15s',
@@ -222,7 +222,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats, tim
       {archives.map((group) => (
         <div key={group.year} style={{ border: '1px solid var(--color-border)', overflow: 'hidden', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-soft)' }}>
-            <Link href={`/date/${group.year}`} style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text-main)', textDecoration: 'none' }}>{group.year}</Link>
+            <Link href={`/date/${group.year}`} prefetch={false} style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text-main)', textDecoration: 'none' }}>{group.year}</Link>
             <span style={{ fontSize: '13px', color: 'var(--color-text-dim)' }}>
               {group.months.reduce((s, m) => s + m.posts.length, 0)} 篇
             </span>
@@ -230,7 +230,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats, tim
 
           {group.months.map((monthGroup) => (
             <div key={monthGroup.month}>
-              <Link href={`/date/${group.year}/${String(monthGroup.month + 1).padStart(2, '0')}`} style={{
+              <Link href={`/date/${group.year}/${String(monthGroup.month + 1).padStart(2, '0')}`} prefetch={false} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 24px',
                 background: 'var(--color-bg-soft)', borderBottom: '1px solid var(--color-divider)', textDecoration: 'none',
               }}>

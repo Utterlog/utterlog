@@ -74,7 +74,7 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
 
           {/* Category */}
           {catName && (
-            <Link href={`/categories/${post.categories[0].slug}`} className="azure-post-card-category">
+            <Link href={`/categories/${post.categories[0].slug}`} prefetch={false} className="azure-post-card-category">
               <i className={catIcon} aria-hidden="true" /> {catName}
             </Link>
           )}

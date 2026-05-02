@@ -63,7 +63,7 @@ export default function Pagination({ currentPage, totalPages, basePath = '', onP
       );
     }
     return (
-      <Link href={getPageUrl(p)} style={baseStyle}
+      <Link href={getPageUrl(p)} prefetch={false} style={baseStyle}
         onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary, #f53004)'; e.currentTarget.style.color = 'var(--color-primary, #f53004)'; }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = '#d0d0d0'; e.currentTarget.style.color = '#333'; }}
       >{children}</Link>
