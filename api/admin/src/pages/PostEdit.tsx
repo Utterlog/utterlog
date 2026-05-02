@@ -7,6 +7,7 @@ import { Button } from '@/components/ui';
 import api from '@/lib/api';
 import { ImportUrlModal } from '@/components/ui/import-url-modal';
 import { useI18n } from '@/lib/i18n';
+import { firstMarkdownH1, resolveMarkdownTitle } from '@/lib/markdown';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
 import FootprintEditor, { type FootprintFormValue, normalizeFootprintsForPayload } from '@/components/FootprintEditor';
@@ -94,10 +95,10 @@ export default function EditPostPage() {
       setPassword(post.password || '');
       setAllowComment(post.allow_comment !== false);
       setPinned(post.pinned === true);
-      // Prefer published_at; drafts fall back to created_at so the
-      // sidebar isn't blank. Convert to datetime-local format (no TZ,
-      // no seconds) — the backend sends RFC3339 strings or unix ints.
-      setPublishAt(toLocalDatetime(post.published_at) || toLocalDatetime(post.created_at));
+      // Drafts that have never been published keep this blank so first
+      // publish uses the current time; drafts moved back from published keep
+      // their original published_at and restore it when republished.
+      setPublishAt(toLocalDatetime(post.published_at) || (post.status === 'draft' ? '' : toLocalDatetime(post.created_at)));
       if (post.categories?.length) setCategoryId(post.categories[0].id);
       if (post.tags?.length) setTagInput(post.tags.map((t: any) => t.name).join(', '));
       const nextFootprints = Array.isArray(post.footprints)
@@ -127,33 +128,42 @@ export default function EditPostPage() {
   };
 
   const handleSave = async (saveStatus?: string) => {
-    if (!title.trim()) { toast.error(t('admin.postEditor.toast.titleRequired', '标题不能为空')); return; }
+    const resolved = resolveMarkdownTitle(title, content);
+    if (!resolved.title.trim()) { toast.error(t('admin.postEditor.toast.titleRequired', '标题不能为空')); return; }
+    if (resolved.title !== title) setTitle(resolved.title);
+    if (resolved.content !== content) setContent(resolved.content);
     setSubmitting(true);
     try {
       const tagNames = tagInput.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
-      const response: any = await postsApi.update(postId, {
-        title, content,
+      const nextStatus = saveStatus || status;
+      const payload: any = {
+        title: resolved.title.trim(), content: resolved.content,
         slug: slug || undefined,
         cover_url: coverUrl || undefined,
         category_ids: categoryId ? [categoryId] : [],
-        tag_names: tagNames.length ? tagNames : undefined,
-        status: saveStatus || status,
+        tag_names: tagNames,
+        status: nextStatus,
         excerpt: excerpt || undefined,
         password: password || undefined,
         allow_comment: allowComment,
         pinned,
-        // Pass empty string to clear, omit to leave untouched — backend
-        // only looks at this when the key is present.
-        published_at: publishAt,
         footprints: footprintsEnabled ? normalizeFootprintsForPayload(footprints, coverUrl, publishAt) : [],
-      });
+      };
+      if (nextStatus === 'publish' && publishAt) {
+        payload.published_at = publishAt;
+      }
+      const response: any = await postsApi.update(postId, payload);
       toast.success(t('admin.postEditor.toast.updated', '文章更新成功'));
       const nextId = response?.data?.id || response?.id;
       if (nextId && nextId !== postId) {
         navigate(`/posts/edit/${nextId}`, { replace: true });
       }
-    } catch {
-      toast.error(t('admin.common.updateFailed', '更新失败'));
+    } catch (err: any) {
+      const detail = err?.response?.data?.error?.message
+        || err?.response?.data?.message
+        || err?.message
+        || t('admin.common.updateFailed', '更新失败');
+      toast.error(detail);
     } finally {
       setSubmitting(false);
     }
@@ -166,9 +176,14 @@ export default function EditPostPage() {
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       if (!text) return;
-      const titleMatch = text.match(/^#\s+(.+)$/m);
-      if (titleMatch && !title) setTitle(titleMatch[1].trim());
-      setContent(text.replace(/^#\s+.+\n?/, '').trim());
+      const h1 = firstMarkdownH1(text);
+      if (h1 && !title.trim()) {
+        setTitle(h1.title);
+        setContent(h1.content);
+      } else {
+        if (!title.trim()) setTitle(file.name.replace(/\.(md|markdown|txt)$/i, ''));
+        setContent(text.trim());
+      }
       toast.success(t('admin.postEditor.toast.markdownImported', 'Markdown 文件已导入'));
     };
     reader.readAsText(file);
@@ -217,7 +232,17 @@ export default function EditPostPage() {
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <MarkdownEditor
               value={content}
-              onChange={setContent}
+              onChange={(val) => {
+                if (!title.trim()) {
+                  const resolved = resolveMarkdownTitle(title, val);
+                  if (resolved.title) {
+                    setTitle(resolved.title);
+                    setContent(resolved.content);
+                    return;
+                  }
+                }
+                setContent(val);
+              }}
               className="h-full rounded-none border-0"
               minHeight="100%"
               onImportMd={() => mdFileRef.current?.click()}

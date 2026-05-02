@@ -2,11 +2,12 @@ import Link from 'next/link';
 import PostLink from '../PostLink';
 import PageTitle from '@/components/blog/PageTitle';
 import { datePartsInTimeZone, formatMonthDayInTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 
 function groupByYear(posts: any[], timeZone: string) {
   const map = new Map<number, any[]>();
   for (const post of posts) {
-    const year = datePartsInTimeZone(post.created_at, timeZone).year;
+    const year = datePartsInTimeZone(postDateInput(post), timeZone).year;
     if (!map.has(year)) map.set(year, []);
     map.get(year)!.push(post);
   }
@@ -53,7 +54,7 @@ export default function DefaultTagPage({ tag, posts, timeZone = 'UTC' }: Default
                 <PostLink key={post.id} post={post}
                   style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', borderBottom: idx < yearPosts.length - 1 ? '1px solid var(--color-divider)' : 'none', textDecoration: 'none', transition: 'background 0.1s' }}
                   className="hover:bg-soft post-list-link">
-                  <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '50px', flexShrink: 0 }}>{formatMMDD(post.created_at, timeZone)}</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '50px', flexShrink: 0 }}>{formatMMDD(postDateInput(post), timeZone)}</span>
                   <i className={postCategoryIcon(post)} title={post.categories?.[0]?.name || ''} style={{ fontSize: '13px', color: 'var(--color-primary)', flexShrink: 0, width: '14px', textAlign: 'center' }} />
                   <span className="post-list-title" style={{ flex: 1, fontSize: '15px', fontWeight: 500, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color 0.15s' }}>{post.title}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--color-text-dim)', flexShrink: 0 }}>

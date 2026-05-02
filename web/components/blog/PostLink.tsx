@@ -12,7 +12,7 @@ interface PostLinkProps extends LinkPropsNoHref {
     id?: number;
     slug?: string;
     title?: string;
-    published_at?: string | null;
+    published_at?: string | number | null;
     created_at?: string | number;
     categories?: { slug?: string }[];
   };

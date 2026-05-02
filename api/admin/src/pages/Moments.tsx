@@ -105,7 +105,8 @@ export default function MomentsPage() {
   const onSubmit = async () => {
     if (!form.content.trim()) { toast.error(t('admin.moments.toast.contentRequired', '内容不能为空')); return; }
     setSubmitting(true);
-    const payload = { ...form, images: formImages.length > 0 ? formImages : [] };
+    const payload: any = { ...form, images: formImages.length > 0 ? formImages : [] };
+    if (!editingId) payload.source = '网页';
     try {
       if (editingId) { await momentsApi.update(editingId, payload); toast.success(t('admin.common.updateSuccess', '更新成功')); }
       else { await momentsApi.create(payload); toast.success(t('admin.moments.toast.published', '发布成功')); }

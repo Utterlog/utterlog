@@ -22,6 +22,7 @@ export interface Post {
   comment_count: number;
   created_at: string | number;
   updated_at: string | number;
+  published_at?: string | number | null;
   categories?: Category[];
   tags?: Tag[];
   seo?: {

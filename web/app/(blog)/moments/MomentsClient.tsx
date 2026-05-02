@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { momentsApi, optionsApi, mediaApi } from '@/lib/api';
+import { momentsApi, optionsApi, mediaApi, geoApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { useThemeContext } from '@/lib/theme-context';
 import { datePartsInTimeZone, formatDateInTimeZone, formatDateTimeInTimeZone } from '@/lib/timezone';
@@ -81,6 +81,15 @@ function getTagColor(tag: string) {
   let hash = 0;
   for (let i = 0; i < tag.length; i++) hash = ((hash << 5) - hash + tag.charCodeAt(i) * 31) >>> 0;
   return tagColors[hash % tagColors.length];
+}
+
+function formatMomentSource(source?: string | null) {
+  const raw = String(source || '').trim();
+  if (!raw) return '';
+  const normalized = raw.toLowerCase();
+  if (raw === '网页' || ['local', 'web', 'browser'].includes(normalized)) return '网页';
+  if (normalized === 'telegram') return 'Telegram';
+  return raw;
 }
 
 function getMomentPositions(count: number) {
@@ -262,12 +271,16 @@ export default function MomentsPage() {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=zh`);
-          const data = await res.json();
-          const addr = data.address;
-          setLocation(addr?.city || addr?.town || addr?.county || addr?.state || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          const res: any = await geoApi.reverse(latitude, longitude);
+          const data = res?.data || res || {};
+          const resolved = String(data.location || data.city || data.region || data.country || '').trim();
+          if (resolved) {
+            setLocation(resolved);
+          } else {
+            toast.error('未能识别城市，请手动填写位置');
+          }
         } catch {
-          setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          toast.error('位置反查失败，请手动填写位置');
         }
         setLocating(false);
       },
@@ -354,6 +367,7 @@ export default function MomentsPage() {
               const tagColor = tag ? getTagColor(tag) : null;
               const imgs = parseImages(m);
               const isActive = activeCard === i;
+              const sourceLabel = formatMomentSource(m.source);
 
               return (
                 <div style={{ background: '#fff', borderRadius: '2px', boxShadow: isActive ? '0 12px 40px rgba(0,0,0,0.15)' : '0 2px 12px rgba(0,0,0,0.06)', position: 'relative' }}>
@@ -383,12 +397,12 @@ export default function MomentsPage() {
                     {m.content && (
                       <p style={{ fontSize: '14px', lineHeight: 1.85, color: '#2b2a28', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{m.content}</p>
                     )}
-                    {(m.location || m.source) && (
+                    {(m.location || sourceLabel) && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', fontSize: '11px', color: '#b8b4ad' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                           {m.location && <><i className="fa-regular fa-location-dot" style={{ fontSize: '10px' }} />{m.location}</>}
                         </span>
-                        {m.source && <span style={{ fontSize: '10px', color: '#c4c0b8' }}>via {m.source}</span>}
+                        {sourceLabel && <span style={{ fontSize: '10px', color: '#c4c0b8' }}>via {sourceLabel}</span>}
                       </div>
                     )}
                   </div>

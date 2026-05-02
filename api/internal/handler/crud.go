@@ -861,7 +861,7 @@ func PostsFeed(c *gin.Context) {
 	permalinkTpl := model.GetOption("permalink_structure")
 
 	var posts []model.Post
-	config.DB.Select(&posts, fmt.Sprintf("SELECT id, title, slug, excerpt, content, display_id, created_at, updated_at, published_at FROM %s WHERE status='publish' AND type='post' ORDER BY created_at DESC LIMIT 20", t))
+	config.DB.Select(&posts, fmt.Sprintf("SELECT id, title, slug, excerpt, content, display_id, created_at, updated_at, published_at FROM %s WHERE status='publish' AND type='post' ORDER BY COALESCE(published_at, TO_TIMESTAMP(created_at)) DESC LIMIT 20", t))
 
 	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.Header("Cache-Control", "public, max-age=3600")

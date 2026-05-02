@@ -7,6 +7,7 @@ import FadeCover from '@/components/blog/FadeCover';
 import FootprintFlags from '@/components/blog/FootprintFlags';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 import { getCategoryIcon } from './constants';
 import { CommentCount, CommentSection } from './PostInteractive';
 
@@ -21,6 +22,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
   // home cards / hero — no more "首页有图、内页一张默认 img.et" mismatch.
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
   const timeZone = resolveSiteTimeZone(options);
+  const displayDate = postDateInput(post);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
@@ -51,7 +53,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
 
       {/* Meta bar */}
       <div className="azure-post-meta">
-        <span className="azure-post-meta-item"><i className="fa-regular fa-calendar" aria-hidden="true" />{formatDate(post.created_at, timeZone)}</span>
+        <span className="azure-post-meta-item"><i className="fa-regular fa-calendar" aria-hidden="true" />{formatDate(displayDate, timeZone)}</span>
         {/* view_count 显示 = DB 真实值 + 1（cosmetic）。
             后端 /track 已经移除了 isFirstPostViewToday 守门 ——「访客
             点击就 +1，刷新一次再 +1」是用户明确的预期。所以 cosmetic +1

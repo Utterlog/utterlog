@@ -19,7 +19,7 @@ type PostLike = {
   display_id?: number;
   slug?: string;
   created_at?: string | number;
-  published_at?: string | null;
+  published_at?: string | number | null;
   categories?: { slug?: string }[];
 };
 
@@ -30,7 +30,9 @@ const pad2 = (value: number) => String(value).padStart(2, '0');
 
 function postDate(post: PostLike): Date | null {
   if (post.published_at) {
-    const d = new Date(post.published_at);
+    const n = Number(post.published_at);
+    if (!Number.isNaN(n) && n > 1e9 && n < 1e10) return new Date(n * 1000);
+    const d = new Date(post.published_at as any);
     if (!Number.isNaN(d.getTime())) return d;
   }
   if (post.created_at != null) {

@@ -1171,7 +1171,7 @@ CREATE TABLE public.ul_moments (
     images text[] DEFAULT '{}'::text[],
     location character varying(200),
     mood character varying(50),
-    source character varying(20) DEFAULT 'local'::character varying,
+    source character varying(20) DEFAULT '网页'::character varying,
     source_id character varying(100),
     source_url character varying(500),
     author_id integer NOT NULL,
@@ -3207,4 +3207,3 @@ ALTER TABLE ONLY public.ul_relationships
 --
 
 -- \unrestrict 6ycODpwHtO1bZBhD1SW8boycnYV0UzGzOtWvhb4mYmFUwbeXNdEA2DwrQYRE4Sy  -- psql meta-command, removed for lib/pq compatibility
-

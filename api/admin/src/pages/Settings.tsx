@@ -291,6 +291,8 @@ export default function SettingsPage() {
         mapbox_api_url: s.mapbox_api_url || 'https://api.mapbox.com',
         github_access_token: s.github_access_token || s.coding_github_token || '',
         google_maps_api_key: s.google_maps_api_key || '',
+        amap_api_key: s.amap_api_key || '',
+        tencent_maps_api_key: s.tencent_maps_api_key || '',
         tinypng_api_key: s.tinypng_api_key || '',
         // S3/R2
         s3_endpoint: s.s3_endpoint || '',
@@ -385,7 +387,12 @@ export default function SettingsPage() {
       'image_display_effect', 'image_display_duration',
       'image_lazy_load', 'image_lightbox',
     ],
-    services: ['mapbox_access_token', 'mapbox_api_url', 'github_access_token', 'google_maps_api_key', 'tinypng_api_key'],
+    services: [
+      'mapbox_access_token', 'mapbox_api_url',
+      'github_access_token',
+      'google_maps_api_key', 'amap_api_key', 'tencent_maps_api_key',
+      'tinypng_api_key',
+    ],
   };
 
   const onSubmit = async (data: any) => {
@@ -1537,6 +1544,36 @@ export default function SettingsPage() {
                   type="password"
                   register={register('google_maps_api_key')}
                   placeholder="AIza..."
+                  last
+                />
+              </FormSectionC>
+
+              <FormSectionC
+                title={t('admin.settings.services.amap.section', '高德地图')}
+                icon="fa-regular fa-location-dot"
+                description={t('admin.settings.services.amap.description', '用于国内经纬度反查城市名、地址解析等地理编码能力。后续说说位置和足迹地理编码可从这里读取。')}
+                footerHint={t('admin.settings.services.amap.footer', '填写高德开放平台 Web 服务 Key。建议只给服务端接口使用，不在前台公开输出。')}
+              >
+                <FormRowInputC
+                  label={t('admin.settings.services.amap.apiKey', '高德地图 Web 服务 Key')}
+                  type="password"
+                  register={register('amap_api_key')}
+                  placeholder="AMap Web Service Key"
+                  last
+                />
+              </FormSectionC>
+
+              <FormSectionC
+                title={t('admin.settings.services.tencent.section', '腾讯位置服务')}
+                icon="fa-regular fa-location-crosshairs"
+                description={t('admin.settings.services.tencent.description', '用于国内逆地址解析、城市名识别和后续位置服务。可作为 Mapbox 的国内兜底服务。')}
+                footerHint={t('admin.settings.services.tencent.footer', '填写腾讯位置服务 WebService API Key。建议只给服务端接口使用，不在前台公开输出。')}
+              >
+                <FormRowInputC
+                  label={t('admin.settings.services.tencent.apiKey', '腾讯位置服务 Key')}
+                  type="password"
+                  register={register('tencent_maps_api_key')}
+                  placeholder="Tencent Location Service Key"
                   last
                 />
               </FormSectionC>

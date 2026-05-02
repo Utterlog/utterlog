@@ -42,7 +42,7 @@ interface PostLike {
   id?: number;
   display_id?: number;
   slug?: string;
-  published_at?: string | null;
+  published_at?: string | number | null;
   created_at?: string | number;
   categories?: { slug?: string }[];
 }
@@ -51,7 +51,9 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 
 function postDate(post: PostLike): Date | null {
   if (post.published_at) {
-    const d = new Date(post.published_at);
+    const n = Number(post.published_at);
+    if (!isNaN(n) && n > 1e9 && n < 1e10) return new Date(n * 1000);
+    const d = new Date(post.published_at as any);
     if (!isNaN(d.getTime())) return d;
   }
   if (post.created_at != null) {

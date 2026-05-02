@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { Button } from '@/components/ui';
 import api from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { firstMarkdownH1, resolveMarkdownTitle } from '@/lib/markdown';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
 import FootprintEditor, { type FootprintFormValue, normalizeFootprintsForPayload } from '@/components/FootprintEditor';
@@ -87,28 +88,40 @@ export default function CreatePostPage() {
   }, [title, content, slug, coverUrl, categoryId, tagInput, excerpt, footprintsEnabled, footprints]);
 
   const handleSave = async (saveStatus?: string) => {
-    if (!title.trim()) { toast.error(t('admin.postEditor.toast.titleRequired', '标题不能为空')); return; }
+    const resolved = resolveMarkdownTitle(title, content);
+    if (!resolved.title.trim()) { toast.error(t('admin.postEditor.toast.titleRequired', '标题不能为空')); return; }
+    if (resolved.title !== title) setTitle(resolved.title);
+    if (resolved.content !== content) setContent(resolved.content);
     setSubmitting(true);
     try {
       const tagNames = tagInput.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
-      await postsApi.create({
-        title, content,
+      const nextStatus = saveStatus || status;
+      const payload: any = {
+        title: resolved.title.trim(), content: resolved.content,
         slug: slug || undefined,
         cover_url: coverUrl || undefined,
         category_ids: categoryId ? [categoryId] : [],
         tag_names: tagNames.length ? tagNames : undefined,
-        status: saveStatus || status,
+        status: nextStatus,
         excerpt: excerpt || undefined,
         password: password || undefined,
         allow_comment: allowComment,
         pinned,
         footprints: footprintsEnabled ? normalizeFootprintsForPayload(footprints, coverUrl, publishAt) : [],
-      });
+      };
+      if (nextStatus === 'publish' && publishAt) {
+        payload.published_at = publishAt;
+      }
+      await postsApi.create(payload);
       localStorage.removeItem('draft_post');
       toast.success(t('admin.postEditor.toast.created', '文章创建成功'));
       navigate('/posts');
-    } catch {
-      toast.error(t('admin.common.createFailed', '创建失败'));
+    } catch (err: any) {
+      const detail = err?.response?.data?.error?.message
+        || err?.response?.data?.message
+        || err?.message
+        || t('admin.common.createFailed', '创建失败');
+      toast.error(detail);
     } finally {
       setSubmitting(false);
     }
@@ -123,10 +136,14 @@ export default function CreatePostPage() {
       const text = ev.target?.result as string;
       if (!text) return;
       // Extract title from first # heading or filename
-      const titleMatch = text.match(/^#\s+(.+)$/m);
-      if (titleMatch && !title) setTitle(titleMatch[1].trim());
-      else if (!title) setTitle(file.name.replace(/\.md$/i, ''));
-      setContent(text.replace(/^#\s+.+\n?/, '').trim()); // Remove first H1 if used as title
+      const h1 = firstMarkdownH1(text);
+      if (h1 && !title.trim()) {
+        setTitle(h1.title);
+        setContent(h1.content);
+      } else {
+        if (!title.trim()) setTitle(file.name.replace(/\.(md|markdown|txt)$/i, ''));
+        setContent(text.trim());
+      }
       toast.success(t('admin.postEditor.toast.markdownImported', 'Markdown 文件已导入'));
     };
     reader.readAsText(file);
@@ -173,12 +190,12 @@ export default function CreatePostPage() {
             <MarkdownEditor
               value={content}
               onChange={(val) => {
-                // Auto-extract H1 title from pasted content (when content suddenly grows)
-                if (val.length > content.length + 10) {
-                  const h1Match = val.match(/^#\s+(.+)$/m);
-                  if (h1Match) {
-                    setTitle(h1Match[1].trim());
-                    val = val.replace(/^#\s+.+\n?/, '').trim();
+                if (!title.trim()) {
+                  const resolved = resolveMarkdownTitle(title, val);
+                  if (resolved.title) {
+                    setTitle(resolved.title);
+                    setContent(resolved.content);
+                    return;
                   }
                 }
                 setContent(val);

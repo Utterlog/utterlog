@@ -4,6 +4,7 @@ import Link from 'next/link';
 import PostLink from '@/components/blog/PostLink';
 import { formatDateInTimeZone } from '@/lib/timezone';
 import { useThemeContext } from '@/lib/theme-context';
+import { postDateInput } from '@/lib/post-date';
 
 function excerptOf(post: any) {
   return String(post.excerpt || post.content || '')
@@ -17,7 +18,8 @@ export default function PostCard({ post, index = 1 }: { post: any; index?: numbe
   const { timeZone } = useThemeContext();
   if (!post?.title) return null;
 
-  const date = formatDateInTimeZone(post.created_at, 'zh-CN', {
+  const displayDate = postDateInput(post);
+  const date = formatDateInTimeZone(displayDate, 'zh-CN', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -30,7 +32,7 @@ export default function PostCard({ post, index = 1 }: { post: any; index?: numbe
       <div className="renascent-card-index">{String(index).padStart(2, '0')}</div>
       <div className="renascent-card-body">
         <div className="renascent-card-kicker">
-          <time dateTime={String(post.created_at)}>{date}</time>
+          <time dateTime={String(displayDate)}>{date}</time>
           {category && (
             <>
               <span>/</span>

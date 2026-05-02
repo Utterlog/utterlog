@@ -15,7 +15,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 const ACCENT = '#0052D9';
 
 const MODES = [
-  { key: 'latest', label: '最新文章', color: '#0052D9', param: '&order_by=created_at&order=desc' },
+  { key: 'latest', label: '最新文章', color: '#0052D9', param: '&order_by=published_at&order=desc' },
   { key: 'hot', label: '热门文章', color: '#e53935', param: '&order_by=view_count&order=desc' },
   { key: 'comments', label: '热评文章', color: '#f57c00', param: '&order_by=comment_count&order=desc' },
   { key: 'random', label: '随机文章', color: '#43a047', param: '&order_by=random' },
@@ -129,7 +129,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   const handlePageChange = useCallback(async (newPage: number) => {
     setPageLoading(true);
     try {
-      const r = await fetch(`${API}/posts?page=${newPage}&per_page=${perPage}&status=publish&order_by=created_at&order=desc`).then(r => r.json());
+      const r = await fetch(`${API}/posts?page=${newPage}&per_page=${perPage}&status=publish&order_by=published_at&order=desc`).then(r => r.json());
       const items = r.data?.posts || r.data || [];
       const total = r.meta?.total_pages || r.data?.total_pages || 1;
       setCurrentPosts(items);

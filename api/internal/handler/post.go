@@ -25,7 +25,7 @@ func ListPosts(c *gin.Context) {
 	typ := c.DefaultQuery("type", "post")
 	status := c.Query("status")
 	search := c.Query("search")
-	orderBy := c.DefaultQuery("order_by", "created_at")
+	orderBy := c.DefaultQuery("order_by", "published_at")
 	order := strings.ToUpper(c.DefaultQuery("order", "DESC"))
 
 	// If authenticated, allow all statuses; otherwise only publish
@@ -145,9 +145,24 @@ func postByIDOrSlug(ref string) (*model.Post, error) {
 	return model.PostBySlug(ref)
 }
 
+func parsePostPublishedAt(input string) (*time.Time, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return nil, nil
+	}
+	layouts := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02T15:04"}
+	loc := siteclock.Location()
+	for _, layout := range layouts {
+		if t, err := time.ParseInLocation(layout, input, loc); err == nil {
+			return &t, nil
+		}
+	}
+	return nil, fmt.Errorf("invalid published_at")
+}
+
 func CreatePost(c *gin.Context) {
 	var req struct {
-		Title        string             `json:"title" binding:"required"`
+		Title        string             `json:"title"`
 		Slug         string             `json:"slug"`
 		Content      string             `json:"content"`
 		Excerpt      string             `json:"excerpt"`
@@ -157,11 +172,23 @@ func CreatePost(c *gin.Context) {
 		Password     string             `json:"password"`
 		AllowComment *bool              `json:"allow_comment"`
 		Pinned       *bool              `json:"pinned"`
+		PublishedAt  *string            `json:"published_at"`
 		CategoryIDs  []int              `json:"category_ids"`
 		TagNames     []string           `json:"tag_names"`
 		Footprints   []FootprintPayload `json:"footprints"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
+		util.BadRequest(c, "请求格式错误")
+		return
+	}
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		if h1, body := firstMarkdownH1Title(req.Content); h1 != "" {
+			title = h1
+			req.Content = body
+		}
+	}
+	if title == "" {
 		util.BadRequest(c, "标题不能为空")
 		return
 	}
@@ -181,8 +208,18 @@ func CreatePost(c *gin.Context) {
 	}
 	var publishedAt *time.Time
 	if status == "publish" {
-		t := time.Now()
-		publishedAt = &t
+		if req.PublishedAt != nil && strings.TrimSpace(*req.PublishedAt) != "" {
+			t, err := parsePostPublishedAt(*req.PublishedAt)
+			if err != nil {
+				util.BadRequest(c, "发布时间格式错误")
+				return
+			}
+			publishedAt = t
+		}
+		if publishedAt == nil {
+			t := siteclock.Now()
+			publishedAt = &t
+		}
 	}
 
 	// Auto-extract excerpt from content if not provided
@@ -192,7 +229,7 @@ func CreatePost(c *gin.Context) {
 	}
 
 	p := &model.Post{
-		Title: req.Title, Slug: slug, Type: typ, Status: status,
+		Title: title, Slug: slug, Type: typ, Status: status,
 		AuthorID: middleware.GetUserID(c), CreatedAt: now, UpdatedAt: now, PublishedAt: publishedAt,
 	}
 	if req.Content != "" {
@@ -262,8 +299,8 @@ func UpdatePost(c *gin.Context) {
 		Password     string              `json:"password"`
 		AllowComment *bool               `json:"allow_comment"`
 		Pinned       *bool               `json:"pinned"`
-		CategoryIDs  []int               `json:"category_ids"`
-		TagNames     []string            `json:"tag_names"`
+		CategoryIDs  *[]int              `json:"category_ids"`
+		TagNames     *[]string           `json:"tag_names"`
 		Footprints   *[]FootprintPayload `json:"footprints"`
 		// RFC3339 / ISO8601 string or empty. Admin edit page sends the
 		// datetime-local value here so authors can backdate or reschedule.
@@ -276,6 +313,13 @@ func UpdatePost(c *gin.Context) {
 
 	if req.Title != "" {
 		existing.Title = req.Title
+	} else if strings.TrimSpace(existing.Title) == "" && req.Content != nil {
+		if h1, body := firstMarkdownH1Title(*req.Content); h1 != "" {
+			existing.Title = h1
+			existing.Content = &body
+			existing.WordCount = countWords(body)
+			req.Content = &body
+		}
 	}
 	if req.Slug != "" {
 		existing.Slug = req.Slug
@@ -302,24 +346,16 @@ func UpdatePost(c *gin.Context) {
 
 	// Explicit published_at from the client wins. Empty string clears.
 	if req.PublishedAt != nil {
-		if *req.PublishedAt == "" {
-			existing.PublishedAt = nil
-		} else {
-			// Accept both "2026-04-24T15:30" (datetime-local) and full
-			// RFC3339. Treat naive strings as local time in the server's
-			// TZ — same way a bare datetime-local input renders.
-			layouts := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02T15:04"}
-			for _, l := range layouts {
-				if t, err := time.ParseInLocation(l, *req.PublishedAt, time.Local); err == nil {
-					existing.PublishedAt = &t
-					break
-				}
-			}
+		t, err := parsePostPublishedAt(*req.PublishedAt)
+		if err != nil {
+			util.BadRequest(c, "发布时间格式错误")
+			return
 		}
+		existing.PublishedAt = t
 	}
 	// Auto-backfill: draft → publish and no explicit date supplied.
 	if wasDraft && existing.Status == "publish" && existing.PublishedAt == nil {
-		now := time.Now()
+		now := siteclock.Now()
 		existing.PublishedAt = &now
 	}
 
@@ -335,8 +371,12 @@ func UpdatePost(c *gin.Context) {
 		// previously-generated text — exactly the "saved but not
 		// synced" symptom.
 		existing.AISummary = &req.Excerpt
-	} else if req.Content != nil && (existing.Excerpt == nil || *existing.Excerpt == "") {
-		exc := extractExcerpt(*req.Content, 200)
+	} else if (req.Content != nil || (wasDraft && existing.Status == "publish")) && (existing.Excerpt == nil || *existing.Excerpt == "") {
+		content := ""
+		if existing.Content != nil {
+			content = *existing.Content
+		}
+		exc := extractExcerpt(content, 200)
 		if exc != "" {
 			existing.Excerpt = &exc
 		}
@@ -351,9 +391,21 @@ func UpdatePost(c *gin.Context) {
 	}
 	id = finalID
 
-	// Sync category and tag relationships
+	// Sync category and tag relationships only when the client explicitly
+	// includes those fields. Status-only updates from the list page must keep
+	// the draft's categories and tags instead of replacing them with defaults.
 	now := time.Now().Unix()
-	syncRelationships(id, req.CategoryIDs, req.TagNames, now)
+	if req.CategoryIDs != nil || req.TagNames != nil {
+		categoryIDs := relationshipCategoryIDs(id)
+		tagNames := relationshipTagNames(id)
+		if req.CategoryIDs != nil {
+			categoryIDs = *req.CategoryIDs
+		}
+		if req.TagNames != nil {
+			tagNames = *req.TagNames
+		}
+		syncRelationships(id, categoryIDs, tagNames, now)
+	}
 	if req.Footprints != nil {
 		if err := model.SyncPostFootprints(id, normalizeFootprintPayloads(*req.Footprints)); err != nil {
 			util.Error(c, 500, "FOOTPRINT_ERROR", err.Error())
@@ -425,6 +477,24 @@ func getDefaultCategoryID() int {
 	return catID
 }
 
+func relationshipCategoryIDs(postID int) []int {
+	categories := model.PostCategories(postID)
+	ids := make([]int, 0, len(categories))
+	for _, cat := range categories {
+		ids = append(ids, cat.ID)
+	}
+	return ids
+}
+
+func relationshipTagNames(postID int) []string {
+	tags := model.PostTags(postID)
+	names := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		names = append(names, tag.Name)
+	}
+	return names
+}
+
 // syncRelationships replaces all category/tag associations for a post
 func syncRelationships(postID int, categoryIDs []int, tagNames []string, now int64) {
 	t := config.T
@@ -471,6 +541,34 @@ func syncRelationships(postID int, categoryIDs []int, tagNames []string, now int
 	config.DB.Exec(fmt.Sprintf(
 		"UPDATE %s SET count = (SELECT COUNT(*) FROM %s WHERE meta_id = %s.id) WHERE type IN ('category', 'tag')",
 		t("metas"), t("relationships"), t("metas")))
+}
+
+func firstMarkdownH1Title(content string) (string, string) {
+	lines := strings.Split(content, "\n")
+	inFence := false
+	for i, line := range lines {
+		trimmed := strings.TrimLeft(line, " \t")
+		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
+			inFence = !inFence
+			continue
+		}
+		if inFence {
+			continue
+		}
+		if !strings.HasPrefix(trimmed, "# ") && !strings.HasPrefix(trimmed, "#\t") {
+			continue
+		}
+		title := strings.TrimSpace(trimmed[1:])
+		title = strings.Trim(title, "# \t")
+		if title == "" {
+			continue
+		}
+		bodyLines := append([]string{}, lines[:i]...)
+		bodyLines = append(bodyLines, lines[i+1:]...)
+		body := strings.TrimSpace(strings.Join(bodyLines, "\n"))
+		return title, body
+	}
+	return "", content
 }
 
 // extractExcerpt generates a plain text excerpt from markdown content
@@ -608,7 +706,7 @@ func ArchiveStats(c *gin.Context) {
 		}
 	}
 	if sinceTime == 0 {
-		config.DB.Get(&sinceTime, "SELECT COALESCE(MIN(created_at), 0) FROM "+t("posts")+" WHERE status = 'publish' AND type = 'post'")
+		config.DB.Get(&sinceTime, "SELECT COALESCE(EXTRACT(EPOCH FROM MIN(COALESCE(published_at, TO_TIMESTAMP(created_at))))::bigint, 0) FROM "+t("posts")+" WHERE status = 'publish' AND type = 'post'")
 	}
 	days := 0
 	if sinceTime > 0 {
@@ -622,9 +720,9 @@ func ArchiveStats(c *gin.Context) {
 	}
 	var heatmap []dayCount
 	tzName := siteclock.Name()
-	cutoff := time.Now().Add(-365 * 24 * time.Hour).Unix()
+	cutoff := siteclock.Now().Add(-365 * 24 * time.Hour).Unix()
 	config.DB.Select(&heatmap, fmt.Sprintf(
-		"SELECT TO_CHAR(TO_TIMESTAMP(created_at) AT TIME ZONE $1, 'YYYY-MM-DD') as date, COUNT(*) as count FROM %s WHERE status = 'publish' AND type = 'post' AND created_at > $2 GROUP BY date ORDER BY date",
+		"SELECT TO_CHAR(COALESCE(published_at, TO_TIMESTAMP(created_at)) AT TIME ZONE $1, 'YYYY-MM-DD') as date, COUNT(*) as count FROM %s WHERE status = 'publish' AND type = 'post' AND COALESCE(published_at, TO_TIMESTAMP(created_at)) > TO_TIMESTAMP($2) GROUP BY date ORDER BY date",
 		t("posts")), tzName, cutoff)
 	if heatmap == nil {
 		heatmap = []dayCount{}
@@ -676,9 +774,9 @@ func PostNavigation(c *gin.Context) {
 	t := config.T
 
 	// Current post info (for category matching)
-	var createdAt int64
+	var publishAt int64
 	var categoryIDs []int
-	config.DB.Get(&createdAt, "SELECT created_at FROM "+t("posts")+" WHERE id = $1", id)
+	config.DB.Get(&publishAt, "SELECT EXTRACT(EPOCH FROM COALESCE(published_at, TO_TIMESTAMP(created_at)))::bigint FROM "+t("posts")+" WHERE id = $1", id)
 	rows, _ := config.DB.Query("SELECT meta_id FROM "+t("relationships")+" WHERE post_id = $1", id)
 	if rows != nil {
 		defer rows.Close()
@@ -700,20 +798,21 @@ func PostNavigation(c *gin.Context) {
 		Slug         string            `db:"slug" json:"slug"`
 		CoverURL     *string           `db:"cover_url" json:"cover_url"`
 		CreatedAt    int64             `db:"created_at" json:"created_at"`
+		PublishedAt  *time.Time        `db:"published_at" json:"published_at,omitempty"`
 		ViewCount    int               `db:"view_count" json:"view_count"`
 		CommentCount int               `db:"comment_count" json:"comment_count"`
 		Categories   []model.MetaBrief `db:"-" json:"categories"`
 	}
 
-	cols := "id, title, slug, cover_url, created_at, view_count, comment_count"
-	pCols := "p.id, p.title, p.slug, p.cover_url, p.created_at, p.view_count, p.comment_count"
+	cols := "id, title, slug, cover_url, created_at, published_at, view_count, comment_count"
+	pCols := "p.id, p.title, p.slug, p.cover_url, p.created_at, p.published_at, p.view_count, p.comment_count"
 
 	// Prev post (older)
 	var prev *navPost
 	var p navPost
 	err := config.DB.Get(&p, fmt.Sprintf(
-		"SELECT %s FROM %s WHERE status = 'publish' AND type = 'post' AND created_at < $1 ORDER BY created_at DESC LIMIT 1",
-		cols, t("posts")), createdAt)
+		"SELECT %s FROM %s WHERE status = 'publish' AND type = 'post' AND EXTRACT(EPOCH FROM COALESCE(published_at, TO_TIMESTAMP(created_at))) < $1 ORDER BY COALESCE(published_at, TO_TIMESTAMP(created_at)) DESC, id DESC LIMIT 1",
+		cols, t("posts")), publishAt)
 	if err == nil {
 		prev = &p
 	}
@@ -722,8 +821,8 @@ func PostNavigation(c *gin.Context) {
 	var next *navPost
 	var n navPost
 	err = config.DB.Get(&n, fmt.Sprintf(
-		"SELECT %s FROM %s WHERE status = 'publish' AND type = 'post' AND created_at > $1 ORDER BY created_at ASC LIMIT 1",
-		cols, t("posts")), createdAt)
+		"SELECT %s FROM %s WHERE status = 'publish' AND type = 'post' AND EXTRACT(EPOCH FROM COALESCE(published_at, TO_TIMESTAMP(created_at))) > $1 ORDER BY COALESCE(published_at, TO_TIMESTAMP(created_at)) ASC, id ASC LIMIT 1",
+		cols, t("posts")), publishAt)
 	if err == nil {
 		next = &n
 	}
@@ -761,7 +860,7 @@ func PostNavigation(c *gin.Context) {
 			categoryScore = "COUNT(DISTINCT cr.meta_id)"
 		}
 		config.DB.Select(&related, fmt.Sprintf(
-			"SELECT %s FROM %s p JOIN %s tr ON p.id = tr.post_id%s WHERE tr.meta_id IN (%s) AND p.id != $1 AND p.status = 'publish' AND p.type = 'post' GROUP BY p.id, p.title, p.slug, p.cover_url, p.created_at, p.view_count, p.comment_count ORDER BY (COUNT(DISTINCT tr.meta_id) * 5 + %s) DESC, p.view_count DESC, p.created_at DESC LIMIT 20",
+			"SELECT %s FROM %s p JOIN %s tr ON p.id = tr.post_id%s WHERE tr.meta_id IN (%s) AND p.id != $1 AND p.status = 'publish' AND p.type = 'post' GROUP BY p.id, p.title, p.slug, p.cover_url, p.created_at, p.published_at, p.view_count, p.comment_count ORDER BY (COUNT(DISTINCT tr.meta_id) * 5 + %s) DESC, p.view_count DESC, COALESCE(p.published_at, TO_TIMESTAMP(p.created_at)) DESC LIMIT 20",
 			pCols, t("posts"), t("relationships"), categoryJoin, tagIDStr, categoryScore), id)
 	}
 
@@ -796,7 +895,7 @@ func PostNavigation(c *gin.Context) {
 			// Keep the fill capped at the same 20-item budget used by
 			// relationship-based suggestions.
 			config.DB.Select(&ftsRelated, fmt.Sprintf(
-				"SELECT %s FROM %s p%s WHERE p.status = 'publish' AND p.type = 'post' AND p.id NOT IN (%s) AND (%s) GROUP BY p.id, p.title, p.slug, p.cover_url, p.created_at, p.view_count, p.comment_count ORDER BY (%s) DESC, %s DESC, p.view_count DESC, p.created_at DESC LIMIT %d",
+				"SELECT %s FROM %s p%s WHERE p.status = 'publish' AND p.type = 'post' AND p.id NOT IN (%s) AND (%s) GROUP BY p.id, p.title, p.slug, p.cover_url, p.created_at, p.published_at, p.view_count, p.comment_count ORDER BY (%s) DESC, %s DESC, p.view_count DESC, COALESCE(p.published_at, TO_TIMESTAMP(p.created_at)) DESC LIMIT %d",
 				pCols, t("posts"), categoryJoin, excludeIDs, strings.Join(whereParts, " OR "), strings.Join(scoreParts, " + "), categoryOrder, 20-len(related)), args...)
 			related = append(related, ftsRelated...)
 		}
@@ -827,7 +926,7 @@ func PostNavigation(c *gin.Context) {
 	var categoryPosts []navPost
 	if len(categoryIDs) > 0 {
 		config.DB.Select(&categoryPosts, fmt.Sprintf(
-			"SELECT DISTINCT %s FROM %s p JOIN %s r ON p.id = r.post_id WHERE r.meta_id = $1 AND p.id != $2 AND p.status = 'publish' AND p.type = 'post' ORDER BY p.created_at DESC LIMIT 20",
+			"SELECT %s FROM %s p JOIN %s r ON p.id = r.post_id WHERE r.meta_id = $1 AND p.id != $2 AND p.status = 'publish' AND p.type = 'post' ORDER BY COALESCE(p.published_at, TO_TIMESTAMP(p.created_at)) DESC LIMIT 20",
 			pCols, t("posts"), t("relationships")), categoryIDs[0], id)
 	}
 	if categoryPosts == nil {

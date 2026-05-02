@@ -6,6 +6,7 @@ import PostNavigation from '@/components/blog/PostNavigation';
 import TableOfContents from '@/components/blog/TableOfContents';
 import { coverProps, randomCoverUrl } from '@/lib/blog-image';
 import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 import { CommentCount, CommentSection } from './PostInteractive';
 
 function excerptText(value?: string) {
@@ -21,12 +22,13 @@ function excerptText(value?: string) {
 export default function PostPage({ post, options }: { post: any; options?: Record<string, string> }) {
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
   const timeZone = resolveSiteTimeZone(options);
-  const date = formatDateInTimeZone(post.created_at, 'en-US', {
+  const displayDate = postDateInput(post);
+  const date = formatDateInTimeZone(displayDate, 'en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   }, timeZone);
-  const shortDate = formatDateInTimeZone(post.created_at, 'en-GB', {
+  const shortDate = formatDateInTimeZone(displayDate, 'en-GB', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

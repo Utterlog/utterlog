@@ -6,6 +6,7 @@ import { getCategoryIcon } from './constants';
 import { coverProps, randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone, formatDateTimeInTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 import PostLink from '@/components/blog/PostLink';
 
 const ACCENT = '#F53102';
@@ -18,7 +19,8 @@ function formatDate(ts: string | number, timeZone: string) {
 
 export default function PostCard({ post, isNewest, priority }: { post: any; isNewest?: boolean; priority?: boolean }) {
   const { options, timeZone } = useThemeContext();
-  const { mon, day } = formatDate(post.created_at, timeZone);
+  const displayDate = postDateInput(post);
+  const { mon, day } = formatDate(displayDate, timeZone);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
@@ -49,7 +51,7 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
               padding: '4px 6px', whiteSpace: 'nowrap',
             }}>
               {(() => {
-                return formatDateTimeInTimeZone(post.created_at, 'sv-SE', {
+                return formatDateTimeInTimeZone(displayDate, 'sv-SE', {
                   year: 'numeric', month: '2-digit', day: '2-digit',
                   hour: '2-digit', minute: '2-digit', hour12: false,
                 }, timeZone).replace('-', '/').replace('-', '/').slice(0, 16);

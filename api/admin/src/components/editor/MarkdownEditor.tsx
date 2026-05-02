@@ -99,7 +99,7 @@ const toolbar: TBBtn[] = [
   { label: 'sep', icon: null, action: () => {} },
   {
     label: '代码',
-    icon: <span style={{ fontSize: '11px', fontFamily: 'monospace' }}>&lt;/&gt;</span>,
+    icon: <i className="fa-regular fa-keyboard" style={{ fontSize: '13px' }} />,
     action: (ta, fn) => wrap(ta, '`', '`', fn, 'code'),
   },
   // Code block handled separately as language picker
@@ -725,9 +725,8 @@ export default function MarkdownEditor({
           <button ref={codeLangBtnRef} type="button" title={t('admin.editor.toolbar.codeBlock', '代码块')} onClick={() => toggleDropdown('code')} style={{
             padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center',
-            fontSize: '10px', fontFamily: 'monospace',
           }}>
-            {'{ }'}
+            <i className="fa-regular fa-file-code" style={{ fontSize: '13px' }} />
           </button>
           <ToolbarDropdown open={showCodeLang} anchorRef={codeLangBtnRef} onClose={closeDropdowns} minWidth={120} maxHeight={240}>
               {['javascript', 'typescript', 'python', 'go', 'rust', 'java', 'php', 'ruby', 'swift', 'kotlin', 'c', 'cpp', 'csharp', 'html', 'css', 'scss', 'sql', 'bash', 'shell', 'json', 'yaml', 'toml', 'xml', 'markdown', 'diff', 'docker', 'nginx', 'lua', 'r', 'dart'].map(lang => (

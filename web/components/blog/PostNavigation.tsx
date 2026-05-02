@@ -7,6 +7,7 @@ import SharedFadeCover from './FadeCover';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 
 function LazyCardImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -84,6 +85,7 @@ interface NavPost {
   slug: string;
   cover_url?: string;
   created_at: number;
+  published_at?: string | number | null;
   view_count: number;
   comment_count: number;
   categories?: { id: number; name: string; slug: string; icon?: string }[];
@@ -281,7 +283,7 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
             {activeTab !== 'feeds' && activeItems.map(post => {
               const cat = post.categories?.[0];
               const coverSrc = post.cover_url || randomCoverUrl(post.id, options);
-              const mon = formatDateInTimeZone(post.created_at || 0, 'zh-CN', { month: 'short', day: 'numeric' }, timeZone);
+              const mon = formatDateInTimeZone(postDateInput(post), 'zh-CN', { month: 'short', day: 'numeric' }, timeZone);
               return (
                 <PostLink key={post.id} post={post} className="post-related-card cover-zoom">
                   <div className="post-related-card-cover">

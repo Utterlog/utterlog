@@ -4,10 +4,11 @@ import { getOptions, searchPosts } from '@/lib/blog-api';
 import PostLink from '@/components/blog/PostLink';
 import PageTitle from '@/components/blog/PageTitle';
 import { datePartsInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 
 export const metadata: Metadata = { title: '搜索' };
 
-function formatDate(ts: number, timeZone: string) {
+function formatDate(ts: string | number | Date, timeZone: string) {
   const { year, month, day } = datePartsInTimeZone(ts, timeZone);
   return `${year}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
 }
@@ -115,7 +116,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
                   {/* Meta */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-                    <span style={{ fontSize: '12px', color: 'var(--color-text-dim)' }}>{formatDate(post.created_at, timeZone)}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--color-text-dim)' }}>{formatDate(postDateInput(post), timeZone)}</span>
                     {post.score !== undefined && (
                       <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 500 }}>
                         {Math.round(post.score * 100)}% 相关

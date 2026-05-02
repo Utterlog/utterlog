@@ -3,6 +3,7 @@ import PostLink from '../PostLink';
 import Heatmap from '@/app/(blog)/archives/Heatmap';
 import PageTitle from '@/components/blog/PageTitle';
 import { datePartsInTimeZone, formatMonthDayInTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 
 function timeAgo(ts: number | string): string {
   const now = Date.now();
@@ -54,7 +55,7 @@ interface YearGroup {
 function groupByYearMonth(posts: any[], timeZone: string): YearGroup[] {
   const yearMap = new Map<number, Map<number, any[]>>();
   for (const post of posts) {
-    const { year, month } = datePartsInTimeZone(post.created_at, timeZone);
+    const { year, month } = datePartsInTimeZone(postDateInput(post), timeZone);
     const monthIndex = month - 1;
     if (!yearMap.has(year)) yearMap.set(year, new Map());
     const monthMap = yearMap.get(year)!;
@@ -185,7 +186,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats, tim
                       }}>
                         <i className="fa-sharp fa-light fa-pen-line" style={{ fontSize: '10px', color: 'var(--color-text-dim)', flexShrink: 0 }} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{latest.title}</span>
-                        <span style={{ fontSize: '11px', color: 'var(--color-text-dim)', flexShrink: 0, marginLeft: '8px' }}>{timeAgo(latest.created_at)}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-dim)', flexShrink: 0, marginLeft: '8px' }}>{timeAgo(postDateInput(latest))}</span>
                       </PostLink>
                     </div>
                   </div>
@@ -244,7 +245,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats, tim
                   borderBottom: idx < monthGroup.posts.length - 1 ? '1px solid var(--color-divider)' : 'none',
                   textDecoration: 'none', transition: 'background 0.1s',
                 }} className="hover:bg-soft">
-                  <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '50px', flexShrink: 0 }}>{formatDate(post.created_at, timeZone)}</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '50px', flexShrink: 0 }}>{formatDate(postDateInput(post), timeZone)}</span>
                   <i className={`${getCatIcon(post.categories?.[0]?.name, post.categories?.[0]?.icon)} fa-fw`} style={{ color: 'var(--color-primary)', fontSize: '13px', flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: '14px', fontWeight: 500, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.title}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--color-text-dim)', flexShrink: 0 }}>

@@ -174,7 +174,7 @@ function revalidateCache() {
   fetch('/api/revalidate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paths: ['/', '/coding'], tags: ['options', 'coding'] }),
+    body: JSON.stringify({ paths: ['/', '/about', '/coding'], tags: ['options', 'coding'] }),
   }).catch(() => {});
 }
 

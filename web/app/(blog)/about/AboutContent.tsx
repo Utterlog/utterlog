@@ -68,24 +68,6 @@ const defaultUpdates: AboutUpdate[] = [
   { date: '2026-01-01', type: '开始', title: '新的一年', description: '整理站点方向，让博客更像一个长期主页。' },
 ];
 
-const defaultMarkdown = `
-## 关于我
-
-欢迎来到这里。你可以在后台用 Markdown 自定义这页内容，写个人介绍、项目经历、旅行记录、联系方式，或者任何你想长期展示的内容。
-
-> 这里支持 Markdown 引用、列表、表格、链接和图片。
-
-### 我通常会写
-
-- 产品、设计和开发相关的记录
-- 旅行、摄影和生活观察
-- 一些长期项目的更新
-
-### 联系方式
-
-可以在后台资料设置里添加社交链接，也可以直接在这里写。
-`.trim();
-
 function parseAboutConfig(raw: unknown): AboutConfig {
   if (!raw) return {};
   try {
@@ -116,8 +98,7 @@ export default function AboutContent() {
   const avatar = profile.avatar || owner.avatar || site.logo;
   const title = profile.title || site.subtitle || '用文字、图片和项目记录正在发生的生活。';
   const bio = profile.bio || owner.bio || site.description || '这里会持续保存关于产品、设计、开发、旅行和日常观察的内容。';
-  const customContent = (options.page_about_content || '').trim();
-  const markdownContent = (options.page_about_markdown || '').trim() || defaultMarkdown;
+  const markdownContent = (options.page_about_markdown || '').trim();
   const hobbies = notEmpty(config.hobbies, defaultHobbies);
   const music = notEmpty(config.music, defaultMusic);
   const updates = notEmpty(config.updates, defaultUpdates);
@@ -142,16 +123,18 @@ export default function AboutContent() {
               <h3>自定义介绍</h3>
             </div>
             <div className="blog-prose">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  a: ({ node: _node, ...props }) => (
-                    <a {...props} target={props.href?.startsWith('http') ? '_blank' : undefined} rel={props.href?.startsWith('http') ? 'noopener noreferrer' : undefined} />
-                  ),
-                }}
-              >
-                {markdownContent}
-              </ReactMarkdown>
+              {markdownContent ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    a: ({ node: _node, ...props }) => (
+                      <a {...props} target={props.href?.startsWith('http') ? '_blank' : undefined} rel={props.href?.startsWith('http') ? 'noopener noreferrer' : undefined} />
+                    ),
+                  }}
+                >
+                  {markdownContent}
+                </ReactMarkdown>
+              ) : null}
             </div>
           </section>
         </div>
@@ -247,16 +230,6 @@ export default function AboutContent() {
             })}
           </div>
         </section>
-
-        {customContent && (
-          <section className={styles.section}>
-            <div className={styles.sectionHead}>
-              <i className="fa-sharp fa-light fa-align-left" aria-hidden="true" />
-              <h3>更多介绍</h3>
-            </div>
-            <div className="blog-prose" dangerouslySetInnerHTML={{ __html: customContent }} />
-          </section>
-        )}
 
         <section className={styles.section}>
           <div className={styles.sectionHead}>

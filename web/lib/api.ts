@@ -193,6 +193,10 @@ export const momentsApi = {
   delete: (id: number) => api.delete(`/moments/${id}`),
 };
 
+export const geoApi = {
+  reverse: (lat: number, lng: number) => api.get('/location/reverse', { params: { lat, lng } }),
+};
+
 // Music API
 export const musicApi = {
   list: (params?: any) => api.get('/music', { params }),

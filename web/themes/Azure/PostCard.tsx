@@ -6,6 +6,7 @@ import { getCategoryIcon } from './constants';
 import { coverProps, randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone, formatDateTimeInTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 import PostLink from '@/components/blog/PostLink';
 import LoadingSpinner from '@/components/blog/LoadingSpinner';
 
@@ -26,7 +27,8 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
   const { options, timeZone } = useThemeContext();
   const coverRef = useRef<HTMLImageElement>(null);
   const [coverLoaded, setCoverLoaded] = useState(false);
-  const { mon, day } = formatDate(post.created_at, timeZone);
+  const displayDate = postDateInput(post);
+  const { mon, day } = formatDate(displayDate, timeZone);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
@@ -50,7 +52,7 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
         <div className="azure-post-date-badge">
           <div className="azure-post-date-month">{mon}</div>
           <div className="azure-post-date-day">{day}</div>
-          <div className="azure-post-date-tooltip">{formatFullDate(post.created_at, timeZone)}</div>
+          <div className="azure-post-date-tooltip">{formatFullDate(displayDate, timeZone)}</div>
         </div>
 
         {/* Title + meta */}

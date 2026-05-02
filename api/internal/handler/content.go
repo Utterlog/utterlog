@@ -70,6 +70,9 @@ func ContentCreate(table string) gin.HandlerFunc {
 		now := time.Now().Unix()
 		req["created_at"] = now
 		req["updated_at"] = now
+		if table == "moments" {
+			normalizeMomentCreateSource(req)
+		}
 
 		// Build INSERT
 		cols := []string{}
@@ -101,6 +104,17 @@ func ContentCreate(table string) gin.HandlerFunc {
 		}
 
 		util.Success(c, gin.H{"id": id})
+	}
+}
+
+func normalizeMomentCreateSource(req map[string]interface{}) {
+	raw, _ := req["source"].(string)
+	source := strings.TrimSpace(raw)
+	switch strings.ToLower(source) {
+	case "", "local", "web", "browser":
+		req["source"] = "网页"
+	default:
+		req["source"] = source
 	}
 }
 

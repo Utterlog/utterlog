@@ -4,6 +4,7 @@ import { getOptions, getPosts } from '@/lib/blog-api';
 import PostLink from '@/components/blog/PostLink';
 import PageTitle from '@/components/blog/PageTitle';
 import { datePartsInTimeZone, formatMonthDayInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 
 interface Props { params: Promise<{ year: string }> }
 
@@ -37,13 +38,13 @@ export default async function YearArchive({ params }: Props) {
   ]);
   const timeZone = resolveSiteTimeZone((optsRes as any).data || {});
   const allPosts = (res.data || []).filter((p: any) => {
-    return datePartsInTimeZone(p.created_at, timeZone).year === y;
+    return datePartsInTimeZone(postDateInput(p), timeZone).year === y;
   });
 
   // Group by month
   const monthMap = new Map<number, any[]>();
   allPosts.forEach((p: any) => {
-    const m = datePartsInTimeZone(p.created_at, timeZone).month;
+    const m = datePartsInTimeZone(postDateInput(p), timeZone).month;
     if (!monthMap.has(m)) monthMap.set(m, []);
     monthMap.get(m)!.push(p);
   });
@@ -74,7 +75,7 @@ export default async function YearArchive({ params }: Props) {
               borderBottom: idx < posts.length - 1 ? '1px solid var(--color-divider)' : 'none',
               textDecoration: 'none', transition: 'background 0.1s',
             }} className="hover:bg-soft">
-              <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '44px', flexShrink: 0 }}>{formatDate(post.created_at, timeZone).full}</span>
+              <span style={{ fontSize: '13px', color: 'var(--color-text-dim)', width: '44px', flexShrink: 0 }}>{formatDate(postDateInput(post), timeZone).full}</span>
               <i className={postCategoryIcon(post)} title={post.categories?.[0]?.name || ''} style={{ fontSize: '13px', color: 'var(--color-primary)', flexShrink: 0, width: '14px', textAlign: 'center' }} />
               <span style={{ flex: 1, fontSize: '14px', color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.title}</span>
             </PostLink>

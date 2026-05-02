@@ -50,6 +50,15 @@ function formatMomentDate(timestamp?: number): string {
   });
 }
 
+function formatMomentSource(source?: string | null): string {
+  const raw = String(source || '').trim();
+  if (!raw) return '';
+  const normalized = raw.toLowerCase();
+  if (raw === '网页' || ['local', 'web', 'browser'].includes(normalized)) return '网页';
+  if (normalized === 'telegram') return 'Telegram';
+  return raw;
+}
+
 export default function MomentEmbed({ id }: MomentEmbedProps) {
   const momentId = String(id || '').trim();
   const [moment, setMoment] = useState<MomentData | null>(null);
@@ -115,7 +124,8 @@ export default function MomentEmbed({ id }: MomentEmbedProps) {
   }
 
   const date = formatMomentDate(moment.created_at);
-  const metaItems = [moment.location, moment.mood, moment.source ? `via ${moment.source}` : ''].filter(Boolean);
+  const sourceLabel = formatMomentSource(moment.source);
+  const metaItems = [moment.location, moment.mood, sourceLabel ? `via ${sourceLabel}` : ''].filter(Boolean);
 
   return (
     <aside className="utter-moment-embed" data-moment-id={momentId}>

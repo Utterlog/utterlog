@@ -111,19 +111,23 @@ func PostsList(typ, status, search, orderBy, order string, page, perPage int, ca
 		whereStr = "WHERE " + strings.Join(where, " AND ")
 	}
 
-	allowed := map[string]bool{"created_at": true, "updated_at": true, "display_id": true, "view_count": true, "comment_count": true, "title": true}
+	allowed := map[string]bool{"created_at": true, "updated_at": true, "published_at": true, "display_id": true, "view_count": true, "comment_count": true, "title": true}
 	isRandom := orderBy == "random"
 	if isRandom {
 		orderBy = "RANDOM()"
 		order = ""
 	} else {
 		if !allowed[orderBy] {
-			orderBy = "created_at"
+			orderBy = "published_at"
 		}
 		if order != "ASC" && order != "DESC" {
 			order = "DESC"
 		}
-		orderBy = "p." + orderBy
+		if orderBy == "published_at" {
+			orderBy = "COALESCE(p.published_at, TO_TIMESTAMP(p.created_at))"
+		} else {
+			orderBy = "p." + orderBy
+		}
 	}
 
 	var total int
@@ -392,8 +396,16 @@ func UpdatePost(id int, p *Post) (int, error) {
 		if err != nil {
 			return id, err
 		}
+		if _, err := tx.Exec("UPDATE "+t+" SET slug = $1 WHERE id = $2", draftReleaseSlug(id), id); err != nil {
+			return id, err
+		}
 		if err := insertPostWithID(tx, t, newID, newID, p); err != nil {
 			return id, err
+		}
+		for _, relTable := range []string{"relationships", "post_footprints", "post_meta", "annotations", "comments"} {
+			if _, err := tx.Exec("UPDATE "+config.T(relTable)+" SET post_id = $1 WHERE post_id = $2", newID, id); err != nil {
+				return id, err
+			}
 		}
 		if _, err := tx.Exec("DELETE FROM "+t+" WHERE id = $1", id); err != nil {
 			return id, err
@@ -433,6 +445,10 @@ func insertPostWithID(tx *sqlx.Tx, table string, id int, displayID int, p *Post)
 		p.CoverURL, p.Password, p.AllowComment, p.Pinned, p.WordCount, p.CreatedAt, p.UpdatedAt, p.PublishedAt,
 	)
 	return err
+}
+
+func draftReleaseSlug(id int) string {
+	return fmt.Sprintf("__draft_released_%d_%d", -id, time.Now().UnixNano())
 }
 
 func DeletePost(id int) error {

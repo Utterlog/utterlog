@@ -328,7 +328,7 @@ export default function DashboardPage() {
                         <p className="text-main" style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.title}</p>
                       </div>
                       <p className="text-dim" style={{ fontSize: '12px', marginTop: '4px' }}>
-                        {formatRelativeTime(post.created_at, t)}
+                        {formatRelativeTime(post.published_at || post.created_at, t)}
                         {post.view_count != null && ` · ${t('post.views', '{count} 阅读', { count: post.view_count })}`}
                         {post.comment_count != null && ` · ${t('post.commentCount', '{count} 评论', { count: post.comment_count })}`}
                       </p>

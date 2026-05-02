@@ -3,6 +3,7 @@
 import { coverProps, randomCoverUrl } from '@/lib/blog-image';
 import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 import PostLink from '@/components/blog/PostLink';
 
 function formatDate(ts: string | number, timeZone: string) {
@@ -12,6 +13,7 @@ function formatDate(ts: string | number, timeZone: string) {
 export default function PostCard({ post, priority }: { post: any; priority?: boolean }) {
   const { options, timeZone } = useThemeContext();
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
+  const displayDate = postDateInput(post);
 
   return (
     <PostLink post={post} style={{ textDecoration: 'none', display: 'block' }}>
@@ -47,7 +49,7 @@ export default function PostCard({ post, priority }: { post: any; priority?: boo
             </p>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#9ca3af' }}>
-            <span>{formatDate(post.created_at, timeZone)}</span>
+            <span>{formatDate(displayDate, timeZone)}</span>
             {post.categories?.[0] && (
               <span style={{ color: '#3368d9', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 {/* admin 在「主题 → 分类」给分类设的 icon (FontAwesome class)；

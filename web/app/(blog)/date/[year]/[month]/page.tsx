@@ -4,6 +4,7 @@ import { getOptions, getPosts } from '@/lib/blog-api';
 import PostLink from '@/components/blog/PostLink';
 import PageTitle from '@/components/blog/PageTitle';
 import { datePartsInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 
 interface Props { params: Promise<{ year: string; month: string }> }
 
@@ -28,7 +29,7 @@ export default async function MonthArchive({ params }: Props) {
   ]);
   const timeZone = resolveSiteTimeZone((optsRes as any).data || {});
   const posts = (res.data || []).filter((p: any) => {
-    const parts = datePartsInTimeZone(p.created_at, timeZone);
+    const parts = datePartsInTimeZone(postDateInput(p), timeZone);
     return parts.year === y && parts.month === m;
   });
 
@@ -48,7 +49,7 @@ export default async function MonthArchive({ params }: Props) {
       <div style={{ padding: '0 32px 32px' }}>
       <div style={{ border: '1px solid var(--color-border)' }}>
         {posts.map((post: any, idx: number) => {
-          const day = String(datePartsInTimeZone(post.created_at, timeZone).day).padStart(2, '0');
+          const day = String(datePartsInTimeZone(postDateInput(post), timeZone).day).padStart(2, '0');
           return (
             <PostLink key={post.id} post={post} style={{
               display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px',

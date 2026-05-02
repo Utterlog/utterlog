@@ -4,6 +4,7 @@ import Link from 'next/link';
 import PostLink from '@/components/blog/PostLink';
 import { formatDateInTimeZone } from '@/lib/timezone';
 import { useThemeContext } from '@/lib/theme-context';
+import { postDateInput } from '@/lib/post-date';
 import PostCard from './PostCard';
 
 export default function HomePage({
@@ -25,7 +26,7 @@ export default function HomePage({
   const stats = archiveStats?.post_count ? archiveStats : contextStats;
   const featured = posts[0];
   const featuredDate = featured
-    ? formatDateInTimeZone(featured.created_at, 'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }, timeZone).replace(/\//g, '.')
+    ? formatDateInTimeZone(postDateInput(featured), 'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }, timeZone).replace(/\//g, '.')
     : '';
   const totalWords = stats?.word_count ? Number(stats.word_count).toLocaleString() : '0';
   const totalPosts = stats?.post_count || posts.length || 0;

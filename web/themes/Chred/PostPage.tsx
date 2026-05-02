@@ -7,6 +7,7 @@ import FadeCover from '@/components/blog/FadeCover';
 import FootprintFlags from '@/components/blog/FootprintFlags';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 import { getCategoryIcon } from './constants';
 import { CommentCount, CommentSection } from './PostInteractive';
 
@@ -21,6 +22,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
   // home cards / hero — no more "首页有图、内页一张默认 img.et" mismatch.
   const coverUrl = post.cover_url || randomCoverUrl(post.id, options);
   const timeZone = resolveSiteTimeZone(options);
+  const displayDate = postDateInput(post);
   const cat0 = post.categories?.[0];
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
@@ -59,7 +61,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 32px',
         fontSize: '13px', color: '#999', borderBottom: '1px solid #eee',
       }}>
-        <span><i className="fa-regular fa-calendar" style={{ marginRight: '4px' }} />{formatDate(post.created_at, timeZone)}</span>
+        <span><i className="fa-regular fa-calendar" style={{ marginRight: '4px' }} />{formatDate(displayDate, timeZone)}</span>
         {/* view_count = DB + 1 (cosmetic)，详见 Azure/PostPage.tsx 同位置注释。
             后端 /track 已移除 dedup，每次访问都 +1，cosmetic 跟 DB 永远对齐。 */}
         <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#F53102' }} />{(post.view_count || 0) + 1} 阅读</span>

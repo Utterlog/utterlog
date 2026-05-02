@@ -150,7 +150,7 @@ func main() {
 
 	// Health
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.0.6-go"}})
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.0.7-go"}})
 	})
 
 	// ===================== Install Wizard (public, unauth) =====================
@@ -358,6 +358,7 @@ func main() {
 		authed.PUT("/admin/footprints/:id", handler.AdminUpdateFootprint)
 		authed.GET("/admin/footprints/places", handler.AdminListFootprintPlaces)
 		authed.POST("/admin/footprints/geocode", handler.AdminFootprintGeocode)
+		authed.GET("/location/reverse", handler.ReverseGeocode)
 
 		// 数据统计 access_log 清理：把已记录的爬虫 UA + 旧版 SSR
 		// middleware 双计的 visitor_id 空记录从 ul_access_logs 删除。

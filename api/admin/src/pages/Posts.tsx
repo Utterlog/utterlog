@@ -111,7 +111,7 @@ export default function PostsPage() {
         page, limit: perPage,
         status: status || undefined,
         search: search || undefined,
-        order_by: 'created_at', order: orderDir,
+        order_by: 'published_at', order: orderDir,
       } as any);
       setPosts(response.data?.posts || response.data || []);
       setTotal(response.meta?.total || 0);
@@ -241,7 +241,7 @@ export default function PostsPage() {
           onClick={async () => {
             const newStatus = row.status === 'draft' ? 'publish' : 'draft';
             try { await postsApi.update(row.id, { status: newStatus }); toast.success(newStatus === 'draft' ? t('admin.posts.toast.movedToDrafts', '已移至草稿箱') : t('admin.posts.toast.published', '已发布')); fetchPosts(); }
-            catch { toast.error(t('admin.common.operationFailed', '操作失败')); }
+            catch (err: any) { toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || t('admin.common.operationFailed', '操作失败')); }
           }}
           className={`action-btn${row.status === 'draft' ? ' primary' : ''}`}
           title={row.status === 'draft' ? t('admin.posts.action.publishDraft', '取消草稿（发布）') : t('admin.posts.action.moveToDrafts', '移至草稿箱')}

@@ -152,6 +152,7 @@ func InitDB() error {
 
 	// Comments: visitor_id for fingerprint matching
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS visitor_id VARCHAR(64) DEFAULT ''", T("comments")))
+	DB.Exec(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN source SET DEFAULT '网页'", T("moments")))
 
 	// Comment geo column (cache geoip data)
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS geo TEXT", T("comments")))
@@ -432,7 +433,11 @@ func InitDB() error {
 	// rows where published_at is still NULL, so repeating the
 	// migration on every boot costs nothing.
 	DB.Exec(fmt.Sprintf(
-		"UPDATE %s SET published_at = TO_TIMESTAMP(created_at) WHERE published_at IS NULL AND created_at > 0",
+		"UPDATE %s SET published_at = TO_TIMESTAMP(created_at) WHERE published_at IS NULL AND status = 'publish' AND created_at > 0",
+		T("posts"),
+	))
+	DB.Exec(fmt.Sprintf(
+		"UPDATE %s SET published_at = NULL WHERE id < 0 AND status != 'publish' AND published_at IS NOT NULL",
 		T("posts"),
 	))
 

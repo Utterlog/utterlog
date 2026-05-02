@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Post } from '@/types';
 import PostLink from './PostLink';
 import { formatDateInTimeZone, localTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 
 function formatDate(dateInput: string | number): string {
   const ts = typeof dateInput === 'number' ? dateInput : Number(dateInput);
@@ -27,6 +28,7 @@ interface PostCardProps {
 
 export default function PostCard({ post }: PostCardProps) {
   const readTime = estimateReadingTime(post.content || post.excerpt || '');
+  const displayDate = postDateInput(post);
   if (!post.title) return null;
 
   return (
@@ -51,7 +53,7 @@ export default function PostCard({ post }: PostCardProps) {
 
       {/* Meta */}
       <div className="text-dim" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-        <time dateTime={String(post.created_at)}>{formatDate(post.created_at)}</time>
+        <time dateTime={String(displayDate)}>{formatDate(displayDate)}</time>
         <span>&middot;</span>
         <span>{readTime} 分钟阅读</span>
         {post.view_count > 0 && (

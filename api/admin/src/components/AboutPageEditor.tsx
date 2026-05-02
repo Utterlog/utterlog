@@ -113,6 +113,13 @@ const squareButtonStyle: CSSProperties = {
   justifyContent: 'center',
 };
 
+const aboutActionButtonStyle: CSSProperties = {
+  minWidth: 210,
+  paddingLeft: 22,
+  paddingRight: 22,
+  justifyContent: 'center',
+};
+
 function mergeConfig(raw: any): AboutConfig {
   const parsed = raw && typeof raw === 'object' ? raw : {};
   return {
@@ -393,11 +400,11 @@ export default function AboutPageEditor({ open, onClose }: { open: boolean; onCl
           <p className="text-dim" style={{ margin: 0, fontSize: 13, lineHeight: 1.8 }}>
             这个版本先提供一个稳定模板。后续可以继续增加“极简名片”“时间线主页”“摄影作品集”等模板，数据结构保持不变。
           </p>
-          <div>
-            <Button variant="secondary" onClick={resetTemplate}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <Button variant="secondary" onClick={resetTemplate} style={aboutActionButtonStyle}>
               <i className="fa-regular fa-rotate-left" style={{ fontSize: 13 }} /> 载入默认模板
             </Button>
-            <Button variant="secondary" onClick={() => setTab('custom')} style={{ marginLeft: 8 }}>
+            <Button variant="secondary" onClick={() => setTab('custom')} style={aboutActionButtonStyle}>
               <i className="fa-brands fa-markdown" style={{ fontSize: 13 }} /> 编辑 Markdown
             </Button>
           </div>

@@ -4,6 +4,7 @@ import { getOptions, getPosts } from '@/lib/blog-api';
 import PostLink from '@/components/blog/PostLink';
 import PageTitle from '@/components/blog/PageTitle';
 import { datePartsInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
+import { postDateInput } from '@/lib/post-date';
 
 interface Props { params: Promise<{ year: string; month: string; day: string }> }
 
@@ -28,7 +29,7 @@ export default async function DayArchive({ params }: Props) {
   ]);
   const timeZone = resolveSiteTimeZone((optsRes as any).data || {});
   const posts = (res.data || []).filter((p: any) => {
-    const parts = datePartsInTimeZone(p.created_at, timeZone);
+    const parts = datePartsInTimeZone(postDateInput(p), timeZone);
     return parts.year === y && parts.month === m && parts.day === dd;
   });
 
