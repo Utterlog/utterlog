@@ -17,7 +17,7 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 ### 修复
 
-暂无。
+- 修复生产 `docker-compose.prod.yml` 在 `.env` 缺少数据库密码或 JWT 密钥时被 Compose 拒绝启动的问题，改为允许空值并把宿主机 `.env` 挂入容器，使 Web 安装向导写入的配置在重启后可被读取，外部数据库 / 外部 Redis 模式下的安装流程现在能完整跑通。
 
 ### 移除
 
