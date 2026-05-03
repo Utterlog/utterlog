@@ -58,7 +58,7 @@ export default function Header() {
         padding: '0 24px',
       }}>
         {/* Logo / Brand lockup — site_brand_mode 控制 */}
-        <Link href="/" className="chred-brand" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Link prefetch={false} href="/" className="chred-brand" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
           {showMark && (
             site.logo ? (
               <img
@@ -101,7 +101,7 @@ export default function Header() {
                   padding: '6px 0', minWidth: '120px', display: 'none', zIndex: 100,
                 }}>
                   {item.children.map((child: any) => (
-                    <Link key={child.href} href={child.href} style={{
+                    <Link prefetch={false} key={child.href} href={child.href} style={{
                       display: 'block', padding: '8px 20px', fontSize: '13px',
                       color: isActive(child.href) ? '#F53102' : '#555',
                       textDecoration: 'none', fontWeight: isActive(child.href) ? 600 : 400,
@@ -116,7 +116,7 @@ export default function Header() {
                 </div>
               </div>
             ) : (
-              <Link
+              <Link prefetch={false}
                 key={item.href}
                 href={item.href}
                 style={{
@@ -190,14 +190,14 @@ export default function Header() {
               <div key={item.href}>
                 <span style={{ display: 'block', padding: '10px 0', fontSize: '15px', color: '#999', borderBottom: '1px solid #f0f0f0' }}>{item.label}</span>
                 {item.children.map((child: any) => (
-                  <Link key={child.href} href={child.href} onClick={() => setMenuOpen(false)}
+                  <Link prefetch={false} key={child.href} href={child.href} onClick={() => setMenuOpen(false)}
                     style={{ display: 'block', padding: '10px 0 10px 20px', fontSize: '14px', color: isActive(child.href) ? '#F53102' : '#333', textDecoration: 'none', borderBottom: '1px solid #f0f0f0' }}>
                     {child.label}
                   </Link>
                 ))}
               </div>
             ) : (
-              <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
+              <Link prefetch={false} key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
                 style={{ display: 'block', padding: '10px 0', fontSize: '15px', color: isActive(item.href) ? '#F53102' : '#333', textDecoration: 'none', borderBottom: '1px solid #f0f0f0' }}>
                 {item.label}
               </Link>

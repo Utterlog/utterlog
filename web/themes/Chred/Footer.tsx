@@ -448,7 +448,7 @@ export default function Footer() {
             <a href={`https://beian.mps.gov.cn/#/query/webSearch?code=${siteOptions.beian_gongan.replace(/\D/g, '')}`}
               target="_blank" rel="noopener noreferrer"
               style={{ color: '#999', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <img src="https://beian.mps.gov.cn/img/ghs.png" alt="" style={{ width: '14px', height: '14px' }} />
+              <img src="/images/beian/ghs.png" alt="" style={{ width: '14px', height: '14px' }} />
               {siteOptions.beian_gongan}
             </a>
           )}
@@ -475,7 +475,7 @@ export default function Footer() {
               );
             }
             return (
-              <Link key={i} href={item.href || '#'} title={item.label}
+              <Link prefetch={false} key={i} href={item.href || '#'} title={item.label}
                 style={baseStyle} onMouseEnter={onEnter} onMouseLeave={onLeave}>
                 {renderIcon(item.icon)}
               </Link>
@@ -652,7 +652,7 @@ export default function Footer() {
                 background: '#fff', border: '1px solid #e0e0e0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
                 padding: '8px 0', minWidth: '120px',
               }}>
-                <Link href="/admin" style={{ display: 'block', padding: '8px 16px', fontSize: '13px', color: '#333', textDecoration: 'none' }}>
+                <Link prefetch={false} href="/admin" style={{ display: 'block', padding: '8px 16px', fontSize: '13px', color: '#333', textDecoration: 'none' }}>
                   <i className="fa-light fa-gauge" style={{ marginRight: '6px' }} />控制台
                 </Link>
                 <button onClick={handleLogout} style={{

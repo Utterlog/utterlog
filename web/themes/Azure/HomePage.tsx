@@ -41,10 +41,8 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   const useCustomSidebar = sidebarMenu.length > 0;
   const [modeIdx, setModeIdx] = useState(0);
   const [heroPost, setHeroPost] = useState<any>(posts[0] || null);
-  const [paused, setPaused] = useState(false);
   const [latestMoment, setLatestMoment] = useState<any>(null);
   const [totalPostCount, setTotalPostCount] = useState(serverStats.post_count || 0);
-  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // PJAX 分页状态
@@ -58,73 +56,45 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   const allTabs = ['', ...categories.map(c => c.slug)];
   const activeCatSlug = allTabs[activeCatIdx] || '';
 
-  // Preload all hero posts on mount + when categories load
-  const preloadHeroes = useCallback((cats: any[]) => {
-    const slugs = ['', ...cats.map((c: any) => c.slug)];
-    slugs.forEach(slug => {
-      MODES.forEach(mode => {
-        let url = `${API}/posts?per_page=1&status=publish${mode.param}`;
-        if (slug) url += `&category=${slug}`;
-        fetch(url).then(r => r.json()).then(r => {
-          const items = r.data?.posts || r.data || [];
-          if (items.length > 0) {
-            if (!heroCacheRef.current[slug]) heroCacheRef.current[slug] = {};
-            heroCacheRef.current[slug][mode.key] = items[0];
-          }
-        }).catch(() => {});
-      });
-    });
-  }, []);
-
   useEffect(() => {
     // Always fetch fresh categories and stats from client
     fetch(`${API}/categories`).then(r => r.json()).then(r => {
-      const cats = r.data || [];
-      setCategories(cats);
-      preloadHeroes(cats);
-    }).catch(() => {
-      if (serverCategories.length > 0) preloadHeroes(serverCategories);
-    });
+      setCategories(r.data || []);
+    }).catch(() => {});
     fetch(`${API}/archive/stats`).then(r => r.json()).then(r => setTotalPostCount(r.data?.post_count || 0)).catch(() => {});
     fetch(`${API}/moments?per_page=1`).then(r => r.json()).then(r => {
       const items = r.data?.moments || r.data || [];
       if (items.length > 0) setLatestMoment(items[0]);
     }).catch(() => {});
-  }, [preloadHeroes, serverCategories, serverStats.post_count]);
+  }, [serverCategories, serverStats.post_count]);
 
 
-  // Switch hero from cache instantly
+  // Lazy: fetch hero only when the active (category, mode) combo changes.
+  // First visit fetches once; revisiting a combo hits the in-memory cache
+  // and is instant. Auto-rotate every 5s amortizes to ~one fetch per
+  // combo until all are seen, then stays cached for the rest of the
+  // session — vs the old preload that fired (N+1)×4 fetches up-front.
   useEffect(() => {
     const cached = heroCacheRef.current[activeCatSlug]?.[MODES[modeIdx].key];
     if (cached) {
       setHeroPost(cached);
-    } else {
-      // Fallback: fetch if not cached yet
-      let url = `${API}/posts?per_page=1&status=publish${MODES[modeIdx].param}`;
-      if (activeCatSlug) url += `&category=${activeCatSlug}`;
-      fetch(url).then(r => r.json()).then(r => {
-        const items = r.data?.posts || r.data || [];
-        if (items.length > 0) setHeroPost(items[0]);
-      }).catch(() => {});
+      return;
     }
+    let url = `${API}/posts?per_page=1&status=publish${MODES[modeIdx].param}`;
+    if (activeCatSlug) url += `&category=${activeCatSlug}`;
+    fetch(url).then(r => r.json()).then(r => {
+      const items = r.data?.posts || r.data || [];
+      if (items.length > 0) {
+        if (!heroCacheRef.current[activeCatSlug]) heroCacheRef.current[activeCatSlug] = {};
+        heroCacheRef.current[activeCatSlug][MODES[modeIdx].key] = items[0];
+        setHeroPost(items[0]);
+      }
+    }).catch(() => {});
   }, [activeCatIdx, modeIdx, activeCatSlug]);
 
-  // Auto-rotate: next category + random mode, every 5s.
-  const advance = useCallback(() => {
-    setActiveCatIdx(prev => (prev + 1) % (categories.length + 1));
-    setModeIdx(Math.floor(Math.random() * MODES.length));
-  }, [categories.length]);
-
-  // Restart the timer whenever activeCatIdx / modeIdx changes — that
-  // way clicking a tab (handleTabClick mutates these) wipes the
-  // existing countdown so the next auto-advance is a full 5s away,
-  // instead of firing in whatever fragment of the old 5s remained
-  // and snapping the user off the tab they just selected.
-  useEffect(() => {
-    if (paused) return;
-    timerRef.current = setInterval(advance, 5000);
-    return () => clearInterval(timerRef.current);
-  }, [paused, advance, page, activeCatIdx, modeIdx]);
+  // Hero 切换由用户主动操作（点 tab / 模式）触发；不再有自动轮播
+  // setInterval，避免开着首页静态消耗 API（每个新组合都会触发一次
+  // /posts?per_page=1&category=... fetch，几十种组合慢慢累积）。
 
   // Click same tab = cycle to next mode; click different tab = switch + random mode
   const handleTabClick = (idx: number) => {
@@ -309,8 +279,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
           {/* Right: Hero image — overlaps border line */}
           <section className="azure-hero-panel">
             {heroPost && (
-              <div className="azure-hero"
-                onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+              <div className="azure-hero">
                 {/* Hero deliberately drops .cover-zoom — the giant
                     banner doesn't need the scale(1.04) hover; loading
                     placeholder + admin's image_display_effect (fade /

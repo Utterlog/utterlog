@@ -81,7 +81,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
           {post.tags?.length > 0 && (
             <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {post.tags.map((tag: any) => (
-                <Link key={tag.id} href={`/tags/${tag.slug}`} style={{
+                <Link prefetch={false} key={tag.id} href={`/tags/${tag.slug}`} style={{
                   padding: '4px 10px', fontSize: '12px', color: '#3368d9',
                   background: 'rgba(51,104,217,0.06)', borderRadius: '4px', textDecoration: 'none',
                 }}>

@@ -29,12 +29,12 @@ export default function Footer() {
       <footer className="renascent-footer">
         <div className="renascent-container renascent-footer-inner">
           <div>
-            <Link href="/" className="renascent-footer-brand">Renascent·@{siteName}</Link>
+            <Link prefetch={false} href="/" className="renascent-footer-brand">Renascent·@{siteName}</Link>
             {owner.bio && <p className="renascent-footer-bio">{owner.bio}</p>}
           </div>
           <div className="renascent-footer-links">
             {footerItems.map(item => (
-              <Link key={`${item.href}-${item.label}`} href={item.href || '#'}>{item.label}</Link>
+              <Link prefetch={false} key={`${item.href}-${item.label}`} href={item.href || '#'}>{item.label}</Link>
             ))}
             <a href="/feed">RSS</a>
             <a href="https://utterlog.com" target="_blank" rel="noopener noreferrer">Utterlog</a>

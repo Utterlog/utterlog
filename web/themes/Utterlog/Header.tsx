@@ -49,7 +49,7 @@ export default function Header() {
             showLogo 和 showText 均为 false 的极端情况理论不会出现
             （mode 解析层已经保底 'text'），但 fallback 渲染 siteName
             纯文字以防万一。 */}
-        <Link href="/" className="site-title utterlog-brand" style={{
+        <Link prefetch={false} href="/" className="site-title utterlog-brand" style={{
           textDecoration: 'none', fontSize: '22px', fontWeight: 700,
           color: '#202020', letterSpacing: '-0.02em',
           display: 'flex', alignItems: 'center', gap: '10px',
@@ -72,7 +72,7 @@ export default function Header() {
         {/* Desktop nav */}
         <nav style={{ display: 'flex', gap: '4px', alignItems: 'center' }} className="hidden md:flex">
           {navItems.map(item => (
-            <Link key={item.href} href={item.href} style={{
+            <Link prefetch={false} key={item.href} href={item.href} style={{
               padding: '6px 14px', fontSize: '14px', borderRadius: '4px',
               color: isActive(item.href) ? '#3368d9' : '#6b7280',
               background: isActive(item.href) ? 'rgba(51,104,217,0.08)' : 'transparent',
@@ -96,7 +96,7 @@ export default function Header() {
       {menuOpen && (
         <div className="md:hidden" style={{ background: '#fff', borderBottom: '1px solid #e9e9e9', padding: '8px 40px 16px' }}>
           {navItems.map(item => (
-            <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
+            <Link prefetch={false} key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
               style={{ display: 'block', padding: '10px 0', fontSize: '15px', color: isActive(item.href) ? '#3368d9' : '#6b7280', textDecoration: 'none' }}>
               {item.label}
             </Link>

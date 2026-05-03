@@ -37,11 +37,11 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         }}>
           {/* Breadcrumb */}
           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Link href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>首页</Link>
+            <Link prefetch={false} href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>首页</Link>
             <span>/</span>
             {catName && (
               <>
-                <Link href={`/categories/${post.categories[0].slug}`} style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>{catName}</Link>
+                <Link prefetch={false} href={`/categories/${post.categories[0].slug}`} style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>{catName}</Link>
                 <span>/</span>
               </>
             )}
@@ -67,7 +67,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         )}
         <span><i className="fa-regular fa-clock" style={{ marginRight: '4px' }} />{Math.max(1, Math.ceil((post.word_count || 0) / 400))} 分钟</span>
         {catName && (
-          <Link href={`/categories/${post.categories[0].slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#0052D9', textDecoration: 'none', marginLeft: 'auto' }}>
+          <Link prefetch={false} href={`/categories/${post.categories[0].slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#0052D9', textDecoration: 'none', marginLeft: 'auto' }}>
             <i className={catIcon} /> {catName}
           </Link>
         )}
@@ -99,7 +99,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
           {post.author?.avatar && (
             <img src={post.author.avatar} alt="" style={{ width: '20px', height: '20px', objectFit: 'cover', clipPath: 'url(#squircle)', background: '#f0f0f0' }} />
           )}
-          <Link href="/" style={{ color: '#0052D9', textDecoration: 'none', fontWeight: 600 }}>{post.author?.nickname || post.author?.username || '匿名'}</Link>
+          <Link prefetch={false} href="/" style={{ color: '#0052D9', textDecoration: 'none', fontWeight: 600 }}>{post.author?.nickname || post.author?.username || '匿名'}</Link>
           <span>本文采用</span>
           <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer" style={{ color: '#999', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             <i className="fa-brands fa-creative-commons" />
@@ -111,7 +111,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'baseline' }}>
             {post.tags.map((tag: any, idx: number) => (
               <span key={tag.id} style={{ display: 'inline-flex', alignItems: 'baseline' }}>
-                <Link href={`/tags/${tag.slug}`} style={{
+                <Link prefetch={false} href={`/tags/${tag.slug}`} style={{
                   fontSize: '13px', textDecoration: 'none',
                   display: 'inline-flex', alignItems: 'baseline',
                 }}>

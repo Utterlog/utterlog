@@ -36,7 +36,7 @@ export default function PostCard({ post, index = 1 }: { post: any; index?: numbe
           {category && (
             <>
               <span>/</span>
-              <Link href={`/categories/${category.slug}`}>{category.name}</Link>
+              <Link prefetch={false} href={`/categories/${category.slug}`}>{category.name}</Link>
             </>
           )}
         </div>

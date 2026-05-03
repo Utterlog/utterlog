@@ -75,7 +75,7 @@ export default function HomePage({
               );
             }
             return (
-              <Link key={item.no} href={item.href || '/'} className="renascent-dashboard-item">
+              <Link prefetch={false} key={item.no} href={item.href || '/'} className="renascent-dashboard-item">
                 {content}
               </Link>
             );
@@ -95,9 +95,9 @@ export default function HomePage({
 
       {categories.length > 0 && (
         <nav className="renascent-category-strip" aria-label="分类">
-          <Link href="/" className="active">全部</Link>
+          <Link prefetch={false} href="/" className="active">全部</Link>
           {categories.slice(0, 10).map((cat: any) => (
-            <Link key={cat.id || cat.slug} href={`/categories/${cat.slug}`}>
+            <Link prefetch={false} key={cat.id || cat.slug} href={`/categories/${cat.slug}`}>
               {cat.name}
               <span>{cat.count || 0}</span>
             </Link>
@@ -119,9 +119,9 @@ export default function HomePage({
 
       {totalPages > 1 && (
         <nav className="renascent-pagination" aria-label="分页">
-          {page > 1 ? <Link href={page - 1 === 1 ? '/' : `/page/${page - 1}`}>Previous</Link> : <span />}
+          {page > 1 ? <Link prefetch={false} href={page - 1 === 1 ? '/' : `/page/${page - 1}`}>Previous</Link> : <span />}
           <span>{page} / {totalPages}</span>
-          {page < totalPages ? <Link href={`/page/${page + 1}`}>Next</Link> : <span />}
+          {page < totalPages ? <Link prefetch={false} href={`/page/${page + 1}`}>Next</Link> : <span />}
         </nav>
       )}
     </div>

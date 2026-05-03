@@ -58,7 +58,7 @@ export default function Footer() {
             <a href={`https://beian.mps.gov.cn/#/query/webSearch?code=${siteOptions.beian_gongan.replace(/\D/g, '')}`}
               target="_blank" rel="noopener noreferrer"
               style={{ color: '#9ca3af', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <img src="https://beian.mps.gov.cn/img/ghs.png" alt="" style={{ width: '14px', height: '14px' }} />
+              <img src="/images/beian/ghs.png" alt="" style={{ width: '14px', height: '14px' }} />
               {siteOptions.beian_gongan}
             </a>
           )}

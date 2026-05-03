@@ -208,7 +208,7 @@ export default function Header() {
   const renderNavItem = (item: MenuItem) => {
     const active = isActive(item.href || '#');
     return (
-      <Link key={`${item.href}-${item.label}`} href={item.href || '#'} className={`renascent-nav-link${active ? ' active' : ''}`}>
+      <Link prefetch={false} key={`${item.href}-${item.label}`} href={item.href || '#'} className={`renascent-nav-link${active ? ' active' : ''}`}>
         {item.label}
       </Link>
     );
@@ -218,7 +218,7 @@ export default function Header() {
     <>
       <header className="renascent-header">
         <div className="renascent-header-inner">
-          <Link href="/" className="renascent-brand" aria-label={siteName}>
+          <Link prefetch={false} href="/" className="renascent-brand" aria-label={siteName}>
             {showMark && (
               site.logo ? (
                 <img src={site.logo} alt={showText ? '' : siteName} className="renascent-brand-logo" />

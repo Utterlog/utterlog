@@ -45,7 +45,7 @@ export default function Header() {
         {/* Brand lockup — mark + text，由 site_brand_mode 决定哪些显示。
             'logo' / 'text_logo' 模式下：有上传 Logo 时图片当 mark，
             否则退回 Flux 硬编码的绿色圆形 chevron 保留品牌识别。 */}
-        <Link href="/" className="flux-brand" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+        <Link prefetch={false} href="/" className="flux-brand" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
           {showMark && (
             ctx.site.logo ? (
               <img
@@ -86,7 +86,7 @@ export default function Header() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
           <nav style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
             {navItems.map((item: any) => (
-              <Link
+              <Link prefetch={false}
                 key={item.href}
                 href={item.href}
                 className="flux-nav-link"
@@ -101,7 +101,7 @@ export default function Header() {
           </nav>
 
           {/* Single CTA pill on right — subtle neutral */}
-          <Link
+          <Link prefetch={false}
             href="/feed"
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',

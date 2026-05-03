@@ -87,7 +87,7 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
 
         {/* Category */}
         {catName && (
-          <Link href={`/categories/${post.categories[0].slug}`} style={{
+          <Link prefetch={false} href={`/categories/${post.categories[0].slug}`} style={{
             display: 'inline-flex', alignItems: 'center', gap: '5px',
             fontSize: '13px', color: ACCENT, textDecoration: 'none', flexShrink: 0,
           }}>

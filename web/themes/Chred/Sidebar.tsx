@@ -250,7 +250,7 @@ export default function Sidebar() {
             const c = colors[i % colors.length];
             const size = tag.count > 5 ? 14 : tag.count > 2 ? 13 : 12;
             return (
-              <Link key={tag.id} href={`/tags/${tag.slug}`} style={{
+              <Link prefetch={false} key={tag.id} href={`/tags/${tag.slug}`} style={{
                 padding: '4px 10px', fontSize: `${size}px`,
                 border: `1px solid ${c}40`, color: c, background: `${c}08`,
                 textDecoration: 'none', transition: 'all 0.15s',
@@ -270,7 +270,7 @@ export default function Sidebar() {
       <div style={{ borderBottom: '1px solid #e5e5e5' }}>
         {sectionTitle('fa-solid fa-folder-tree', '文章分类')}
         {categories.map((cat, idx) => (
-          <Link key={cat.id} href={`/categories/${cat.slug}`} style={{
+          <Link prefetch={false} key={cat.id} href={`/categories/${cat.slug}`} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '8px 16px', fontSize: '13px', color: '#333',
             textDecoration: 'none', borderBottom: idx < categories.length - 1 ? '1px solid #f5f5f5' : 'none',
@@ -328,7 +328,7 @@ export default function Sidebar() {
                   <span style={{ fontSize: '12px', color: '#bbb' }}>{yearTotal} 篇</span>
                 </button>
                 {isOpen && yearMap[year].map((m, mi) => (
-                  <Link key={m.month} href={`/date/${year}/${m.month}`} style={{
+                  <Link prefetch={false} key={m.month} href={`/date/${year}/${m.month}`} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '6px 16px 6px 32px', fontSize: '12px', color: '#666',
                     textDecoration: 'none', borderBottom: (isLastYear && mi === yearMap[year].length - 1) ? 'none' : '1px solid #f8f8f8',

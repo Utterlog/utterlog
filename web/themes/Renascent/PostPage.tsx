@@ -52,11 +52,11 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
 
           <div className="renascent-article-title-block">
             <div className="renascent-article-meta">
-              <Link href="/">Home</Link>
+              <Link prefetch={false} href="/">Home</Link>
               {category && (
                 <>
                   <span>/</span>
-                  <Link href={`/categories/${category.slug}`}>{category.name}</Link>
+                  <Link prefetch={false} href={`/categories/${category.slug}`}>{category.name}</Link>
                 </>
               )}
               <span>/</span>
@@ -100,7 +100,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
           {category && (
             <div>
               <span>Filed under</span>
-              <Link href={`/categories/${category.slug}`}>{category.name}</Link>
+              <Link prefetch={false} href={`/categories/${category.slug}`}>{category.name}</Link>
             </div>
           )}
           {readMinutes && (
@@ -130,7 +130,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         {post.tags?.length > 0 && (
           <div className="renascent-tags">
             {post.tags.map((tag: any) => (
-              <Link key={tag.id || tag.slug} href={`/tags/${tag.slug}`}>#{tag.name}</Link>
+              <Link prefetch={false} key={tag.id || tag.slug} href={`/tags/${tag.slug}`}>#{tag.name}</Link>
             ))}
           </div>
         )}
