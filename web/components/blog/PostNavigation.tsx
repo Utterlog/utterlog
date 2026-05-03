@@ -159,7 +159,14 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
 
   const handleRefresh = () => {
     setRefreshing(true);
-    const allItems = activeTab === 'feeds' ? feeds : (tabs.find(t => t.key === activeTab)?.items || []);
+    if (activeTab === 'feeds') {
+      // feeds 后端是 ORDER BY RANDOM() LIMIT 5，整组就 5 条，重新调
+      // navigation 接口拿新的随机集合，比单纯翻页更符合「换一批」语义。
+      fetchData();
+      setTimeout(() => setRefreshing(false), 300);
+      return;
+    }
+    const allItems = (tabs.find(t => t.key === activeTab)?.items || []);
     const totalPages = Math.ceil(allItems.length / PAGE_SIZE);
     setPageIndex(prev => (prev + 1) % Math.max(totalPages, 1));
     setTimeout(() => setRefreshing(false), 300);
@@ -169,14 +176,17 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
 
   const feeds = data.feeds || [];
 
+  // feeds 是 FeedItem[]，类型与其它 tab 的 NavPost[] 不同，items
+  // 留空数组占位但加 `count` 字段供 disabled / 显示判断时使用 —— 真
+  // 实数据走 feeds 变量，渲染时单独分支。
   const tabs = [
-    { key: 'related', label: '相关文章', items: data.related || [] },
-    { key: 'random', label: '随机文章', items: data.random || [] },
-    { key: 'popular', label: '热门文章', items: data.popular || [] },
-    { key: 'category', label: '分类文章', items: data.category || [] },
-    { key: 'feeds', label: '友链更新', items: [] as NavPost[] },
-    { key: 'network_latest', label: '最新更新', items: [] as NavPost[] },
-    { key: 'network_hot', label: '网络热门', items: [] as NavPost[] },
+    { key: 'related', label: '相关文章', items: data.related || [], count: (data.related || []).length },
+    { key: 'random', label: '随机文章', items: data.random || [], count: (data.random || []).length },
+    { key: 'popular', label: '热门文章', items: data.popular || [], count: (data.popular || []).length },
+    { key: 'category', label: '分类文章', items: data.category || [], count: (data.category || []).length },
+    { key: 'feeds', label: '友链更新', items: [] as NavPost[], count: feeds.length },
+    { key: 'network_latest', label: '最新更新', items: [] as NavPost[], count: 0 },
+    { key: 'network_hot', label: '网络热门', items: [] as NavPost[], count: 0 },
   ];
 
   const allActiveItems = tabs.find(t => t.key === activeTab)?.items || [];
@@ -231,7 +241,7 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
       )}
 
       {/* Tabs + Post List */}
-      {tabs.some(t => t.items.length > 0) && (
+      {tabs.some(t => t.count > 0) && (
         <div className="post-related-section">
           <div className="post-related-tabs">
             {tabs.map(tab => (
@@ -239,7 +249,7 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
                 key={tab.key}
                 className={`post-related-tab${activeTab === tab.key ? ' active' : ''}`}
                 onClick={() => { setActiveTab(tab.key); setPageIndex(0); }}
-                disabled={tab.items.length === 0}
+                disabled={tab.count === 0}
               >
                 {tab.label}
               </button>
@@ -253,22 +263,35 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
             </button>
           </div>
           <div className="post-related-grid">
-            {/* 友链更新 — 特殊渲染 */}
-            {activeTab === 'feeds' && feeds.length > 0 && feeds.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE).map((item, idx) => {
+            {/* 友链更新 — 复用 16:10 卡片槽位，但左上站名 / 右上时间 /
+                底部标题的清晰布局，没有真实封面，用渐变背景 + RSS 水印。 */}
+            {activeTab === 'feeds' && feeds.length > 0 && feeds.map((item, idx) => {
               const mon = formatDateInTimeZone(item.pub_date || 0, 'zh-CN', { month: 'short', day: 'numeric' }, timeZone);
               return (
-                <a key={idx} href={item.link} target="_blank" rel="noopener noreferrer" className="post-related-card">
-                  <div className="post-related-card-cover" style={{ background: 'var(--color-bg-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ textAlign: 'center', padding: '12px 8px' }}>
-                      <i className="fa-light fa-rss" style={{ fontSize: '20px', color: 'var(--color-text-dim)', marginBottom: '4px', display: 'block' }} />
-                      <span style={{ fontSize: '11px', color: 'var(--color-text-dim)', fontWeight: 500 }}>{item.site_name}</span>
-                    </div>
+                <a key={idx} href={item.link} target="_blank" rel="noopener noreferrer" className="post-related-card cover-zoom">
+                  <div className="post-related-card-cover" style={{
+                    background: 'linear-gradient(135deg, var(--color-bg-soft) 0%, rgba(0,82,217,0.08) 100%)',
+                  }}>
+                    {/* RSS 水印 */}
+                    <i className="fa-light fa-rss" style={{
+                      position: 'absolute', inset: 0, margin: 'auto',
+                      width: '64px', height: '64px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '54px', color: 'rgba(0,0,0,0.06)',
+                      pointerEvents: 'none',
+                    }} />
+                    {/* 左上：站点名 */}
+                    <span className="post-related-card-cat" title={item.site_name}>
+                      <i className="fa-regular fa-user" /> {item.site_name}
+                    </span>
+                    {/* 右上：时间 */}
                     <span className="post-related-card-date">{mon}</span>
+                    {/* 底部 hover overlay：标题 */}
                     <div className="post-related-card-overlay">
                       <div className="post-related-card-bottom">
                         <span className="post-related-card-title">{item.title}</span>
                         <span className="post-related-card-stats">
-                          <i className="fa-light fa-arrow-up-right-from-square" /> {item.site_name}
+                          <i className="fa-light fa-arrow-up-right-from-square" /> 阅读原文
                         </span>
                       </div>
                     </div>

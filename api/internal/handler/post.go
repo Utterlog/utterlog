@@ -963,8 +963,10 @@ func PostNavigation(c *gin.Context) {
 	// fi.pub_date must be in the SELECT list — without it sqlx leaves
 	// PubDate=0 and the front-end's `new Date(pub_date * 1000)` paints
 	// every related-tab feed entry as 1970-01-01.
+	// 取随机 5 条（按用户需求），每次请求 navigation 接口都会换一批；
+	// 前端「换一批」按钮在 feeds tab 时也会调一次以拿新的随机集合。
 	config.DB.Select(&feedItems, fmt.Sprintf(
-		"SELECT fi.title, fi.link, rs.site_name, rs.site_url, fi.pub_date FROM %s fi JOIN %s rs ON fi.subscription_id = rs.id ORDER BY fi.pub_date DESC LIMIT 20",
+		"SELECT fi.title, fi.link, rs.site_name, rs.site_url, fi.pub_date FROM %s fi JOIN %s rs ON fi.subscription_id = rs.id ORDER BY RANDOM() LIMIT 5",
 		t("feed_items"), t("rss_subscriptions")))
 	if feedItems == nil {
 		feedItems = []feedItem{}

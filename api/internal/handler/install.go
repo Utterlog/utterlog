@@ -54,7 +54,7 @@ func InstallStatus(c *gin.Context) {
 			"schema":      schemaOK,
 			"admin_count": adminCount,
 		},
-		"version": "2.1.0",
+		"version": "2.1.1",
 	})
 }
 
