@@ -561,8 +561,8 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
         </div>
       </div>
 
-      {/* 递归渲染子评论 — 在同一个卡片内 */}
-      {comment.children && comment.children.length > 0 && (
+      {/* 子评论扁平渲染 — 仅在顶层做一次,避免深层链重复 */}
+      {depth === 0 && comment.children && comment.children.length > 0 && (
         <div style={{ paddingBottom: '12px' }}>
           {flattenReplies(comment).map(({ child, parent }) => (
             <CommentRow key={child.id} comment={child} postId={postId} depth={1} parentComment={parent} onReplySuccess={onReplySuccess} editableIds={editableIds} />

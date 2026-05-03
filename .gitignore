@@ -119,3 +119,6 @@ backup/
 
 # Reference materials (Typecho CommentAI plugin source for reference)
 /Comment/
+
+# Private SSL certs / keys
+/ssl/
