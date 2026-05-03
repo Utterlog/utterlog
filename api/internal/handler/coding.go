@@ -26,8 +26,13 @@ import (
 )
 
 const (
-	codingCacheTTL                = time.Hour
-	codingCacheStaleTTL           = 6 * time.Hour
+	// 30 分钟新鲜期：这段时间内任何请求都直接返回内存 / Redis 缓存，
+	// 不触发 GitHub 拉取。
+	codingCacheTTL = 30 * time.Minute
+	// 30 天 stale-while-revalidate：过 TTL 后仍在这段时间内的，立即
+	// 返回旧数据 + 后台异步刷新接力（不阻塞用户请求），让用户从冷
+	// 启动 / 长间隔访问回来时也不会卡 4-5 秒。
+	codingCacheStaleTTL           = 30 * 24 * time.Hour
 	codingCacheRedisTTL           = codingCacheTTL + codingCacheStaleTTL
 	codingAllContributionCacheTTL = 24 * time.Hour
 	codingGitHubRefreshTimeout    = 45 * time.Second

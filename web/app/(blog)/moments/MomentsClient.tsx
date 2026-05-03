@@ -371,9 +371,14 @@ export default function MomentsPage() {
               const isActive = activeCard === i;
               const sourceLabel = formatMomentSource(m.source);
 
-              return (
-                <div style={{ background: '#fff', borderRadius: '2px', boxShadow: isActive ? '0 12px 40px rgba(0,0,0,0.15)' : '0 2px 12px rgba(0,0,0,0.06)', position: 'relative' }}>
-                  {/* Tag badge */}
+              // 散落布局里卡片不许跨行覆盖：未激活时硬限制总高度并裁
+                // 掉超长内容（文字配合 line-clamp 平滑截断），激活时解除
+                // 限制看全部，z-index 升到最顶不会再压到任何邻居。
+                // 外层 frame 不裁切，保留 tag badge 突出在卡角的设计；
+                // 内层 clip 才是真正的内容容器并加 overflow: hidden。
+                return (
+                <div style={{ position: 'relative' }}>
+                  {/* Tag badge — 在 frame 之外，不被 inner clip 裁掉 */}
                   {tag && tagColor && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setFilterTag(filterTag === tag ? null : tag); }}
@@ -391,37 +396,55 @@ export default function MomentsPage() {
                     </button>
                   )}
 
-                  {/* Text content */}
-                  <div style={{ padding: '20px 24px' }}>
-                    <div style={{ marginBottom: '12px' }}>
-                      <span style={{ fontSize: '10px', color: '#9e9a93', letterSpacing: '0.08em' }}>{relativeTime(m.created_at)}</span>
+                  <div style={{
+                    background: '#fff',
+                    borderRadius: '2px',
+                    boxShadow: isActive ? '0 12px 40px rgba(0,0,0,0.15)' : '0 2px 12px rgba(0,0,0,0.06)',
+                    maxHeight: scattered && !isActive ? '280px' : 'none',
+                    overflow: scattered && !isActive ? 'hidden' : 'visible',
+                  }}>
+                    {/* Text content */}
+                    <div style={{ padding: '20px 24px' }}>
+                      <div style={{ marginBottom: '12px' }}>
+                        <span style={{ fontSize: '10px', color: '#9e9a93', letterSpacing: '0.08em' }}>{relativeTime(m.created_at)}</span>
+                      </div>
+                      {m.content && (
+                        <p style={{
+                          fontSize: '14px', lineHeight: 1.85, color: '#2b2a28',
+                          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                          margin: 0,
+                          ...(scattered && !isActive ? {
+                            display: '-webkit-box',
+                            WebkitLineClamp: imgs.length > 0 ? 2 : 6,
+                            WebkitBoxOrient: 'vertical' as const,
+                            overflow: 'hidden',
+                          } : {}),
+                        }}>{m.content}</p>
+                      )}
+                      {(m.location || sourceLabel) && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', fontSize: '11px', color: '#b8b4ad' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            {m.location && <><i className="fa-regular fa-location-dot" style={{ fontSize: '10px' }} />{m.location}</>}
+                          </span>
+                          {sourceLabel && <span style={{ fontSize: '10px', color: '#c4c0b8' }}>via {sourceLabel}</span>}
+                        </div>
+                      )}
                     </div>
-                    {m.content && (
-                      <p style={{ fontSize: '14px', lineHeight: 1.85, color: '#2b2a28', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{m.content}</p>
+
+                    {/* Images */}
+                    {imgs.length === 1 && (
+                      <img src={imgs[0]} alt="" onClick={(e) => { e.stopPropagation(); openLightbox(imgs, 0); }}
+                        style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }} />
                     )}
-                    {(m.location || sourceLabel) && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', fontSize: '11px', color: '#b8b4ad' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                          {m.location && <><i className="fa-regular fa-location-dot" style={{ fontSize: '10px' }} />{m.location}</>}
-                        </span>
-                        {sourceLabel && <span style={{ fontSize: '10px', color: '#c4c0b8' }}>via {sourceLabel}</span>}
+                    {imgs.length >= 2 && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
+                        {imgs.map((url, idx) => (
+                          <img key={idx} src={url} alt="" onClick={(e) => { e.stopPropagation(); openLightbox(imgs, idx); }}
+                            style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }} />
+                        ))}
                       </div>
                     )}
                   </div>
-
-                  {/* Images */}
-                  {imgs.length === 1 && (
-                    <img src={imgs[0]} alt="" onClick={(e) => { e.stopPropagation(); openLightbox(imgs, 0); }}
-                      style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }} />
-                  )}
-                  {imgs.length >= 2 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
-                      {imgs.map((url, idx) => (
-                        <img key={idx} src={url} alt="" onClick={(e) => { e.stopPropagation(); openLightbox(imgs, idx); }}
-                          style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }} />
-                      ))}
-                    </div>
-                  )}
                 </div>
               );
             };
