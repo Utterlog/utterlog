@@ -28,6 +28,8 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   const [heroPost, setHeroPost] = useState<any>(posts[0] || null);
   const [latestMoment, setLatestMoment] = useState<any>(null);
   const [totalPostCount, setTotalPostCount] = useState(serverStats.post_count || 0);
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // PJAX 分页状态
@@ -72,7 +74,17 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
     }).catch(() => {});
   }, [activeCatIdx, modeIdx, activeCatSlug]);
 
-  // Hero 切换由用户主动点击触发，不再有自动轮播 setInterval。
+  // 自动轮播：每 8 秒切到下一个 (分类, 随机模式)，hero 上 hover 暂停。
+  const advance = useCallback(() => {
+    setActiveCatIdx(prev => (prev + 1) % (categories.length + 1));
+    setModeIdx(Math.floor(Math.random() * MODES.length));
+  }, [categories.length]);
+
+  useEffect(() => {
+    if (paused) return;
+    timerRef.current = setInterval(advance, 8000);
+    return () => clearInterval(timerRef.current);
+  }, [paused, advance, page]);
 
   // Click same tab = cycle to next mode; click different tab = switch + random mode
   const handleTabClick = (idx: number) => {
@@ -84,8 +96,14 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
     }
   };
 
-  // 原本这里有 goFirst / goPrev / goNext / goLast 播放控制，
-  // 配合自动轮播 setInterval 切换 hero 分类。轮播已删，按钮无用，一起清理。
+  // Playback controls
+  const goFirst = () => { setActiveCatIdx(0); setModeIdx(Math.floor(Math.random() * MODES.length)); };
+  const goPrev = () => {
+    setActiveCatIdx(p => (p - 1 + categories.length + 1) % (categories.length + 1));
+    setModeIdx(Math.floor(Math.random() * MODES.length));
+  };
+  const goNext = () => advance();
+  const goLast = () => { setActiveCatIdx(categories.length); setModeIdx(Math.floor(Math.random() * MODES.length)); };
 
   // PJAX 分页切换
   const handlePageChange = useCallback(async (newPage: number) => {
@@ -162,7 +180,8 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
           {/* Right: Hero image — overlaps border line */}
           <div style={{ minWidth: 0, position: 'relative', zIndex: 1, marginLeft: '-1px' }}>
             {heroPost && (
-              <div style={{ position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'relative', overflow: 'hidden' }}
+                onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
                 <PostLink post={heroPost} style={{ display: 'block', textDecoration: 'none' }}>
                   <FadeCover src={heroSrc} alt={heroPost.title} style={{ width: '100%', height: heroHeight }} />
                   <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', padding: '60px 24px 20px' }}>
@@ -181,8 +200,23 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
       {/* ===== Playback + Moment row — single unit ===== */}
       {(
         <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)' }} className="lg:grid">
-          {/* Left column kept empty — playback controls removed with auto-rotate */}
-          <div style={{ borderRight: '1px solid #e5e5e5', borderTop: '1px solid #e5e5e5', borderBottom: '1px solid #e5e5e5', background: '#fafafa', height: '38px' }} className="hidden lg:block" />
+          {/* Left: Playback controls */}
+          <div style={{ borderRight: '1px solid #e5e5e5' }} className="hidden lg:block">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '38px', borderTop: '1px solid #e5e5e5', borderBottom: '1px solid #e5e5e5', background: '#fafafa' }}>
+              {[
+                { icon: 'fa-solid fa-backward-fast', action: goFirst },
+                { icon: 'fa-solid fa-backward-step', action: goPrev },
+                { icon: paused ? 'fa-solid fa-play' : 'fa-solid fa-pause', action: () => setPaused(!paused) },
+                { icon: 'fa-solid fa-forward-step', action: goNext },
+                { icon: 'fa-solid fa-forward-fast', action: goLast },
+              ].map((btn, i) => (
+                <button key={i} onClick={btn.action} style={{ padding: '0 10px', height: '100%', background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: '12px', transition: 'color 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = ACCENT)} onMouseLeave={e => (e.currentTarget.style.color = '#666')}>
+                  <i className={btn.icon} />
+                </button>
+              ))}
+            </div>
+          </div>
           {/* Right: Moment ticker */}
           <div style={{ minWidth: 0 }}>
             {latestMoment && (

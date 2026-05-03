@@ -43,6 +43,8 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   const [heroPost, setHeroPost] = useState<any>(posts[0] || null);
   const [latestMoment, setLatestMoment] = useState<any>(null);
   const [totalPostCount, setTotalPostCount] = useState(serverStats.post_count || 0);
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // PJAX 分页状态
@@ -53,8 +55,38 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   // Preloaded cache: heroCache[catSlug][modeKey] = post
   const heroCacheRef = useRef<Record<string, Record<string, any>>>({});
 
-  const allTabs = ['', ...categories.map(c => c.slug)];
-  const activeCatSlug = allTabs[activeCatIdx] || '';
+  // Resolve a sidebar menu item to its underlying category (or shape one).
+  const categoryFromMenuItem = (item: any) => {
+    if (!item) return null;
+    const rawSlug = item.slug || String(item.href || '').match(/^\/categor(?:y|ies)\/([^/?#]+)/)?.[1] || '';
+    const slug = rawSlug ? decodeURIComponent(rawSlug) : '';
+    const id = Number(item.category_id || 0);
+    const found = categories.find((cat: any) => (id > 0 && Number(cat.id) === id) || (slug && cat.slug === slug));
+    if (found) return found;
+    if (item.type === 'category') {
+      return {
+        id: item.category_id || item.href || item.label,
+        name: item.label,
+        slug,
+        icon: item.icon,
+        count: item.count || 0,
+      };
+    }
+    return null;
+  };
+
+  // visibleCats = hero 切换实际能落到的分类。自定义 sidebar 时只使用
+  // sidebar 配置里映射成分类的那几项；否则退回全部分类。这样 hero
+  // 状态空间和侧栏 UI 一致，不会切到 sidebar 里看不见的隐藏分类。
+  const visibleCats: any[] = useCustomSidebar
+    ? sidebarMenu.map(categoryFromMenuItem).filter((c: any) => !!c)
+    : categories;
+  const allTabs = ['', ...visibleCats.map((c: any) => c.slug)];
+  // Clamp activeCatIdx to visible range (defensive — user toggling
+  // sidebar config in admin shrinks visibleCats while a stale idx
+  // is still selected).
+  const safeActiveIdx = activeCatIdx < allTabs.length ? activeCatIdx : 0;
+  const activeCatSlug = allTabs[safeActiveIdx] || '';
 
   useEffect(() => {
     // Always fetch fresh categories and stats from client
@@ -92,13 +124,22 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
     }).catch(() => {});
   }, [activeCatIdx, modeIdx, activeCatSlug]);
 
-  // Hero 切换由用户主动操作（点 tab / 模式）触发；不再有自动轮播
-  // setInterval，避免开着首页静态消耗 API（每个新组合都会触发一次
-  // /posts?per_page=1&category=... fetch，几十种组合慢慢累积）。
+  // 自动轮播：按 visibleCats 范围循环（[0, visibleCats.length] 之间），
+  // 不会切到 sidebar 配置之外的隐藏分类。鼠标 hover 在 hero 上时暂停。
+  const advance = useCallback(() => {
+    setActiveCatIdx(prev => (prev + 1) % (visibleCats.length + 1));
+    setModeIdx(Math.floor(Math.random() * MODES.length));
+  }, [visibleCats.length]);
+
+  useEffect(() => {
+    if (paused) return;
+    timerRef.current = setInterval(advance, 5000);
+    return () => clearInterval(timerRef.current);
+  }, [paused, advance, page, safeActiveIdx, modeIdx]);
 
   // Click same tab = cycle to next mode; click different tab = switch + random mode
   const handleTabClick = (idx: number) => {
-    if (idx === activeCatIdx) {
+    if (idx === safeActiveIdx) {
       setModeIdx(prev => (prev + 1) % MODES.length);
     } else {
       setActiveCatIdx(idx);
@@ -142,24 +183,6 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   // 文章列表始终显示全部（分类标签只影响 hero 轮播）
 
   const heroSrc = heroPost?.cover_url || (heroPost ? randomCoverUrl(heroPost.id, options) : '');
-  const categoryFromMenuItem = (item: any) => {
-    if (!item) return null;
-    const rawSlug = item.slug || String(item.href || '').match(/^\/categor(?:y|ies)\/([^/?#]+)/)?.[1] || '';
-    const slug = rawSlug ? decodeURIComponent(rawSlug) : '';
-    const id = Number(item.category_id || 0);
-    const found = categories.find((cat: any) => (id > 0 && Number(cat.id) === id) || (slug && cat.slug === slug));
-    if (found) return found;
-    if (item.type === 'category') {
-      return {
-        id: item.category_id || item.href || item.label,
-        name: item.label,
-        slug,
-        icon: item.icon,
-        count: item.count || 0,
-      };
-    }
-    return null;
-  };
 
   // ── Hero 切换过渡 ──
   // 之前点分类 tab → heroSrc 直接换 → <img src> 立刻替换，浏览器加载完
@@ -212,7 +235,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
     '--azure-hero-mode-color': MODES[modeIdx].color,
   } as CSSProperties;
   const renderAllHeroTab = () => (
-    <button key="__all" type="button" onClick={() => handleTabClick(0)} className={`azure-hero-tab${activeCatIdx === 0 ? ' active' : ''}`}>
+    <button key="__all" type="button" onClick={() => handleTabClick(0)} className={`azure-hero-tab${safeActiveIdx === 0 ? ' active' : ''}`}>
       <span className="azure-hero-tab-label">
         全部 <span className="azure-hero-tab-count">({totalPostCount})</span>
       </span>
@@ -235,9 +258,13 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                   {sidebarMenu.map((item: any, i: number) => {
                     const cat = categoryFromMenuItem(item);
                     if (cat) {
-                      const catIdx = categories.findIndex((c: any) => c.slug === cat.slug || Number(c.id) === Number(cat.id));
-                      const tabIdx = catIdx >= 0 ? catIdx + 1 : -1;
-                      const active = activeCatIdx === tabIdx;
+                      // tabIdx 按 visibleCats 顺序（即 sidebar 配置中分类
+                      // 项的相对位置 + 1），不再走全集 categories.findIndex。
+                      // 这样 activeCatIdx 永远落在 sidebar 实际显示的范围
+                      // 内，hero 状态空间和 UI 完全一致。
+                      const found = visibleCats.findIndex((c: any) => c.slug === cat.slug);
+                      const tabIdx = found >= 0 ? found + 1 : -1;
+                      const active = safeActiveIdx === tabIdx;
                       return (
                         <button
                           key={i}
@@ -265,7 +292,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                 <>
                   {renderAllHeroTab()}
                   {categories.map((cat, i) => (
-                    <button key={cat.id} type="button" onClick={() => handleTabClick(i + 1)} className={`azure-hero-tab${activeCatIdx === i + 1 ? ' active' : ''}`}>
+                    <button key={cat.id} type="button" onClick={() => handleTabClick(i + 1)} className={`azure-hero-tab${safeActiveIdx === i + 1 ? ' active' : ''}`}>
                       <span className="azure-hero-tab-label">
                         {cat.name} <span className="azure-hero-tab-count">({cat.count || 0})</span>
                       </span>
@@ -279,7 +306,8 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
           {/* Right: Hero image — overlaps border line */}
           <section className="azure-hero-panel">
             {heroPost && (
-              <div className="azure-hero">
+              <div className="azure-hero"
+                onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
                 {/* Hero deliberately drops .cover-zoom — the giant
                     banner doesn't need the scale(1.04) hover; loading
                     placeholder + admin's image_display_effect (fade /

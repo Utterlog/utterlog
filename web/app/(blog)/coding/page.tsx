@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import PageTitle from '@/components/blog/PageTitle';
 import { getCoding } from '@/lib/blog-api';
+import { getThemeContextData } from '@/lib/theme-data';
+import { formatDateInTimeZone, formatDateTimeInTimeZone, datePartsInTimeZone, isValidTimeZone } from '@/lib/timezone';
 
 export const metadata: Metadata = { title: 'Coding' };
 
@@ -94,26 +96,22 @@ function formatCount(value?: number) {
   return String(n);
 }
 
-function formatDate(value?: string | number) {
+function formatDate(value?: string | number, timeZone: string = 'UTC') {
   if (!value) return '';
-  const d = typeof value === 'number' ? new Date(value * 1000) : new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('zh-CN', {
+  return formatDateInTimeZone(value, 'zh-CN', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(d);
+  }, timeZone);
 }
 
-function formatTime(value?: string) {
+function formatTime(value?: string, timeZone: string = 'UTC') {
   if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('zh-CN', {
+  return formatDateTimeInTimeZone(value, 'zh-CN', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).format(d);
+  }, timeZone);
 }
 
 function eventCode(type?: string) {
@@ -192,6 +190,65 @@ function contributionYear(days: CodingDay[]) {
   return /^\d{4}$/.test(year) ? year : String(new Date().getFullYear());
 }
 
+// 把活动日分成「最近 3 天 / 本周（除最近 3 天外）/ 更早」三段。
+//   - 最近 3 天 = 今天 + 昨天 + 前天
+//   - 本周 = 本周一 0:00 之后，但不在最近 3 天范围内
+//   - 更早 = 本周一之前
+// 周一作为本周起点，符合中国日历习惯；如果今天是周日 / 周一这种边界
+// 情况，本周组可能为空，渲染时会自动隐藏对应小标题。
+type ActivityBucket = {
+  key: 'recent' | 'thisWeek' | 'older';
+  title: string;
+  hint: string;
+  days: CodingActivityDayGroup[];
+};
+function groupActivityDays(days: CodingActivityDayGroup[], timeZone: string): ActivityBucket[] {
+  // 把"今天"按站点时区取，避免服务器或浏览器本地时区让边界飘动。
+  const tz = isValidTimeZone(timeZone) ? timeZone : 'UTC';
+  const today = datePartsInTimeZone(new Date(), tz);
+  const todayStr = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+  const todayUTC = new Date(`${todayStr}T00:00:00Z`);
+  const threeDaysAgoUTC = new Date(todayUTC);
+  threeDaysAgoUTC.setUTCDate(todayUTC.getUTCDate() - 2); // 含今天的 3 个自然日
+
+  // 周一 = 站点时区今天往前 (dow+6)%7 天，dow 0=Sun..6=Sat。
+  const dow = todayUTC.getUTCDay();
+  const daysFromMonday = (dow + 6) % 7;
+  const mondayUTC = new Date(todayUTC);
+  mondayUTC.setUTCDate(todayUTC.getUTCDate() - daysFromMonday);
+
+  const dayKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  const recentSet = new Set<string>();
+  const weekSet = new Set<string>();
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(threeDaysAgoUTC);
+    d.setUTCDate(threeDaysAgoUTC.getUTCDate() + i);
+    recentSet.add(dayKey(d));
+  }
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mondayUTC);
+    d.setUTCDate(mondayUTC.getUTCDate() + i);
+    if (d > todayUTC) break;
+    weekSet.add(dayKey(d));
+  }
+
+  const recent: CodingActivityDayGroup[] = [];
+  const thisWeek: CodingActivityDayGroup[] = [];
+  const older: CodingActivityDayGroup[] = [];
+  for (const day of days) {
+    const key = String(day.date || '');
+    if (!key) { older.push(day); continue; }
+    if (recentSet.has(key)) recent.push(day);
+    else if (weekSet.has(key)) thisWeek.push(day);
+    else older.push(day);
+  }
+  return [
+    { key: 'recent', title: '最近 3 天', hint: 'Last 3 days', days: recent },
+    { key: 'thisWeek', title: '本周', hint: 'This week', days: thisWeek },
+    { key: 'older', title: '更早', hint: 'Earlier', days: older },
+  ];
+}
+
 function codingAccountTitle(profiles: CodingProfile[], username: string) {
   const logins = profiles.length
     ? profiles.map(item => item.login).filter(Boolean)
@@ -210,12 +267,17 @@ function codingProfileURL(profile: CodingProfile, profiles: CodingProfile[], use
 }
 
 export default async function CodingPage() {
-  const res = await getCoding().catch(() => ({ data: {} } as any));
+  const [res, ctx] = await Promise.all([
+    getCoding().catch(() => ({ data: {} } as any)),
+    getThemeContextData().catch(() => null),
+  ]);
+  const timeZone = ctx?.timeZone || 'UTC';
   const data = (res?.data || {}) as CodingData;
   const profile = data.profile || {};
   const profiles = Array.isArray(data.profiles) ? data.profiles.filter(item => item?.login) : [];
   const username = data.username || profile.login || '';
   const activityDays = Array.isArray(data.activity_days) ? data.activity_days : [];
+  const activityBuckets = groupActivityDays(activityDays, timeZone).filter(b => b.days.length > 0);
   const days = Array.isArray(data.contributions) ? data.contributions : [];
   const weeks = contributionWeeks(days);
   const todayContributions = todayContributionCount(days);
@@ -224,7 +286,7 @@ export default async function CodingPage() {
   const profileSummary = profiles.length > 1
     ? profiles.map(item => item.name || item.login).filter(Boolean).join(' / ')
     : (profile.bio || 'Public coding activity, repositories and recent shipping rhythm.');
-  const updatedAt = formatDate(data.updated_at);
+  const updatedAt = formatDate(data.updated_at, timeZone);
   const titleText = codingAccountTitle(profiles, username);
   const titleURL = codingProfileURL(profile, profiles, username);
   const heatmapAvatar = profile.avatar_url || profiles.find(item => item.avatar_url)?.avatar_url || '';
@@ -347,56 +409,64 @@ export default async function CodingPage() {
               </div>
             </div>
             <div className="coding-log">
-              {activityDays.length === 0 ? (
+              {activityBuckets.length === 0 ? (
                 <div className="coding-empty">暂无最近 GitHub 动态。</div>
-              ) : activityDays.map((day) => {
-                const dayRepos = Array.isArray(day.repos) ? day.repos : [];
-                return (
-                  <section className="coding-log-day" key={day.date || day.label}>
-                    <header className="coding-log-day-head">
-                      <div className="coding-log-day-kicker">
-                        <strong>{day.label || formatDate(day.date)}</strong>
-                        <span>· {formatCount(day.total)} ACROSS {formatCount(day.repo_count)} REPOS</span>
-                      </div>
-                      {day.date && <time>{formatDate(day.date)}</time>}
-                    </header>
-                    <div className="coding-log-repos">
-                      {dayRepos.map((repo) => {
-                        const events = Array.isArray(repo.events) ? repo.events : [];
-                        const counts = eventCountEntries(repo.counts);
-                        return (
-                          <article className="coding-log-repo" key={`${day.date}-${repo.full_name || repo.name}`}>
-                            <a href={repo.html_url || '#'} target="_blank" rel="noopener noreferrer" className="coding-log-repo-head">
-                              <span className="coding-log-repo-name">{displayLogRepoName(repo)}</span>
-                              <span className="coding-log-counts">
-                                {counts.map(([code, count]) => (
-                                  <span className={`coding-event-code ${eventCodeClass(code)}`} key={code}>{formatCount(count)} {code}</span>
-                                ))}
-                              </span>
-                            </a>
-                            <div className="coding-log-events">
-                              {events.length === 0 ? (
-                                <div className="coding-project-empty">暂无最近动作。</div>
-                              ) : events.map((event, index) => {
-                                const code = eventCode(event.type);
-                                return (
-                                  <a href={event.url || repo.html_url || '#'} target="_blank" rel="noopener noreferrer" className="coding-event" key={`${event.created_at}-${index}`}>
-                                    <span className={`coding-event-code ${eventCodeClass(code)}`}>{code}</span>
-                                    <span className="coding-event-text">
-                                      <em>{event.label}</em>
-                                    </span>
-                                    <time>{formatTime(event.created_at)}</time>
-                                  </a>
-                                );
-                              })}
-                            </div>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })}
+              ) : activityBuckets.map((bucket) => (
+                <div className={`coding-log-bucket coding-log-bucket-${bucket.key}`} key={bucket.key}>
+                  <div className="coding-log-bucket-head">
+                    <strong>{bucket.title}</strong>
+                    <span>· {bucket.hint} · {bucket.days.length} day{bucket.days.length === 1 ? '' : 's'}</span>
+                  </div>
+                  {bucket.days.map((day) => {
+                    const dayRepos = Array.isArray(day.repos) ? day.repos : [];
+                    return (
+                      <section className="coding-log-day" key={day.date || day.label}>
+                        <header className="coding-log-day-head">
+                          <div className="coding-log-day-kicker">
+                            <strong>{day.label || formatDate(day.date, timeZone)}</strong>
+                            <span>· {formatCount(day.total)} ACROSS {formatCount(day.repo_count)} REPOS</span>
+                          </div>
+                          {day.date && <time>{formatDate(day.date, timeZone)}</time>}
+                        </header>
+                        <div className="coding-log-repos">
+                          {dayRepos.map((repo) => {
+                            const events = Array.isArray(repo.events) ? repo.events : [];
+                            const counts = eventCountEntries(repo.counts);
+                            return (
+                              <article className="coding-log-repo" key={`${day.date}-${repo.full_name || repo.name}`}>
+                                <a href={repo.html_url || '#'} target="_blank" rel="noopener noreferrer" className="coding-log-repo-head">
+                                  <span className="coding-log-repo-name">{displayLogRepoName(repo)}</span>
+                                  <span className="coding-log-counts">
+                                    {counts.map(([code, count]) => (
+                                      <span className={`coding-event-code ${eventCodeClass(code)}`} key={code}>{formatCount(count)} {code}</span>
+                                    ))}
+                                  </span>
+                                </a>
+                                <div className="coding-log-events">
+                                  {events.length === 0 ? (
+                                    <div className="coding-project-empty">暂无最近动作。</div>
+                                  ) : events.map((event, index) => {
+                                    const code = eventCode(event.type);
+                                    return (
+                                      <a href={event.url || repo.html_url || '#'} target="_blank" rel="noopener noreferrer" className="coding-event" key={`${event.created_at}-${index}`}>
+                                        <span className={`coding-event-code ${eventCodeClass(code)}`}>{code}</span>
+                                        <span className="coding-event-text">
+                                          <em>{event.label}</em>
+                                        </span>
+                                        <time>{formatTime(event.created_at, timeZone)}</time>
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </section>
         </>
