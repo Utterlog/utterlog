@@ -42,7 +42,7 @@ export default function BackupPage() {
     fd.append('file', file);
     try {
       const r: any = await api.post('/backup/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      toast.success(`恢复成功！数据库: ${r.data?.db_restored ? '✓' : '✗'}, 文件: ${r.data?.files || 0}`);
+      toast.success(`恢复成功！数据库：${r.data?.db_restored ? '✓' : '✗'}, 文件：${r.data?.files || 0}`);
       fetchData();
     } catch { toast.error('导入失败'); }
     setImporting(false);
@@ -84,7 +84,7 @@ export default function BackupPage() {
         <label style={{ cursor: 'pointer' }}>
           <input type="file" accept=".zip" onChange={handleImport} style={{ display: 'none' }} />
           <span className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} /> {importing ? '导入中...' : '导入备份'}
+            <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} /> {importing ? '导入中…' : '导入备份'}
           </span>
         </label>
       </div>

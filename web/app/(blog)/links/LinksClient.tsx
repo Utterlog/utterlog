@@ -200,7 +200,7 @@ export default function LinksPage() {
         )}
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: '#999' }}>加载中...</div>
+          <div style={{ textAlign: 'center', padding: '80px 0', color: '#999' }}>加载中…</div>
         ) : links.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0', color: '#999' }}>暂无友链</div>
         ) : (
@@ -378,7 +378,7 @@ export default function LinksPage() {
                   cursor: applying ? 'wait' : 'pointer', opacity: applying ? 0.6 : 1,
                 }}
               >
-                {applying ? '提交中...' : '提交申请'}
+                {applying ? '提交中…' : '提交申请'}
               </button>
             </div>
           </div>

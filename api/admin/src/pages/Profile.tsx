@@ -355,7 +355,7 @@ export default function ProfilePage() {
             <Input label={t('admin.profile.website', '个人网站')} placeholder="https://" {...register('url')} />
             <div>
               <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.profile.bio', '简介')}</label>
-              <textarea rows={3} className="input focus-ring" {...register('bio')} placeholder={t('admin.profile.bioPlaceholder', '介绍一下自己...')} />
+              <textarea rows={3} className="input focus-ring" {...register('bio')} placeholder={t('admin.profile.bioPlaceholder', '介绍一下自己…')} />
             </div>
             <p className="text-dim" style={{ fontSize: '11px' }}>
               {t('admin.profile.sensitiveChangeHint', '修改登录账号或邮箱需要验证当前密码和邮箱验证码')}
@@ -378,7 +378,7 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input className="input" style={{ flex: 1 }} placeholder={t('admin.profile.codePlaceholder', '输入验证码')} {...registerPw('verify_code')} />
                 <button type="button" onClick={handlePwSendCode} disabled={pwSendingCode || pwCountdown > 0} className="btn btn-secondary" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  {pwSendingCode ? t('admin.login.sending', '发送中...') : pwCountdown > 0 ? `${pwCountdown}s` : pwCodeSent ? t('admin.profile.resendCode', '重新发送') : t('admin.profile.sendCode', '发送验证码')}
+                  {pwSendingCode ? t('admin.login.sending', '发送中…') : pwCountdown > 0 ? `${pwCountdown}s` : pwCodeSent ? t('admin.profile.resendCode', '重新发送') : t('admin.profile.sendCode', '发送验证码')}
                 </button>
               </div>
             </div>
@@ -454,7 +454,7 @@ export default function ProfilePage() {
                 }} className="btn btn-primary" style={{ fontSize: '12px', padding: '4px 10px', height: '28px' }}>{t('admin.common.add', '添加')}</button>
               </div>
               <p className="text-dim" style={{ fontSize: '11px' }}>
-                {t('admin.profile.commonIcons', '常用图标: fa-brands fa-bilibili, fa-brands fa-weixin, fa-brands fa-tiktok, fa-brands fa-xiaohongshu')}
+                {t('admin.profile.commonIcons', '常用图标：fa-brands fa-bilibili, fa-brands fa-weixin, fa-brands fa-tiktok, fa-brands fa-xiaohongshu')}
               </p>
             </div>
           )}
@@ -598,7 +598,7 @@ export default function ProfilePage() {
                   className="btn btn-primary"
                   style={{ flex: 1 }}
                 >
-                  {totpLoading ? t('admin.login.verifying', '验证中...') : t('admin.profile.enableTwoFactor', '启用两步验证')}
+                  {totpLoading ? t('admin.login.verifying', '验证中…') : t('admin.profile.enableTwoFactor', '启用两步验证')}
                 </button>
               </div>
             </div>
@@ -640,7 +640,7 @@ export default function ProfilePage() {
                   className="btn btn-primary"
                   style={{ flex: 1, background: '#ef4444' }}
                 >
-                  {totpLoading ? t('admin.profile.processing', '处理中...') : t('admin.profile.disableTwoFactor', '关闭两步验证')}
+                  {totpLoading ? t('admin.profile.processing', '处理中…') : t('admin.profile.disableTwoFactor', '关闭两步验证')}
                 </button>
               </div>
             </div>
@@ -694,7 +694,7 @@ export default function ProfilePage() {
                 className="btn btn-primary"
               >
                 <i className="fa-light fa-shield-keyhole" style={{ marginRight: '6px' }} />
-                {totpLoading ? t('admin.profile.preparing', '准备中...') : t('admin.profile.enableTwoFactor', '启用两步验证')}
+                {totpLoading ? t('admin.profile.preparing', '准备中…') : t('admin.profile.enableTwoFactor', '启用两步验证')}
               </button>
             </div>
           )}
@@ -750,7 +750,7 @@ export default function ProfilePage() {
               <input
                 value={passkeyName}
                 onChange={e => setPasskeyName(e.target.value)}
-                placeholder={t('admin.profile.passkeyNamePlaceholder', '为此密钥命名（如: MacBook）')}
+                placeholder={t('admin.profile.passkeyNamePlaceholder', '为此密钥命名（如：MacBook）')}
                 className="input focus-ring"
                 style={{ flex: 1, fontSize: '13px' }}
                 autoFocus
@@ -812,7 +812,7 @@ export default function ProfilePage() {
                 disabled={passkeyLoading}
                 className="btn btn-primary"
               >
-                {passkeyLoading ? t('admin.profile.registering', '注册中...') : t('admin.profile.register', '注册')}
+                {passkeyLoading ? t('admin.profile.registering', '注册中…') : t('admin.profile.register', '注册')}
               </button>
               <button onClick={() => { setPasskeyNaming(false); setPasskeyName(''); }} className="btn btn-secondary">{t('admin.common.cancel', '取消')}</button>
             </div>

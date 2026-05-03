@@ -59,7 +59,7 @@ export default function FederatedComment({ postId, onCommentAdded }: FederatedCo
       <textarea
         value={content}
         onChange={e => setContent(e.target.value)}
-        placeholder={isAuthenticated ? '写下你的评论...' : '写下你的评论...（需要填写昵称和邮箱）'}
+        placeholder={isAuthenticated ? '写下你的评论…' : '写下你的评论…（需要填写昵称和邮箱）'}
         rows={3}
         className="input"
         style={{ resize: 'none', marginBottom: '8px' }}
@@ -73,7 +73,7 @@ export default function FederatedComment({ postId, onCommentAdded }: FederatedCo
           className="btn btn-primary"
           style={{ fontSize: '13px' }}
         >
-          {sending ? '提交中...' : '发表评论'}
+          {sending ? '提交中…' : '发表评论'}
         </button>
       </div>
     </div>

@@ -178,7 +178,7 @@ export default function FeedsPage() {
       <div style={{ padding: isMobile ? '24px 16px 80px' : '32px 32px 80px' }}>
       {loading ? (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
-          <p style={{ fontSize: '13px', color: '#999' }}>加载中...</p>
+          <p style={{ fontSize: '13px', color: '#999' }}>加载中…</p>
         </div>
       ) : items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>

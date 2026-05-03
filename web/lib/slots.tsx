@@ -1,7 +1,7 @@
 /**
  * Slots — 轻量级内容注入系统
  *
- * 标准 Slot 名称:
+ * 标准 Slot 名称：
  * - head_scripts: <head> 内注入 (analytics, meta tags)
  * - footer_scripts: </body> 前注入 (chat widgets, tracking)
  * - before_content: 文章内容前
@@ -9,7 +9,7 @@
  * - sidebar_top: 侧栏顶部
  * - sidebar_bottom: 侧栏底部
  *
- * 数据来源:
+ * 数据来源：
  * 1. ul_options 表，键名 slot_{name}（设置页代码注入）
  * 2. 活跃插件的 hooks（plugin.json 中声明的 slot 映射）
  */
@@ -60,7 +60,7 @@ export function Slot({ name, options }: { name: SlotName; options: Record<string
 
 /**
  * SlotHead 组件 — 渲染 head 内的 slot 内容
- * 合并: slot_head_scripts + 旧 custom_head_code + 插件 head_scripts hooks
+ * 合并：slot_head_scripts + 旧 custom_head_code + 插件 head_scripts hooks
  * 使用客户端 useEffect 直接插入原始 HTML 到 document.head，保留所有属性
  */
 export function SlotHead({ options }: { options: Record<string, string> }) {

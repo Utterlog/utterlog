@@ -240,7 +240,7 @@ export default function GitHubRepoCard({ owner, repo, url }: GitHubRepoCardProps
   const description = data?.description || (failed
     ? '无法读取 GitHub 仓库信息，点击打开仓库页面。'
     : loading
-      ? '正在读取 GitHub 仓库信息...'
+      ? '正在读取 GitHub 仓库信息…'
       : '页面加载完成后异步读取仓库信息。');
 
   return (

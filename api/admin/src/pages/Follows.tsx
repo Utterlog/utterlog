@@ -51,7 +51,7 @@ export default function FollowsPage() {
 
   const list = data?.[activeTab] || [];
 
-  if (loading) return <div className="text-dim p-6">加载中...</div>;
+  if (loading) return <div className="text-dim p-6">加载中…</div>;
 
   return (
     <div>

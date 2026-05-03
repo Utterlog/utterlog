@@ -188,7 +188,7 @@ export default function MomentsPage() {
       )}
 
       {loading ? (
-        <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>{t('common.loading', '加载中...')}</div>
+        <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>{t('common.loading', '加载中…')}</div>
       ) : moments.length === 0 ? (
         <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>
           <p style={{ fontSize: '15px', marginBottom: '12px' }}>{t('admin.moments.empty', '还没有说说')}</p>
@@ -236,7 +236,7 @@ export default function MomentsPage() {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? t('admin.moments.editMoment', '编辑说说') : t('admin.moments.publishMoment', '发布说说')}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <textarea className="input focus-ring" rows={5} placeholder={t('admin.moments.contentPlaceholder', '说点什么...')} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} style={{ resize: 'vertical' }} />
+          <textarea className="input focus-ring" rows={5} placeholder={t('admin.moments.contentPlaceholder', '说点什么…')} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} style={{ resize: 'vertical' }} />
 
           {/* Image upload */}
           <div>
@@ -255,7 +255,7 @@ export default function MomentsPage() {
             )}
             <label
               className="btn btn-secondary btn-toolbar-square"
-              title={imgUploading ? t('admin.cover.uploading', '上传中...') : t('admin.cover.uploadImage', '上传图片')}
+              title={imgUploading ? t('admin.cover.uploading', '上传中…') : t('admin.cover.uploadImage', '上传图片')}
               style={{ cursor: imgUploading ? 'wait' : 'pointer', opacity: imgUploading ? 0.6 : 1 }}
             >
               <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />

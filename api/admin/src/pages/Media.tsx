@@ -109,7 +109,7 @@ export default function MediaPage() {
           <input type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.zip,.rar,.7z" onChange={handleUpload} className="hidden" />
           <span className="btn-primary btn inline-flex items-center" style={{ padding: '0 24px', gap: '10px' }}>
             <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />
-            {uploading ? t('admin.media.uploading', '上传中...') : t('admin.media.uploadFile', '上传文件')}
+            {uploading ? t('admin.media.uploading', '上传中…') : t('admin.media.uploadFile', '上传文件')}
           </span>
         </label>
       </div>
@@ -122,7 +122,7 @@ export default function MediaPage() {
               <animateTransform attributeName="transform" type="rotate" dur="0.75s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
             </path>
           </svg>
-          <p className="text-dim" style={{ fontSize: '13px' }}>{t('admin.common.loading', '加载中...')}</p>
+          <p className="text-dim" style={{ fontSize: '13px' }}>{t('admin.common.loading', '加载中…')}</p>
         </div>
       ) : files.length === 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: '12px' }}>

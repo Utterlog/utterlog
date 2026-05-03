@@ -166,7 +166,7 @@ export default function BlockAnnotation({ blockId, children }: BlockAnnotationPr
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
-                placeholder="写下你的点评..."
+                placeholder="写下你的点评…"
                 style={{
                   flex: 1, padding: '6px 10px', fontSize: '12px',
                   border: '1px solid var(--color-border)', borderRadius: '6px',

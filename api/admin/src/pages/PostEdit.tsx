@@ -221,7 +221,7 @@ export default function EditPostPage() {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={t('admin.postEditor.titlePlaceholder', '在此输入标题...')}
+            placeholder={t('admin.postEditor.titlePlaceholder', '在此输入标题…')}
             style={{
               padding: '14px 20px', fontSize: '18px', fontWeight: 600,
               border: 'none', borderBottom: '1px solid var(--color-border)',
@@ -343,7 +343,7 @@ export default function EditPostPage() {
                   <button
                     onClick={() => coverFileRef.current?.click()}
                     className="btn btn-secondary btn-toolbar-square"
-                    title={coverUploading ? t('admin.media.uploading', '上传中...') : t('admin.postEditor.uploadCover', '上传封面')}
+                    title={coverUploading ? t('admin.media.uploading', '上传中…') : t('admin.postEditor.uploadCover', '上传封面')}
                   >
                     {coverUploading
                       ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: 14 }} />
@@ -460,7 +460,7 @@ export default function EditPostPage() {
               <button onClick={() => setInsertType(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-dim)' }}>×</button>
             </div>
             <div style={{ flex: 1, overflow: 'auto', padding: '12px 20px' }}>
-              {insertLoading && <p style={{ textAlign: 'center', color: 'var(--color-text-dim)', padding: '20px 0', fontSize: '13px' }}>{t('admin.common.loading', '加载中...')}</p>}
+              {insertLoading && <p style={{ textAlign: 'center', color: 'var(--color-text-dim)', padding: '20px 0', fontSize: '13px' }}>{t('admin.common.loading', '加载中…')}</p>}
               {!insertLoading && insertItems.length === 0 && <p style={{ textAlign: 'center', color: 'var(--color-text-dim)', padding: '20px 0', fontSize: '13px' }}>{t('admin.common.noData', '暂无数据')}</p>}
               {insertItems.map((item: any) => (
                 <div key={item.id} onClick={() => {
@@ -531,7 +531,7 @@ export default function EditPostPage() {
               </div>
             </div>
             <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px', minHeight: '150px' }}>
-              {aiProcessing && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '40px 0', color: 'var(--color-text-dim)', fontSize: '13px' }}><i className="fa-light fa-spinner-third fa-spin" /> {t('admin.postEditor.aiProcessing', 'AI 处理中...')}</div>}
+              {aiProcessing && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '40px 0', color: 'var(--color-text-dim)', fontSize: '13px' }}><i className="fa-light fa-spinner-third fa-spin" /> {t('admin.postEditor.aiProcessing', 'AI 处理中…')}</div>}
               {aiResult && !aiProcessing && <pre style={{ fontSize: '12px', lineHeight: 1.7, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, maxHeight: '300px', overflow: 'auto', padding: '12px', background: 'var(--color-bg-soft)' }}>{aiResult}</pre>}
               {!aiResult && !aiProcessing && <p style={{ textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px', padding: '40px 0' }}>{t('admin.postEditor.chooseProcessMode', '选择处理方式')}</p>}
             </div>

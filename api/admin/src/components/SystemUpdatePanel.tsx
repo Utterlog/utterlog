@@ -133,7 +133,7 @@ export default function SystemUpdatePanel() {
       const r = await api.get<any>(`/admin/system/version${refresh ? '?refresh=1' : ''}`);
       setInfo(r.data);
     } catch (e: any) {
-      toast.error('获取版本信息失败: ' + (e?.message || 'unknown'));
+      toast.error('获取版本信息失败：' + (e?.message || 'unknown'));
     } finally {
       setLoading(false);
     }
@@ -202,11 +202,11 @@ export default function SystemUpdatePanel() {
           // Backend's "success" is optimistic — verify the running
           // version actually flipped before declaring victory.
           const expected = info?.latest?.version || '';
-          toast('升级脚本已执行，正在确认容器版本...');
+          toast('升级脚本已执行，正在确认容器版本…');
           await verifyUpgradeApplied(expected, 60);
           setUpgrading(false);
         } else {
-          toast.error('升级失败: ' + r.data.message);
+          toast.error('升级失败：' + r.data.message);
           setUpgrading(false);
         }
       }
@@ -232,7 +232,7 @@ export default function SystemUpdatePanel() {
     } catch (e: any) {
       setUpgrading(false);
       const msg = e?.response?.data?.error?.message || e?.message;
-      toast.error('启动升级失败: ' + msg);
+      toast.error('启动升级失败：' + msg);
     }
   }
 
@@ -416,7 +416,7 @@ export default function SystemUpdatePanel() {
         <div style={{ border: '1px solid var(--color-border)', background: '#0f172a', color: '#e2e8f0', padding: '16px 20px', fontFamily: 'ui-monospace, monospace', fontSize: 12, lineHeight: 1.6, marginBottom: 16, whiteSpace: 'pre-wrap', maxHeight: 280, overflow: 'auto' }}>
           <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
             <i className={`fa-solid ${upgradeStatus.running ? 'fa-circle-notch fa-spin' : upgradeStatus.success ? 'fa-circle-check' : 'fa-circle-xmark'}`} />
-            {upgradeStatus.running ? '升级进行中...' : upgradeStatus.success ? '升级完成' : '升级失败'}
+            {upgradeStatus.running ? '升级进行中…' : upgradeStatus.success ? '升级完成' : '升级失败'}
           </div>
           {upgradeStatus.log_tail || '(尚无输出)'}
         </div>
@@ -472,7 +472,7 @@ export default function SystemUpdatePanel() {
         {releases === null ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', fontSize: 13, color: 'var(--color-text-dim)' }}>
             <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 6 }} />
-            加载更新历史...
+            加载更新历史…
           </div>
         ) : releases.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', fontSize: 13, color: 'var(--color-text-dim)' }}>

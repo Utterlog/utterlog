@@ -250,7 +250,7 @@ export default function MenusPage() {
   };
 
   if (loading) {
-    return <div className="text-dim" style={{ padding: '40px', textAlign: 'center' }}>{t('common.loading', '加载中...')}</div>;
+    return <div className="text-dim" style={{ padding: '40px', textAlign: 'center' }}>{t('common.loading', '加载中…')}</div>;
   }
 
   const items = menus[activePos] || [];

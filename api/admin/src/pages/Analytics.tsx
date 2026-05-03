@@ -89,7 +89,7 @@ export default function AnalyticsPage() {
     return () => clearInterval(timer);
   }, []);
 
-  if (loading) return <div className="text-dim" style={{ padding: '48px', textAlign: 'center' }}>加载中...</div>;
+  if (loading) return <div className="text-dim" style={{ padding: '48px', textAlign: 'center' }}>加载中…</div>;
 
   const s = data?.summary || {};
 
@@ -310,7 +310,7 @@ function PurgeDialog({ onClose }: { onClose: () => void }) {
 
         <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {loading ? (
-            <div className="text-dim" style={{ textAlign: 'center', padding: '20px', fontSize: '13px' }}>加载中...</div>
+            <div className="text-dim" style={{ textAlign: 'center', padding: '20px', fontSize: '13px' }}>加载中…</div>
           ) : (
             <>
               {/* Current stats */}

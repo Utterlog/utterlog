@@ -177,7 +177,7 @@ export default function InstallPage() {
   if (checking) {
     return (
       <div style={pageStyle}>
-        <div style={{ color: '#6b7280', fontSize: '14px' }}>正在检查环境...</div>
+        <div style={{ color: '#6b7280', fontSize: '14px' }}>正在检查环境…</div>
       </div>
     );
   }
@@ -314,13 +314,13 @@ export default function InstallPage() {
             <>
               <button style={secondaryBtn} onClick={() => setStep('welcome')}>← 上一步</button>
               <button style={primaryBtn} onClick={submitAdmin} disabled={submitting}>
-                {submitting ? '创建中...' : '创建管理员 →'}
+                {submitting ? '创建中…' : '创建管理员 →'}
               </button>
             </>
           )}
           {step === 'site' && (
             <button style={primaryBtn} onClick={submitSite} disabled={submitting}>
-              {submitting ? '保存中...' : '完成安装'}
+              {submitting ? '保存中…' : '完成安装'}
             </button>
           )}
           {step === 'done' && (

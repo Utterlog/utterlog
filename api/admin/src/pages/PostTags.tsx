@@ -38,13 +38,13 @@ export default function TagsPage() {
   useEffect(() => {
     setToolbar(
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-        {/* 左: 新建 */}
+        {/* 左：新建 */}
         <Button className="btn-toolbar" onClick={openCreate}>
           <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />{t('admin.tags.newTag', '新建标签')}
         </Button>
-        {/* 右: 搜索 */}
+        {/* 右：搜索 */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <Input placeholder={t('admin.tags.searchPlaceholder', '搜索标签...')} value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchTags())} style={{ width: '220px' }} />
+          <Input placeholder={t('admin.tags.searchPlaceholder', '搜索标签…')} value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchTags())} style={{ width: '220px' }} />
           <Button className="btn-square" variant="secondary" title={t('common.search', '搜索')} onClick={() => { setPage(1); fetchTags(); }}>
             <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
           </Button>
@@ -90,7 +90,7 @@ export default function TagsPage() {
     <div>
       {/* Cards */}
       {loading ? (
-        <div className="text-dim" style={{ textAlign: 'center', padding: '60px 0', fontSize: '14px' }}>{t('common.loading', '加载中...')}</div>
+        <div className="text-dim" style={{ textAlign: 'center', padding: '60px 0', fontSize: '14px' }}>{t('common.loading', '加载中…')}</div>
       ) : tags.length === 0 ? (
         <div className="text-dim" style={{ textAlign: 'center', padding: '60px 0', fontSize: '14px' }}>{t('admin.tags.empty', '暂无标签')}</div>
       ) : (

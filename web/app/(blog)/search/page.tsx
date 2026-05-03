@@ -44,7 +44,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             type="text"
             name="q"
             defaultValue={query}
-            placeholder="搜索文章..."
+            placeholder="搜索文章…"
             autoFocus
             style={{
               flex: 1, padding: '10px 16px', fontSize: '15px',

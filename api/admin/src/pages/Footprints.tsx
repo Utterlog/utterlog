@@ -346,7 +346,7 @@ export default function FootprintsPage() {
         {loading ? (
           <div className="text-dim" style={{ padding: 32, textAlign: 'center', fontSize: 13 }}>
             <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 8, color: 'var(--color-primary)' }} />
-            {t('common.loading', '加载中...')}
+            {t('common.loading', '加载中…')}
           </div>
         ) : rows.length === 0 ? (
           <EmptyState

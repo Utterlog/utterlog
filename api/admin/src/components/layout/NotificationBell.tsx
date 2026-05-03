@@ -117,7 +117,7 @@ export default function NotificationBell() {
             {/* List */}
             <div style={{ flex: 1, overflow: 'auto' }}>
               {loading ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px' }}>{t('common.loading', '加载中...')}</div>
+                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px' }}>{t('common.loading', '加载中…')}</div>
               ) : notifications.length === 0 ? (
                 <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px' }}>{t('admin.notification.empty', '暂无通知')}</div>
               ) : (

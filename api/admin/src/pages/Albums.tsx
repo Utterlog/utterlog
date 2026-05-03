@@ -139,7 +139,7 @@ export default function AlbumsPage() {
       </div>
 
       {loading ? (
-        <div className="text-dim" style={{ padding: '60px 0', textAlign: 'center' }}>加载中...</div>
+        <div className="text-dim" style={{ padding: '60px 0', textAlign: 'center' }}>加载中…</div>
       ) : albums.length === 0 ? (
         <div className="card" style={{ padding: '60px 20px', textAlign: 'center' }}>
           <i className="fa-regular fa-image" style={{ fontSize: '40px', color: 'var(--color-text-dim)', margin: '0 auto 16px', display: 'block' }} />
@@ -197,7 +197,7 @@ export default function AlbumsPage() {
           <Input label="别名 (URL)" value={form.slug} onChange={(e: any) => setForm(p => ({ ...p, slug: e.target.value }))} placeholder="自动生成" />
           <div>
             <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>描述</label>
-            <textarea className="input" rows={3} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="相册描述..." />
+            <textarea className="input" rows={3} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="相册描述…" />
           </div>
           <div>
             <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>可见性</label>

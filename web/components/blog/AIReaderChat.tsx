@@ -246,7 +246,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
           <>
             {loadingQuestions && (
               <p style={{ fontSize: 12, color: '#999', textAlign: 'center', padding: '16px 0' }}>
-                <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 6 }} />正在生成推荐问题...
+                <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 6 }} />正在生成推荐问题…
               </p>
             )}
             {questions.length > 0 && (
@@ -325,7 +325,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
-          placeholder="继续追问这篇文章..."
+          placeholder="继续追问这篇文章…"
           disabled={sending}
           style={{
             flex: 1, padding: '10px 14px', fontSize: 13,

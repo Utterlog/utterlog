@@ -489,7 +489,7 @@ class PreviewErrorBoundary extends Component<{ children: ReactNode }, { error: s
   }
   render() {
     if (this.state.error) {
-      return <p style={{ color: '#dc2626', fontSize: '12px' }}>预览渲染出错: {this.state.error}</p>;
+      return <p style={{ color: '#dc2626', fontSize: '12px' }}>预览渲染出错：{this.state.error}</p>;
     }
     return this.props.children;
   }
@@ -523,7 +523,7 @@ export default function MarkdownEditor({
   const [tableHover, setTableHover] = useState({ r: 0, c: 0 });
   const [showCodeLang, setShowCodeLang] = useState(false);
   const [showColor, setShowColor] = useState(false);
-  const editorPlaceholder = placeholder ?? t('admin.editor.placeholder', '开始写作...');
+  const editorPlaceholder = placeholder ?? t('admin.editor.placeholder', '开始写作…');
   const toolbarLabel = (label: string) => ({
     '任务列表': t('admin.editor.toolbar.taskList', '任务列表'),
     '列表': t('admin.editor.toolbar.list', '列表'),
@@ -863,7 +863,7 @@ export default function MarkdownEditor({
             {value ? (
               <SafePreview value={value} />
             ) : (
-              <p className="text-dim italic">{t('admin.editor.previewPlaceholder', '预览区域，输入 Markdown 后实时渲染...')}</p>
+              <p className="text-dim italic">{t('admin.editor.previewPlaceholder', '预览区域，输入 Markdown 后实时渲染…')}</p>
             )}
           </div>
         </div>

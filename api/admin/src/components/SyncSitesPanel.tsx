@@ -68,7 +68,7 @@ export default function SyncSitesPanel() {
       const r = await api.get<any>('/admin/sync/wordpress/sites');
       setSites(r.data?.sites || []);
     } catch (e: any) {
-      toast.error(t('admin.syncSites.toast.loadSitesFailed', '加载站点失败: {reason}', { reason: e?.message || t('admin.common.unknownError', '未知错误') }));
+      toast.error(t('admin.syncSites.toast.loadSitesFailed', '加载站点失败：{reason}', { reason: e?.message || t('admin.common.unknownError', '未知错误') }));
     }
   }
 
@@ -148,7 +148,7 @@ export default function SyncSitesPanel() {
       await loadSites();
     } catch (e: any) {
       const msg = e?.response?.data?.error?.message || e?.message;
-      toast.error(t('admin.syncSites.toast.createFailed', '创建失败: {reason}', { reason: msg || t('admin.common.unknownError', '未知错误') }));
+      toast.error(t('admin.syncSites.toast.createFailed', '创建失败：{reason}', { reason: msg || t('admin.common.unknownError', '未知错误') }));
     }
   }
 
@@ -160,7 +160,7 @@ export default function SyncSitesPanel() {
       await loadSites();
     } catch (e: any) {
       const msg = e?.response?.data?.error?.message || e?.message;
-      toast.error(t('admin.syncSites.toast.deleteFailed', '删除失败: {reason}', { reason: msg || t('admin.common.unknownError', '未知错误') }));
+      toast.error(t('admin.syncSites.toast.deleteFailed', '删除失败：{reason}', { reason: msg || t('admin.common.unknownError', '未知错误') }));
     }
   }
 
@@ -200,7 +200,7 @@ export default function SyncSitesPanel() {
 
         {loading ? (
           <div style={{ padding: '30px 16px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: 13 }}>
-            <i className="fa-solid fa-spinner fa-spin" /> {t('admin.common.loading', '加载中...')}
+            <i className="fa-solid fa-spinner fa-spin" /> {t('admin.common.loading', '加载中…')}
           </div>
         ) : sites.length === 0 ? (
           <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: 13 }}>

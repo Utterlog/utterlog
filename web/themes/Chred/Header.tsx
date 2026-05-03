@@ -142,7 +142,7 @@ export default function Header() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && searchQuery) window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`; }}
-              placeholder="搜索文章..."
+              placeholder="搜索文章…"
               style={{
                 width: '180px', padding: '7px 12px 7px 32px', fontSize: '13px',
                 border: '1px solid #e0e0e0',

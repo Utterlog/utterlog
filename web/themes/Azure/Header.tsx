@@ -366,7 +366,7 @@ export default function Header() {
                   ref={headerSearchRef}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="搜索文章..."
+                  placeholder="搜索文章…"
                   className="azure-search-input"
                 />
                 <kbd className="azure-search-kbd">Enter</kbd>
@@ -444,7 +444,7 @@ export default function Header() {
               ref={modalSearchRef}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="搜索文章..."
+              placeholder="搜索文章…"
               className="azure-search-modal-input"
             />
             <button

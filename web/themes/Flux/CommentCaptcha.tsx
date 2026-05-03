@@ -145,7 +145,7 @@ export default function CommentCaptcha({ onVerified, onReset }: CommentCaptchaPr
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '12px', color: isVerified ? '#16a34a' : 'var(--color-text-sub, #666)' }}>
-            {powState === 'idle' ? '点击验证' : isVerified ? '验证成功' : '验证中...'}
+            {powState === 'idle' ? '点击验证' : isVerified ? '验证成功' : '验证中…'}
           </span>
           <span style={{
             width: isWorking ? '22px' : isVerified ? '22px' : '16px',
@@ -191,7 +191,7 @@ export default function CommentCaptcha({ onVerified, onReset }: CommentCaptchaPr
           border: '1px solid var(--color-border, #e5e5e5)', background: 'var(--color-bg-soft, #fafafa)',
           fontSize: '11px', color: 'var(--color-text-dim)',
         }}>
-          {imgLoading ? '加载中...' : '验证码'}
+          {imgLoading ? '加载中…' : '验证码'}
         </div>
       )}
       <input

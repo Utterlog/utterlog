@@ -306,7 +306,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
         <div style={{ minWidth: 0 }}>
           {pageLoading ? (
             <div style={{ textAlign: 'center', padding: '80px 0', color: '#999', fontSize: '14px' }}>
-              <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 8 }} />加载中...
+              <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 8 }} />加载中…
             </div>
           ) : currentPosts.length > 0 ? (
             currentPosts.map((post, idx) => (

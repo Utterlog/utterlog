@@ -104,7 +104,7 @@ export default function MomentEmbed({ id }: MomentEmbedProps) {
         <div className="utter-moment-embed__head">
           <span className="utter-moment-embed__icon"><i className="fa-regular fa-comment-dots" /></span>
           <span className="utter-moment-embed__label">说说</span>
-          <span className="utter-moment-embed__meta">加载中...</span>
+          <span className="utter-moment-embed__meta">加载中…</span>
         </div>
       </aside>
     );

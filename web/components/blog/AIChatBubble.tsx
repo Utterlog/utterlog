@@ -304,7 +304,7 @@ export default function AIChatBubble() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={sending ? 'AI 思考中...' : '问点什么…'}
+          placeholder={sending ? 'AI 思考中…' : '问点什么…'}
           disabled={sending}
           style={{
             flex: 1, padding: '8px 12px', fontSize: 13,

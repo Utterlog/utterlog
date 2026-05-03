@@ -39,7 +39,7 @@ export function ImportUrlModal({ isOpen, onClose, onImport, type, platforms }: I
         toast.error(t('admin.import.parseFailed', '解析失败'));
       }
     } catch (e: any) {
-      toast.error(t('admin.import.parseFailedWithReason', '解析失败: {reason}', { reason: e?.response?.data?.error?.message || e?.message || '' }));
+      toast.error(t('admin.import.parseFailedWithReason', '解析失败：{reason}', { reason: e?.response?.data?.error?.message || e?.message || '' }));
     }
     setLoading(false);
   };

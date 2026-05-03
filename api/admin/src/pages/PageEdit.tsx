@@ -102,7 +102,7 @@ export default function EditPostPage() {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="在此输入标题..."
+            placeholder="在此输入标题…"
             style={{ padding: '14px 20px', fontSize: '18px', fontWeight: 600, border: 'none', borderBottom: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-main)', outline: 'none' }}
           />
           <div style={{ flex: 1, overflow: 'hidden' }}>

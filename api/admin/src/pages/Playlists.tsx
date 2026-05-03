@@ -133,7 +133,7 @@ export default function PlaylistsPage() {
         {/* Left: playlist list */}
         <div style={{ width: '300px', flexShrink: 0 }}>
           {loading ? (
-            <div className="text-dim" style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+            <div className="text-dim" style={{ textAlign: 'center', padding: '40px' }}>加载中…</div>
           ) : playlists.length === 0 ? (
             <div className="text-dim" style={{ textAlign: 'center', padding: '40px' }}>
               <p style={{ marginBottom: '12px' }}>暂无歌单</p>
@@ -254,7 +254,7 @@ export default function PlaylistsPage() {
       {/* Add song picker modal */}
       <Modal isOpen={showAddSong} onClose={() => setShowAddSong(false)} title="添加歌曲到歌单" size="md">
         <div>
-          <Input placeholder="搜索已有歌曲..." value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)} style={{ marginBottom: '12px' }} />
+          <Input placeholder="搜索已有歌曲…" value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)} style={{ marginBottom: '12px' }} />
           <div style={{ maxHeight: '400px', overflow: 'auto' }}>
             {filteredMusic.length === 0 ? (
               <p className="text-dim" style={{ textAlign: 'center', padding: '24px', fontSize: '13px' }}>

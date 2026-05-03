@@ -517,7 +517,7 @@ export default function LinksPage() {
               <input className="input focus-ring" style={{ flex: 1 }} value={form.logo} onChange={e => setForm({ ...form, logo: e.target.value })} placeholder={t('admin.links.logoPlaceholder', '留空自动获取 favicon')} />
               <label
                 className="btn btn-secondary btn-toolbar-square"
-                title={avatarUploading ? t('admin.media.uploading', '上传中...') : t('admin.links.uploadAvatar', '上传头像')}
+                title={avatarUploading ? t('admin.media.uploading', '上传中…') : t('admin.links.uploadAvatar', '上传头像')}
                 style={{ cursor: avatarUploading ? 'wait' : 'pointer' }}
               >
                 <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />

@@ -338,7 +338,7 @@ export default function AboutPageEditor({ open, onClose }: { open: boolean; onCl
   );
 
   const renderBody = () => {
-    if (loading) return <div className="text-dim" style={{ padding: '48px 0', textAlign: 'center' }}>加载中...</div>;
+    if (loading) return <div className="text-dim" style={{ padding: '48px 0', textAlign: 'center' }}>加载中…</div>;
     if (tab === 'template') {
       return (
         <div style={{ display: 'grid', gap: 16 }}>
@@ -431,7 +431,7 @@ export default function AboutPageEditor({ open, onClose }: { open: boolean; onCl
           className="input"
           value={markdownContent}
           onChange={e => setMarkdownContent(e.target.value)}
-          placeholder={"## 关于我\n\n写一段自定义 Markdown 介绍...\n\n> 支持引用、列表、表格、链接和图片。"}
+          placeholder={"## 关于我\n\n写一段自定义 Markdown 介绍…\n\n> 支持引用、列表、表格、链接和图片。"}
           rows={12}
           style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13, resize: 'vertical' }}
         />

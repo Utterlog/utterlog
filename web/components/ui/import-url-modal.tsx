@@ -38,7 +38,7 @@ export function ImportUrlModal({ isOpen, onClose, onImport, type, platforms }: I
         toast.error('解析失败');
       }
     } catch (e: any) {
-      toast.error('解析失败: ' + (e?.response?.data?.error?.message || e?.message || ''));
+      toast.error('解析失败：' + (e?.response?.data?.error?.message || e?.message || ''));
     }
     setLoading(false);
   };

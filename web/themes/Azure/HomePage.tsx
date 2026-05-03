@@ -392,7 +392,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
         <section className="azure-post-list">
           {pageLoading ? (
             <div className="azure-loading">
-              <LoadingSpinner size={18} />加载中...
+              <LoadingSpinner size={18} />加载中…
             </div>
           ) : currentPosts.length > 0 ? (
             currentPosts.map((post, idx) => (

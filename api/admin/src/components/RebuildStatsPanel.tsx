@@ -45,9 +45,9 @@ export default function RebuildStatsPanel() {
       </Button>
       {result && (
         <div style={{ marginTop: 12, fontSize: 12, color: 'var(--color-text-dim)', lineHeight: 1.7 }}>
-          <div>分类/标签数量: 更新 {result.meta_count_updated ?? 0} 行</div>
-          <div>文章评论数: 更新 {result.comment_count_updated ?? 0} 行</div>
-          <div>文章字数: 更新 {result.word_count_updated ?? 0} 行</div>
+          <div>分类/标签数量：更新 {result.meta_count_updated ?? 0} 行</div>
+          <div>文章评论数：更新 {result.comment_count_updated ?? 0} 行</div>
+          <div>文章字数：更新 {result.word_count_updated ?? 0} 行</div>
         </div>
       )}
       {err && (

@@ -149,7 +149,7 @@ function RouteLoading() {
       height: '100%', minHeight: 200, color: 'var(--color-text-dim)', fontSize: 13,
     }}>
       <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 8, color: 'var(--color-primary)' }} />
-      {t('common.loading', '加载中...')}
+      {t('common.loading', '加载中…')}
     </div>
   );
 }

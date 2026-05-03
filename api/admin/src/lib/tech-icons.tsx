@@ -1,9 +1,9 @@
 /**
  * 浏览器/操作系统/设备 图标映射
  *
- * 浏览器: /icons/browsers/*.svg
- * 操作系统: /icons/os/*.svg (部分用 FA)
- * 设备: FA icon class
+ * 浏览器：/icons/browsers/*.svg
+ * 操作系统：/icons/os/*.svg (部分用 FA)
+ * 设备：FA icon class
  */
 
 const browserMap: Record<string, string> = {

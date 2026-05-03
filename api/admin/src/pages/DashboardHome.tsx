@@ -289,7 +289,7 @@ export default function DashboardPage() {
             </button>
           </div>
           {loading ? (
-            <div className="text-dim" style={{ padding: '48px 20px', textAlign: 'center', fontSize: '14px' }}>{t('common.loading', '加载中...')}</div>
+            <div className="text-dim" style={{ padding: '48px 20px', textAlign: 'center', fontSize: '14px' }}>{t('common.loading', '加载中…')}</div>
           ) : recentPosts.length === 0 ? (
             <div style={{ padding: '48px 20px', textAlign: 'center' }}>
               <p className="text-dim" style={{ fontSize: '14px', marginBottom: '16px' }}>{t('admin.dashboard.noPosts', '暂无文章')}</p>
@@ -357,7 +357,7 @@ export default function DashboardPage() {
             </button>
           </div>
           {loading ? (
-            <div className="text-dim" style={{ padding: '48px 20px', textAlign: 'center', fontSize: '14px' }}>{t('common.loading', '加载中...')}</div>
+            <div className="text-dim" style={{ padding: '48px 20px', textAlign: 'center', fontSize: '14px' }}>{t('common.loading', '加载中…')}</div>
           ) : recentComments.length === 0 ? (
             <div className="text-dim" style={{ padding: '48px 20px', textAlign: 'center', fontSize: '14px' }}>{t('admin.dashboard.noComments', '暂无评论')}</div>
           ) : (

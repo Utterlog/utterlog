@@ -457,7 +457,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
                     opacity: editSubmitting ? 0.6 : 1,
                   }}
                 >
-                  {editSubmitting ? '保存中...' : '保存'}
+                  {editSubmitting ? '保存中…' : '保存'}
                 </button>
                 <button
                   onClick={() => { setIsEditing(false); setEditContent(comment.content); }}

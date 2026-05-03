@@ -127,7 +127,7 @@ export default function FooterIconsEditor({
     return <i className={icon} style={{ fontSize: 14 }} />;
   };
 
-  if (loading) return <div className="text-dim" style={{ padding: '20px 0', fontSize: 13 }}>加载中...</div>;
+  if (loading) return <div className="text-dim" style={{ padding: '20px 0', fontSize: 13 }}>加载中…</div>;
 
   return (
     <div className="card" style={{ padding: 20, marginTop: 24 }}>
@@ -229,7 +229,7 @@ export default function FooterIconsEditor({
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-          {saving ? '保存中...' : '保存'}
+          {saving ? '保存中…' : '保存'}
         </button>
       </div>
     </div>

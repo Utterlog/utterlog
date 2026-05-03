@@ -314,7 +314,7 @@ export default function MomentsPage() {
       <div style={{ padding: isMobile ? '24px 16px 120px' : '32px 32px 120px' }}>
       {loading ? (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
-          <p style={{ fontSize: '13px', color: '#999' }}>加载中...</p>
+          <p style={{ fontSize: '13px', color: '#999' }}>加载中…</p>
         </div>
       ) : moments.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
@@ -716,7 +716,7 @@ export default function MomentsPage() {
               </div>
 
               {/* Textarea */}
-              <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)} placeholder="请输入你的想法..."
+              <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)} placeholder="请输入你的想法…"
                 style={{ width: '100%', minHeight: '140px', border: 'none', outline: 'none', fontSize: '14px', lineHeight: 1.8, color: '#2b2a28', resize: 'vertical', fontFamily: 'inherit', background: 'transparent' }}
               />
 
@@ -761,7 +761,7 @@ export default function MomentsPage() {
                     }}
                   >
                     <i className="fa-regular fa-image" style={{ fontSize: '12px' }} />
-                    <span>{uploading ? '上传中...' : images.length > 0 ? `${images.length} 张图片` : '添加图片'}</span>
+                    <span>{uploading ? '上传中…' : images.length > 0 ? `${images.length} 张图片` : '添加图片'}</span>
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleImageUpload} />
 
@@ -782,7 +782,7 @@ export default function MomentsPage() {
                       background: 'transparent', color: '#b8b4ad', border: '1px solid #e2dfd8',
                       cursor: locating ? 'wait' : 'pointer',
                     }}>
-                      <i className="fa-regular fa-location-dot" style={{ fontSize: '12px' }} /><span>{locating ? '定位中...' : '选择位置'}</span>
+                      <i className="fa-regular fa-location-dot" style={{ fontSize: '12px' }} /><span>{locating ? '定位中…' : '选择位置'}</span>
                     </button>
                   )}
                 </div>
@@ -801,7 +801,7 @@ export default function MomentsPage() {
                       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                     }}
                   >
-                    {submitting ? '发布中...' : '↵ 发布'}
+                    {submitting ? '发布中…' : '↵ 发布'}
                   </button>
                 </div>
               </div>

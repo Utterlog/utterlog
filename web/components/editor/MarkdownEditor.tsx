@@ -398,7 +398,7 @@ class PreviewErrorBoundary extends Component<{ children: ReactNode }, { error: s
   }
   render() {
     if (this.state.error) {
-      return <p style={{ color: '#dc2626', fontSize: '12px' }}>预览渲染出错: {this.state.error}</p>;
+      return <p style={{ color: '#dc2626', fontSize: '12px' }}>预览渲染出错：{this.state.error}</p>;
     }
     return this.props.children;
   }
@@ -415,7 +415,7 @@ function SafePreview({ value }: { value: string }) {
 export default function MarkdownEditor({
   value,
   onChange,
-  placeholder = '开始写作...',
+  placeholder = '开始写作…',
   className = '',
   minHeight = '500px',
   onImportMd,
@@ -724,7 +724,7 @@ export default function MarkdownEditor({
             {value ? (
               <SafePreview value={value} />
             ) : (
-              <p className="text-dim italic">预览区域，输入 Markdown 后实时渲染...</p>
+              <p className="text-dim italic">预览区域，输入 Markdown 后实时渲染…</p>
             )}
           </div>
         </div>

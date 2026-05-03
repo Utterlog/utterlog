@@ -264,7 +264,7 @@ export default function CategoriesPage() {
             <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>{t('admin.common.description', '描述')}</label>
             <textarea rows={2} className="input" {...register('description')} placeholder={t('admin.common.optional', '可选')} />
           </div>
-          <Input label={t('admin.posts.columns.keywords', '关键词')} {...register('seo_keywords')} placeholder={t('admin.categories.keywordsPlaceholder', '多个关键词用逗号分隔，如: Linux,服务器,运维')} />
+          <Input label={t('admin.posts.columns.keywords', '关键词')} {...register('seo_keywords')} placeholder={t('admin.categories.keywordsPlaceholder', '多个关键词用逗号分隔，如：Linux,服务器,运维')} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px' }}>
             <Button variant="secondary" onClick={() => setIsModalOpen(false)}>{t('admin.common.cancel', '取消')}</Button>
             <Button type="submit" loading={submitting}>{editingId ? t('admin.common.save', '保存') : t('admin.common.create', '创建')}</Button>

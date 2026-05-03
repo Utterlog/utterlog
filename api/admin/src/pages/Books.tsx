@@ -74,7 +74,7 @@ export default function booksPage() {
       </div>
 
       {loading ? (
-        <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>加载中...</div>
+        <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>加载中…</div>
       ) : items.length === 0 ? (
         <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>
           <p style={{ fontSize: '15px', marginBottom: '12px' }}>暂无内容</p>

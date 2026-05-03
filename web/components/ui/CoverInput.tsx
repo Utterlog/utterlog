@@ -68,7 +68,7 @@ export function CoverInput({ value, onChange, folder, label = '封面图片', pl
               style={{ cursor: uploading ? 'wait' : 'pointer', fontSize: '12px', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
               {uploading
-                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />上传中...</>
+                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />上传中…</>
                 : <><i className="fa-regular fa-upload" style={{ fontSize: '11px' }} />上传图片</>
               }
               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} disabled={uploading} />
@@ -82,7 +82,7 @@ export function CoverInput({ value, onChange, folder, label = '封面图片', pl
               title="将当前 URL 下载并保存到配置的存储"
             >
               {fetching
-                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />同步中...</>
+                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />同步中…</>
                 : <><i className="fa-regular fa-cloud-arrow-down" style={{ fontSize: '11px' }} />同步到存储</>
               }
             </button>

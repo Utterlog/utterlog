@@ -108,7 +108,7 @@ export default function MusicPage() {
         play_url: item.url || '',
         status: 'publish',
       });
-      toast.success(`已添加: ${item.name || item.title}`);
+      toast.success(`已添加：${item.name || item.title}`);
       fetchData();
     } catch { toast.error('添加失败'); }
     setAdding(null);
@@ -145,7 +145,7 @@ export default function MusicPage() {
                 value={keyword}
                 onChange={e => setKeyword(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && doSearch()}
-                placeholder="搜索歌曲名或歌手..."
+                placeholder="搜索歌曲名或歌手…"
                 style={{ paddingLeft: '32px' }}
               />
             </div>
@@ -195,7 +195,7 @@ export default function MusicPage() {
 
       {/* Music list */}
       {loading ? (
-        <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>加载中...</div>
+        <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>加载中…</div>
       ) : items.length === 0 ? (
         <div className="text-dim" style={{ textAlign: 'center', padding: '48px' }}>
           <p style={{ fontSize: '15px', marginBottom: '12px' }}>暂无内容</p>

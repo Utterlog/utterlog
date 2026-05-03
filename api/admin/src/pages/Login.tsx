@@ -220,7 +220,7 @@ export default function Login() {
             </div>
 
             <button type="submit" className="btn btn-primary" disabled={submitting} style={{ width: '100%' }}>
-              {submitting ? t('admin.login.signingIn', '登录中...') : t('admin.login.signIn', '登录')}
+              {submitting ? t('admin.login.signingIn', '登录中…') : t('admin.login.signIn', '登录')}
             </button>
 
             {showPasskey && (
@@ -238,7 +238,7 @@ export default function Login() {
                   style={{ width: '100%', gap: 8 }}
                 >
                   <i className="fa-light fa-fingerprint" style={{ fontSize: 16 }} />
-                  {passkeyLoading ? t('admin.login.verifying', '验证中...') : t('admin.login.usePasskey', '使用通行密钥登录')}
+                  {passkeyLoading ? t('admin.login.verifying', '验证中…') : t('admin.login.usePasskey', '使用通行密钥登录')}
                 </button>
               </>
             )}
@@ -279,7 +279,7 @@ export default function Login() {
                 {t('admin.common.back', '返回')}
               </button>
               <button type="submit" className="btn btn-primary" disabled={submitting} style={{ flex: 2 }}>
-                {submitting ? t('admin.login.verifying', '验证中...') : t('admin.login.verify', '验证')}
+                {submitting ? t('admin.login.verifying', '验证中…') : t('admin.login.verify', '验证')}
               </button>
             </div>
           </>
@@ -346,7 +346,7 @@ export default function Login() {
                     style={{ flex: 1 }}
                     onClick={handleForgotSubmit}
                   >
-                    {forgotSending ? t('admin.login.sending', '发送中...') : t('admin.login.sendResetLink', '发送重置链接')}
+                    {forgotSending ? t('admin.login.sending', '发送中…') : t('admin.login.sendResetLink', '发送重置链接')}
                   </button>
                 </div>
               </>

@@ -360,7 +360,7 @@ export default function PagesPage() {
             })}
             {/* Custom pages */}
             {loading ? (
-              <tr><td colSpan={5} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>{t('common.loading', '加载中...')}</td></tr>
+              <tr><td colSpan={5} className="text-dim" style={{ textAlign: 'center', padding: '24px' }}>{t('common.loading', '加载中…')}</td></tr>
             ) : pages.map(page => (
               <tr key={page.id}>
                 <td style={{ padding: '10px 12px', fontWeight: 500 }}>
@@ -460,7 +460,7 @@ export default function PagesPage() {
 
           <div style={{ border: '1px solid var(--color-border)', maxHeight: '360px', overflow: 'auto' }}>
             {loadingCodingRepos ? (
-              <div className="text-dim" style={{ padding: '24px', textAlign: 'center', fontSize: '13px' }}>正在读取项目...</div>
+              <div className="text-dim" style={{ padding: '24px', textAlign: 'center', fontSize: '13px' }}>正在读取项目…</div>
             ) : codingRepos.length === 0 ? (
               <div className="text-dim" style={{ padding: '24px', textAlign: 'center', fontSize: '13px' }}>暂无可用项目。</div>
             ) : codingRepos.map(repo => {
@@ -541,7 +541,7 @@ export default function PagesPage() {
                 style={{ width: '100%', minHeight: '360px', fontFamily: 'monospace', fontSize: '13px' }}
                 value={editingContent}
                 onChange={e => setEditingContent(e.target.value)}
-                placeholder={t('admin.pages.contentPlaceholder', '<p>欢迎来到我的博客...</p>')}
+                placeholder={t('admin.pages.contentPlaceholder', '<p>欢迎来到我的博客…</p>')}
               />
             </div>
             <div style={{ padding: '16px 20px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>

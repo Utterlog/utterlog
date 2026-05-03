@@ -228,7 +228,7 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
           )}
 
           <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)}
-            placeholder="写下你的回复..." rows={3}
+            placeholder="写下你的回复…" rows={3}
             style={{ width: '100%', padding: '10px', fontSize: '13px', lineHeight: 1.6, border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', outline: 'none', resize: 'vertical', color: 'var(--color-text-main)', fontFamily: 'inherit', borderRadius: 0 }} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>

@@ -559,7 +559,7 @@ export default function Footer() {
                       background: '#0052D9', color: '#fff', border: 'none', cursor: 'pointer',
                       transition: 'opacity 0.15s', opacity: loginLoading ? 0.6 : 1,
                     }}>
-                      {loginLoading ? '登录中...' : '登录'}
+                      {loginLoading ? '登录中…' : '登录'}
                     </button>
 
                     {/* OR divider */}
@@ -639,7 +639,7 @@ export default function Footer() {
                         cursor: loginLoading ? 'wait' : 'pointer',
                         opacity: loginLoading ? 0.6 : 1,
                       }}>
-                        {loginLoading ? '验证中...' : '验证'}
+                        {loginLoading ? '验证中…' : '验证'}
                       </button>
                     </div>
                   </form>

@@ -127,7 +127,7 @@ export default function AzureProfileSettings() {
     }
   };
 
-  if (loading) return <div className="text-dim" style={{ padding: '20px 0', fontSize: 13 }}>加载中...</div>;
+  if (loading) return <div className="text-dim" style={{ padding: '20px 0', fontSize: 13 }}>加载中…</div>;
 
   return (
     <div>
@@ -140,7 +140,7 @@ export default function AzureProfileSettings() {
             </p>
           </div>
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? '保存中...' : '保存'}
+            {saving ? '保存中…' : '保存'}
           </button>
         </div>
 
@@ -259,7 +259,7 @@ export default function AzureProfileSettings() {
             </p>
           </div>
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? '保存中...' : '保存'}
+            {saving ? '保存中…' : '保存'}
           </button>
         </div>
 

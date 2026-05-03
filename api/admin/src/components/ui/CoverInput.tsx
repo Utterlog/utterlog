@@ -70,7 +70,7 @@ export function CoverInput({ value, onChange, folder, label, placeholder = 'http
               style={{ cursor: uploading ? 'wait' : 'pointer', fontSize: '12px', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
               {uploading
-                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />{t('admin.cover.uploading', '上传中...')}</>
+                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />{t('admin.cover.uploading', '上传中…')}</>
                 : <><i className="fa-regular fa-upload" style={{ fontSize: '11px' }} />{t('admin.cover.uploadImage', '上传图片')}</>
               }
               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} disabled={uploading} />
@@ -84,7 +84,7 @@ export function CoverInput({ value, onChange, folder, label, placeholder = 'http
               title={t('admin.cover.syncTitle', '将当前 URL 下载并保存到配置的存储')}
             >
               {fetching
-                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />{t('admin.cover.syncing', '同步中...')}</>
+                ? <><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} />{t('admin.cover.syncing', '同步中…')}</>
                 : <><i className="fa-regular fa-cloud-arrow-down" style={{ fontSize: '11px' }} />{t('admin.cover.syncToStorage', '同步到存储')}</>
               }
             </button>

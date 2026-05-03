@@ -104,7 +104,7 @@ export default function ToolsPage() {
     fd.append('file', file);
     try {
       const r: any = await api.post('/backup/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      toast.success(t('admin.tools.toast.restoreSuccess', '恢复成功！数据库: {db}, 文件: {files}', { db: r.data?.db_restored ? '✓' : '✗', files: r.data?.files || 0 }));
+      toast.success(t('admin.tools.toast.restoreSuccess', '恢复成功！数据库：{db}, 文件：{files}', { db: r.data?.db_restored ? '✓' : '✗', files: r.data?.files || 0 }));
       fetchBackupData();
     } catch { toast.error(t('admin.tools.toast.importFailed', '导入失败')); }
     setImporting(false);
@@ -151,7 +151,7 @@ export default function ToolsPage() {
             </div>
             <input ref={wpFileRef} type="file" accept=".xml" onChange={handleWordPressImport} style={{ display: 'none' }} />
             <Button onClick={() => wpFileRef.current?.click()} disabled={wpImporting} style={{ width: '100%' }}>
-              <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '16px' }} /> {wpImporting ? t('admin.common.importing', '导入中...') : t('admin.tools.import.wordpress.chooseXml', '选择 XML 文件并导入')}
+              <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '16px' }} /> {wpImporting ? t('admin.common.importing', '导入中…') : t('admin.tools.import.wordpress.chooseXml', '选择 XML 文件并导入')}
             </Button>
             {wpResult && (
               <div style={{ padding: '12px', borderRadius: '4px', background: 'var(--color-bg-soft)', fontSize: '13px', marginTop: '12px' }}>
@@ -216,7 +216,7 @@ export default function ToolsPage() {
             <label style={{ cursor: 'pointer' }}>
               <input type="file" accept=".zip" onChange={handleBackupImport} style={{ display: 'none' }} />
               <span className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} /> {importing ? t('admin.common.importing', '导入中...') : t('admin.tools.backup.importBackup', '导入备份')}
+                <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} /> {importing ? t('admin.common.importing', '导入中…') : t('admin.tools.backup.importBackup', '导入备份')}
               </span>
             </label>
           </div>

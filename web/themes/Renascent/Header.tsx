@@ -289,7 +289,7 @@ export default function Header() {
               </button>
             </form>
             <div className="renascent-search-results">
-              {searching && <div className="renascent-search-empty">搜索中...</div>}
+              {searching && <div className="renascent-search-empty">搜索中…</div>}
               {!searching && query.trim().length >= 2 && results.length === 0 && (
                 <div className="renascent-search-empty">没有匹配文章</div>
               )}

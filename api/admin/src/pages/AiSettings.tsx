@@ -326,10 +326,10 @@ export default function AiSettingsPage() {
         setEditing(null);
         load();
       } else {
-        toast.error(t('admin.aiSettings.toast.saveFailedReason', '保存失败: {reason}', { reason: r.error?.message || t('admin.common.unknownError', '未知错误') }));
+        toast.error(t('admin.aiSettings.toast.saveFailedReason', '保存失败：{reason}', { reason: r.error?.message || t('admin.common.unknownError', '未知错误') }));
       }
     } catch (e: any) {
-      toast.error(t('admin.aiSettings.toast.saveErrorReason', '保存错误: {reason}', { reason: e?.response?.data?.error?.message || e?.message || t('admin.common.unknownError', '未知错误') }));
+      toast.error(t('admin.aiSettings.toast.saveErrorReason', '保存错误：{reason}', { reason: e?.response?.data?.error?.message || e?.message || t('admin.common.unknownError', '未知错误') }));
     }
     setSaving(false);
   };
@@ -345,7 +345,7 @@ export default function AiSettingsPage() {
     setTesting(true); setTestResult(null);
     try {
       const r: any = await api.post('/ai/test', { endpoint: editing.endpoint, model: editing.model, api_key: editing.api_key });
-      setTestResult({ ok: r.success, msg: r.success ? t('admin.aiSettings.testSuccessReason', '连接成功: {reason}', { reason: r.data?.content || 'OK' }) : (r.error?.message || t('admin.common.failed', '失败')) });
+      setTestResult({ ok: r.success, msg: r.success ? t('admin.aiSettings.testSuccessReason', '连接成功：{reason}', { reason: r.data?.content || 'OK' }) : (r.error?.message || t('admin.common.failed', '失败')) });
     } catch (e: any) {
       setTestResult({ ok: false, msg: e?.response?.data?.error?.message || e.message || t('admin.common.networkError', '网络错误') });
     }
@@ -365,7 +365,7 @@ export default function AiSettingsPage() {
     updateConfig('ai_data_permissions', JSON.stringify(next));
   };
 
-  if (loading) return <div className="p-6 text-dim">{t('admin.common.loading', '加载中...')}</div>;
+  if (loading) return <div className="p-6 text-dim">{t('admin.common.loading', '加载中…')}</div>;
 
   return (
     <div className="settings-page">
@@ -448,7 +448,7 @@ export default function AiSettingsPage() {
                   </>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <Input label={t('admin.aiSettings.providers.name', '名称')} value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} placeholder={t('admin.aiSettings.providers.namePlaceholder', '如: OpenAI')} />
+                  <Input label={t('admin.aiSettings.providers.name', '名称')} value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} placeholder={t('admin.aiSettings.providers.namePlaceholder', '如：OpenAI')} />
                   <Select label={t('admin.aiSettings.providers.type', '类型')} value={editing.type} onChange={e => setEditing({ ...editing, type: e.target.value })}>
                     <option value="text">{t('admin.aiSettings.provider.type.text', '文本')}</option>
                     <option value="image">{t('admin.aiSettings.provider.type.image', '图片')}</option>
@@ -468,7 +468,7 @@ export default function AiSettingsPage() {
                     <label className="text-sub" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>{t('admin.aiSettings.providers.temperature', '温度 ({value})', { value: editing.temperature })}</label>
                     <input type="range" min="0" max="2" step="0.1" value={editing.temperature} onChange={e => setEditing({ ...editing, temperature: parseFloat(e.target.value) })} style={{ width: '100%' }} />
                   </div>
-                  <Input label={t('admin.aiSettings.providers.timeout', '超时(秒)')} type="number" value={editing.timeout} onChange={e => setEditing({ ...editing, timeout: parseInt(e.target.value) })} />
+                  <Input label={t('admin.aiSettings.providers.timeout', '超时（秒）')} type="number" value={editing.timeout} onChange={e => setEditing({ ...editing, timeout: parseInt(e.target.value) })} />
                 </div>
                 {/* Toggle group — light divider above so booleans read as
                     a separate concern from the connection fields. 14px
@@ -786,7 +786,7 @@ export default function AiSettingsPage() {
               rows={2}
               value={config.ai_blogger_style}
               onChange={v => updateConfig('ai_blogger_style', v)}
-              placeholder={t('admin.aiSettings.profile.stylePlaceholder', '例如：轻松幽默、技术严谨、文艺清新...')}
+              placeholder={t('admin.aiSettings.profile.stylePlaceholder', '例如：轻松幽默、技术严谨、文艺清新…')}
             />
             <FormRowTextareaC
               label={t('admin.aiSettings.profile.memory', 'AI 记忆（MEMORY.md）')}
@@ -794,7 +794,7 @@ export default function AiSettingsPage() {
               rows={8}
               value={config.ai_blogger_memory}
               onChange={v => updateConfig('ai_blogger_memory', v)}
-              placeholder={t('admin.aiSettings.profile.memoryPlaceholder', 'AI 会自动在这里记录你的偏好和上下文...')}
+              placeholder={t('admin.aiSettings.profile.memoryPlaceholder', 'AI 会自动在这里记录你的偏好和上下文…')}
             />
             <FormRowSelectC
               label={t('admin.aiSettings.profile.memoryStorage', '记忆存储方式')}

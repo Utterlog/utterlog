@@ -1,12 +1,12 @@
 /**
  * Plugin System — 声明式插件注册表
  *
- * 插件结构:
+ * 插件结构：
  * web/plugins/{name}/
  * ├── plugin.json  — 名称、版本、hooks、settings
  * └── [assets]     — 可选静态资源
  *
- * 工作方式:
+ * 工作方式：
  * - 静态导入 plugin.json（同主题，Next.js SSR 限制）
  * - active_plugins 选项存储启用的插件列表 (JSON 数组)
  * - 活跃插件的 hooks 合并到 Slot 注册表

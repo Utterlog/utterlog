@@ -38,7 +38,7 @@ export default function Themes() {
       return;
     }
     setUploading(true);
-    const tid = toast.loading('正在上传...');
+    const tid = toast.loading('正在上传…');
     try {
       const r: any = await themesApi.upload(file);
       toast.success(`主题「${r.data?.name || r.name || '未命名'}」已安装`, { id: tid });
@@ -157,7 +157,7 @@ export default function Themes() {
           </button>
           <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="上传主题 .zip">
             <i className="fa-regular fa-upload" style={{ fontSize: 14 }} />
-            {uploading ? '上传中...' : '上传主题'}
+            {uploading ? '上传中…' : '上传主题'}
           </button>
           <input
             ref={fileInputRef}
@@ -182,7 +182,7 @@ export default function Themes() {
 
       {/* Grid */}
       {loading ? (
-        <div className="text-dim" style={{ padding: 60, textAlign: 'center', fontSize: 13 }}>加载中...</div>
+        <div className="text-dim" style={{ padding: 60, textAlign: 'center', fontSize: 13 }}>加载中…</div>
       ) : themes.length === 0 ? (
         <div className="card" style={{ padding: 60, textAlign: 'center' }}>
           <i className="fa-regular fa-palette" style={{ fontSize: 32, color: 'var(--color-text-dim)', marginBottom: 12 }} />
@@ -288,7 +288,7 @@ export default function Themes() {
                         onClick={() => handleActivate(theme.id)}
                         style={{ flex: 1 }}
                       >
-                        {activating === theme.id ? '切换中...' : '启用'}
+                        {activating === theme.id ? '切换中…' : '启用'}
                       </button>
                     )}
                     {theme.homepage && (

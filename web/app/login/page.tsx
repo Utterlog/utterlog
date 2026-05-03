@@ -199,7 +199,7 @@ export default function LoginPage() {
                 className="btn btn-primary w-full"
                 style={{ height: '44px', fontSize: '15px', marginBottom: '12px' }}
               >
-                {totpLoading ? (<><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '18px' }} />验证中...</>) : '验证'}
+                {totpLoading ? (<><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '18px' }} />验证中…</>) : '验证'}
               </button>
               <button
                 onClick={() => { setShow2FA(false); setTotpCode(''); setTempToken(''); }}
@@ -264,7 +264,7 @@ export default function LoginPage() {
                 {isLoading ? (
                   <>
                     <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '18px' }} />
-                    登录中...
+                    登录中…
                   </>
                 ) : (
                   '登录'
@@ -287,7 +287,7 @@ export default function LoginPage() {
                     style={{ height: '44px', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
                     <i className="fa-light fa-fingerprint" style={{ fontSize: '18px' }} />
-                    {passkeyLoading ? '验证中...' : '使用通行密钥登录'}
+                    {passkeyLoading ? '验证中…' : '使用通行密钥登录'}
                   </button>
                 </>
               )}
@@ -353,7 +353,7 @@ export default function LoginPage() {
                       setForgotSending(false);
                     }}
                   >
-                    {forgotSending ? '发送中...' : '发送重置链接'}
+                    {forgotSending ? '发送中…' : '发送重置链接'}
                   </button>
                 </div>
               </>

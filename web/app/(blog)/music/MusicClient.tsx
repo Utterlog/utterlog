@@ -206,7 +206,7 @@ export default function MusicPage() {
   };
 
   if (p.loading) return (
-    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>加载中...</div>
+    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>加载中…</div>
   );
 
   const song = p.song;
@@ -350,7 +350,7 @@ export default function MusicPage() {
                     opacity: i === p.lrcIdx ? 1 : i > p.lrcIdx ? 0.3 : 0.6,
                     transition: 'all 0.3s',
                   }}
-                  aria-label={`跳转到歌词: ${line.text}`}
+                  aria-label={`跳转到歌词：${line.text}`}
                 >{line.text || '···'}</div>
               )) : (
                 <div style={{ color: t.textDim, textAlign: 'center', paddingTop: 60 }}>暂无歌词</div>
@@ -517,7 +517,7 @@ export default function MusicPage() {
             <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${t.searchBorder}` }}>
               <input value={searchInput} onChange={e => setSearchInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                placeholder="搜索歌曲、歌手..."
+                placeholder="搜索歌曲、歌手…"
                 autoFocus
                 style={{
                   flex: 1, padding: '14px 20px', background: 'transparent',

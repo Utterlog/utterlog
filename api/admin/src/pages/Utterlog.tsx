@@ -106,14 +106,14 @@ export default function UtterlogCenterPage() {
               background: networkStatus.connected ? '#dcfce7' : '#fef3c7',
               color: networkStatus.connected ? '#16a34a' : '#d97706',
             }}>
-              {networkStatus.connected ? '已连接' : '连接中...'}
+              {networkStatus.connected ? '已连接' : '连接中…'}
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
             {[
               { label: '认证中心', value: networkStatus.hub },
-              { label: '站点 ID', value: networkStatus.site_id || '自动分配中...' },
+              { label: '站点 ID', value: networkStatus.site_id || '自动分配中…' },
               { label: '站点指纹', value: networkStatus.fingerprint || '...' },
             ].map((item, idx) => (
               <div key={item.label} style={{
@@ -253,7 +253,7 @@ export default function UtterlogCenterPage() {
                 }
                 finally { setBindingUtterlog(false); }
               }}>
-                <i className="fa-regular fa-globe" style={{ fontSize: '14px' }} /> {bindingUtterlog ? '跳转中...' : '绑定 Utterlog ID'}
+                <i className="fa-regular fa-globe" style={{ fontSize: '14px' }} /> {bindingUtterlog ? '跳转中…' : '绑定 Utterlog ID'}
               </button>
             </div>
           )}
@@ -284,7 +284,7 @@ export default function UtterlogCenterPage() {
               </label>
             </div>
             <p className="text-dim" style={{ fontSize: '11px' }}>
-              当前使用: {avatarSource === 'gravatar' ? 'Gravatar (邮箱头像)' : 'Utterlog ID (联盟头像)'}
+              当前使用：{avatarSource === 'gravatar' ? 'Gravatar (邮箱头像)' : 'Utterlog ID (联盟头像)'}
             </p>
           </div>
         )}

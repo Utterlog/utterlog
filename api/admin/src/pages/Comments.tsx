@@ -607,13 +607,13 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
             value={replyContent}
             onChange={(e) => setReplyContent(e.target.value)}
             rows={4}
-            placeholder={t('admin.comments.replyPlaceholder', '输入回复内容...')}
+            placeholder={t('admin.comments.replyPlaceholder', '输入回复内容…')}
             className="input"
             style={{ resize: 'vertical' }}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
             <Button variant="secondary" onClick={() => setReplyId(null)}>{t('admin.common.cancel', '取消')}</Button>
-            <Button onClick={handleReply} disabled={replying}>{replying ? t('admin.comments.replying', '回复中...') : t('admin.comments.reply', '回复')}</Button>
+            <Button onClick={handleReply} disabled={replying}>{replying ? t('admin.comments.replying', '回复中…') : t('admin.comments.reply', '回复')}</Button>
           </div>
         </div>
       </Modal>

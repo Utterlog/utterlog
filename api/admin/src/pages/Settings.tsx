@@ -548,7 +548,7 @@ export default function SettingsPage() {
             <animateTransform attributeName="transform" type="rotate" dur="0.75s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
           </path>
         </svg>
-        <p className="text-dim" style={{ fontSize: '13px' }}>{t('common.loading', '加载中...')}</p>
+        <p className="text-dim" style={{ fontSize: '13px' }}>{t('common.loading', '加载中…')}</p>
       </div>
     );
   }
@@ -1350,7 +1350,7 @@ export default function SettingsPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '4px' }}>
                       <button type="button" className="btn btn-secondary text-sm" onClick={testStorageConnection} disabled={testingStorage} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <i className={testingStorage ? 'fa-solid fa-spinner fa-spin' : 'fa-regular fa-plug'} style={{ fontSize: '13px' }} />
-                        {testingStorage ? t('admin.common.testing', '测试中...') : t('admin.common.testConnection', '测试连接')}
+                        {testingStorage ? t('admin.common.testing', '测试中…') : t('admin.common.testConnection', '测试连接')}
                       </button>
                     </div>
                   </div>

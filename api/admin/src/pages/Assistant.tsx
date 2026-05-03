@@ -440,7 +440,7 @@ export default function AiChatPage() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
+              placeholder="输入消息…（Enter 发送，Shift+Enter 换行）"
               rows={1}
               className="input focus-ring"
               style={{
