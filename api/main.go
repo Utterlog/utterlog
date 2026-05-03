@@ -150,7 +150,7 @@ func main() {
 
 	// Health
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.0.7-go"}})
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.0.8-go"}})
 	})
 
 	// ===================== Install Wizard (public, unauth) =====================
