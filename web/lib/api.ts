@@ -191,6 +191,7 @@ export const momentsApi = {
   create: (data: any) => api.post('/moments', data),
   update: (id: number, data: any) => api.put(`/moments/${id}`, data),
   delete: (id: number) => api.delete(`/moments/${id}`),
+  recentTags: (limit = 8) => api.get('/moments/recent-tags', { params: { limit } }),
 };
 
 export const geoApi = {

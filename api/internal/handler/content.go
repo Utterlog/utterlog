@@ -103,6 +103,12 @@ func ContentCreate(table string) gin.HandlerFunc {
 			SyncContentMedia(table, id, coverURL)
 		}
 
+		if table == "moments" {
+			if mood, ok := req["mood"].(string); ok {
+				mergeMomentTagOption(mood)
+			}
+		}
+
 		util.Success(c, gin.H{"id": id})
 	}
 }
@@ -116,6 +122,67 @@ func normalizeMomentCreateSource(req map[string]interface{}) {
 	default:
 		req["source"] = source
 	}
+}
+
+// mergeMomentTagOption 把刚发布的说说 mood 合并进 moment_tags option，
+// 让 admin 后台「标签管理器」能拿到全部用过的标签。已存在的不重复写。
+// 在 ContentCreate / ContentUpdate 走 moments 分支时调用，去重大小写敏感。
+func mergeMomentTagOption(mood string) {
+	mood = strings.TrimSpace(mood)
+	if mood == "" {
+		return
+	}
+	raw := model.GetOption("moment_tags")
+	parts := []string{}
+	seen := map[string]bool{}
+	for _, p := range strings.Split(raw, ",") {
+		p = strings.TrimSpace(p)
+		if p == "" || seen[p] {
+			continue
+		}
+		seen[p] = true
+		parts = append(parts, p)
+	}
+	if seen[mood] {
+		return
+	}
+	parts = append(parts, mood)
+	model.SetOption("moment_tags", strings.Join(parts, ","))
+}
+
+// MomentRecentTags returns the most-recently-used distinct mood values
+// from ul_moments，按每个标签最近一次使用的 created_at 倒序，最多取
+// limit 个（默认 8、上限 50）。前台发布说说的弹窗用它替代写死的
+// "随想 / 技术 / 生活 / 阅读"，让推荐标签随实际使用动态滚动。
+func MomentRecentTags(c *gin.Context) {
+	limit := 8
+	if v := c.Query("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 50 {
+			limit = n
+		}
+	}
+	t := config.T("moments")
+	rows, err := config.DB.Query(fmt.Sprintf(`
+		SELECT mood
+		FROM %s
+		WHERE mood IS NOT NULL AND mood <> ''
+		GROUP BY mood
+		ORDER BY MAX(created_at) DESC
+		LIMIT $1
+	`, t), limit)
+	if err != nil {
+		util.Error(c, 500, "QUERY_ERROR", err.Error())
+		return
+	}
+	defer rows.Close()
+	tags := []string{}
+	for rows.Next() {
+		var mood string
+		if err := rows.Scan(&mood); err == nil {
+			tags = append(tags, mood)
+		}
+	}
+	util.Success(c, tags)
 }
 
 func ContentUpdate(table string) gin.HandlerFunc {
@@ -158,6 +225,12 @@ func ContentUpdate(table string) gin.HandlerFunc {
 		if coverURL, ok := req["cover_url"].(string); ok && coverURL != "" {
 			idInt, _ := strconv.Atoi(id)
 			SyncContentMedia(table, idInt, coverURL)
+		}
+
+		if table == "moments" {
+			if mood, ok := req["mood"].(string); ok {
+				mergeMomentTagOption(mood)
+			}
 		}
 
 		util.Success(c, gin.H{"id": id})

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { momentsApi, optionsApi, mediaApi, geoApi } from '@/lib/api';
+import { momentsApi, mediaApi, geoApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { useThemeContext } from '@/lib/theme-context';
 import { datePartsInTimeZone, formatDateInTimeZone, formatDateTimeInTimeZone } from '@/lib/timezone';
@@ -199,10 +199,12 @@ export default function MomentsPage() {
   };
 
   const fetchTags = async () => {
+    // 推荐标签 = 最近使用过的 mood 聚合（最多 8 个），不再写死。
+    // 数据库里没说说时返回空，保留 useState 的默认值作兜底。
     try {
-      const r: any = await optionsApi.get('moment_tags');
-      const val = r.data?.value || r.value || '';
-      if (val) setTags(val.split(',').map((t: string) => t.trim()).filter(Boolean));
+      const r: any = await momentsApi.recentTags(8);
+      const list = (r.data || r) as string[];
+      if (Array.isArray(list) && list.length > 0) setTags(list);
     } catch {}
   };
 
@@ -410,7 +412,7 @@ export default function MomentsPage() {
                   {/* Images */}
                   {imgs.length === 1 && (
                     <img src={imgs[0]} alt="" onClick={(e) => { e.stopPropagation(); openLightbox(imgs, 0); }}
-                      style={{ width: '100%', display: 'block', cursor: 'zoom-in', objectFit: 'cover', maxHeight: '280px' }} />
+                      style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }} />
                   )}
                   {imgs.length >= 2 && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
@@ -443,10 +445,20 @@ export default function MomentsPage() {
                   const pos = positions[i];
                   const isActive = activeCard === i;
                   const z = cardZs[i] || (filtered.length - i);
+                  // 鼠标进入时把这张卡升到最顶，离开后保留升过的 z（用户视
+                  // 线扫到哪张就看清哪张），避免散落布局里的图片或长文字
+                  // 视觉上被相邻卡片压住。
+                  const handleHover = () => {
+                    if ((cardZs[i] || 0) >= topZ) return;
+                    const newZ = topZ + 1;
+                    setTopZ(newZ);
+                    setCardZs(prev => ({ ...prev, [i]: newZ }));
+                  };
                   return (
                     <div
                       key={m.id}
                       onClick={(e) => handleCardClick(e, i)}
+                      onMouseEnter={handleHover}
                       style={{
                         position: 'absolute',
                         left: pos.x + 30,
