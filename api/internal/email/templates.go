@@ -5,11 +5,12 @@
 // (SiteTitle, SiteLogo, SiteDomain, SiteURL) plus template-specific fields.
 //
 // Usage:
-//   body, err := email.Render("new_comment", email.NewCommentData{
-//     Site: email.LoadSiteData(),
-//     PostTitle: post.Title,
-//     ...
-//   })
+//
+//	body, err := email.Render("new_comment", email.NewCommentData{
+//	  Site: email.LoadSiteData(),
+//	  PostTitle: post.Title,
+//	  ...
+//	})
 package email
 
 import (
@@ -31,7 +32,8 @@ var parsedTemplates *template.Template
 
 func init() {
 	funcs := template.FuncMap{
-		"firstChar": firstChar,
+		"firstChar":            firstChar,
+		"renderCommentContent": renderCommentContent,
 	}
 	parsed, err := template.New("email").Funcs(funcs).ParseFS(tplFS, "tpl/*.html")
 	if err != nil {
@@ -137,79 +139,86 @@ func Render(name string, data any) (string, error) {
    ======================================================================== */
 
 type NewCommentData struct {
-	Site            SiteData
-	Author          string
-	Email           string
-	Content         string
-	PostTitle       string
-	PostURL         string
-	PostedAt        string // "2 分钟前" or "2026-04-17 10:42"
+	Site             SiteData
+	Author           string
+	Email            string
+	URL              string // 访客填写的网址 (optional)
+	IP               string
+	CountryCode      string // 2-letter ISO, lowercase, 用于国旗渲染 (optional)
+	IPLocation       string // 省份/城市可选,目前模板只显示 IP + 国旗
+	Content          string
+	PostTitle        string
+	PostURL          string
+	PostedAt         string // "2 分钟前" or "2026-04-17 10:42"
 	ManageCommentURL string
 }
 
 type PendingCommentData struct {
-	Site         SiteData
-	Author       string
-	Email        string
-	Content      string
-	IP           string
-	IPLocation   string
-	PostTitle    string
-	PostedAt     string
-	ModerateURL  string
-	ApproveURL   string // direct approve via signed link (optional)
+	Site        SiteData
+	Author      string
+	Email       string
+	URL         string // 访客填写的网址(可选,用于链到昵称上)
+	Content     string
+	IP          string
+	IPLocation  string
+	CountryCode string // 2-letter ISO lowercase,用于国旗
+	PostTitle   string
+	PostURL     string
+	PostedAt    string
+	ModerateURL string
+	ApproveURL  string // direct approve via signed link (optional)
 }
 
 type CommentReplyData struct {
-	Site             SiteData
-	RecipientName    string
-	ReplierName      string
-	PostTitle        string
-	OriginalContent  string
-	ReplyContent     string
-	PostURL          string
-	UnsubscribeURL   string
+	Site            SiteData
+	RecipientName   string
+	ReplierName     string
+	PostTitle       string
+	OriginalContent string
+	ReplyContent    string
+	PostURL         string
+	UnsubscribeURL  string
 }
 
 type UpgradeData struct {
-	Site       SiteData
-	Version    string
-	Highlights []string
+	Site         SiteData
+	Version      string
+	Highlights   []string
 	ChangelogURL string
 }
 
 type IncidentData struct {
-	Site         SiteData
-	ErrorType    string
-	Location     string
-	Component    string
-	OccurredAt   string
-	Host         string
-	Duration     string
-	UserImpact   string
-	LogsURL      string
-	StatusURL    string
+	Site       SiteData
+	ErrorType  string
+	Location   string
+	Component  string
+	OccurredAt string
+	Host       string
+	Duration   string
+	UserImpact string
+	LogsURL    string
+	StatusURL  string
 }
 
 type LinkRequestData struct {
-	Site          SiteData
-	RequesterName string
-	RequesterURL  string
+	Site            SiteData
+	RequesterName   string
+	RequesterURL    string
 	RequesterAvatar string
-	Email         string
-	Description   string
-	RSSURL        string
-	UtterlogID    string
-	ApproveURL    string
-	RejectURL     string
+	Email           string
+	Description     string
+	RSSURL          string
+	UtterlogID      string
+	ApproveURL      string
+	RejectURL       string
 }
 
 type VerifyCodeData struct {
-	Site        SiteData
-	Code        string
-	ExpireMins  int // default 10
-	Purpose     string // "登录" / "注册" / "修改密码" 等
-	SupportURL  string
+	Site       SiteData
+	Code       string
+	ExpireMins int    // default 10
+	Purpose    string // "登录" / "注册" / "修改密码" 等
+	SupportURL string
 }
 
 type PasswordResetData struct {
@@ -217,4 +226,10 @@ type PasswordResetData struct {
 	UserName   string
 	ResetURL   string
 	ExpireMins int // typically 60
+	// 请求来源(可选,生产由 ForgotPassword handler 传入,
+	// 预览脚本里给静态示例值)
+	IP          string
+	IPLocation  string // 省份 / 城市,例 "广东 广州 · 移动"
+	CountryCode string // 2-letter ISO lowercase,用于国旗
+	RequestedAt string // 已格式化的时间字符串,例 "2026-05-04 11:32:18"
 }

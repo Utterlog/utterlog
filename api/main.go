@@ -150,7 +150,7 @@ func main() {
 
 	// Health
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.1.2-go"}})
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.1.3-go"}})
 	})
 
 	// ===================== Install Wizard (public, unauth) =====================
@@ -221,6 +221,10 @@ func main() {
 	api.GET("/i18n/locales", handler.ListLocales)
 	api.GET("/i18n/:locale", handler.GetLocale)
 	api.GET("/visitor/weather", handler.VisitorWeather)
+
+	// Public unsubscribe (HTML response). Reached from comment-reply
+	// notification emails — no auth, signed link verifies intent.
+	api.GET("/unsubscribe/comment-reply", handler.UnsubscribeCommentReply)
 
 	// Content types (public read)
 	api.GET("/moments", handler.GenericList("moments"))

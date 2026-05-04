@@ -1,19 +1,21 @@
 // Forgot-password / reset-password flow.
 //
 // Routes (registered in main.go):
-//   POST /api/v1/auth/forgot-password  { email }
-//        Generates a one-time token, stores it on the user row with a
-//        1-hour expiry, sends the password_reset email template. To
-//        avoid email enumeration the response is the same regardless
-//        of whether the address exists.
 //
-//   POST /api/v1/auth/reset-password   { token, new_password }
-//        Validates the token (still active and not expired), bcrypts
-//        the new password, clears the token row in the same UPDATE.
+//	POST /api/v1/auth/forgot-password  { email }
+//	     Generates a one-time token, stores it on the user row with a
+//	     1-hour expiry, sends the password_reset email template. To
+//	     avoid email enumeration the response is the same regardless
+//	     of whether the address exists.
+//
+//	POST /api/v1/auth/reset-password   { token, new_password }
+//	     Validates the token (still active and not expired), bcrypts
+//	     the new password, clears the token row in the same UPDATE.
 //
 // DB columns added by InitDB() (idempotent ADD COLUMN IF NOT EXISTS):
-//   reset_token              VARCHAR(64)  hex of 32 random bytes
-//   reset_token_expires_at   BIGINT       unix seconds; 0 means none
+//
+//	reset_token              VARCHAR(64)  hex of 32 random bytes
+//	reset_token_expires_at   BIGINT       unix seconds; 0 means none
 package handler
 
 import (
@@ -65,7 +67,10 @@ func ForgotPassword(c *gin.Context) {
 				config.T("users"),
 			), token, expires, now, user.ID)
 			if err == nil {
-				go sendPasswordResetEmail(user, token)
+				// Capture request-source info synchronously (gin's
+				// Context isn't safe to read once the goroutine runs).
+				ip := c.ClientIP()
+				go sendPasswordResetEmail(user, token, ip)
 			} else {
 				log.Printf("[forgot-password] DB update failed for user %d: %v", user.ID, err)
 			}
@@ -148,15 +153,28 @@ func newResetToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func sendPasswordResetEmail(user *model.User, token string) {
+func sendPasswordResetEmail(user *model.User, token, ip string) {
 	site := email.LoadSiteData()
 	resetURL := strings.TrimRight(site.URL, "/") + "/admin/reset-password?token=" + token
 
+	// Geo lookup for the request IP (best-effort — empty fields just
+	// hide that line in the template).
+	geo := model.LookupGeo(ip)
+	var country, location string
+	if geo != nil {
+		country = geo.CountryCode
+		location = buildIPLocation(geo.Province, geo.City)
+	}
+
 	body, rerr := email.Render("password_reset", email.PasswordResetData{
-		Site:       site,
-		UserName:   user.NicknameStr(),
-		ResetURL:   resetURL,
-		ExpireMins: passwordResetTTLMinutes,
+		Site:        site,
+		UserName:    user.NicknameStr(),
+		ResetURL:    resetURL,
+		ExpireMins:  passwordResetTTLMinutes,
+		IP:          ip,
+		IPLocation:  location,
+		CountryCode: country,
+		RequestedAt: time.Now().Format("2006-01-02 15:04:05"),
 	})
 	if rerr != nil {
 		log.Printf("[reset-password] render template failed: %v", rerr)
@@ -180,7 +198,7 @@ func sendPasswordResetEmail(user *model.User, token string) {
 		SendflareAPIKey: model.GetOption("sendflare_api_key"),
 	}
 
-	subject := fmt.Sprintf("🔐 %s 密码重置链接", site.Title)
+	subject := fmt.Sprintf("%s 密码重置链接", site.Title)
 	if err := util.SendEmail(cfg, user.Email, subject, body); err != nil {
 		log.Printf("[reset-password] send email failed (provider=%s to=%s): %v", provider, user.Email, err)
 	}

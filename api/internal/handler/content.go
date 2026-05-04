@@ -598,19 +598,40 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 	postURL := strings.TrimRight(siteURL, "/") + BuildPostPermalink(post, model.GetOption("permalink_structure"))
 
 	var sender struct {
-		UserID int    `db:"user_id"`
-		Email  string `db:"author_email"`
-		Role   string `db:"role"`
+		UserID    int    `db:"user_id"`
+		Email     string `db:"author_email"`
+		URL       string `db:"author_url"`
+		IP        string `db:"author_ip"`
+		Geo       string `db:"geo"`
+		CreatedAt int64  `db:"created_at"`
+		Role      string `db:"role"`
 	}
 	_ = config.DB.Get(&sender, fmt.Sprintf(
 		`SELECT COALESCE(c.user_id,0) AS user_id,
 		        COALESCE(c.author_email,'') AS author_email,
-		        COALESCE(u.role,'') AS role
+		        COALESCE(c.author_url,'')   AS author_url,
+		        COALESCE(c.author_ip,'')    AS author_ip,
+		        COALESCE(c.geo,'')          AS geo,
+		        c.created_at,
+		        COALESCE(u.role,'')         AS role
 		   FROM %s c
 		   LEFT JOIN %s u ON u.id = c.user_id
 		  WHERE c.id = $1`,
 		config.T("comments"), config.T("users")), commentID)
 	senderIsAdmin := sender.Role == "admin"
+
+	// Parse stored geo JSON (set on insert by model.LookupAndStoreGeo).
+	var senderGeo struct {
+		CountryCode string `json:"country_code"`
+		Country     string `json:"country"`
+		Province    string `json:"province"`
+		City        string `json:"city"`
+	}
+	if sender.Geo != "" {
+		_ = json.Unmarshal([]byte(sender.Geo), &senderGeo)
+	}
+	senderLocation := buildIPLocation(senderGeo.Province, senderGeo.City)
+	senderPostedAt := formatCommentTime(sender.CreatedAt)
 
 	// Truncate content for email
 	preview := content
@@ -627,15 +648,19 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 		body, err := email.Render("new_comment", email.NewCommentData{
 			Site:             site,
 			Author:           commenterName,
-			Email:            "",
+			Email:            sender.Email,
+			URL:              sender.URL,
+			IP:               sender.IP,
+			IPLocation:       senderLocation,
+			CountryCode:      senderGeo.CountryCode,
 			Content:          preview,
 			PostTitle:        post.Title,
 			PostURL:          postURL,
-			PostedAt:         "",
+			PostedAt:         senderPostedAt,
 			ManageCommentURL: site.AdminURL + "/comments",
 		})
 		if err == nil {
-			subject := fmt.Sprintf("💬 新评论 — 《%s》", post.Title)
+			subject := fmt.Sprintf("新评论 — 《%s》", post.Title)
 			if err := util.SendEmail(cfg, admin.Email, subject, body); err != nil {
 				log.Printf("[comment-notify] admin email failed (provider=%s to=%s): %v", provider, admin.Email, err)
 			}
@@ -674,6 +699,12 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 			parentPreview = string([]rune(parentPreview)[:160]) + "..."
 		}
 
+		// Skip if recipient has opted out of comment-reply notifications.
+		if email.IsCommentReplyOptedOut(parent.AuthorEmail) {
+			log.Printf("[comment-notify] reply skipped — recipient opted out (to=%s)", parent.AuthorEmail)
+			return
+		}
+
 		body, err := email.Render("comment_reply", email.CommentReplyData{
 			Site:            site,
 			RecipientName:   parent.AuthorName,
@@ -682,10 +713,10 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 			OriginalContent: parentPreview,
 			ReplyContent:    preview,
 			PostURL:         fmt.Sprintf("%s#comment-%d", postURL, commentID),
-			UnsubscribeURL:  "", // TODO: generate signed unsubscribe link
+			UnsubscribeURL:  email.GenerateCommentReplyUnsubscribeURL(site.URL, parent.AuthorEmail),
 		})
 		if err == nil {
-			subject := fmt.Sprintf("💬 你的评论收到了回复 — %s", siteName)
+			subject := fmt.Sprintf("你的评论收到了回复 — %s", siteName)
 			if err := util.SendEmail(cfg, parent.AuthorEmail, subject, body); err != nil {
 				log.Printf("[comment-notify] reply email failed (provider=%s to=%s): %v", provider, parent.AuthorEmail, err)
 			}
@@ -693,6 +724,35 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 			log.Printf("[comment-notify] render comment_reply template failed: %v", err)
 		}
 	}
+}
+
+// formatCommentTime formats a Unix timestamp to "2026-05-04 11:32:18" in
+// the server's local timezone. The server timezone is whatever the
+// container is set to (we set TZ=Asia/Shanghai in the production
+// docker-compose). Empty string for zero/negative timestamps so the
+// template's {{if .PostedAt}} guard hides the field.
+func formatCommentTime(ts int64) string {
+	if ts <= 0 {
+		return ""
+	}
+	return time.Unix(ts, 0).Format("2006-01-02 15:04:05")
+}
+
+// buildIPLocation joins province + city with a space, falling back to
+// whichever is non-empty. Returns "" when both are empty so the
+// template hides the location entirely.
+func buildIPLocation(province, city string) string {
+	province = strings.TrimSpace(province)
+	city = strings.TrimSpace(city)
+	switch {
+	case province != "" && city != "" && province != city:
+		return province + " " + city
+	case city != "":
+		return city
+	case province != "":
+		return province
+	}
+	return ""
 }
 
 func UpdateComment(c *gin.Context) {
@@ -1088,7 +1148,7 @@ func SendVerifyCode(c *gin.Context) {
 		return
 	}
 
-	if err := util.SendEmail(cfg, u.Email, fmt.Sprintf("🔐 %s 验证码：%s", site.Title, code), body); err != nil {
+	if err := util.SendEmail(cfg, u.Email, fmt.Sprintf("%s 验证码:%s", site.Title, code), body); err != nil {
 		util.Error(c, 500, "EMAIL_SEND_FAILED", fmt.Sprintf("邮件发送失败: %v", err))
 		return
 	}

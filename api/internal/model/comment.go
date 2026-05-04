@@ -97,6 +97,13 @@ func LookupAndStoreGeo(commentID int, ip string) *GeoInfo {
 	return geo
 }
 
+// LookupGeo is the exported, side-effect-free wrapper around the
+// internal cache + geoip lookup. Use this when you need the geo info
+// outside of comment storage (e.g. password-reset email source line).
+func LookupGeo(ip string) *GeoInfo {
+	return lookupGeo(ip)
+}
+
 type ParentComment struct {
 	ID        int    `json:"id"`
 	Author    string `json:"author"`

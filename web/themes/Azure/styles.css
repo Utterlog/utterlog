@@ -724,7 +724,9 @@
 [data-theme="Azure"] .azure-profile-card {
   position: relative;
   min-height: 238px;
-  margin: 0;
+  /* 右侧 -1px 让蓝色背景盖住 .azure-sidebar-cell 的灰色 border-right,
+     避免欢迎卡片和右侧文章之间出现明显分割线;下方其它侧栏卡片不受影响。 */
+  margin: 0 -1px 0 0;
   padding: 18px 16px 16px;
   overflow: hidden;
   color: #fff;

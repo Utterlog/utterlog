@@ -122,3 +122,5 @@ backup/
 
 # Private SSL certs / keys
 /ssl/
+/api/preview-emails
+/api/cmd/preview-emails/preview-emails
