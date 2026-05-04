@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 	"utterlog-go/internal/textutil"
 
 	"github.com/jmoiron/sqlx"
@@ -177,6 +178,73 @@ func InitDB() error {
 		PRIMARY KEY (visitor_id, date)
 	)`, T("visitor_dates")))
 	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_visitor_dates_date ON %s (date)", T("visitor_dates")))
+
+	// Real-time eternal stats — refactor v2.2.0
+	//
+	// Counters that MUST never decrease and never wait for cron rollup:
+	//   ul_stats_global       1-row site-level永久 counter (footer 实时来源)
+	//   ul_stats_post_daily   per-post per-day PV/UV (永久, 文章历史曲线)
+	//   ul_visitor_post_dates per-post per-visitor per-day (永久, post UV 探测)
+	//
+	// All written real-time (UPSERT) on every track. ul_access_logs is
+	// now strictly the "hot raw" tier (90-day default retention) — its
+	// row count is no longer a source of truth for the永久 PV total.
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id              SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+		total_views     BIGINT   NOT NULL DEFAULT 0,
+		total_uniques   BIGINT   NOT NULL DEFAULT 0,
+		first_event_at  BIGINT   NOT NULL DEFAULT 0,
+		updated_at      BIGINT   NOT NULL DEFAULT 0
+	)`, T("stats_global")))
+	DB.Exec(fmt.Sprintf("INSERT INTO %s (id) VALUES (1) ON CONFLICT DO NOTHING", T("stats_global")))
+
+	// Backfill on first migration (total_views=0 means never seeded).
+	// Logic: hot count = COUNT(*) of remaining ul_access_logs (no jump
+	// vs old footer); archived count = SUM(visits) from analytics_daily
+	// _total rows for days strictly OLDER than the oldest access_logs
+	// row, so prune'd historical days are not lost. total_uniques =
+	// lifetime distinct visitor_ids in ul_visitor_dates.
+	{
+		var seeded int64
+		DB.Get(&seeded, fmt.Sprintf("SELECT total_views FROM %s WHERE id = 1", T("stats_global")))
+		if seeded == 0 {
+			var hotCount, archivedCount, lifetimeUniques, firstEvent int64
+			DB.Get(&hotCount, fmt.Sprintf("SELECT COUNT(*) FROM %s", T("access_logs")))
+			DB.Get(&archivedCount, fmt.Sprintf(`
+				SELECT COALESCE(SUM(visits), 0) FROM %s
+				WHERE dimension = '_total'
+				  AND date < COALESCE(
+				    (SELECT DATE(TO_TIMESTAMP(MIN(created_at))) FROM %s),
+				    CURRENT_DATE
+				  )
+			`, T("analytics_daily"), T("access_logs")))
+			DB.Get(&lifetimeUniques, fmt.Sprintf("SELECT COUNT(DISTINCT visitor_id) FROM %s WHERE visitor_id != ''", T("visitor_dates")))
+			DB.Get(&firstEvent, fmt.Sprintf("SELECT COALESCE(MIN(created_at), 0) FROM %s", T("access_logs")))
+			total := hotCount + archivedCount
+			DB.Exec(fmt.Sprintf(`UPDATE %s SET total_views = $1, total_uniques = $2, first_event_at = $3, updated_at = $4 WHERE id = 1`,
+				T("stats_global")), total, lifetimeUniques, firstEvent, time.Now().Unix())
+			log.Printf("stats_global seeded: total_views=%d (hot=%d + archived=%d), total_uniques=%d", total, hotCount, archivedCount, lifetimeUniques)
+		}
+	}
+
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		post_id         INTEGER NOT NULL,
+		date            DATE    NOT NULL,
+		views           INTEGER NOT NULL DEFAULT 0,
+		unique_visitors INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (post_id, date)
+	)`, T("stats_post_daily")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_stats_post_daily_date ON %s (date)", T("stats_post_daily")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_stats_post_daily_post ON %s (post_id, date)", T("stats_post_daily")))
+
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		visitor_id  VARCHAR(80) NOT NULL,
+		post_id     INTEGER     NOT NULL,
+		date        DATE        NOT NULL,
+		PRIMARY KEY (visitor_id, post_id, date)
+	)`, T("visitor_post_dates")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_visitor_post_dates_post ON %s (post_id, date)", T("visitor_post_dates")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_visitor_post_dates_date ON %s (date)", T("visitor_post_dates")))
 
 	// Comments: visitor_id for fingerprint matching
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS visitor_id VARCHAR(64) DEFAULT ''", T("comments")))

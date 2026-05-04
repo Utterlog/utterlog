@@ -23,6 +23,35 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.2.0] - 2026-05-05
+
+### 新增
+
+- **永久不丢失的实时统计系统**。新增 3 张永久不可删表：
+  - `ul_stats_global`：1 行站点级累计计数器（`total_views` / `total_uniques` / `first_event_at`），footer "总访问" 现在 O(1) 读这里。
+  - `ul_stats_post_daily`：每篇文章每日 PV/UV，文章历史曲线的来源。
+  - `ul_visitor_post_dates`：每篇文章每日访客唯一去重表，per-post UV 的真相源。
+- 站点 PV、文章 view_count、日聚合（`_total` 维度）现在事务化原子写入，单次访问一个事务，不再依赖每日 cron。
+- 首次启动自动从历史数据回填 `ul_stats_global`：现存 `ul_access_logs` 行数 + `ul_analytics_daily` 中 prune 早期日期的 `_total` 聚合 + `ul_visitor_dates` 累计 distinct 访客。
+
+### 优化
+
+- footer "总访问量" 不再随 30 天 prune 而"变小"。`ArchiveStats` 接口由 `COUNT(*) FROM ul_access_logs` 改读 `ul_stats_global.total_views` 单行 O(1)。
+- 站点 PV / UV / 维度日聚合改为**写入时实时累加**（UPSERT），不再等 cron。今日数字立刻可见。
+- `rollupRetentionDays` 由 30 天提升至 90 天（`ul_access_logs` 热数据保留期）。永久数字现已在 `ul_stats_global` / `ul_analytics_daily`，`access_logs` 仅作"最近访客 / 维度 breakdown"的明细。
+- 取消 `logAccess` 的 30 秒去重 + 60 秒速率闸（≥8 hits 拒绝），刷新就 +1。
+- 取消管理员 skip：管理员自己访问也计入 PV / view_count。
+- 取消文章 SSR `?track=1` 路径上的 `IsBot` UA 检查 —— 该路径 UA 永远是 Next.js 的 `node`，原检查导致每个真实访客的 SSR 渲染都被拦下不计数。bot 护栏保留在浏览器 `/track` 路径（UA 真实可信）。
+
+### 修复
+
+- 修复 `ul_posts.view_count` 与 `ul_stats_post_daily.views` 漂移的双计 bug：旧版 `logAccess`（浏览器 /track）和 `IncrPostViews`（SSR `?track=1`）都在累加 daily.views，一次 F5 文章被 +2。现 daily.views 由 SSR 路径独占。
+
+### 移除
+
+- 删除死代码 `IncrTotalViews()` / `GetTotalViews()` / Redis `stats:total_views` —— PV 真相已迁移到 SQL。
+- `analytics_rollup` 不再聚合 `_total` 维度（由 `logAccess` 实时写入）；维度 breakdown（browser / os / device / country）仍保留 cron 滚动。
+
 ## [2.1.7] - 2026-05-04
 
 ### 优化

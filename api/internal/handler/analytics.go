@@ -96,58 +96,35 @@ func AccessLogger() gin.HandlerFunc {
 	}
 }
 
+// logAccess writes one访客 hit to all real-time stats tables atomically.
+//
+// v2.2.0 重构：
+//   - 不再去重（30s dedup）—— 用户要求刷新就算
+//   - 不再做行为闸（60s ≥8 hits 拒绝）—— 同上
+//   - 全部副作用进事务，包括 ul_stats_global / ul_analytics_daily（_total
+//     实时维度）/ ul_visitor_dates / ul_stats_post_daily / ul_visitor_post_dates
+//     / ul_access_logs
+//   - GeoIP 留在事务外异步补 access_logs.country/city（这条单行 UPDATE 失败
+//     不影响永久计数器）
+//   - bot UA 仍然全跳过（数据质量护栏，不属于"管理员/限流"范畴）
 func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string) {
-	// Bot early-out — never write bot traffic to access_logs. This is
-	// the single chokepoint for both the AccessLogger middleware and
-	// the explicit /track POST, so one check here keeps crawlers,
-	// monitoring probes, and scripting libraries entirely out of the
-	// dataset (no row to purge, no GeoIP fetch, no Redis mark-online).
 	if IsBot(ua) {
 		return
 	}
 
-	// Priority: CF-Connecting-IP > X-Real-IP > X-Forwarded-For > RemoteAddr
 	if xff != "" {
 		ip = strings.TrimSpace(strings.Split(xff, ",")[0])
 	}
 
-	// Session dedup: if this visitor_id (or IP when vid is empty) has
-	// already been recorded on this exact path in the last 30 seconds,
-	// drop the new row. Protects against React StrictMode double-effect,
-	// navigation jitter, and legitimate refreshes that would otherwise
-	// inflate "最近访客" with identical rows on every F5.
 	now := time.Now().Unix()
-	dedupKey := visitorID
-	if dedupKey == "" {
-		dedupKey = ip
-	}
-	if dedupKey != "" {
-		var existing int
-		config.DB.Get(&existing, fmt.Sprintf(
-			"SELECT COUNT(*) FROM %s WHERE path = $1 AND COALESCE(NULLIF(visitor_id,''), ip) = $2 AND created_at >= $3",
-			config.T("access_logs")), path, dedupKey, now-30)
-		if existing > 0 {
-			return
-		}
+	today := time.Unix(now, 0).UTC().Format("2006-01-02")
+
+	visitorKey := visitorID
+	if visitorKey == "" {
+		visitorKey = ip
 	}
 
-	// Behavioral bot gate — catches crawlers that spoof a real browser
-	// UA (so IsBot() misses them) by looking at request rate. A human
-	// reader almost never opens 8+ distinct pages inside 60s; a tag /
-	// archive scraper routinely does. Once an IP trips the gate we
-	// stop logging them for the rest of the minute, which keeps the
-	// access_logs table clean without a background cleanup job.
-	if dedupKey != "" {
-		var recent int
-		config.DB.Get(&recent, fmt.Sprintf(
-			"SELECT COUNT(*) FROM %s WHERE COALESCE(NULLIF(visitor_id,''), ip) = $1 AND created_at >= $2",
-			config.T("access_logs")), dedupKey, now-60)
-		if recent >= 8 {
-			return
-		}
-	}
-
-	device, browser, browserVer, os, osVer := parseUserAgent(ua)
+	device, browser, browserVer, osName, osVer := parseUserAgent(ua)
 	refHost := ""
 	if referer != "" {
 		parts := strings.SplitN(referer, "//", 2)
@@ -156,36 +133,99 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 		}
 	}
 
-	// Mask IP
-	ipParts := strings.Split(ip, ".")
 	ipMasked := ip
-	if len(ipParts) == 4 {
+	if ipParts := strings.Split(ip, "."); len(ipParts) == 4 {
 		ipMasked = ipParts[0] + "." + ipParts[1] + ".*.*"
 	}
 
-	t := config.T("access_logs")
-	var logID int
-	config.DB.QueryRow(fmt.Sprintf(
-		"INSERT INTO %s (ip, ip_masked, path, method, referer, referer_host, user_agent, device_type, browser, browser_version, os, os_version, visitor_id, fingerprint, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id",
-		t), ip, ipMasked, path, method, referer, refHost, ua, device, browser, browserVer, os, osVer, visitorID, fingerprint, now).Scan(&logID)
-
-	// Permanent visitor presence — one row per (visitor, day). Lets us
-	// answer unique-visitor counts for any window precisely, including
-	// ranges that straddle the 30-day raw retention. ON CONFLICT DO
-	// NOTHING is the right primitive here: the same visitor coming back
-	// later the same day is a no-op. Falls back to ip when visitor_id
-	// is empty so we still count cookie-disabled / first-page visits.
-	visitorKey := visitorID
-	if visitorKey == "" {
-		visitorKey = ip
+	tx, err := config.DB.Beginx()
+	if err != nil {
+		return
 	}
+	committed := false
+	defer func() {
+		if !committed {
+			tx.Rollback()
+		}
+	}()
+
+	// 1. 站点 visitor 是否今日首次？UPSERT + RETURNING (xmax=0) 是
+	//    PG 探测「真的新插入了」的标准法子。老访客 ON CONFLICT 走
+	//    DO UPDATE 设回原值 → 总能 RETURNING 一行；xmax=0 表示这次
+	//    确实是 INSERT 而不是 UPDATE（PG MVCC：UPDATE 会把当前事务
+	//    号写到旧行的 xmax）。直接 RETURNING bool 避免 xid → Go 类型转换。
+	siteNewToday := false
 	if visitorKey != "" {
-		config.DB.Exec(fmt.Sprintf(
-			"INSERT INTO %s (visitor_id, date) VALUES ($1, TO_TIMESTAMP($2)::date) ON CONFLICT DO NOTHING",
-			config.T("visitor_dates")), visitorKey, now)
+		var inserted bool
+		errv := tx.QueryRow(fmt.Sprintf(`
+			INSERT INTO %s (visitor_id, date) VALUES ($1, $2::date)
+			ON CONFLICT (visitor_id, date) DO UPDATE SET visitor_id = EXCLUDED.visitor_id
+			RETURNING (xmax = 0)`, config.T("visitor_dates")), visitorKey, today).Scan(&inserted)
+		if errv == nil && inserted {
+			siteNewToday = true
+		}
 	}
 
-	// Async: enrich with GeoIP
+	// 2. 永久站点累计：PV +1，UV 仅当首次今日
+	uniqInc := 0
+	if siteNewToday {
+		uniqInc = 1
+	}
+	tx.Exec(fmt.Sprintf(`UPDATE %s SET
+		total_views   = total_views + 1,
+		total_uniques = total_uniques + $1,
+		first_event_at = CASE WHEN first_event_at = 0 THEN $2 ELSE first_event_at END,
+		updated_at    = $2
+		WHERE id = 1`, config.T("stats_global")), uniqInc, now)
+
+	// 3. 永久日聚合（_total 维度）：写入时实时 +1，不再等 cron
+	tx.Exec(fmt.Sprintf(`
+		INSERT INTO %s (date, dimension, dim_value, dim_extra, visits, unique_visitors)
+		VALUES ($1::date, '_total', '', '', 1, $2)
+		ON CONFLICT (date, dimension, dim_value, dim_extra)
+		DO UPDATE SET visits = %s.visits + 1,
+		              unique_visitors = %s.unique_visitors + EXCLUDED.unique_visitors`,
+		config.T("analytics_daily"), config.T("analytics_daily"), config.T("analytics_daily")),
+		today, uniqInc)
+
+	// 4. 文章级实时统计（仅文章详情页路径能解析出 post_id）
+	if postID, _ := parsePostFromPath(path); postID > 0 && visitorKey != "" {
+		var postInserted bool
+		errp := tx.QueryRow(fmt.Sprintf(`
+			INSERT INTO %s (visitor_id, post_id, date) VALUES ($1, $2, $3::date)
+			ON CONFLICT (visitor_id, post_id, date) DO UPDATE SET visitor_id = EXCLUDED.visitor_id
+			RETURNING (xmax = 0)`, config.T("visitor_post_dates")), visitorKey, postID, today).Scan(&postInserted)
+		postNewToday := errp == nil && postInserted
+		postUniqInc := 0
+		if postNewToday {
+			postUniqInc = 1
+		}
+		// 只更新 unique_visitors —— views 由 IncrPostViews（SSR ?track=1
+		// 路径）独占。否则一次 F5 触发 SSR + /track 两条路径，stats_post_daily.views
+		// 会被 +2 而 ul_posts.view_count 只 +1，两者漂移。INSERT 时 views=0
+		// 是兜底（极少数情况：/track 比 SSR 先到 / SSR 失败而 /track 成功）。
+		tx.Exec(fmt.Sprintf(`
+			INSERT INTO %s (post_id, date, views, unique_visitors)
+			VALUES ($1, $2::date, 0, $3)
+			ON CONFLICT (post_id, date)
+			DO UPDATE SET unique_visitors = %s.unique_visitors + EXCLUDED.unique_visitors`,
+			config.T("stats_post_daily"), config.T("stats_post_daily")),
+			postID, today, postUniqInc)
+	}
+
+	// 5. 热原始行（90 天保留，供"最近访客 / 维度 breakdown"读取）
+	var logID int
+	tx.QueryRow(fmt.Sprintf(
+		"INSERT INTO %s (ip, ip_masked, path, method, referer, referer_host, user_agent, device_type, browser, browser_version, os, os_version, visitor_id, fingerprint, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id",
+		config.T("access_logs")), ip, ipMasked, path, method, referer, refHost, ua, device, browser, browserVer, osName, osVer, visitorID, fingerprint, now).Scan(&logID)
+
+	if commitErr := tx.Commit(); commitErr != nil {
+		return
+	}
+	committed = true
+
+	// GeoIP enrich 在事务外异步：失败只影响这条 raw 行的 country/city，
+	// 永久计数器已经原子落库。
 	if logID > 0 && ip != "" && ip != "127.0.0.1" {
 		go enrichAccessGeo(logID, ip)
 	}
@@ -442,21 +482,13 @@ func TrackPageView(c *gin.Context) {
 		return
 	}
 
-	if currentUserIsAdmin(c) {
-		util.Success(c, gin.H{"ok": true, "skipped": "admin"})
-		return
-	}
-
+	// v2.2.0: 不再 skip 管理员；管理员自己访问也计入统计（用户明确要求）
 	ua := c.Request.UserAgent()
-	// Bot early-out — respond 200 with {ok:true} so bots don't retry,
-	// but skip every downstream side-effect (DB insert, post view++,
-	// Redis counters, mark-online).
 	if IsBot(ua) {
 		util.Success(c, gin.H{"ok": true})
 		return
 	}
 
-	// Get real IP
 	realIP := c.Request.Header.Get("CF-Connecting-IP")
 	if realIP == "" {
 		realIP = c.Request.Header.Get("X-Real-IP")
@@ -465,20 +497,12 @@ func TrackPageView(c *gin.Context) {
 		realIP = c.ClientIP()
 	}
 
-	// Async: log access + increment counters via Redis.
-	//
-	// Per-post view counter intentionally is NOT bumped here. v2.1.7
-	// moved the increment server-side onto the SSR fetch
-	// (/api/v1/posts/<id>?track=1) so the article-detail render IS
-	// the side-effect — no separate async POST round-trip, no race
-	// between rendering and tracking, no client-side cosmetic +1.
-	// /track is now ONLY about access_logs / online presence /
-	// global PV — visitor-stats dimensions, not per-post counts.
+	// 异步：logAccess 现在事务化写入所有永久统计表（ul_stats_global /
+	// ul_analytics_daily / ul_visitor_dates / ul_stats_post_daily /
+	// ul_visitor_post_dates / ul_access_logs），不再依赖 Redis 当 PV
+	// 真相源。MarkOnline 仍走 Redis（5min TTL，本来就是临时态）。
 	go func() {
 		logAccess(realIP, req.Path, "GET", req.Referer, ua, c.Request.Header.Get("X-Forwarded-For"), req.VisitorID, req.Fingerprint)
-
-		// Global PV counter + mark online
-		IncrTotalViews()
 		MarkOnline(req.VisitorID, realIP, req.Path)
 	}()
 
@@ -1024,10 +1048,7 @@ func TrackDuration(c *gin.Context) {
 		return
 	}
 
-	if currentUserIsAdmin(c) {
-		util.Success(c, gin.H{"ok": true, "skipped": "admin"})
-		return
-	}
+	// v2.2.0: 不再 skip 管理员
 
 	ip := c.Request.Header.Get("CF-Connecting-IP")
 	if ip == "" {

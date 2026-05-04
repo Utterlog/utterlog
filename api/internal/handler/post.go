@@ -111,19 +111,18 @@ func GetPostByDisplayID(c *gin.Context) {
 //
 //   - track=1 query param must be present (so admin / search / list
 //     callers don't bump);
-//   - request must NOT come from an authenticated user (admins read
-//     their own articles all day; counting that is meaningless);
 //   - request must NOT match the bot UA list (crawlers shouldn't
 //     inflate view counts).
+//
+// v2.2.0: 不再 skip 登录用户 / 管理员；不再做去重；刷新就 +1（用户要求）。
 //
 // Mutates p.ViewCount in-place so the response reflects the
 // already-bumped value, matching what the next visitor will read.
 //
-// Replaces the previous flow where /api/v1/track (a separate
-// client-side POST) called IncrPostViews; that approach lost counts
-// when JS was disabled / blocked / slow, and forced us to add a
-// "cosmetic +1" to the displayed number to compensate. Server-side
-// increment removes both pain points.
+// view_count 自增 + ul_stats_post_daily.views 同时同步增量，保持「文章
+// 永久 PV 计数」和「文章日聚合」之间不漂移。post UV 不在 SSR 端做
+// （SSR 拿不到 visitor_id），统一让浏览器 /track 流程更新
+// ul_visitor_post_dates / ul_stats_post_daily.unique_visitors。
 func maybeBumpPostView(c *gin.Context, p *model.Post) {
 	if p == nil || p.ID <= 0 {
 		return
@@ -131,12 +130,16 @@ func maybeBumpPostView(c *gin.Context, p *model.Post) {
 	if c.Query("track") != "1" {
 		return
 	}
-	if middleware.GetUserID(c) > 0 {
-		return
-	}
-	if IsBot(c.Request.UserAgent()) {
-		return
-	}
+	// v2.2.0: 不再做 IsBot UA 检查。
+	//
+	// 这条路径的 UA 永远是 Next.js SSR 的 `node`（Node fetch 默认 UA），
+	// 对它做 bot 检测会把每个真实访客的第一次文章访问都拦掉。访客的
+	// 浏览器真实 UA 在 SSR 层后才出现，到不了这里。
+	//
+	// 数据质量护栏放在 /track POST（logAccess）那一侧 —— 那条路径是
+	// 浏览器直接打到 api 的，UA 真实，bot 拦截有意义。这里的 view_count
+	// 等同于"文章被渲染过几次"，对 SSR 渲染请求一律 +1，符合用户
+	// "刷新就 +1" 的要求。
 	IncrPostViews(p.ID)
 	p.ViewCount++
 }
@@ -768,12 +771,12 @@ func ArchiveStats(c *gin.Context) {
 		heatmap = []dayCount{}
 	}
 
-	// Total page views — read fresh from DB (SELECT COUNT is cheap on the
-	// access_logs indexed PK). Redis was a stale source of truth: if the
-	// IncrTotalViews side of the write path ever got skipped the Redis
-	// counter drifted and stats looked permanently out of date.
-	var totalViews int
-	config.DB.Get(&totalViews, "SELECT COUNT(*) FROM "+t("access_logs"))
+	// 永久 PV 真相源。v2.2.0 改用 ul_stats_global 单行读，O(1)。
+	// 此前是 COUNT(*) FROM ul_access_logs，access_logs 30 天 prune 一批
+	// 数字会缓慢「变小」。现在 ul_stats_global.total_views 由 logAccess
+	// 事务化每次访问 +1，永不减少。
+	var totalViews int64
+	config.DB.Get(&totalViews, fmt.Sprintf("SELECT total_views FROM %s WHERE id = 1", t("stats_global")))
 
 	util.Success(c, gin.H{
 		"post_count":    postCount,

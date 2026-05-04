@@ -2,66 +2,56 @@ package handler
 
 import (
 	"fmt"
-	"log"
 	"time"
 	"utterlog-go/config"
 )
 
 // Redis keys
-const keyTotalViews = "stats:total_views"
 const keyOnlinePrefix = "online:" // + visitor_id, TTL 5min
 
-// IncrTotalViews atomically increments the global page view counter
-func IncrTotalViews() {
-	if config.RDB == nil {
+// v2.2.0 删除：IncrTotalViews / GetTotalViews / Redis stats:total_views。
+// PV 真相源已迁移到 ul_stats_global.total_views（永久、事务化、O(1) 读）。
+// 之前 Redis 的写入注释自己都说会漂移、读路径已经退到 SQL，纯死代码。
+
+// IncrPostViews increments a post's永久 view count and the per-day
+// PV row atomically. Called from SSR `?track=1` so刷新就 +1。Daily
+// row 没记 unique_visitors（SSR 端拿不到 visitor_id），UV 一侧由
+// 浏览器 /track 流程的 logAccess() 补 ul_visitor_post_dates +
+// ul_stats_post_daily.unique_visitors。
+func IncrPostViews(postID int) {
+	tx, err := config.DB.Beginx()
+	if err != nil {
 		return
 	}
-	config.RDB.Incr(config.Ctx, keyTotalViews)
-}
-
-// GetTotalViews returns the global PV count (Redis fast path, DB fallback)
-func GetTotalViews() int {
-	if config.RDB != nil {
-		val, err := config.RDB.Get(config.Ctx, keyTotalViews).Int()
-		if err == nil {
-			return val
+	committed := false
+	defer func() {
+		if !committed {
+			tx.Rollback()
 		}
-	}
-	// Fallback: count from access_logs
-	var count int
-	config.DB.Get(&count, "SELECT COUNT(*) FROM "+config.T("access_logs"))
-	// Warm up Redis
-	if config.RDB != nil {
-		config.RDB.Set(config.Ctx, keyTotalViews, count, 0)
-	}
-	return count
-}
+	}()
 
-// IncrPostViews increments a post's view count directly in DB
-// (post views are low-frequency enough for direct writes; Redis is used for global PV only)
-func IncrPostViews(postID int) {
-	config.DB.Exec(fmt.Sprintf(
+	tx.Exec(fmt.Sprintf(
 		"UPDATE %s SET view_count = view_count + 1 WHERE id = $1",
 		config.T("posts")), postID)
+
+	tx.Exec(fmt.Sprintf(`
+		INSERT INTO %s (post_id, date, views, unique_visitors)
+		VALUES ($1, CURRENT_DATE, 1, 0)
+		ON CONFLICT (post_id, date)
+		DO UPDATE SET views = %s.views + 1`,
+		config.T("stats_post_daily"), config.T("stats_post_daily")), postID)
+
+	if err := tx.Commit(); err != nil {
+		return
+	}
+	committed = true
 }
 
-// InitStatsSync starts background goroutines for stats management
+// InitStatsSync 在 v2.2.0 之后只是空 hook。
+// 历史：曾经从 Redis warm-up `stats:total_views`；现已迁移到 SQL 永久
+// 计数器（ul_stats_global），不需要预热。保留这个函数避免 main.go 改
+// 调用图，将来真有 background sync 需求可以填进来。
 func InitStatsSync() {
-	// Warm up total_views: only if Redis key doesn't exist yet (first boot)
-	if config.RDB != nil {
-		exists, _ := config.RDB.Exists(config.Ctx, keyTotalViews).Result()
-		if exists == 0 {
-			var count int
-			config.DB.Get(&count, "SELECT COUNT(*) FROM "+config.T("access_logs"))
-			config.RDB.Set(config.Ctx, keyTotalViews, count, 0)
-			log.Printf("Stats: initialized total_views = %d from DB (first boot)", count)
-		} else {
-			val, _ := config.RDB.Get(config.Ctx, keyTotalViews).Int()
-			log.Printf("Stats: total_views = %d from Redis", val)
-		}
-	}
-
-	// Redis is used for global PV counter only; post view_count writes directly to DB
 }
 
 // MarkOnline marks a visitor as online (5 min TTL)

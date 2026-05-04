@@ -34,7 +34,11 @@ import (
 // rollupRetentionDays is how long raw access_logs rows are kept.
 // Anything older is aggregated into ul_analytics_daily (if not
 // already) and then deleted from the raw table.
-const rollupRetentionDays = 30
+//
+// v2.2.0: 30 → 90。永久 PV 真相已经移到 ul_stats_global 实时累计，
+// access_logs 仅作"最近访客 / 维度 breakdown"的热数据。90 天足以
+// 覆盖站长日常的"近期分析"，再老的访问详情对个人博客无意义。
+const rollupRetentionDays = 90
 
 // dimColumn maps a dimension name to the raw-table column it groups by.
 // Mirrored on the read side in analytics_breakdown.go.
@@ -106,25 +110,16 @@ func RollupAccessLogs() (int, int, error) {
 
 // rollupOneDay generates / refreshes all dim rows for a single date.
 // Uses ON CONFLICT DO UPDATE so re-running is safe.
+//
+// v2.2.0: _total 维度不再 rollup —— 由 logAccess 在每次访问时实时
+// UPSERT。如果 cron 再 GROUP BY access_logs 一次，access_logs 90 天后
+// 被 prune 的旧行会让重算结果"变小"，覆盖掉真实累计值。维度 breakdown
+// （browser / os / device / country）仍走 cron，因为它们没在写入路径
+// 实时维护，且它们的"准确度"对个人博客而言够用（只用于 admin 后台分析）。
 func rollupOneDay(access, daily string, day time.Time) error {
 	dayStart := day.Unix()
 	dayEnd := day.Add(24 * time.Hour).Unix()
 	dateStr := day.Format("2006-01-02")
-
-	// _total: 1 row representing whole-site visits + uniques on that day.
-	_, err := config.DB.Exec(fmt.Sprintf(`
-		INSERT INTO %s (date, dimension, dim_value, dim_extra, visits, unique_visitors)
-		SELECT $1::date, '_total', '', '',
-		       COUNT(*),
-		       COUNT(DISTINCT COALESCE(NULLIF(visitor_id,''), ip))
-		FROM %s
-		WHERE created_at >= $2 AND created_at < $3
-		ON CONFLICT (date, dimension, dim_value, dim_extra) DO UPDATE
-		SET visits = EXCLUDED.visits, unique_visitors = EXCLUDED.unique_visitors
-	`, daily, access), dateStr, dayStart, dayEnd)
-	if err != nil {
-		return fmt.Errorf("_total: %w", err)
-	}
 
 	// browser / os / device — straightforward GROUP BY on the column.
 	for dim, col := range dimColumn {
@@ -148,7 +143,7 @@ func rollupOneDay(access, daily string, day time.Time) error {
 	}
 
 	// country: dim_value = country_name (display), dim_extra = country code.
-	_, err = config.DB.Exec(fmt.Sprintf(`
+	_, err := config.DB.Exec(fmt.Sprintf(`
 		INSERT INTO %s (date, dimension, dim_value, dim_extra, visits, unique_visitors)
 		SELECT $1::date, 'country',
 		       COALESCE(country_name, ''),
