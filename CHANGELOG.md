@@ -23,6 +23,16 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.1.6] - 2026-05-04
+
+### 修复
+
+- 接续 v2.1.5 的修复。v2.1.5 设的 `experimental.staleTimes.dynamic = 0` 在 Next 16.2.4 实际是默认值,等于无操作,文章卡片在首页仍可能显示旧的阅读数。改成更直接的方案:新增客户端组件 `LiveViewCount`,每次卡片 mount 都向 `/api/v1/posts/<id>` 发一次 `cache:'no-store'` 的请求并把数字替换为最新值。Azure / Flux / Chred / Utterlog 四个主题的 `PostCard.tsx` 全部接入。无论 Router Cache、bfcache 还是浏览器其它隐性缓存,数字都会被客户端兜底更新。
+
+### 移除
+
+暂无。
+
 ## [2.1.5] - 2026-05-04
 
 ### 修复
