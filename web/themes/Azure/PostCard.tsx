@@ -9,7 +9,6 @@ import { formatDateInTimeZone, formatDateTimeInTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
 import PostLink from '@/components/blog/PostLink';
 import LoadingSpinner from '@/components/blog/LoadingSpinner';
-import LiveViewCount from '@/components/blog/LiveViewCount';
 
 function formatDate(ts: string | number, timeZone: string) {
   const mon = formatDateInTimeZone(ts, 'en-US', { month: 'short' }, timeZone);
@@ -66,7 +65,7 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
           {/* Stats — desktop hover, mobile visible */}
           <div className="azure-post-card-stats">
             <span>
-              <i className="fa-solid fa-fire" aria-hidden="true" /> <LiveViewCount postId={post.id} initial={post.view_count || 0} />
+              <i className="fa-solid fa-fire" aria-hidden="true" /> {post.view_count || 0}
             </span>
             <span>
               <i className="fa-regular fa-comment" aria-hidden="true" /> {post.comment_count || 0}

@@ -465,43 +465,21 @@ func TrackPageView(c *gin.Context) {
 		realIP = c.ClientIP()
 	}
 
-	// Async: log access + increment counters via Redis
+	// Async: log access + increment counters via Redis.
+	//
+	// Per-post view counter intentionally is NOT bumped here. v2.1.7
+	// moved the increment server-side onto the SSR fetch
+	// (/api/v1/posts/<id>?track=1) so the article-detail render IS
+	// the side-effect — no separate async POST round-trip, no race
+	// between rendering and tracking, no client-side cosmetic +1.
+	// /track is now ONLY about access_logs / online presence /
+	// global PV — visitor-stats dimensions, not per-post counts.
 	go func() {
 		logAccess(realIP, req.Path, "GET", req.Referer, ua, c.Request.Header.Get("X-Forwarded-For"), req.VisitorID, req.Fingerprint)
 
 		// Global PV counter + mark online
 		IncrTotalViews()
 		MarkOnline(req.VisitorID, realIP, req.Path)
-
-		// Per-post view counter — 每次 /track 命中文章 path 就 +1。
-		//
-		// 历史上这里有 isFirstPostViewToday(visitor+ip 当日去重) 守门，
-		// 想做「unique reader 计数」。但实际效果违反用户直觉：
-		//   - 文章页前端写死 view_count + 1 做「乐观显示」
-		//   - 同访客今天再访问一次 → /track 被 dedup 拦截 → DB 不变
-		//   - 但前端照样 +1 → 首页（raw DB）跟文章页（cosmetic +1）数字
-		//     永远差 1，看着像统计 bug
-		// 用户明确要求「访客点击访问页面就 +1，刷新一次再 +1」—— 不要
-		// 任何限制。所以这里直接 always +1，跟 IsBot 早退路径配合
-		// （爬虫不进这里），自然规避 bot 干扰。前端可以放心还原 +1
-		// cosmetic，因为 /track 必然增量，cosmetic 永远跟 DB 对齐。
-		//
-		// Path 反向解析按 admin 配的 permalink_structure 模板走，而不是
-		// 硬编码 /posts/<slug>。否则 admin 用 /archives/%display_id% 等
-		// 模板后 view_count 一直 +0。
-		if id, slug := parsePostFromPath(req.Path); id > 0 || slug != "" {
-			var postID int
-			if id > 0 {
-				postID = id
-			} else if slug != "" {
-				config.DB.Get(&postID, fmt.Sprintf(
-					"SELECT id FROM %s WHERE slug = $1 AND status = 'publish'",
-					config.T("posts")), slug)
-			}
-			if postID > 0 {
-				IncrPostViews(postID)
-			}
-		}
 	}()
 
 	util.Success(c, gin.H{"ok": true})

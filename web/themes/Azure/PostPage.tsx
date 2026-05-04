@@ -54,16 +54,11 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
       {/* Meta bar */}
       <div className="azure-post-meta">
         <span className="azure-post-meta-item"><i className="fa-regular fa-calendar" aria-hidden="true" />{formatDate(displayDate, timeZone)}</span>
-        {/* view_count 显示 = DB 真实值 + 1（cosmetic）。
-            后端 /track 已经移除了 isFirstPostViewToday 守门 ——「访客
-            点击就 +1，刷新一次再 +1」是用户明确的预期。所以 cosmetic +1
-            跟 DB 增量永远对齐：
-              · SSR 时 DB=149 → 页面渲染 150 (149+1)
-              · /track async 跑完 → DB=150
-              · 用户回到首页刷新 → 首页读 raw DB=150 ✓ 跟文章页对上
-              · 再点进同一篇 → SSR 拿到 DB=150 → 页面 151 (150+1)
-              · /track 跑完 → DB=151 → 首页刷新看到 151 ✓ */}
-        <span className="azure-post-meta-item"><i className="fa-solid fa-fire hot" aria-hidden="true" />{(post.view_count || 0) + 1} 阅读</span>
+        {/* view_count 直接展示 DB 真实值。
+            v2.1.7 起后端在 SSR 拉这条文章时(?track=1)就同步 +1,所以
+            到达这里的 post.view_count 已经是 +1 之后的值。不再需要
+            前端 cosmetic +1,也不依赖客户端 /track 异步路径。 */}
+        <span className="azure-post-meta-item"><i className="fa-solid fa-fire hot" aria-hidden="true" />{post.view_count || 0} 阅读</span>
         <span className="azure-post-meta-item"><i className="fa-regular fa-comment" aria-hidden="true" /><CommentCount initial={post.comment_count || 0} /></span>
         {(post.word_count || 0) > 0 && (
           <span className="azure-post-meta-item"><i className="fa-regular fa-font" aria-hidden="true" />{post.word_count.toLocaleString()} 字</span>

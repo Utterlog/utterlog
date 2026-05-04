@@ -46,7 +46,12 @@ export default async function PostPage({ params }: PostPageProps) {
 
   let post: any;
   try {
-    const response = await getPostBySlug(slug);
+    // track:true tells the API to bump view_count server-side as
+    // part of this read (WordPress-style). The next renderer (and
+    // every visit thereafter) sees the already-incremented value.
+    // generateMetadata above intentionally passes no track flag —
+    // SEO/preview crawlers shouldn't inflate counts.
+    const response = await getPostBySlug(slug, { track: true });
     post = response.data;
   } catch {
     notFound();

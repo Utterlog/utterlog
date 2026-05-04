@@ -8,7 +8,6 @@ import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone, formatDateTimeInTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
 import PostLink from '@/components/blog/PostLink';
-import LiveViewCount from '@/components/blog/LiveViewCount';
 
 const ACCENT = '#F53102';
 
@@ -79,7 +78,7 @@ export default function PostCard({ post, isNewest, priority }: { post: any; isNe
           opacity: hovered ? 1 : 0, transition: 'opacity 0.2s',
         }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <i className="fa-solid fa-fire" style={{ fontSize: '12px' }} /> <LiveViewCount postId={post.id} initial={post.view_count || 0} />
+            <i className="fa-solid fa-fire" style={{ fontSize: '12px' }} /> {post.view_count || 0}
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             <i className="fa-regular fa-comment" style={{ fontSize: '12px' }} /> {post.comment_count || 0}

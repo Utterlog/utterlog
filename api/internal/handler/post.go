@@ -66,6 +66,7 @@ func GetPost(c *gin.Context) {
 		util.NotFound(c, "文章")
 		return
 	}
+	maybeBumpPostView(c, p)
 	util.Success(c, model.FormatPost(p, true))
 }
 
@@ -80,6 +81,7 @@ func GetPostBySlug(c *gin.Context) {
 		util.NotFound(c, "文章")
 		return
 	}
+	maybeBumpPostView(c, p)
 	util.Success(c, model.FormatPost(p, true))
 }
 
@@ -98,7 +100,45 @@ func GetPostByDisplayID(c *gin.Context) {
 		util.NotFound(c, "文章")
 		return
 	}
+	maybeBumpPostView(c, p)
 	util.Success(c, model.FormatPost(p, true))
+}
+
+// maybeBumpPostView is the WordPress-style server-side view-count
+// increment. The frontend SSR for an article detail page calls
+// /api/v1/posts/<id>?track=1 — which means "this is the visitor
+// reading the article, count it now". Conditions:
+//
+//   - track=1 query param must be present (so admin / search / list
+//     callers don't bump);
+//   - request must NOT come from an authenticated user (admins read
+//     their own articles all day; counting that is meaningless);
+//   - request must NOT match the bot UA list (crawlers shouldn't
+//     inflate view counts).
+//
+// Mutates p.ViewCount in-place so the response reflects the
+// already-bumped value, matching what the next visitor will read.
+//
+// Replaces the previous flow where /api/v1/track (a separate
+// client-side POST) called IncrPostViews; that approach lost counts
+// when JS was disabled / blocked / slow, and forced us to add a
+// "cosmetic +1" to the displayed number to compensate. Server-side
+// increment removes both pain points.
+func maybeBumpPostView(c *gin.Context, p *model.Post) {
+	if p == nil || p.ID <= 0 {
+		return
+	}
+	if c.Query("track") != "1" {
+		return
+	}
+	if middleware.GetUserID(c) > 0 {
+		return
+	}
+	if IsBot(c.Request.UserAgent()) {
+		return
+	}
+	IncrPostViews(p.ID)
+	p.ViewCount++
 }
 
 func ListPostComments(c *gin.Context) {

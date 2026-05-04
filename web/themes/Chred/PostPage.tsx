@@ -62,9 +62,8 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         fontSize: '13px', color: '#999', borderBottom: '1px solid #eee',
       }}>
         <span><i className="fa-regular fa-calendar" style={{ marginRight: '4px' }} />{formatDate(displayDate, timeZone)}</span>
-        {/* view_count = DB + 1 (cosmetic)，详见 Azure/PostPage.tsx 同位置注释。
-            后端 /track 已移除 dedup，每次访问都 +1，cosmetic 跟 DB 永远对齐。 */}
-        <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#F53102' }} />{(post.view_count || 0) + 1} 阅读</span>
+        {/* v2.1.7 起后端在 SSR fetch 时 (?track=1) 就同步 +1,这里直接显示 DB 值。 */}
+        <span><i className="fa-solid fa-fire" style={{ marginRight: '4px', color: '#F53102' }} />{post.view_count || 0} 阅读</span>
         <span><i className="fa-regular fa-comment" style={{ marginRight: '4px' }} /><CommentCount initial={post.comment_count || 0} /></span>
         {(post.word_count || 0) > 0 && (
           <span><i className="fa-regular fa-font" style={{ marginRight: '4px' }} />{post.word_count.toLocaleString()} 字</span>

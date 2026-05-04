@@ -5,7 +5,6 @@ import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
 import PostLink from '@/components/blog/PostLink';
-import LiveViewCount from '@/components/blog/LiveViewCount';
 
 function formatDate(ts: string | number, timeZone: string) {
   return formatDateInTimeZone(ts, 'zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }, timeZone);
@@ -61,7 +60,7 @@ export default function PostCard({ post, priority }: { post: any; priority?: boo
                 {post.categories[0].name}
               </span>
             )}
-            {post.view_count > 0 && <span><LiveViewCount postId={post.id} initial={post.view_count} /> 阅读</span>}
+            {post.view_count > 0 && <span>{post.view_count} 阅读</span>}
           </div>
         </div>
       </article>

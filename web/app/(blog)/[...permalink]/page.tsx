@@ -13,7 +13,7 @@ interface Props {
   params: Promise<{ permalink: string[] }>;
 }
 
-async function resolvePost(segments: string[]): Promise<any | null> {
+async function resolvePost(segments: string[], track: boolean): Promise<any | null> {
   let structure = DEFAULT_PERMALINK;
   try {
     const optsRes: any = await getOptions();
@@ -30,19 +30,24 @@ async function resolvePost(segments: string[]): Promise<any | null> {
   const hit = parsePermalink(pathname, structure);
   if (!hit) return null;
 
+  // track passes through to the API as ?track=1 → server-side view
+  // bump (WordPress-style). generateMetadata calls with track=false
+  // because SEO/preview crawlers shouldn't inflate counts; the
+  // visitor-facing render calls with track=true.
+  const opts = track ? { track: true } : undefined;
   try {
     // display_id 优先 —— /archives/%display_id% 是新推荐的 URL 形态，
     // 序号严格按发布顺序递增，跟 db 主键 id 解耦。
     if (hit.display_id != null) {
-      const r: any = await getPostByDisplayID(hit.display_id);
+      const r: any = await getPostByDisplayID(hit.display_id, opts);
       return r?.data ?? null;
     }
     if (hit.id != null) {
-      const r: any = await getPost(hit.id);
+      const r: any = await getPost(hit.id, opts);
       return r?.data ?? null;
     }
     if (hit.slug) {
-      const r: any = await getPostBySlug(hit.slug);
+      const r: any = await getPostBySlug(hit.slug, opts);
       return r?.data ?? null;
     }
   } catch { return null; }
@@ -51,7 +56,7 @@ async function resolvePost(segments: string[]): Promise<any | null> {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { permalink } = await params;
-  const post = await resolvePost(permalink || []);
+  const post = await resolvePost(permalink || [], false);
   if (!post) return { title: '页面未找到' };
   return {
     title: post.seo?.title || post.title,
@@ -62,7 +67,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PermalinkPage({ params }: Props) {
   const { permalink } = await params;
-  const post = await resolvePost(permalink || []);
+  const post = await resolvePost(permalink || [], true);
   if (!post) notFound();
 
   let themeName = 'Azure';

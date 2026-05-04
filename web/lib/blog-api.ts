@@ -45,21 +45,32 @@ export async function getPosts(params?: {
   return fetchAPI<any>(`/posts${query ? `?${query}` : ''}`);
 }
 
+// `track` option = 这次 fetch 是不是 "访客在读这篇文章" 的 SSR 请求,
+// 加上 ?track=1 后端会把 view_count 当场 +1 并返回 +1 后的值
+// (排除 admin / bot)。文章详情页 SSR 渲染时设 true,其它读取(列表 /
+// 后台 / 搜索 / 关联推荐)留 false。这样阅读数完全交给服务端在渲染
+// 时同步处理,前端不再走 /track 异步路径,也不再 cosmetic +1。
+type FetchPostOptions = { track?: boolean };
+
+function trackQuery(opts?: FetchPostOptions) {
+  return opts?.track ? '?track=1' : '';
+}
+
 // 按 slug 获取文章 — Chinese slugs must be percent-encoded here, otherwise
 // Node's fetch refuses the URL and the caller thinks the post doesn't exist.
-export async function getPostBySlug(slug: string) {
-  return fetchAPI<any>(`/posts/slug/${encodeURIComponent(slug)}`);
+export async function getPostBySlug(slug: string, opts?: FetchPostOptions) {
+  return fetchAPI<any>(`/posts/slug/${encodeURIComponent(slug)}${trackQuery(opts)}`);
 }
 
 // 文章详情
-export async function getPost(id: number) {
-  return fetchAPI<any>(`/posts/${id}`);
+export async function getPost(id: number, opts?: FetchPostOptions) {
+  return fetchAPI<any>(`/posts/${id}${trackQuery(opts)}`);
 }
 
 // 按 display_id 获取文章 —— 配合 permalink 模板里的 %display_id% token。
 // display_id 是「按发布顺序连续递增的序号」，跟 db 主键 id 解耦。
-export async function getPostByDisplayID(displayID: number) {
-  return fetchAPI<any>(`/posts/by-display-id/${displayID}`);
+export async function getPostByDisplayID(displayID: number, opts?: FetchPostOptions) {
+  return fetchAPI<any>(`/posts/by-display-id/${displayID}${trackQuery(opts)}`);
 }
 
 // 文章评论
