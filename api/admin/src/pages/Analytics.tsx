@@ -11,6 +11,8 @@ const periods = [
   { key: '24h', label: '24小时' },
   { key: '7d', label: '7天' },
   { key: '30d', label: '30天' },
+  { key: 'year', label: '当年' },
+  { key: '365d', label: '近一年' },
   { key: 'all', label: '全部' },
 ];
 
@@ -39,7 +41,7 @@ function CountryRow({ data }: { data: any[] }) {
       {data.slice(0, 10).map((d, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '4px 0' }}>
           {d.code && <img src={`https://flagcdn.io/flags/4x3/${d.code.toLowerCase()}.svg`} alt="" style={{ width: '16px', height: '12px' }} />}
-          <span style={{ flex: 1 }}>{d.country || d.code || '-'}</span>
+          <span style={{ flex: 1 }}>{d.name || d.country || d.code || '-'}</span>
           <span className="text-dim">{d.count}</span>
         </div>
       ))}
@@ -224,7 +226,7 @@ export default function AnalyticsPage() {
         </div>
         <div className="card" style={{ padding: '16px' }}>
           <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>设备</h3>
-          <IconStatList data={data?.devices || []} nameKey="type" valueKey="count" icon={(d) => <DeviceIcon type={d.type} size={16} />} />
+          <IconStatList data={data?.devices || []} nameKey="name" valueKey="count" icon={(d) => <DeviceIcon type={d.name} size={16} />} />
         </div>
         <div className="card" style={{ padding: '16px' }}>
           <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>国家/地区</h3>
@@ -446,6 +448,7 @@ function RecentVisitorsPanel() {
         <h3 style={{ fontSize: '13px', fontWeight: 600 }}>
           <i className="fa-sharp fa-light fa-users" style={{ marginRight: '6px', color: 'var(--color-primary)' }} />
           最近访客
+          <span className="text-dim" style={{ marginLeft: '8px', fontSize: '11px', fontWeight: 400 }}>最近 7 天 · 上限 1000 条</span>
         </h3>
         <span className="text-dim" style={{ fontSize: '12px' }}>共 {total} 条</span>
       </div>

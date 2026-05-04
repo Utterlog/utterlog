@@ -21,6 +21,7 @@ func main() {
 		storage.Init()
 		handler.InitStatsSync()
 		handler.StartFeedFetchCron()
+		handler.StartAnalyticsRollupCron()
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -150,7 +151,7 @@ func main() {
 
 	// Health
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.1.3-go"}})
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.1.4-go"}})
 	})
 
 	// ===================== Install Wizard (public, unauth) =====================
@@ -526,6 +527,7 @@ func main() {
 
 		// Analytics
 		authed.GET("/analytics", handler.AnalyticsOverview)
+		authed.GET("/analytics/breakdown", handler.AnalyticsBreakdown)
 		authed.GET("/analytics/logs", handler.AccessLogs)
 		authed.GET("/analytics/visitors", handler.RecentVisitors)
 		authed.GET("/analytics/online", handler.OnlineUsers)

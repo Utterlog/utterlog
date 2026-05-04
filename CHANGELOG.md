@@ -23,6 +23,29 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.1.4] - 2026-05-04
+
+### 新增
+
+- 数据统计支持 6 个时间窗口:**24 小时 / 7 天 / 30 天 / 当年 / 近一年 / 全部**。后台 → 数据统计页右上角切换器对应新增 3 个长周期。
+- 新增 `/api/v1/analytics/breakdown?period=&dimension=` 统一接口,返回任意时间窗口内的访问次数 / 唯一访客 / 浏览器 / 操作系统 / 设备 / 国家分布(含每项 ratio 比例)。`dimension=all` 一次性返回 4 个维度。
+
+### 优化
+
+- 数据保留架构改为分层:`ul_access_logs` 仅保留**最近 30 天**原始行,超期前会被聚合到永久表 `ul_analytics_daily`(每天每维度一行,带 visits + unique_visitors)。"全部 / 当年 / 近一年" 等长周期查询走 UNION(daily 聚合 + 最近 30 天 raw),保证历史数据永不丢失。
+- 唯一访客在跨日窗口的精度问题:新增 `ul_visitor_dates(visitor_id, date)` 永久表,记录每位访客每天是否访问过。任意时间窗口的"唯一访客数"= `COUNT(DISTINCT visitor_id) WHERE date BETWEEN`,精确而非过计。
+- 数据统计→**最近访客** 卡片限制为最近 7 天 + 上限 1000 条,卡片标题副文字加"最近 7 天 · 上限 1000 条"。
+- 概览面板的浏览器 / 操作系统 / 设备 / 国家分布列表项 JSON 字段统一为 `{name, code, count, ratio}`(原先 devices 用 type、countries 用 country,字段名不一致),前端 IconStatList / CountryRow 同步更新。
+- 启动时新增 `StartAnalyticsRollupCron()`,每 24 小时把昨天及更早的数据聚合到 daily 表,然后删 30 天前的 raw 行。幂等(走 ON CONFLICT DO UPDATE),重跑安全。
+
+### 修复
+
+暂无。
+
+### 移除
+
+暂无。
+
 ## [2.1.3] - 2026-05-04
 
 ### 新增

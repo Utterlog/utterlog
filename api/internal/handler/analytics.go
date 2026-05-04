@@ -169,6 +169,22 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 		"INSERT INTO %s (ip, ip_masked, path, method, referer, referer_host, user_agent, device_type, browser, browser_version, os, os_version, visitor_id, fingerprint, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id",
 		t), ip, ipMasked, path, method, referer, refHost, ua, device, browser, browserVer, os, osVer, visitorID, fingerprint, now).Scan(&logID)
 
+	// Permanent visitor presence — one row per (visitor, day). Lets us
+	// answer unique-visitor counts for any window precisely, including
+	// ranges that straddle the 30-day raw retention. ON CONFLICT DO
+	// NOTHING is the right primitive here: the same visitor coming back
+	// later the same day is a no-op. Falls back to ip when visitor_id
+	// is empty so we still count cookie-disabled / first-page visits.
+	visitorKey := visitorID
+	if visitorKey == "" {
+		visitorKey = ip
+	}
+	if visitorKey != "" {
+		config.DB.Exec(fmt.Sprintf(
+			"INSERT INTO %s (visitor_id, date) VALUES ($1, TO_TIMESTAMP($2)::date) ON CONFLICT DO NOTHING",
+			config.T("visitor_dates")), visitorKey, now)
+	}
+
 	// Async: enrich with GeoIP
 	if logID > 0 && ip != "" && ip != "127.0.0.1" {
 		go enrichAccessGeo(logID, ip)
@@ -251,80 +267,63 @@ func parseUserAgent(ua string) (device, browser, browserVer, os, osVer string) {
 // Analytics dashboard data
 func AnalyticsOverview(c *gin.Context) {
 	period := c.DefaultQuery("period", "24h")
+	if !stringInSlice(period, []string{"24h", "7d", "30d", "year", "365d", "all"}) {
+		period = "24h"
+	}
 	t := config.T("access_logs")
 
-	var since int64
-	switch period {
-	case "24h":
-		since = time.Now().Add(-24 * time.Hour).Unix()
-	case "7d":
-		since = time.Now().Add(-7 * 24 * time.Hour).Unix()
-	case "30d":
-		since = time.Now().Add(-30 * 24 * time.Hour).Unix()
-	default:
-		since = 0
+	startUnix, startDate, _ := periodWindow(period)
+	cutoff := rollupCutoffDate()
+
+	// Summary stats — long-window visits / unique numbers come from the
+	// rollup helpers (UNION raw + ul_analytics_daily). uniquePaths
+	// remains raw-only because we don't aggregate path-level data
+	// (would explode the daily table).
+	totalVisits := sumVisits(startUnix, startDate, cutoff)
+	uniqueIPs := sumUniqueVisitors(period, startUnix, startDate)
+
+	whereRaw := ""
+	if startUnix > 0 {
+		whereRaw = fmt.Sprintf("WHERE created_at >= %d", startUnix)
 	}
-
-	where := ""
-	if since > 0 {
-		where = fmt.Sprintf("WHERE created_at >= %d", since)
-	}
-
-	// Summary stats — "unique visitors" prefers the browser-issued
-	// visitor_id over IP so multiple users behind the same NAT don't
-	// collapse into one visitor, and a single user clearing cookies
-	// doesn't count as a distinct visitor until their IP changes too.
-	var totalVisits, uniqueIPs int
-	config.DB.Get(&totalVisits, fmt.Sprintf("SELECT COUNT(*) FROM %s %s", t, where))
-	config.DB.Get(&uniqueIPs, fmt.Sprintf("SELECT COUNT(DISTINCT COALESCE(NULLIF(visitor_id,''), ip)) FROM %s %s", t, where))
-
 	var uniquePaths int
-	config.DB.Get(&uniquePaths, fmt.Sprintf("SELECT COUNT(DISTINCT path) FROM %s %s", t, where))
+	config.DB.Get(&uniquePaths, fmt.Sprintf("SELECT COUNT(DISTINCT path) FROM %s %s", t, whereRaw))
 
-	// Top pages
+	// Top pages — raw only, capped to retention window. For long-window
+	// queries the answer is "top pages in the last 30 days" which is a
+	// reasonable approximation; aggregating per-path forever would
+	// blow up storage.
 	var topPages []struct {
 		Path  string `db:"path" json:"path"`
 		Count int    `db:"count" json:"count"`
 	}
-	config.DB.Select(&topPages, fmt.Sprintf("SELECT path, COUNT(*) as count FROM %s %s GROUP BY path ORDER BY count DESC LIMIT 10", t, where))
+	config.DB.Select(&topPages, fmt.Sprintf("SELECT path, COUNT(*) as count FROM %s %s GROUP BY path ORDER BY count DESC LIMIT 10", t, whereRaw))
 
-	// Top referers
+	// Top referers — same caveat as Top pages.
 	var topReferers []struct {
 		Host  string `db:"referer_host" json:"host"`
 		Count int    `db:"count" json:"count"`
 	}
-	refererWhere := analyticsWhereAnd(where, "referer_host != ''")
+	refererWhere := analyticsWhereAnd(whereRaw, "referer_host != ''")
 	config.DB.Select(&topReferers, fmt.Sprintf("SELECT referer_host, COUNT(*) as count FROM %s %s GROUP BY referer_host ORDER BY count DESC LIMIT 10", t, refererWhere))
 
-	// Browsers
-	var browsers []struct {
-		Name  string `db:"browser" json:"name"`
-		Count int    `db:"count" json:"count"`
+	// Browsers / OS / Devices / Countries — long-window safe. The
+	// breakdownDimension helpers UNION raw rows with the daily-aggregate
+	// table so 'year' / 'all' returns historical data even after rows
+	// have been pruned from ul_access_logs.
+	browsers := breakdownDimension("browser", "browser", startUnix, startDate, cutoff)
+	osList := breakdownDimension("os", "os", startUnix, startDate, cutoff)
+	devices := breakdownDimension("device", "device_type", startUnix, startDate, cutoff)
+	countries := breakdownCountry(startUnix, startDate, cutoff)
+	if len(browsers) > 10 {
+		browsers = browsers[:10]
 	}
-	config.DB.Select(&browsers, fmt.Sprintf("SELECT browser as browser, COUNT(*) as count FROM %s %s GROUP BY browser ORDER BY count DESC LIMIT 10", t, where))
-
-	// OS
-	var osList []struct {
-		Name  string `db:"os" json:"name"`
-		Count int    `db:"count" json:"count"`
+	if len(osList) > 10 {
+		osList = osList[:10]
 	}
-	config.DB.Select(&osList, fmt.Sprintf("SELECT os, COUNT(*) as count FROM %s %s GROUP BY os ORDER BY count DESC", t, where))
-
-	// Devices
-	var devices []struct {
-		Type  string `db:"device_type" json:"type"`
-		Count int    `db:"count" json:"count"`
+	if len(countries) > 20 {
+		countries = countries[:20]
 	}
-	config.DB.Select(&devices, fmt.Sprintf("SELECT device_type, COUNT(*) as count FROM %s %s GROUP BY device_type ORDER BY count DESC", t, where))
-
-	// Countries
-	var countries []struct {
-		Country string `db:"country_name" json:"country"`
-		Code    string `db:"country" json:"code"`
-		Count   int    `db:"count" json:"count"`
-	}
-	countryWhere := analyticsWhereAnd(where, "country != ''")
-	config.DB.Select(&countries, fmt.Sprintf("SELECT country_name, country, COUNT(*) as count FROM %s %s GROUP BY country_name, country ORDER BY count DESC LIMIT 20", t, countryWhere))
 
 	// Hourly chart (last 24h)
 	var hourly []struct {
@@ -824,7 +823,19 @@ func AccessLogs(c *gin.Context) {
 	util.Paginate(c, logs, total, page, perPage)
 }
 
+// recentVisitorMaxRows caps how many distinct entry-page rows the
+// "最近访客" panel will return. Combined with the 7-day created_at
+// window below, this keeps the panel snappy even on busy sites and
+// puts a hard ceiling on the data shipped to the admin UI.
+const recentVisitorMaxRows = 1000
+
+// recentVisitorWindowDays bounds the "最近访客" panel to the most
+// recent N days of access logs. Older raw rows are still retained
+// until rollupRetentionDays kicks in; the panel just hides them.
+const recentVisitorWindowDays = 7
+
 func recentVisitorPageWhere() string {
+	cutoff := time.Now().Add(-time.Duration(recentVisitorWindowDays) * 24 * time.Hour).Unix()
 	return strings.Join([]string{
 		"path <> ''",
 		"path LIKE '/%'",
@@ -838,6 +849,7 @@ func recentVisitorPageWhere() string {
 		"path NOT LIKE '/wp-%'",
 		"path NOT IN ('/feed', '/feed/', '/rss', '/rss/', '/rss.xml', '/atom.xml', '/xmlrpc.php', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/manifest.json', '/ads.txt')",
 		"path !~ '\\.[A-Za-z0-9]{1,8}$'",
+		fmt.Sprintf("created_at >= %d", cutoff),
 	}, " AND ")
 }
 
@@ -927,6 +939,22 @@ func RecentVisitors(c *gin.Context) {
 
 	var total int
 	config.DB.Get(&total, entryCTE+"SELECT COUNT(*) FROM entry_logs WHERE entry_rank = 1")
+	// Cap displayed total + offset to recentVisitorMaxRows. The 7-day
+	// WHERE filter inside the CTE already prunes the bulk; this hard
+	// ceiling stops a noisy week from blowing past a thousand rows.
+	if total > recentVisitorMaxRows {
+		total = recentVisitorMaxRows
+	}
+	if offset >= total {
+		// Past the cap — return empty page rather than spending a CTE
+		// cycle to compute rows that won't render.
+		util.Paginate(c, []map[string]interface{}{}, total, page, perPage)
+		return
+	}
+	limit := perPage
+	if offset+limit > recentVisitorMaxRows {
+		limit = recentVisitorMaxRows - offset
+	}
 
 	var visitors []Visitor
 	config.DB.Select(&visitors, entryCTE+
@@ -938,7 +966,7 @@ func RecentVisitors(c *gin.Context) {
 		WHERE entry_rank = 1
 		ORDER BY session_last_at DESC, id DESC
 		LIMIT $1 OFFSET $2`,
-		perPage, offset)
+		limit, offset)
 
 	// Match visitors to comment authors: visitor_id > IP
 	type authorInfo struct{ Name, Email, Avatar string }

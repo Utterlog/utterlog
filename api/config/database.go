@@ -150,6 +150,34 @@ func InitDB() error {
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS fingerprint VARCHAR(64) DEFAULT ''", T("access_logs")))
 	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_access_visitor ON %s (visitor_id) WHERE visitor_id != ''", T("access_logs")))
 
+	// Analytics rollup: per-day per-dimension aggregates. Permanent —
+	// once a day the rollup cron summarizes ul_access_logs into this
+	// table, then prunes raw rows older than 30 days. Stat queries that
+	// span >30 days UNION raw + this table.
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		date            DATE         NOT NULL,
+		dimension       VARCHAR(20)  NOT NULL,
+		dim_value       VARCHAR(255) NOT NULL,
+		dim_extra       VARCHAR(80)  NOT NULL DEFAULT '',
+		visits          INTEGER      NOT NULL DEFAULT 0,
+		unique_visitors INTEGER      NOT NULL DEFAULT 0,
+		PRIMARY KEY (date, dimension, dim_value, dim_extra)
+	)`, T("analytics_daily")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_analytics_daily_date ON %s (date)", T("analytics_daily")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_analytics_daily_dim ON %s (dimension, date)", T("analytics_daily")))
+
+	// Visitor presence per day. Permanent — lets us answer
+	// "unique visitors active in window [t1, t2]" precisely for any
+	// window length, including ranges that straddle the 30-day raw
+	// retention boundary. SUM-of-daily-uniques would over-count repeat
+	// visitors across days.
+	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		visitor_id  VARCHAR(80) NOT NULL,
+		date        DATE        NOT NULL,
+		PRIMARY KEY (visitor_id, date)
+	)`, T("visitor_dates")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_visitor_dates_date ON %s (date)", T("visitor_dates")))
+
 	// Comments: visitor_id for fingerprint matching
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS visitor_id VARCHAR(64) DEFAULT ''", T("comments")))
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN source SET DEFAULT '网页'", T("moments")))
