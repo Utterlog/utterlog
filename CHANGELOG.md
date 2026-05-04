@@ -23,6 +23,16 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.1.5] - 2026-05-04
+
+### 修复
+
+- 修复点击进入文章后再回首页,文章阅读数 / 评论数显示不更新的问题(必须强制刷新才能看到新数字)。原因是 Next.js 客户端 Router Cache 默认对动态路由保留 RSC payload,导航回首页直接 replay 缓存,绕过服务端拉数据。`web/next.config.js` 加 `experimental.staleTimes.dynamic = 0`,强制每次导航重新拉数据;静态页面继续保留 5 分钟缓存。后端 view_count 和 /track 完全正常,本次只是前端缓存策略调整。
+
+### 移除
+
+暂无。
+
 ## [2.1.4] - 2026-05-04
 
 ### 新增
