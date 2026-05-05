@@ -103,8 +103,14 @@ func AnalyticsBreakdown(c *gin.Context) {
 	result := BreakdownResult{Period: label}
 
 	// ---- visits + unique_visitors ------------------------------------
-	result.Visits = sumVisits(startUnix, startDate, cutoff)
-	result.UniqueVisitors = sumUniqueVisitors(period, startUnix, startDate)
+	// period=all 直接读 ul_stats_global O(1),跟 footer / DashboardStats
+	// 同源(GlobalStats helper)。其它窗口走 sumVisits / sumUniqueVisitors。
+	if period == "all" {
+		result.Visits, result.UniqueVisitors = GlobalStats()
+	} else {
+		result.Visits = sumVisits(startUnix, startDate, cutoff)
+		result.UniqueVisitors = sumUniqueVisitors(period, startUnix, startDate)
+	}
 
 	// ---- per-dimension lists -----------------------------------------
 	if dimension == "browser" || dimension == "all" {
@@ -132,7 +138,7 @@ func AnalyticsBreakdown(c *gin.Context) {
 // rows have been pruned) and from ul_access_logs for live data.
 func sumVisits(startUnix int64, startDate, cutoff time.Time) int64 {
 	access := config.T("access_logs")
-	daily := config.T("analytics_daily")
+	daily := config.T("stats_daily")
 
 	var aggSum, rawCount int64
 
@@ -171,7 +177,7 @@ func sumVisits(startUnix int64, startDate, cutoff time.Time) int64 {
 // uniques would over-count multi-day visitors.
 func sumUniqueVisitors(period string, startUnix int64, startDate time.Time) int64 {
 	access := config.T("access_logs")
-	visitorDates := config.T("visitor_dates")
+	visitorDates := config.T("stats_visitor_dates")
 
 	if period == "24h" || period == "7d" || period == "30d" {
 		var n int64
@@ -206,7 +212,7 @@ func sumUniqueVisitors(period string, startUnix int64, startDate time.Time) int6
 // is the column name to GROUP BY in ul_access_logs.
 func breakdownDimension(dimName, rawCol string, startUnix int64, startDate, cutoff time.Time) []DimensionItem {
 	access := config.T("access_logs")
-	daily := config.T("analytics_daily")
+	daily := config.T("stats_daily")
 
 	merged := map[string]int64{}
 
@@ -261,7 +267,7 @@ func breakdownDimension(dimName, rawCol string, startUnix int64, startDate, cuto
 // flag images keyed on code while displaying the localized name.
 func breakdownCountry(startUnix int64, startDate, cutoff time.Time) []DimensionItem {
 	access := config.T("access_logs")
-	daily := config.T("analytics_daily")
+	daily := config.T("stats_daily")
 
 	type key struct{ Name, Code string }
 	merged := map[key]int64{}

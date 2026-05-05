@@ -23,6 +23,22 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.0] - 2026-05-05
+
+### 优化
+
+- **统计表前缀统一为 `ul_stats_`**:`ul_analytics_daily` → `ul_stats_daily`、`ul_visitor_dates` → `ul_stats_visitor_dates`、`ul_visitor_post_dates` → `ul_stats_visitor_post_dates`。`ul_stats_global` / `ul_stats_post_daily` 已是该前缀,本次对齐;`ul_access_logs` 不变(语义为"原始日志"非"聚合统计")。InitDB 自动 ALTER TABLE RENAME(IF 老表存在 + 新表不存在),老库平滑升级。
+- **三个层面的"总访问量"统一口径**:footer `ArchiveStats` / 后台 `DashboardStats` / 后台数据统计页 `period=all` 全部走新增的 `handler.GlobalStats()` helper,直接读 `ul_stats_global` 单行 O(1)。之前 `DashboardStats` 用 `COUNT(*) FROM ul_access_logs` 会随 90 天 prune 而"变小"。
+- 前端 `PageViewTracker` 删掉 `isAdmin` gate。v2.2.0 起后端"管理员也计入访问"是用户明确决定;前端再 gate 反而让管理员的浏览只 +view_count(走 SSR `?track=1` 路径)而不写 `access_logs`,造成"明细看不到管理员、但 view_count 涨了"的不一致。前后端口径统一为「全部都计入」。
+
+### 移除
+
+- `AccessLogger` middleware:函数体已退化为 `path filter + c.Next() + _ = path` 实际无副作用(v2.2.0 时为防与 `/track` 双计已停止写 access_log)。`main.go` 同步删 `r.Use(handler.AccessLogger())` 调用,以及只此一处用到的 `skipLogPrefix` / `assetExt` 常量。
+- `CleanupBotLogs` / `CleanupBotLogsPreview` handler 与对应的两条 admin 路由(`POST /admin/analytics/cleanup-bots`、`GET /admin/analytics/cleanup-bots/preview`)。这是为旧版 `AccessLogger` 双写产生的"visitor_id 空、UA 真实"行清理用的工具,middleware 不再写,这种行也不再产生,无前端调用。
+- `EnrichGeoIP` handler 与 `POST /analytics/enrich-geoip` 路由。`logAccess` 已经在写入时异步补 GeoIP,没有积压需要批量回填,亦无前端调用。
+- `InitStatsSync()` 空 hook(v2.2.0 起只剩函数声明)以及 `main.go` 里的调用。
+- `web/next.config.js` 的 `experimental.staleTimes` 配置:Next 16.2.4 默认 `staleTimes.dynamic = 0`,显式写 0 是 no-op,删除以保持配置最小化。
+
 ## [2.2.0] - 2026-05-05
 
 ### 新增

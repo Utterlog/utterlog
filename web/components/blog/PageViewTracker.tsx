@@ -22,14 +22,19 @@ function hasAuthHydrated() {
 
 export default function PageViewTracker() {
   const pathname = usePathname();
-  const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
   const tracked = useRef('');
   const startTime = useRef(Date.now());
   const vidRef = useRef('');
   const fpRef = useRef('');
   const [authHydrated, setAuthHydrated] = useState(hasAuthHydrated);
-  const isAdmin = !!accessToken && user?.role === 'admin';
+
+  // v2.3.0: 删掉 isAdmin gate。v2.2.0 起后端"管理员也计入访问"是
+  // 用户明确决定;前端再 gate 反而让管理员的浏览只 +view_count(走
+  // SSR ?track=1 路径)而不写 access_logs,造成"明细看不到管理员、
+  // 但 view_count 涨了"的不一致。前后端口径统一为「全部都计入」。
+  // accessToken 仍保留,因为登录态需要把 Bearer token 带上让后端
+  // 自己判断(虽然现在判断完也不 skip)。
 
   useEffect(() => {
     if (authHydrated) return;
@@ -54,11 +59,6 @@ export default function PageViewTracker() {
   // Track page view on route change
   useEffect(() => {
     if (!authHydrated) return;
-    if (isAdmin) {
-      tracked.current = '';
-      startTime.current = Date.now();
-      return;
-    }
 
     // Report duration of previous page
     if (tracked.current && tracked.current !== pathname) {
@@ -91,13 +91,12 @@ export default function PageViewTracker() {
         fingerprint: fpRef.current,
       }),
     }).catch(() => {});
-  }, [pathname, accessToken, authHydrated, isAdmin]);
+  }, [pathname, accessToken, authHydrated]);
 
   // Report duration on page unload
   useEffect(() => {
     const reportDuration = () => {
       if (!authHydrated) return;
-      if (isAdmin) return;
       const duration = Math.round((Date.now() - startTime.current) / 1000);
       if (duration > 0 && duration < 3600 && tracked.current) {
         navigator.sendBeacon?.(`${API_URL}/track/duration`, JSON.stringify({
@@ -112,7 +111,7 @@ export default function PageViewTracker() {
       window.removeEventListener('beforeunload', reportDuration);
       document.removeEventListener('visibilitychange', onVisChange);
     };
-  }, [authHydrated, isAdmin]);
+  }, [authHydrated]);
 
   return null;
 }

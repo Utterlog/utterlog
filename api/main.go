@@ -19,7 +19,6 @@ func main() {
 	if dbErr == nil {
 		config.InitRedis()
 		storage.Init()
-		handler.InitStatsSync()
 		handler.StartFeedFetchCron()
 		handler.StartAnalyticsRollupCron()
 	}
@@ -147,11 +146,10 @@ func main() {
 	// Security middleware
 	r.Use(handler.CCProtection())
 	r.Use(handler.GeoIPBlocking())
-	r.Use(handler.AccessLogger())
 
 	// Health
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.1.7-go"}})
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.3.0-go"}})
 	})
 
 	// ===================== Install Wizard (public, unauth) =====================
@@ -366,12 +364,6 @@ func main() {
 		authed.POST("/admin/footprints/geocode", handler.AdminFootprintGeocode)
 		authed.GET("/location/reverse", handler.ReverseGeocode)
 
-		// 数据统计 access_log 清理：把已记录的爬虫 UA + 旧版 SSR
-		// middleware 双计的 visitor_id 空记录从 ul_access_logs 删除。
-		// preview 是只读 dry-run，cleanup 真删（不可逆）。
-		authed.GET("/admin/analytics/cleanup-bots/preview", handler.CleanupBotLogsPreview)
-		authed.POST("/admin/analytics/cleanup-bots", handler.CleanupBotLogs)
-
 		// Annotations (段落点评) management
 		authed.GET("/admin/annotations", handler.AdminListAnnotations)
 		authed.DELETE("/admin/annotations/:id", handler.AdminDeleteAnnotation)
@@ -533,7 +525,6 @@ func main() {
 		authed.GET("/analytics/online", handler.OnlineUsers)
 		authed.GET("/analytics/geoip", handler.GeoIPLookup)
 		authed.GET("/analytics/map", handler.VisitorMapData)
-		authed.POST("/analytics/enrich-geoip", handler.EnrichGeoIP)
 		authed.GET("/admin/stats", handler.DashboardStats)
 
 		// Telegram management

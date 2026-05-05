@@ -6,29 +6,13 @@ const nextConfig = {
   serverExternalPackages: ['pixi.js'],
   allowedDevOrigins: ['localhost', '127.0.0.1'],
 
-  // Disable Next.js client Router Cache for dynamic routes.
-  //
-  // Default behaviour: when a visitor navigates from /  →  /archives/X,
-  // Next caches the home-page RSC payload in client memory; pressing
-  // the browser back button (or hitting <Link href="/"> again) replays
-  // that cached payload without hitting the server. Result: 阅读数 /
-  // 评论数 read from cached HTML even after the post page bumped them
-  // via /track. Shift+R bypasses and shows the new number, but normal
-  // navigation looks frozen — exactly the symptom users hit on home
-  // page after viewing a post.
-  //
-  // staleTimes.dynamic = 0 makes dynamic-route segments revalidate on
-  // every navigation. The home page (server-side fetchAPI is already
-  // cache:'no-store') becomes source of truth on each visit. Slight
-  // loss of "instant back" UX, but counters now match across pages.
-  // staleTimes.static stays at 5 min for prerendered pages where data
-  // doesn't change inside a navigation.
-  experimental: {
-    staleTimes: {
-      dynamic: 0,
-      static: 300,
-    },
-  },
+  // v2.1.5 added explicit experimental.staleTimes.dynamic = 0 trying
+  // to disable Router Cache for dynamic routes. v2.3.0 removed it: in
+  // Next 16.2.4 that's already the default
+  // (node_modules/next/dist/esm/server/config-shared.js:207), so
+  // setting it explicitly is a no-op. Removed to keep the config
+  // minimal — if Next ever changes the default, we'll add it back
+  // with a real reason then.
 
   async rewrites() {
     const apiHost = process.env.INTERNAL_API_URL ? 'http://api:8080' : 'http://localhost:8080';

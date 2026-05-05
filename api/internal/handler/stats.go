@@ -10,13 +10,13 @@ import (
 const keyOnlinePrefix = "online:" // + visitor_id, TTL 5min
 
 // v2.2.0 删除：IncrTotalViews / GetTotalViews / Redis stats:total_views。
-// PV 真相源已迁移到 ul_stats_global.total_views（永久、事务化、O(1) 读）。
-// 之前 Redis 的写入注释自己都说会漂移、读路径已经退到 SQL，纯死代码。
+// v2.3.0 删除：InitStatsSync 空 hook(已经没有任何 background sync 任务)。
+// PV 真相源在 ul_stats_global.total_views(永久、事务化、O(1) 读)。
 
 // IncrPostViews increments a post's永久 view count and the per-day
 // PV row atomically. Called from SSR `?track=1` so刷新就 +1。Daily
-// row 没记 unique_visitors（SSR 端拿不到 visitor_id），UV 一侧由
-// 浏览器 /track 流程的 logAccess() 补 ul_visitor_post_dates +
+// row 没记 unique_visitors(SSR 端拿不到 visitor_id),UV 一侧由
+// 浏览器 /track 流程的 logAccess() 补 ul_stats_visitor_post_dates +
 // ul_stats_post_daily.unique_visitors。
 func IncrPostViews(postID int) {
 	tx, err := config.DB.Beginx()
@@ -47,11 +47,22 @@ func IncrPostViews(postID int) {
 	committed = true
 }
 
-// InitStatsSync 在 v2.2.0 之后只是空 hook。
-// 历史：曾经从 Redis warm-up `stats:total_views`；现已迁移到 SQL 永久
-// 计数器（ul_stats_global），不需要预热。保留这个函数避免 main.go 改
-// 调用图，将来真有 background sync 需求可以填进来。
-func InitStatsSync() {
+// GlobalStats returns the永久 site-level totals from ul_stats_global.
+// Single read of one row — O(1). Used by everything that wants
+// "lifetime stats" (footer 总访问量 / DashboardStats / period=all
+// in AnalyticsOverview). Replaces the old COUNT(*) FROM ul_access_logs
+// scattering, which decreased every time access_logs got pruned.
+func GlobalStats() (totalViews, totalUniques int64) {
+	if config.DB == nil {
+		return 0, 0
+	}
+	var row struct {
+		TotalViews   int64 `db:"total_views"`
+		TotalUniques int64 `db:"total_uniques"`
+	}
+	_ = config.DB.Get(&row,
+		"SELECT total_views, total_uniques FROM "+config.T("stats_global")+" WHERE id = 1")
+	return row.TotalViews, row.TotalUniques
 }
 
 // MarkOnline marks a visitor as online (5 min TTL)

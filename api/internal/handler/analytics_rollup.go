@@ -63,7 +63,7 @@ var dimColumn = map[string]string{
 func RollupAccessLogs() (int, int, error) {
 	t := config.T
 	access := t("access_logs")
-	daily := t("analytics_daily")
+	daily := t("stats_daily")
 
 	// Pick the date range to process. Lower bound = earliest raw row's
 	// date; upper bound = yesterday. Today is intentionally excluded

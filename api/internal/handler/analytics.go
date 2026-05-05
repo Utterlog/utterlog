@@ -17,84 +17,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Middleware to log access.
+// AccessLogger middleware was removed in v2.3.0. The function body had
+// degenerated to a path filter + c.Next() with no actual side effect
+// (legacy SSR access-log write was disabled in v2.2.0 to avoid
+// double-counting against the explicit /track POST from PageViewTracker).
+// Keeping a no-op middleware around just confused future readers.
 //
-// Heavily scoped to avoid blowing up access_logs with asset / scanner
-// noise — earlier this middleware only skipped /api/, /uploads/, and
-// /_next/, which left /themes/*.css, /admin/assets/*, /favicon.*, and
-// every bot-scanned WordPress path (.env, wp-login.php, xmlrpc.php,
-// /robots.txt, etc.) landing in the table. One blog page load could
-// easily write a dozen rows on top of the single explicit /track POST
-// from the frontend, and CC scanners pushed counts into the tens of
-// thousands per minute.
-//
-// Current policy: only log text/html navigations that Go is actually
-// meant to serve as pages — today that's effectively nothing (the
-// blog frontend is Next.js, the admin is an SPA), so the middleware
-// is a thin safety net. All analytics now flow through explicit
-// POST /api/v1/track from PageViewTracker.
-var skipLogPrefix = []string{
-	"/api/", "/uploads/", "/_next/", "/themes/", "/admin", "/static/",
-	"/favicon", "/robots.txt", "/sitemap", "/manifest.json", "/ads.txt",
-	"/apple-touch-icon", "/browserconfig.xml", "/.well-known/",
-}
-
-var assetExt = map[string]bool{
-	".js": true, ".css": true, ".map": true,
-	".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".webp": true,
-	".avif": true, ".svg": true, ".ico": true,
-	".woff": true, ".woff2": true, ".ttf": true, ".otf": true, ".eot": true,
-	".json": true, ".xml": true, ".txt": true,
-	".mp4": true, ".webm": true, ".ogg": true, ".mp3": true, ".wav": true,
-}
-
-func AccessLogger() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		path := c.Request.URL.Path
-		for _, p := range skipLogPrefix {
-			if strings.HasPrefix(path, p) {
-				c.Next()
-				return
-			}
-		}
-		// Skip anything with a file extension — all real pages are
-		// extensionless, all assets have one. Keeps bot-scanned junk
-		// like /wp-login.php, /.env.bak, /config.json out.
-		if i := strings.LastIndex(path, "."); i > 0 {
-			if ext := strings.ToLower(path[i:]); assetExt[ext] {
-				c.Next()
-				return
-			}
-			// Unknown extension (.php, .asp, .env, etc.) — treat as
-			// scanner noise, skip.
-			c.Next()
-			return
-		}
-
-		c.Next()
-
-		// 不再在 SSR 路径记录 access_log。
-		//
-		// 历史：之前 middleware 在 SSR 命中 HTML 页时同步写一条
-		// access_log（visitor_id=""，退化成 IP 做 dedup key），
-		// PageViewTracker 在浏览器渲染后又 POST /api/v1/track 写
-		// 一条（visitor_id 为浏览器签发的真值）—— 两条 dedup key
-		// 不同（IP vs visitor_id）互不拦截，同一访客被算两次，
-		// dashboard 的「unique 访客」用 COUNT(DISTINCT COALESCE
-		// (visitor_id, ip)) 把这两条当成两个不同访客。结果就是
-		// 真实访客被双计 +「visitor_id=空」的那条看起来像爬虫
-		// 数据，admin 误以为爬虫泛滥。
-		//
-		// 现状：让 /track 成为唯一访客记录入口。爬虫绝大多数不
-		// 执行 JS，自然不会触发 PageViewTracker → 不写 access_log
-		// → 统计数据自动接近真实访客数。代价：JS-disabled 访客
-		// 不被记录，但比例极低（< 0.1%），可以接受。
-		//
-		// middleware 函数本身保留（path filter 还在用，未来想加
-		// 错误日志 / 安全审计 hook 也方便），只是不再调 logAccess。
-		_ = path
-	}
-}
+// All analytics writes now flow through:
+//   - GET /api/v1/posts/:id?track=1   →  IncrPostViews   (永久 view_count)
+//   - POST /api/v1/track              →  logAccess       (站点 PV/UV + 文章 UV + 明细)
 
 // logAccess writes one访客 hit to all real-time stats tables atomically.
 //
@@ -160,7 +91,7 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 		errv := tx.QueryRow(fmt.Sprintf(`
 			INSERT INTO %s (visitor_id, date) VALUES ($1, $2::date)
 			ON CONFLICT (visitor_id, date) DO UPDATE SET visitor_id = EXCLUDED.visitor_id
-			RETURNING (xmax = 0)`, config.T("visitor_dates")), visitorKey, today).Scan(&inserted)
+			RETURNING (xmax = 0)`, config.T("stats_visitor_dates")), visitorKey, today).Scan(&inserted)
 		if errv == nil && inserted {
 			siteNewToday = true
 		}
@@ -185,7 +116,7 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 		ON CONFLICT (date, dimension, dim_value, dim_extra)
 		DO UPDATE SET visits = %s.visits + 1,
 		              unique_visitors = %s.unique_visitors + EXCLUDED.unique_visitors`,
-		config.T("analytics_daily"), config.T("analytics_daily"), config.T("analytics_daily")),
+		config.T("stats_daily"), config.T("stats_daily"), config.T("stats_daily")),
 		today, uniqInc)
 
 	// 4. 文章级实时统计（仅文章详情页路径能解析出 post_id）
@@ -194,7 +125,7 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 		errp := tx.QueryRow(fmt.Sprintf(`
 			INSERT INTO %s (visitor_id, post_id, date) VALUES ($1, $2, $3::date)
 			ON CONFLICT (visitor_id, post_id, date) DO UPDATE SET visitor_id = EXCLUDED.visitor_id
-			RETURNING (xmax = 0)`, config.T("visitor_post_dates")), visitorKey, postID, today).Scan(&postInserted)
+			RETURNING (xmax = 0)`, config.T("stats_visitor_post_dates")), visitorKey, postID, today).Scan(&postInserted)
 		postNewToday := errp == nil && postInserted
 		postUniqInc := 0
 		if postNewToday {
@@ -315,12 +246,20 @@ func AnalyticsOverview(c *gin.Context) {
 	startUnix, startDate, _ := periodWindow(period)
 	cutoff := rollupCutoffDate()
 
-	// Summary stats — long-window visits / unique numbers come from the
-	// rollup helpers (UNION raw + ul_analytics_daily). uniquePaths
-	// remains raw-only because we don't aggregate path-level data
-	// (would explode the daily table).
-	totalVisits := sumVisits(startUnix, startDate, cutoff)
-	uniqueIPs := sumUniqueVisitors(period, startUnix, startDate)
+	// Summary stats —
+	//   period=all → ul_stats_global 单行 O(1)(跟 footer ArchiveStats /
+	//                DashboardStats 走同一个 GlobalStats() helper,口径
+	//                统一,数字永远跟 footer 对得上)
+	//   其它窗口 → sumVisits / sumUniqueVisitors UNION raw + 日聚合
+	// uniquePaths 始终走 raw —— path-level 不聚合,长窗口本来就是
+	// 「最近 90 天 top path」的近似。
+	var totalVisits, uniqueIPs int64
+	if period == "all" {
+		totalVisits, uniqueIPs = GlobalStats()
+	} else {
+		totalVisits = sumVisits(startUnix, startDate, cutoff)
+		uniqueIPs = sumUniqueVisitors(period, startUnix, startDate)
+	}
 
 	whereRaw := ""
 	if startUnix > 0 {
@@ -445,29 +384,7 @@ func GeoIPLookup(c *gin.Context) {
 	util.Success(c, result)
 }
 
-// Enrich access log with GeoIP (batch job)
-func EnrichGeoIP(c *gin.Context) {
-	t := config.T("access_logs")
-	var ips []struct {
-		IP string `db:"ip"`
-	}
-	config.DB.Select(&ips, fmt.Sprintf("SELECT DISTINCT ip FROM %s WHERE country = '' LIMIT 50", t))
-
-	enriched := 0
-	for _, item := range ips {
-		geo, err := geoip.Lookup(item.IP)
-		if err != nil || geo == nil || geo.CountryCode == "" {
-			continue
-		}
-		config.DB.Exec(fmt.Sprintf(
-			"UPDATE %s SET country=$1, country_name=$2, region=$3, city=$4, latitude=$5, longitude=$6 WHERE ip=$7",
-			t), strings.ToLower(geo.CountryCode), geo.Country, geo.Province, geo.City, geo.Latitude, geo.Longitude, item.IP)
-		enriched++
-		time.Sleep(200 * time.Millisecond) // Rate limit
-	}
-
-	util.Success(c, gin.H{"enriched": enriched})
-}
+// EnrichGeoIP removed in v2.3.0 — see comment lower in the file.
 
 // TrackPageView handles page view reporting from the frontend
 func TrackPageView(c *gin.Context) {
@@ -1077,9 +994,11 @@ func DashboardStats(c *gin.Context) {
 	config.DB.Get(&categoryCount, "SELECT COUNT(*) FROM "+t("metas")+" WHERE type='category'")
 	config.DB.Get(&tagCount, "SELECT COUNT(*) FROM "+t("metas")+" WHERE type='tag'")
 
-	// DB-sourced count so admin dashboard never shows a stale Redis value
-	var totalViews int
-	config.DB.Get(&totalViews, "SELECT COUNT(*) FROM "+t("access_logs"))
+	// 永久站点 PV / UV(O(1) 单行)。v2.3.0 起跟 footer ArchiveStats
+	// 走同一个 GlobalStats() helper,避免 access_logs 90 天 prune 让
+	// dashboard 数字"变小"。
+	totalViewsLong, _ := GlobalStats()
+	totalViews := int(totalViewsLong)
 
 	var totalWords int
 	config.DB.Get(&totalWords, "SELECT COALESCE(SUM(word_count),0) FROM "+t("posts")+" WHERE status='publish' AND type='post'")
@@ -1201,74 +1120,15 @@ func VisitorMapData(c *gin.Context) {
 	util.Success(c, gin.H{"points": points})
 }
 
-// CleanupBotLogsPreview returns counts of how many access_log rows
-// would be removed by CleanupBotLogs, broken down by category. Lets
-// admin see the impact before committing the delete. Read-only.
+// CleanupBotLogs* / EnrichGeoIP removed in v2.3.0:
 //
-// GET /api/v1/admin/analytics/cleanup-bots/preview
-func CleanupBotLogsPreview(c *gin.Context) {
-	t := config.T("access_logs")
-	var totalRows, botRows, ssrDoublecount int
-
-	config.DB.Get(&totalRows, fmt.Sprintf("SELECT COUNT(*) FROM %s", t))
-	config.DB.Get(&botRows, fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s", t, BotSQLPattern()))
-	// SSR double-count: rows written by the old AccessLogger middleware
-	// (visitor_id is empty AND fingerprint is empty AND user_agent looks
-	// like a real browser — short-UA bots already covered by botRows).
-	// These were written alongside the legitimate /track row from the
-	// browser, inflating "unique visitors" via DISTINCT ip fallback.
-	config.DB.Get(&ssrDoublecount, fmt.Sprintf(
-		`SELECT COUNT(*) FROM %s
-		 WHERE COALESCE(visitor_id,'') = ''
-		   AND COALESCE(fingerprint,'') = ''
-		   AND user_agent IS NOT NULL
-		   AND LENGTH(user_agent) >= 15
-		   AND NOT (%s)`, t, BotSQLPattern()))
-
-	util.Success(c, gin.H{
-		"total_rows":      totalRows,
-		"bot_rows":        botRows,
-		"ssr_doublecount": ssrDoublecount,
-		"will_remove":     botRows + ssrDoublecount,
-		"will_keep":       totalRows - botRows - ssrDoublecount,
-	})
-}
-
-// CleanupBotLogs removes the rows identified by CleanupBotLogsPreview:
-//
-//  1. Bot-UA hits (BotSQLPattern — Mozilla/5.0 too short, "bot/crawler/spider"
-//     anywhere in UA, social fetcher, AI scraper, headless framework, etc.)
-//  2. SSR double-count (visitor_id=” AND fingerprint=” on real-browser UA —
-//     the old middleware writes pre-fix where the same visit was counted twice
-//     because the /track POST also wrote a row with the real visitor_id).
-//
-// POST /api/v1/admin/analytics/cleanup-bots
-func CleanupBotLogs(c *gin.Context) {
-	t := config.T("access_logs")
-
-	res, err := config.DB.Exec(fmt.Sprintf("DELETE FROM %s WHERE %s", t, BotSQLPattern()))
-	if err != nil {
-		util.Error(c, 500, "DB_ERROR", err.Error())
-		return
-	}
-	botDel, _ := res.RowsAffected()
-
-	res, err = config.DB.Exec(fmt.Sprintf(
-		`DELETE FROM %s
-		 WHERE COALESCE(visitor_id,'') = ''
-		   AND COALESCE(fingerprint,'') = ''
-		   AND user_agent IS NOT NULL
-		   AND LENGTH(user_agent) >= 15
-		   AND NOT (%s)`, t, BotSQLPattern()))
-	if err != nil {
-		util.Error(c, 500, "DB_ERROR", err.Error())
-		return
-	}
-	ssrDel, _ := res.RowsAffected()
-
-	util.Success(c, gin.H{
-		"deleted_bot":             botDel,
-		"deleted_ssr_doublecount": ssrDel,
-		"deleted_total":           botDel + ssrDel,
-	})
-}
+//   - CleanupBotLogs cleaned up rows the now-removed AccessLogger
+//     middleware used to double-write. With that middleware gone,
+//     the data shape it cleaned no longer exists.
+//   - EnrichGeoIP was a manual batch tool to backfill geo info on
+//     legacy rows. logAccess already does GeoIP enrichment async at
+//     write time; the batch path was unused (no admin frontend ever
+//     called it). Bot rows still exist in access_logs but they are
+//     filtered out at read time by IsBot UA gate in logAccess, so a
+//     manual cleanup endpoint was redundant — re-add later if a
+//     specific need shows up.

@@ -151,10 +151,32 @@ func InitDB() error {
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS fingerprint VARCHAR(64) DEFAULT ''", T("access_logs")))
 	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_access_visitor ON %s (visitor_id) WHERE visitor_id != ''", T("access_logs")))
 
+	// v2.3.0 表名统一:所有 stats 相关表加 `ul_stats_` 前缀。
+	//   ul_analytics_daily      → ul_stats_daily
+	//   ul_visitor_dates        → ul_stats_visitor_dates
+	//   ul_visitor_post_dates   → ul_stats_visitor_post_dates
+	// (ul_stats_global / ul_stats_post_daily / ul_access_logs 不变)
+	//
+	// PG 不支持 ALTER TABLE IF EXISTS RENAME(语法层面 IF EXISTS 是
+	// 有效的,但是当**新表名也已存在**时会报错)。用 DO $$ 块包起
+	// 来,只在「老表存在 + 新表不存在」时执行 RENAME,跑多次安全。
+	for _, m := range []struct{ from, to string }{
+		{T("analytics_daily"), T("stats_daily")},
+		{T("visitor_dates"), T("stats_visitor_dates")},
+		{T("visitor_post_dates"), T("stats_visitor_post_dates")},
+	} {
+		DB.Exec(fmt.Sprintf(`DO $$ BEGIN
+			IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '%s')
+			   AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '%s') THEN
+				ALTER TABLE %s RENAME TO %s;
+			END IF;
+		END $$;`, m.from, m.to, m.from, m.to))
+	}
+
 	// Analytics rollup: per-day per-dimension aggregates. Permanent —
-	// once a day the rollup cron summarizes ul_access_logs into this
-	// table, then prunes raw rows older than 30 days. Stat queries that
-	// span >30 days UNION raw + this table.
+	// rollup cron summarizes ul_access_logs into this table, then
+	// prunes raw rows older than 90 days. Long-window queries UNION
+	// raw + this table.
 	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 		date            DATE         NOT NULL,
 		dimension       VARCHAR(20)  NOT NULL,
@@ -163,32 +185,31 @@ func InitDB() error {
 		visits          INTEGER      NOT NULL DEFAULT 0,
 		unique_visitors INTEGER      NOT NULL DEFAULT 0,
 		PRIMARY KEY (date, dimension, dim_value, dim_extra)
-	)`, T("analytics_daily")))
-	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_analytics_daily_date ON %s (date)", T("analytics_daily")))
-	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_analytics_daily_dim ON %s (dimension, date)", T("analytics_daily")))
+	)`, T("stats_daily")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_stats_daily_date ON %s (date)", T("stats_daily")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_stats_daily_dim ON %s (dimension, date)", T("stats_daily")))
 
 	// Visitor presence per day. Permanent — lets us answer
 	// "unique visitors active in window [t1, t2]" precisely for any
-	// window length, including ranges that straddle the 30-day raw
-	// retention boundary. SUM-of-daily-uniques would over-count repeat
-	// visitors across days.
+	// window length, including ranges that straddle the raw retention
+	// boundary. SUM-of-daily-uniques would over-count repeat visitors.
 	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 		visitor_id  VARCHAR(80) NOT NULL,
 		date        DATE        NOT NULL,
 		PRIMARY KEY (visitor_id, date)
-	)`, T("visitor_dates")))
-	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_visitor_dates_date ON %s (date)", T("visitor_dates")))
+	)`, T("stats_visitor_dates")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_stats_visitor_dates_date ON %s (date)", T("stats_visitor_dates")))
 
-	// Real-time eternal stats — refactor v2.2.0
+	// Real-time eternal stats(v2.2.0 引入,v2.3.0 表名前缀统一为 ul_stats_)。
 	//
 	// Counters that MUST never decrease and never wait for cron rollup:
-	//   ul_stats_global       1-row site-level永久 counter (footer 实时来源)
-	//   ul_stats_post_daily   per-post per-day PV/UV (永久, 文章历史曲线)
-	//   ul_visitor_post_dates per-post per-visitor per-day (永久, post UV 探测)
+	//   ul_stats_global              1-row site-level永久 counter
+	//   ul_stats_post_daily          per-post per-day PV/UV
+	//   ul_stats_visitor_post_dates  per-post per-visitor per-day
 	//
-	// All written real-time (UPSERT) on every track. ul_access_logs is
-	// now strictly the "hot raw" tier (90-day default retention) — its
-	// row count is no longer a source of truth for the永久 PV total.
+	// 全部写入路径事务化(/track 一个事务内 UPSERT 多张表)。
+	// ul_access_logs 仅作"热原始"层(90 天保留),数字真相在
+	// stats_global / stats_daily / visitor 表里。
 	DB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 		id              SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
 		total_views     BIGINT   NOT NULL DEFAULT 0,
@@ -199,11 +220,11 @@ func InitDB() error {
 	DB.Exec(fmt.Sprintf("INSERT INTO %s (id) VALUES (1) ON CONFLICT DO NOTHING", T("stats_global")))
 
 	// Backfill on first migration (total_views=0 means never seeded).
-	// Logic: hot count = COUNT(*) of remaining ul_access_logs (no jump
-	// vs old footer); archived count = SUM(visits) from analytics_daily
-	// _total rows for days strictly OLDER than the oldest access_logs
-	// row, so prune'd historical days are not lost. total_uniques =
-	// lifetime distinct visitor_ids in ul_visitor_dates.
+	// hot count = COUNT(*) ul_access_logs(没跟旧 footer 跳过历史)
+	// archived count = SUM(visits) from stats_daily _total rows for
+	//                  days strictly OLDER than the oldest access_logs
+	//                  row, so prune'd historical days are kept.
+	// total_uniques = lifetime distinct visitor_ids in stats_visitor_dates.
 	{
 		var seeded int64
 		DB.Get(&seeded, fmt.Sprintf("SELECT total_views FROM %s WHERE id = 1", T("stats_global")))
@@ -217,8 +238,8 @@ func InitDB() error {
 				    (SELECT DATE(TO_TIMESTAMP(MIN(created_at))) FROM %s),
 				    CURRENT_DATE
 				  )
-			`, T("analytics_daily"), T("access_logs")))
-			DB.Get(&lifetimeUniques, fmt.Sprintf("SELECT COUNT(DISTINCT visitor_id) FROM %s WHERE visitor_id != ''", T("visitor_dates")))
+			`, T("stats_daily"), T("access_logs")))
+			DB.Get(&lifetimeUniques, fmt.Sprintf("SELECT COUNT(DISTINCT visitor_id) FROM %s WHERE visitor_id != ''", T("stats_visitor_dates")))
 			DB.Get(&firstEvent, fmt.Sprintf("SELECT COALESCE(MIN(created_at), 0) FROM %s", T("access_logs")))
 			total := hotCount + archivedCount
 			DB.Exec(fmt.Sprintf(`UPDATE %s SET total_views = $1, total_uniques = $2, first_event_at = $3, updated_at = $4 WHERE id = 1`,
@@ -242,9 +263,9 @@ func InitDB() error {
 		post_id     INTEGER     NOT NULL,
 		date        DATE        NOT NULL,
 		PRIMARY KEY (visitor_id, post_id, date)
-	)`, T("visitor_post_dates")))
-	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_visitor_post_dates_post ON %s (post_id, date)", T("visitor_post_dates")))
-	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_visitor_post_dates_date ON %s (date)", T("visitor_post_dates")))
+	)`, T("stats_visitor_post_dates")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_stats_visitor_post_dates_post ON %s (post_id, date)", T("stats_visitor_post_dates")))
+	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_stats_visitor_post_dates_date ON %s (date)", T("stats_visitor_post_dates")))
 
 	// Comments: visitor_id for fingerprint matching
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS visitor_id VARCHAR(64) DEFAULT ''", T("comments")))
