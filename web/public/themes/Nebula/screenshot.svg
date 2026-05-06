@@ -1,0 +1,72 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="nb-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6B9DFF" stop-opacity="0.42"/>
+      <stop offset="55%" stop-color="#6B9DFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#6B9DFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="nb-tile" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#122036"/>
+      <stop offset="100%" stop-color="#0E1A2D"/>
+    </linearGradient>
+    <linearGradient id="nb-mark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9E9EFF"/>
+      <stop offset="100%" stop-color="#6B9DFF"/>
+    </linearGradient>
+    <radialGradient id="nb-search-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6B9DFF" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#6B9DFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Pure black background -->
+  <rect width="1200" height="760" fill="#000000"/>
+
+  <!-- Top nav (minimal) -->
+  <g>
+    <rect x="48" y="22" width="28" height="28" rx="6" fill="url(#nb-mark)"/>
+    <text x="86" y="42" font-family="Google Sans, sans-serif" font-size="15" font-weight="500" fill="#FFFFFF">Nebula</text>
+    <circle cx="1108" cy="36" r="14" fill="#0A0A0A"/>
+    <text x="1102" y="41" font-family="Arial, sans-serif" font-size="13" fill="rgba(255,255,255,0.55)">☾</text>
+    <circle cx="1148" cy="36" r="14" fill="#0A0A0A"/>
+    <text x="1144" y="41" font-family="Arial, sans-serif" font-size="13" fill="rgba(255,255,255,0.55)">?</text>
+  </g>
+
+  <!-- Hero glow (under search) -->
+  <ellipse cx="600" cy="430" rx="520" ry="220" fill="url(#nb-glow)"/>
+
+  <!-- Hero title -->
+  <text x="600" y="280" text-anchor="middle" font-family="Google Sans, sans-serif" font-size="120" font-weight="500" fill="#FFFFFF" letter-spacing="-3">Nebula</text>
+
+  <!-- Subtitle in periwinkle blue -->
+  <text x="600" y="338" text-anchor="middle" font-family="Google Sans Text, sans-serif" font-size="17" fill="#A8C7FA">A new perspective for the agentic era.</text>
+  <text x="600" y="362" text-anchor="middle" font-family="Google Sans Text, sans-serif" font-size="17" fill="#A8C7FA">Notes, code and field records, always up-to-date.</text>
+
+  <!-- Search bar glow halo -->
+  <ellipse cx="600" cy="438" rx="380" ry="80" fill="url(#nb-search-glow)"/>
+
+  <!-- Search bar -->
+  <rect x="320" y="408" width="560" height="56" rx="28" fill="#071226" stroke="rgba(255,255,255,0.1)"/>
+  <text x="352" y="444" font-family="Google Sans Text, sans-serif" font-size="16" fill="rgba(255,255,255,0.4)">搜索文章、关键词或标题</text>
+  <circle cx="848" cy="436" r="14" fill="transparent"/>
+  <text x="838" y="442" font-family="Arial, sans-serif" font-size="14" fill="rgba(255,255,255,0.6)">⌕</text>
+
+  <!-- Floating 3D tiles (4 staggered, blue-bordered dark navy squares) -->
+  <g>
+    <!-- Tile 1: book (left, slightly behind) -->
+    <rect x="356" y="568" width="120" height="120" rx="14" fill="url(#nb-tile)" stroke="#6B9DFF" stroke-opacity="0.55" transform="rotate(-2 416 628)"/>
+    <text x="416" y="640" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#6B9DFF" transform="rotate(-2 416 628)">📖</text>
+
+    <!-- Tile 3: comment (top right behind) -->
+    <rect x="700" y="540" width="120" height="120" rx="14" fill="url(#nb-tile)" stroke="#6B9DFF" stroke-opacity="0.55" transform="rotate(2 760 600)"/>
+    <text x="760" y="612" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#6B9DFF" transform="rotate(2 760 600)">💬</text>
+
+    <!-- Tile 4: monitor (right) -->
+    <rect x="844" y="582" width="124" height="124" rx="14" fill="url(#nb-tile)" stroke="#6B9DFF" stroke-opacity="0.55" transform="rotate(-1 906 644)"/>
+    <text x="906" y="652" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#6B9DFF" transform="rotate(-1 906 644)">▢</text>
+
+    <!-- Tile 2: code (center front, larger) -->
+    <rect x="488" y="612" width="138" height="138" rx="16" fill="url(#nb-tile)" stroke="#6B9DFF" stroke-opacity="0.85" transform="rotate(1 557 681)"/>
+    <text x="557" y="694" text-anchor="middle" font-family="Courier New, monospace" font-size="44" font-weight="700" fill="#6B9DFF" transform="rotate(1 557 681)">&lt;/&gt;</text>
+  </g>
+</svg>

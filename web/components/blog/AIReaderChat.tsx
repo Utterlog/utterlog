@@ -168,6 +168,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   if (!open) {
     return (
       <div
+        className="ai-reader-chat ai-reader-chat--collapsed"
         onClick={() => setOpen(true)}
         style={{
           position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 1000,
@@ -210,14 +211,16 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
 
   // ━━ 展开状态：聊天窗口（直角，加高） ━━
   return (
-    <div style={{
-      position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 1000,
-      width: 400, height: '70vh', maxHeight: 700, minHeight: 500,
-      background: '#fff', border: '1px solid #e0e0e0',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      transition: 'bottom 0.2s',
-    }}>
+    <div
+      className="ai-reader-chat ai-reader-chat--open"
+      style={{
+        position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 1000,
+        width: 400, height: '70vh', maxHeight: 700, minHeight: 500,
+        background: '#fff', border: '1px solid #e0e0e0',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        transition: 'bottom 0.2s',
+      }}>
       {/* Header */}
       <div style={{
         padding: '12px 16px', borderBottom: '1px solid #e5e5e5',

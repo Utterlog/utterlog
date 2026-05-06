@@ -2,7 +2,7 @@ import { useEffect, useState, lazy, Suspense, Component, type ErrorInfo, type Re
 import { Routes, Route, useNavigate, Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/lib/store';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { useI18n } from '@/lib/i18n';
+import { Spinner } from '@/components/ui';
 import { loadSiteOptions } from '@/lib/site';
 
 /**
@@ -141,17 +141,11 @@ function AuthGate() {
   );
 }
 
+// 路由切换 / 鉴权未就绪 / Suspense fallback 都走这个。
+// 全 admin 唯一的"主 loading 视图"——固定全屏遮罩,viewport 中央,
+// 不会跟着布局抖,见 ui/Spinner.tsx 注释。
 function RouteLoading() {
-  const { t } = useI18n();
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      height: '100%', minHeight: 200, color: 'var(--color-text-dim)', fontSize: 13,
-    }}>
-      <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 8, color: 'var(--color-primary)' }} />
-      {t('common.loading', '加载中…')}
-    </div>
-  );
+  return <Spinner overlay />;
 }
 
 export default function App() {

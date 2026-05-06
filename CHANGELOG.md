@@ -23,6 +23,31 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.1] - 2026-05-07
+
+### 新增
+
+- **Nebula 暗色科技主题**：电紫强调 + 深蓝表面 + 玻璃质感卡片 + 蓝调发光阴影。覆盖 Header（Alimama 方圆体 logo + admin `site_brand_mode` 联动）、首页（说说磨砂胶囊 + 4 个爱好图块 hover 弹跳 / 文字徽章 + 评论者头像墙 hover 弹评论详情 + 分类切换不变 URL + 统计 inline 在 § ARTICLES 行）、文章页（横幅嵌标题 + 思源宋体 h2-h6 + 苹方正文 + Google Sans Code 代码 / Prism + 右侧 fixed sticky TOC + H2 蓝胶囊徽章 + h3-h4 蓝方块前缀 + 表格行列双向网格 + 表头大写字距 + 评论 thread 包裹主评和回复气泡 + @mention popup 翻深色 + 边读边聊浮窗整套深色适配）、底部多行结构页脚（建站天数 + 总浏览 + 实时在线 + 最近访客地）。
+- **足迹国旗装饰**：文章封面右下角自动显示该文涉及国家国旗（Nebula 主题 36×36 圆角，其他主题 50×50 不变）。
+- **PostNavigation 友链卡随机封面**：RSS 拉不到友链文章特色图，改用 `randomCoverUrl(hashFeedSeed(link))` 取稳定的 img.et 占位图，每条 feed 用 djb2 哈希链接得到不同的整数 seed，刷新不闪、4 张卡 4 张图。
+- **首页"最新评论者头像墙"**：首页底部一排圆头像（10–20 个，按昵称去重），hover 弹出磨砂玻璃 popup 显示该用户最新评论内容 + 文章标题 + 时间，点击跳到对应评论锚点。
+
+### 优化
+
+- **`randomCoverUrl` regex 放宽**：`[?&]r=\d+` → `[?&]r=[^&#]*`。之前 admin 设置 `r=abc` 等非数字 seed 时 regex 不匹配，会去 else 分支追加第二个 `r={id}` 参数，img.et 收到两个同名参数行为不可预测。现在任何 `r=<value>` 都会被替换成 `r={post.id}`，每篇文章拿到稳定唯一的随机封面。
+- **AISummary 图标**：`fa-wand-magic-sparkles`（魔法棒） → `fa-microchip-ai`（AI 微芯片），更切题。共享组件，所有主题受益。
+- **评论列表头像方→圆**：CommentList 三处 inline `borderRadius: 0` 全部改 `'50%'`，跟现代 UI 风格一致。共享组件。
+- **PostNavigation 友链 tab 也按 `pageSize` 切片**：之前 feeds tab 不分页全部渲染，现在跟其他 tab 一样切片，Nebula 传 `pageSize={4}` 时友链卡也只显示 4 张。
+- **CommentList / CommentForm / AIReaderChat 加 className 钩子**：`comment-card` / `comment-card--reply` / `comment-thread` / `comment-form` / `ai-reader-chat--collapsed` / `ai-reader-chat--open`，便于主题精准 override 而无需改 inline style。共享组件不动 inline 样式，其他主题不受影响。
+
+### 修复
+
+- 友链 tab 多张卡片可能拿到同一张占位图：原因是 `randomCoverUrl` 直接把整段 link URL 当 `r=` 传给 img.et，长 URL 被服务端截断或归一化后彼此变成相同 seed。修复见上面"`randomCoverUrl` regex 放宽" + 友链卡新加的 `hashFeedSeed()` djb2 哈希。
+
+### 移除
+
+- 暂无。
+
 ## [2.3.0] - 2026-05-05
 
 ### 优化

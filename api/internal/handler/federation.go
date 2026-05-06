@@ -428,6 +428,14 @@ func runFeedFetch(limit int) (fetched, newItems int) {
 		config.DB.Exec(fmt.Sprintf("UPDATE %s SET last_fetched_at = $1 WHERE id = $2", t("rss_subscriptions")), now, sub.ID)
 	}
 
+	// 滚动清理：仅保留最近 7 天的 feed_items —— 用 created_at（入库时间）
+	// 而非 pub_date（feed 提供的发布时间）作为窗口锚点，因为 pub_date 在
+	// 一些站点上不规范，会导致老条目反复被"重新认定为新"而误删。
+	sevenDaysAgo := time.Now().Unix() - 7*24*3600
+	config.DB.Exec(fmt.Sprintf(
+		"DELETE FROM %s WHERE created_at < $1",
+		t("feed_items")), sevenDaysAgo)
+
 	if newItems > 0 {
 		config.DB.Exec(fmt.Sprintf(
 			"INSERT INTO %s (user_id, type, title, content, created_at) VALUES (1,'feed','关注动态更新',$1,$2)",
@@ -501,6 +509,48 @@ func FeedTimeline(c *gin.Context) {
 		t("feed_items"), t("rss_subscriptions")), userID)
 
 	util.Paginate(c, items, total, page, perPage)
+}
+
+// FeedStats returns aggregate counts for the /feeds page header:
+//   - count_7d: feed_items collected in the last 7 days (rolling window)
+//   - count_total: feed_items lifetime (kept for context, optional)
+//   - rss_count: number of rss_subscriptions for this user (= friend links with RSS)
+//   - last_fetched_at: max last_fetched_at across subscriptions (unix seconds)
+// Same public-friendly fallback as FeedTimeline: anonymous visitors see the
+// owner's (user_id=1) aggregated stats.
+func FeedStats(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		userID = 1
+	}
+	t := config.T
+	sevenDaysAgo := time.Now().Unix() - 7*24*3600
+
+	var count7d, countTotal, rssCount int
+	var lastFetched int64
+
+	config.DB.Get(&count7d, fmt.Sprintf(
+		"SELECT COUNT(*) FROM %s fi JOIN %s rs ON fi.subscription_id = rs.id WHERE rs.user_id = $1 AND fi.created_at >= $2",
+		t("feed_items"), t("rss_subscriptions")), userID, sevenDaysAgo)
+
+	config.DB.Get(&countTotal, fmt.Sprintf(
+		"SELECT COUNT(*) FROM %s fi JOIN %s rs ON fi.subscription_id = rs.id WHERE rs.user_id = $1",
+		t("feed_items"), t("rss_subscriptions")), userID)
+
+	config.DB.Get(&rssCount, fmt.Sprintf(
+		"SELECT COUNT(*) FROM %s WHERE user_id = $1",
+		t("rss_subscriptions")), userID)
+
+	config.DB.Get(&lastFetched, fmt.Sprintf(
+		"SELECT COALESCE(MAX(last_fetched_at), 0) FROM %s WHERE user_id = $1",
+		t("rss_subscriptions")), userID)
+
+	util.Success(c, gin.H{
+		"count_7d":        count7d,
+		"count_total":     countTotal,
+		"rss_count":       rssCount,
+		"last_fetched_at": lastFetched,
+	})
 }
 
 // ===================== Notification Bell =====================

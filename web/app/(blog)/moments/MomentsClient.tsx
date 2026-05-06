@@ -92,8 +92,7 @@ function formatMomentSource(source?: string | null) {
   return raw;
 }
 
-function getMomentPositions(count: number) {
-  const cols = 4;
+function getMomentPositions(count: number, cols = 4) {
   const cardW = 250;
   const cardH = 280;
   const gapX = 35;
@@ -115,7 +114,7 @@ function getMomentPositions(count: number) {
 }
 
 export default function MomentsPage() {
-  const { timeZone } = useThemeContext();
+  const { timeZone, theme } = useThemeContext();
   const [moments, setMoments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showComposer, setShowComposer] = useState(false);
@@ -140,6 +139,10 @@ export default function MomentsPage() {
   const [topZ, setTopZ] = useState(100);
   const [cardZs, setCardZs] = useState<Record<number, number>>({});
   const [isMobile, setIsMobile] = useState(false);
+  // 列数随视口宽度自适应：<640=1, <960=2, <1280=3, 否则 4
+  const [cols, setCols] = useState(4);
+  // 工具栏滚动避让 footer 用的上移量（footer 进入视口时按可见高度提升 toolbar）
+  const [toolbarLift, setToolbarLift] = useState(0);
 
   // 日历筛选
   const [showCalendar, setShowCalendar] = useState(false);
@@ -156,10 +159,42 @@ export default function MomentsPage() {
   useEffect(() => {
     fetchMoments();
     fetchTags();
-    const check = () => setIsMobile(window.innerWidth < 768);
+    // Nebula 主题强制对齐 960px 内容容器，最多 3 列；其他主题按视口断点
+    const isNebula = theme?.name === 'Nebula';
+    const check = () => {
+      const w = window.innerWidth;
+      setIsMobile(w < 768);
+      if (w < 640) setCols(1);
+      else if (w < 960) setCols(2);
+      else if (isNebula) setCols(3);
+      else if (w < 1280) setCols(3);
+      else setCols(4);
+    };
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
+  }, [theme?.name]);
+
+  // 工具栏避让 footer：监听 .blog-main 滚动，footer 露出多少 toolbar 就上抬多少
+  useEffect(() => {
+    const scrollEl = document.querySelector('.blog-main') as HTMLElement | null;
+    if (!scrollEl) return;
+    const onScroll = () => {
+      const footer = scrollEl.querySelector('footer') as HTMLElement | null;
+      if (!footer) { setToolbarLift(0); return; }
+      const fh = footer.offsetHeight;
+      const scrollBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
+      // footer 顶边距视口底的距离 = scrollBottom（footer 完全在下方时 = fh）
+      // 当 scrollBottom < fh 表示 footer 已露出 (fh - scrollBottom) 高度
+      setToolbarLift(Math.max(0, fh - scrollBottom));
+    };
+    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    onScroll();
+    return () => {
+      scrollEl.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
   }, []);
 
   // Close calendar / tag panel on click outside
@@ -301,6 +336,7 @@ export default function MomentsPage() {
 
   return (
     <div
+      className="moments-page"
       onClick={() => setActiveCard(null)}
       style={{
         minHeight: 'calc(100vh - 200px)',
@@ -351,9 +387,11 @@ export default function MomentsPage() {
                 return true;
               });
             }
-            const positions = getMomentPositions(filtered.length);
-            const totalRows = Math.ceil(filtered.length / 4);
+            const positions = getMomentPositions(filtered.length, cols);
+            const totalRows = Math.ceil(filtered.length / cols);
             const containerH = totalRows * 305 + 100;
+            // 容器宽度随列数收口，少几列时不留大片右侧空白：cols*250 + (cols-1)*35 + 50 噪声余量
+            const containerW = cols * 250 + (cols - 1) * 35 + 50;
 
             const handleCardClick = (e: React.MouseEvent, i: number) => {
               e.stopPropagation();
@@ -396,7 +434,7 @@ export default function MomentsPage() {
                     </button>
                   )}
 
-                  <div style={{
+                  <div className="moment-card" style={{
                     background: '#fff',
                     borderRadius: '2px',
                     boxShadow: isActive ? '0 12px 40px rgba(0,0,0,0.15)' : '0 2px 12px rgba(0,0,0,0.06)',
@@ -462,7 +500,7 @@ export default function MomentsPage() {
             return (
               <div
                 onClick={() => setActiveCard(null)}
-                style={{ position: 'relative', maxWidth: '1250px', margin: '0 auto', height: containerH }}
+                style={{ position: 'relative', maxWidth: `${containerW}px`, margin: '0 auto', height: containerH }}
               >
                 {filtered.map((m: any, i: number) => {
                   const pos = positions[i];
@@ -505,8 +543,8 @@ export default function MomentsPage() {
       </div>
 
       {/* ==================== Floating Bottom Toolbar ==================== */}
-      <div style={{ position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
-        <div style={{
+      <div style={{ position: 'fixed', bottom: `${32 + toolbarLift}px`, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, transition: 'bottom 0.18s ease-out' }}>
+        <div className="moments-toolbar" style={{
           display: 'flex', alignItems: 'center', gap: '8px', height: '54px',
           background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
           border: '1px solid rgba(0,0,0,0.08)', borderRadius: '27px', padding: '0 12px',
@@ -555,7 +593,7 @@ export default function MomentsPage() {
                 const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 
                 return (
-                  <div style={{
+                  <div className="moments-popover" style={{
                     position: 'absolute', bottom: '48px', left: '50%', transform: 'translateX(-50%)',
                     background: '#fff', border: '1px solid #e5e5e5', borderRadius: '8px',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.12)', padding: '12px', minWidth: '220px',
@@ -637,7 +675,7 @@ export default function MomentsPage() {
                 const allTags = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]);
 
                 return (
-                  <div style={{
+                  <div className="moments-popover" style={{
                     position: 'absolute', bottom: '48px', left: '50%', transform: 'translateX(-50%)',
                     background: '#fff', border: '1px solid #e5e5e5', borderRadius: '8px',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.12)', padding: '12px', minWidth: '180px',
@@ -719,9 +757,9 @@ export default function MomentsPage() {
           style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)', backdropFilter: 'blur(4px)' }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowComposer(false); }}
         >
-          <div style={{ width: '520px', maxWidth: '90vw', background: '#fff', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.12)', position: 'relative', overflow: 'hidden' }}>
+          <div className="moments-composer" style={{ width: '520px', maxWidth: '90vw', background: '#fff', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.12)', position: 'relative', overflow: 'hidden' }}>
             {/* Badge */}
-            <div style={{
+            <div className={`moments-composer-badge${mood ? '' : ' is-default'}`} style={{
               position: 'absolute', top: '-1px', right: '24px',
               background: mood ? getTagColor(mood).bg : '#4a9e8e', color: '#fff',
               fontSize: '11px', fontWeight: 600, padding: '6px 14px',
@@ -828,6 +866,7 @@ export default function MomentsPage() {
                   <button
                     onClick={handlePublish}
                     disabled={submitting}
+                    className={`moments-composer-submit${mood ? '' : ' is-default'}`}
                     style={{
                       padding: '6px 20px', borderRadius: '16px', fontSize: '12px', fontWeight: 600,
                       background: mood ? getTagColor(mood).bg : '#4a9e8e', color: '#fff',

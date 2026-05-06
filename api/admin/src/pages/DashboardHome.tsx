@@ -30,6 +30,7 @@ import api, { postsApi, commentsApi, linksApi, networkApi } from '@/lib/api';
 import { formatRelativeTime } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 import { postUrlOf } from '@/lib/site';
+import { Spinner } from '@/components/ui';
 
 interface Stats { posts: number; comments: number; links: number; views: number; today: number; words: number; days: number; categories: number; tags: number }
 interface RecentPost { id: number; display_id?: number; title: string; slug: string; status: string; created_at: string; published_at?: string | null; view_count?: number; comment_count?: number; categories?: { id: number; name: string; slug: string; icon?: string }[] }
@@ -289,7 +290,7 @@ export default function DashboardPage() {
             </button>
           </div>
           {loading ? (
-            <div className="text-dim" style={{ padding: '48px 20px', textAlign: 'center', fontSize: '14px' }}>{t('common.loading', '加载中…')}</div>
+            <Spinner />
           ) : recentPosts.length === 0 ? (
             <div style={{ padding: '48px 20px', textAlign: 'center' }}>
               <p className="text-dim" style={{ fontSize: '14px', marginBottom: '16px' }}>{t('admin.dashboard.noPosts', '暂无文章')}</p>
@@ -357,7 +358,7 @@ export default function DashboardPage() {
             </button>
           </div>
           {loading ? (
-            <div className="text-dim" style={{ padding: '48px 20px', textAlign: 'center', fontSize: '14px' }}>{t('common.loading', '加载中…')}</div>
+            <Spinner />
           ) : recentComments.length === 0 ? (
             <div className="text-dim" style={{ padding: '48px 20px', textAlign: 'center', fontSize: '14px' }}>{t('admin.dashboard.noComments', '暂无评论')}</div>
           ) : (

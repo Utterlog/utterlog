@@ -149,7 +149,7 @@ func main() {
 
 	// Health
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.3.0-go"}})
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"status": "ok", "version": "2.3.1-go"}})
 	})
 
 	// ===================== Install Wizard (public, unauth) =====================
@@ -313,6 +313,7 @@ func main() {
 	// the owner's aggregated friend-feed items without a login wall.
 	// Falls back to user_id=1 when the caller isn't signed in.
 	api.GET("/social/feed-timeline", handler.FeedTimeline)
+	api.GET("/social/feed-stats", handler.FeedStats)
 
 	// ===================== WordPress sync (public, body-token auth) =====================
 	// Auth via {site_uuid, token} in each request body — site must be

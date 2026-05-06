@@ -1387,12 +1387,10 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
 /* ========================================
    Animations
    ======================================== */
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
+/* v2.3.1: 删 @keyframes spin / .animate-spin。
+   全 admin loading 走 components/ui/Spinner.tsx,使用 FontAwesome
+   自带的 fa-spin(动画在 FA CSS 内部定义),不再需要本地 keyframes。
+   .animate-spin 整个项目无人引用 —— 死代码。 */
 
 @keyframes vinyl-spin {
   from { transform: rotate(0deg); }

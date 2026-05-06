@@ -59,6 +59,7 @@ import * as Azure from '@/themes/Azure';
 import * as Renascent from '@/themes/Renascent';
 import * as Chred from '@/themes/Chred';
 import * as Flux from '@/themes/Flux';
+import * as Nebula from '@/themes/Nebula';
 
 // 主题 CSS 按需加载：/themes/{name}/styles.css，由 blog layout 动态 <link> 引入。
 // 后端会先查 content/themes，再查内置 public/themes，最后回退到 web 容器。
@@ -68,6 +69,7 @@ import AzureManifest from '@/themes/Azure/theme.json';
 import RenascentManifest from '@/themes/Renascent/theme.json';
 import ChredManifest from '@/themes/Chred/theme.json';
 import FluxManifest from '@/themes/Flux/theme.json';
+import NebulaManifest from '@/themes/Nebula/theme.json';
 
 const themeRegistry: Record<string, ThemeComponents> = {
   Utterlog: Utterlog as unknown as ThemeComponents,
@@ -75,6 +77,7 @@ const themeRegistry: Record<string, ThemeComponents> = {
   Renascent: Renascent as unknown as ThemeComponents,
   Chred: Chred as unknown as ThemeComponents,
   Flux: Flux as unknown as ThemeComponents,
+  Nebula: Nebula as unknown as ThemeComponents,
 };
 
 const manifestRegistry: Record<string, ThemeManifest> = {
@@ -83,6 +86,7 @@ const manifestRegistry: Record<string, ThemeManifest> = {
   Renascent: RenascentManifest as ThemeManifest,
   Chred: ChredManifest as ThemeManifest,
   Flux: FluxManifest as ThemeManifest,
+  Nebula: NebulaManifest as ThemeManifest,
 };
 
 // Utterlog (renamed from Westlife in 2026-04) is the official default

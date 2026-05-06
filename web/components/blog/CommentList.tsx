@@ -261,6 +261,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
   return (
     <>
       <div
+        className={`comment-card${isReply ? ' comment-card--reply' : ''}`}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -280,7 +281,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
             <img
               src={comment.avatar_url || 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=80'}
               alt=""
-              style={{ width: '40px', height: '40px', objectFit: 'cover', background: '#f0f0f0', borderRadius: 0, transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)', transform: hovered ? 'scale(1.15)' : 'scale(1)' }}
+              style={{ width: '40px', height: '40px', objectFit: 'cover', background: '#f0f0f0', borderRadius: '50%', transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)', transform: hovered ? 'scale(1.15)' : 'scale(1)' }}
               onError={e => { (e.target as HTMLImageElement).src = 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=80'; }}
             />
           </div>
@@ -293,7 +294,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
               <img
                 src={comment.avatar_url || 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=80'}
                 alt=""
-                style={{ width: '24px', height: '24px', objectFit: 'cover', background: '#f0f0f0', borderRadius: 0 }}
+                style={{ width: '24px', height: '24px', objectFit: 'cover', background: '#f0f0f0', borderRadius: '50%' }}
                 onError={e => { (e.target as HTMLImageElement).src = 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=80'; }}
               />
             )}
@@ -482,7 +483,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                       <img src={parentComment.avatar_url || 'https://gravatar.bluecdn.com/avatar/0?d=mp&s=40'} alt=""
-                        style={{ width: '20px', height: '20px', borderRadius: 0, background: '#f0f0f0' }} />
+                        style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#f0f0f0', objectFit: 'cover' }} />
                       <span style={{ fontWeight: 600, color: 'var(--color-text-main, #333)' }}>{parentComment.author}</span>
                     </div>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const }}>
@@ -583,7 +584,7 @@ function CommentCard({ comment, postId, floor, onReplySuccess, editableIds }: {
   editableIds: Set<number>;
 }) {
   return (
-    <div style={{ marginTop: '16px', border: '1px solid var(--color-border, #eee)' }}>
+    <div className="comment-thread" style={{ marginTop: '16px', border: '1px solid var(--color-border, #eee)' }}>
       <CommentRow comment={comment} postId={postId} depth={0} floor={floor} onReplySuccess={onReplySuccess} editableIds={editableIds} />
     </div>
   );

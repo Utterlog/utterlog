@@ -19,7 +19,7 @@ export default function AISummary({ aiSummary }: AISummaryProps) {
   return (
     <div className="blog-ai-summary">
       <div className="blog-ai-summary-header">
-        <i className="fa-solid fa-wand-magic-sparkles" style={{ fontSize: '14px' }} />
+        <i className="fa-solid fa-microchip-ai" style={{ fontSize: '14px' }} />
         <span>AI 摘要</span>
       </div>
       <div className="blog-ai-summary-body">{ai}</div>

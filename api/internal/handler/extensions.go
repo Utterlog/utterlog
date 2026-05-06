@@ -188,6 +188,18 @@ var builtInThemes = []Extension{
 			{Key: "sidebar", Label: "侧栏导航", Description: "首页左侧分类标签导航"},
 		},
 	},
+	{
+		ID: "Nebula", Name: "Nebula", Version: "2.3.1",
+		Author:      "Utterlog Team",
+		Description: "暗色科技风主题 — 电紫强调与深蓝表面，玻璃质感卡片与蓝调发光阴影",
+		Kind:        "theme",
+		Builtin:     true,
+		Preview:     "/themes/Nebula/screenshot.svg",
+		MenuPositions: []MenuPosition{
+			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
+			{Key: "footer", Label: "底部导航", Description: "网站底部 Footer 的辅助链接"},
+		},
+	},
 }
 
 // listExtensions scans directories and returns metadata.

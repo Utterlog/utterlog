@@ -16,6 +16,15 @@ interface FeedItem {
   sourceUrl?: string;
 }
 
+type ViewMode = 'grid' | 'list';
+
+interface FeedStats {
+  count_7d: number;
+  count_total: number;
+  rss_count: number;
+  last_fetched_at: number;
+}
+
 function timeAgo(val: string | number): string {
   if (!val) return '';
   const ts = typeof val === 'number' ? val * 1000 : (Number(val) > 1e9 ? Number(val) * 1000 : new Date(val).getTime());
@@ -33,7 +42,6 @@ function timeAgo(val: string | number): string {
   return `${Math.floor(months / 12)} 年前`;
 }
 
-const rotations = [-2.2, 1.5, -0.8, 2.0, -1.5, 1.2, -1.8, 0.5, -1.0, 2.3, -0.3, 1.8];
 const sourceColors = [
   '#4a9e8e', '#c4956a', '#8b7ec8', '#d4837a', '#6b9dbd', '#9aab68',
   '#e8a87c', '#7eb5a6', '#b07ec8', '#c97a7a', '#5d8cae', '#85a65d',
@@ -45,8 +53,6 @@ function getSourceColor(name: string) {
   return sourceColors[Math.abs(hash) % sourceColors.length];
 }
 
-// Decode HTML entities that RSS feeds embed in text fields (e.g. "Kevin&#039;s").
-// Uses the browser's own parser so numeric + named entities are all handled.
 function decodeEntities(s: string): string {
   if (!s || typeof window === 'undefined') return s;
   if (!s.includes('&')) return s;
@@ -55,42 +61,47 @@ function decodeEntities(s: string): string {
   return el.value;
 }
 
+function stripTags(s: string) {
+  return decodeEntities((s || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
+}
+
 export default function FeedsPage() {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  // After the first auto-load past page 1, subsequent page increments
-  // require an explicit button click so users who were on page 3 don't
-  // keep triggering fetches by scroll noise alone.
   const [autoLoadExhausted, setAutoLoadExhausted] = useState(false);
-  const [activeCard, setActiveCard] = useState<number | null>(null);
-  const [topZ, setTopZ] = useState(100);
-  const [cardZs, setCardZs] = useState<Record<number, number>>({});
   const [faviconLoaded, setFaviconLoaded] = useState<Record<number, boolean>>({});
   const [isMobile, setIsMobile] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [stats, setStats] = useState<FeedStats | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  // Refs to each desktop card wrapper. Used to measure the natural
-  // collapsed offsetHeight on first expand, so we can lock the grid
-  // cell to that height while the inner card lifts into position:
-  // absolute and overlays the rows below.
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [collapsedHeights, setCollapsedHeights] = useState<Record<number, number>>({});
 
+  // 视口检测 + 持久化 view mode
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
     window.addEventListener('resize', check);
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('feeds-view-mode') : null;
+    if (saved === 'grid' || saved === 'list') setViewMode(saved);
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  const setView = (mode: ViewMode) => {
+    setViewMode(mode);
+    try { window.localStorage.setItem('feeds-view-mode', mode); } catch {}
+  };
+
   useEffect(() => {
     loadFeeds(1, true);
+    // 拉一份头部统计：7 天文章数 / RSS 友链数 / 上次抓取时间
+    api.get('/social/feed-stats').then((r: any) => {
+      if (r?.data) setStats(r.data as FeedStats);
+    }).catch(() => {});
   }, []);
 
-  // One-shot auto-load when the sentinel scrolls into view. After it
-  // fires, `autoLoadExhausted=true` and further loads need the button.
+  // 一次性 sentinel 自动加载
   useEffect(() => {
     if (autoLoadExhausted || !hasMore || loading || loadingMore) return;
     const el = sentinelRef.current;
@@ -127,7 +138,6 @@ export default function FeedsPage() {
       setPage(targetPage);
       setHasMore(!!meta.has_more);
     } catch {
-      // Fallback — only on very first load, not on page-2+ errors.
       if (reset) {
         try {
           const linksRes: any = await api.get('/links');
@@ -161,240 +171,136 @@ export default function FeedsPage() {
     setLoadingMore(false);
   };
 
+  // 移动端强制 list（grid 在窄屏挤）
+  const effectiveMode: ViewMode = isMobile ? 'list' : viewMode;
+
+  // 单条卡片渲染（grid / list 共用核心信息提取）
+  const renderItem = (item: FeedItem, i: number) => {
+    const name = decodeEntities(item.sourceName || item.site_name || '');
+    const siteUrl = item.sourceUrl || item.site_url || '';
+    const color = getSourceColor(name);
+    const date = item.pubDate || item.pub_date || '';
+    const favicon = siteUrl ? `https://favicon.im/${new URL(siteUrl).hostname}?larger=true` : '';
+    const initial = name ? name[0].toUpperCase() : '?';
+    const showInitial = !favicon || !faviconLoaded[i];
+    const desc = stripTags(item.description || '');
+
+    return (
+      <a
+        key={`${i}-${item.link}`}
+        href={item.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="feed-card"
+      >
+        <div className="feed-card-avatar" style={{ color }}>
+          {showInitial && <span>{initial}</span>}
+          {favicon && (
+            <img
+              src={favicon}
+              alt=""
+              onLoad={() => setFaviconLoaded(prev => ({ ...prev, [i]: true }))}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          )}
+        </div>
+        <span className="feed-card-meta">
+          <span className="feed-card-source">{name}</span>
+          <span className="feed-card-sep" aria-hidden="true" />
+          <span className="feed-card-date">{timeAgo(date)}</span>
+        </span>
+        <h3 className="feed-card-title">{decodeEntities(item.title)}</h3>
+        {desc && <p className="feed-card-desc">{desc}</p>}
+        <span className="feed-card-arrow" aria-hidden="true">
+          <i className="fa-regular fa-arrow-up-right-from-square" />
+        </span>
+      </a>
+    );
+  };
+
   return (
-    <div
-      onClick={() => setActiveCard(null)}
-      style={{
-        minHeight: 'calc(100vh - 200px)',
-        position: 'relative',
-      }}
-    >
+    <div className="feeds-page" style={{ minHeight: 'calc(100vh - 200px)', position: 'relative' }}>
       <PageTitle
         title="订阅"
         icon="fa-sharp fa-light fa-rss"
-        meta={<><strong>{items.length}</strong> 篇文章</>}
+        meta={
+          <>
+            <span className="blog-page-title-stat">
+              <strong>{stats ? stats.count_total : items.length}</strong> 篇文章
+            </span>
+            {stats && (
+              <span className="blog-page-title-stat">
+                <strong>{stats.rss_count}</strong> 个 RSS
+              </span>
+            )}
+            {stats && stats.last_fetched_at > 0 && (
+              <span className="blog-page-title-stat">
+                <strong>{timeAgo(stats.last_fetched_at)}</strong> 更新
+              </span>
+            )}
+          </>
+        }
       />
 
-      <div style={{ padding: isMobile ? '24px 16px 80px' : '32px 32px 80px' }}>
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '80px 0' }}>
-          <p style={{ fontSize: '13px', color: '#999' }}>加载中…</p>
-        </div>
-      ) : items.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '80px 0' }}>
-          <p style={{ fontSize: '15px', color: '#999', marginBottom: '8px' }}>暂无订阅内容</p>
-          <p style={{ fontSize: '13px', color: '#bbb' }}>在后台友链管理中添加 RSS 地址即可</p>
-        </div>
-      ) : isMobile ? (
-        /* Mobile: simple vertical list */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '500px', margin: '0 auto' }}>
-          {items.map((item, i) => {
-            const name = decodeEntities(item.sourceName || item.site_name || '');
-            const siteUrl = item.sourceUrl || item.site_url || '';
-            const color = getSourceColor(name);
-            const date = item.pubDate || item.pub_date || '';
-            const favicon = siteUrl ? `https://favicon.im/${new URL(siteUrl).hostname}?larger=true` : '';
-            const initial = name ? name[0].toUpperCase() : '?';
-            const showInitial = !favicon || !faviconLoaded[i];
-            return (
-              <a key={i} href={item.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#fff', borderRadius: '2px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#fff', color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, overflow: 'hidden', position: 'relative' }}>
-                        {showInitial && <span>{initial}</span>}
-                        {favicon && (
-                          <img
-                            src={favicon}
-                            alt=""
-                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                            onLoad={() => setFaviconLoaded(prev => ({ ...prev, [i]: true }))}
-                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        )}
-                      </div>
-                      <span style={{ fontSize: '12px', color: '#7a7670', fontWeight: 500 }}>{name}</span>
-                    </div>
-                    <span style={{ fontSize: '10px', color: '#b8b4ad' }}>{timeAgo(date)}</span>
-                  </div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 700, lineHeight: 1.5, color: '#2b2a28', marginBottom: '8px' }}>{decodeEntities(item.title)}</h3>
-                  {item.description && (
-                    <p style={{ fontSize: '13px', lineHeight: 1.7, color: '#7a7670', display: '-webkit-box', WebkitLineClamp: 8, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{decodeEntities(item.description)}</p>
-                  )}
-                </div>
-              </a>
-            );
-          })}
-        </div>
-      ) : (() => {
-        const handleCardClick = (e: React.MouseEvent, i: number, link: string) => {
-          e.stopPropagation();
-          if (activeCard === i) {
-            window.open(link, '_blank', 'noopener,noreferrer');
-            return;
-          }
-          // Capture the collapsed wrapper height BEFORE we transition
-          // to active. Once active=i, the inner card flips to
-          // position:absolute and the wrapper would otherwise collapse
-          // to 0 — we'd lose the grid-row anchor and everything below
-          // would shift up. Re-measure each click in case the user has
-          // resized the window since the last expansion.
-          const el = cardRefs.current[i];
-          if (el) {
-            setCollapsedHeights(prev => ({ ...prev, [i]: el.offsetHeight }));
-          }
-          const newZ = topZ + 1;
-          setTopZ(newZ);
-          setCardZs(prev => ({ ...prev, [i]: newZ }));
-          setActiveCard(i);
-        };
-
-        return (
-          <div
-            onClick={(e) => { if (e.target === e.currentTarget) setActiveCard(null); }}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-              gap: '32px 24px',
-              maxWidth: '1300px',
-              margin: '0 auto',
-              // Extra vertical padding gives the subtle card rotation headroom
-              // so rotated corners can't clip into the neighbouring row.
-              padding: '12px 0',
-            }}
+      {/* 视图切换 toolbar */}
+      <div className="feeds-toolbar">
+        <div className="feeds-view-toggle" role="tablist" aria-label="视图模式">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={effectiveMode === 'grid'}
+            className={`feeds-view-btn${effectiveMode === 'grid' ? ' active' : ''}`}
+            onClick={() => setView('grid')}
+            disabled={isMobile}
+            title="网格视图（一行 3 个）"
+            aria-label="网格视图"
           >
-            {items.map((item, i) => {
-              const name = decodeEntities(item.sourceName || item.site_name || '');
-              const siteUrl = item.sourceUrl || item.site_url || '';
-              const color = getSourceColor(name);
-              const date = item.pubDate || item.pub_date || '';
-              const favicon = siteUrl ? `https://favicon.im/${new URL(siteUrl).hostname}?larger=true` : '';
-              const initial = name ? name[0].toUpperCase() : '?';
-              const showInitial = !favicon || !faviconLoaded[i];
-              const isActive = activeCard === i;
-              const z = cardZs[i] || 1;
-              const rotation = rotations[i % rotations.length];
-
-              return (
-                <div
-                  key={i}
-                  ref={(el) => { cardRefs.current[i] = el; }}
-                  onClick={(e) => handleCardClick(e, i, item.link)}
-                  style={{
-                    position: 'relative',
-                    transform: `rotate(${isActive ? 0 : rotation * 0.4}deg) scale(${isActive ? 1.02 : 1})`,
-                    zIndex: isActive ? topZ : z,
-                    cursor: isActive ? 'pointer' : 'default',
-                    transition: 'transform 0.25s ease, box-shadow 0.25s ease',
-                    // When active, freeze the wrapper at its captured
-                    // collapsed height. The inner card lifts into
-                    // position:absolute below and overflows downward
-                    // to overlay the row beneath us, but the grid
-                    // track stays exactly where it was.
-                    minHeight: isActive && collapsedHeights[i]
-                      ? `${collapsedHeights[i]}px`
-                      : undefined,
-                  }}
-                >
-                  <div
-                    style={{
-                      background: '#fff',
-                      borderRadius: '2px',
-                      padding: '24px',
-                      boxShadow: isActive
-                        ? '0 12px 40px rgba(0,0,0,0.15)'
-                        : '0 2px 12px rgba(0,0,0,0.06)',
-                      // Lift out of normal flow when expanded so the
-                      // wrapper's locked minHeight (above) is what the
-                      // grid sees. The card itself grows downward to
-                      // its natural full-content height.
-                      ...(isActive
-                        ? { position: 'absolute' as const, top: 0, left: 0, right: 0 }
-                        : {}),
-                    }}
-                  >
-                    {/* Top row: avatar + name | time */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                        <div style={{
-                          width: '28px', height: '28px', borderRadius: '50%',
-                          background: '#fff', color: color,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '12px', fontWeight: 700, flexShrink: 0,
-                          overflow: 'hidden', position: 'relative',
-                        }}>
-                          {showInitial && <span>{initial}</span>}
-                          {favicon && (
-                            <img
-                              src={favicon}
-                              alt=""
-                              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                              onLoad={() => setFaviconLoaded(prev => ({ ...prev, [i]: true }))}
-                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                            />
-                          )}
-                        </div>
-                        <span style={{ fontSize: '12px', color: '#7a7670', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                      </div>
-                      <span style={{ fontSize: '10px', color: '#b8b4ad', letterSpacing: '0.05em', flexShrink: 0 }}>
-                        {timeAgo(date)}
-                      </span>
-                    </div>
-
-                    {/* Title */}
-                    <h3 style={{
-                      fontSize: '15px', fontWeight: 700, lineHeight: 1.5,
-                      color: '#2b2a28', marginBottom: '12px',
-                    }}>
-                      {decodeEntities(item.title)}
-                    </h3>
-
-                    {/* Description */}
-                    {item.description && (
-                      <p style={{
-                        fontSize: '13px', lineHeight: 1.8, color: '#7a7670',
-                        ...(isActive ? {} : { display: '-webkit-box', WebkitLineClamp: 8, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }),
-                      }}>
-                        {decodeEntities(item.description)}
-                      </p>
-                    )}
-
-                    {/* Read hint when active */}
-                    {isActive && (
-                      <div style={{ marginTop: '12px', fontSize: '11px', color: '#4a9e8e', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <i className="fa-regular fa-arrow-up-right-from-square" style={{ fontSize: '11px' }} /> 点击阅读全文
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
-
-      {/* Infinite-scroll sentinel (triggers one auto-load) + manual button */}
-      {items.length > 0 && hasMore && (
-        <div ref={sentinelRef} style={{ padding: '32px 0', textAlign: 'center' }}>
-          {loadingMore ? (
-            <span style={{ fontSize: '13px', color: '#888' }}>
-              <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 6 }} /> 加载中…
-            </span>
-          ) : autoLoadExhausted ? (
-            <button
-              onClick={() => loadFeeds(page + 1, false)}
-              style={{
-                padding: '10px 28px', fontSize: '13px', fontWeight: 500,
-                background: '#fff', color: 'var(--color-primary, #0052D9)', border: '1px solid var(--color-primary, #0052D9)',
-                cursor: 'pointer',
-              }}
-            >
-              加载更多
-            </button>
-          ) : null}
+            <i className="fa-solid fa-table-cells-large" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={effectiveMode === 'list'}
+            className={`feeds-view-btn${effectiveMode === 'list' ? ' active' : ''}`}
+            onClick={() => setView('list')}
+            title="列表视图（一行 1 个）"
+            aria-label="列表视图"
+          >
+            <i className="fa-solid fa-list" aria-hidden="true" />
+          </button>
         </div>
-      )}
+      </div>
 
+      <div className="feeds-body">
+        {loading ? (
+          <div className="feeds-empty">加载中…</div>
+        ) : items.length === 0 ? (
+          <div className="feeds-empty">
+            <p>暂无订阅内容</p>
+            <small>在后台友链管理中添加 RSS 地址即可</small>
+          </div>
+        ) : (
+          <div className={`feeds-list${effectiveMode === 'grid' ? ' is-grid' : ' is-list'}`}>
+            {items.map((item, i) => renderItem(item, i))}
+          </div>
+        )}
+
+        {items.length > 0 && hasMore && (
+          <div ref={sentinelRef} className="feeds-loadmore">
+            {loadingMore ? (
+              <div className="feeds-loadmore-loader" role="status" aria-label="加载中">
+                <span className="feeds-loadmore-dot" />
+                <span className="feeds-loadmore-dot" />
+                <span className="feeds-loadmore-dot" />
+                <span className="feeds-loadmore-text">加载中…</span>
+              </div>
+            ) : autoLoadExhausted ? (
+              <button onClick={() => loadFeeds(page + 1, false)} className="feeds-loadmore-btn">
+                <i className="fa-regular fa-circle-down" /> 加载更多
+              </button>
+            ) : null}
+          </div>
+        )}
       </div>
     </div>
   );

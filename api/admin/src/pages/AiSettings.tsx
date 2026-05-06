@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Button, Input, Textarea, Select, Modal, Toggle, SettingsTabs } from '@/components/ui';
+import { Button, Input, Textarea, Select, Modal, Toggle, SettingsTabs, Spinner } from '@/components/ui';
 import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC, FormRowRangeC } from '@/components/form/FormC';
 import { useAuthStore } from '@/lib/store';
 import { useI18n } from '@/lib/i18n';
@@ -365,7 +365,7 @@ export default function AiSettingsPage() {
     updateConfig('ai_data_permissions', JSON.stringify(next));
   };
 
-  if (loading) return <div className="p-6 text-dim">{t('admin.common.loading', '加载中…')}</div>;
+  if (loading) return <Spinner />;
 
   return (
     <div className="settings-page">

@@ -294,7 +294,7 @@ export default function CreatePostPage() {
                       }}
                     >
                       {coverAiLoading
-                        ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: 14 }} />
+                        ? <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: 14 }} />
                         : <i className="fa-regular fa-sparkles" style={{ fontSize: 14 }} />}
                     </button>
                   )}
@@ -304,7 +304,7 @@ export default function CreatePostPage() {
                     title={coverUploading ? t('admin.media.uploading', '上传中…') : t('admin.postEditor.uploadCover', '上传封面')}
                   >
                     {coverUploading
-                      ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: 14 }} />
+                      ? <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: 14 }} />
                       : <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: 14 }} />}
                   </button>
                   <input ref={coverFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCoverUpload} />
@@ -334,7 +334,7 @@ export default function CreatePostPage() {
                       setSlugLoading(false);
                     }}
                   >
-                    {slugLoading ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: '11px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '11px' }} />} AI
+                    {slugLoading ? <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '11px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '11px' }} />} AI
                   </button>
                   )}
                 </div>
@@ -371,7 +371,7 @@ export default function CreatePostPage() {
                       setTagsLoading(false);
                     }}
                   >
-                    {tagsLoading ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: '10px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '10px' }} />} {t('admin.postEditor.aiExtract', 'AI 提取')}
+                    {tagsLoading ? <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '10px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '10px' }} />} {t('admin.postEditor.aiExtract', 'AI 提取')}
                   </button>
                   )}
                 </div>
@@ -417,7 +417,7 @@ export default function CreatePostPage() {
                       setExcerptLoading(false);
                     }}
                   >
-                    {excerptLoading ? <i className="fa-light fa-spinner-third fa-spin" style={{ fontSize: '10px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '10px' }} />} {t('admin.postEditor.aiGenerate', 'AI 生成')}
+                    {excerptLoading ? <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '10px' }} /> : <i className="fa-regular fa-sparkles" style={{ fontSize: '10px' }} />} {t('admin.postEditor.aiGenerate', 'AI 生成')}
                   </button>
                   )}
                 </div>
@@ -597,7 +597,7 @@ export default function CreatePostPage() {
             <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px', minHeight: '150px' }}>
               {aiProcessing && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '40px 0', color: 'var(--color-text-dim)', fontSize: '13px' }}>
-                  <i className="fa-light fa-spinner-third fa-spin" /> {t('admin.postEditor.aiProcessing', 'AI 处理中…')}
+                  <i className="fa-solid fa-spinner fa-spin" /> {t('admin.postEditor.aiProcessing', 'AI 处理中…')}
                 </div>
               )}
               {aiResult && !aiProcessing && (

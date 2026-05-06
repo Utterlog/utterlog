@@ -25,13 +25,15 @@ export function randomCoverUrl(
   // Make sure each post gets a unique URL so img.et / picsum / etc.
   // serve different covers per post. Three cases handled:
   //   1. Template already has `{id}` placeholder → use as-is.
-  //   2. Template has `r=<digits>` (img.et builder copy-paste) →
-  //      swap the digits for the post id.
+  //   2. Template has any `r=<value>` query param (e.g. admin pasted
+  //      `r=749630` from img.et builder, or `r=abc` typed by hand) →
+  //      replace the value with `{id}` so each post still gets a
+  //      unique URL after substitution.
   //   3. No `r=` query param at all → append `r={id}` so even a bare
   //      `https://img.et/1920/1080?type=landscape&format=avif` works.
   if (!template.includes('{id}')) {
-    if (/[?&]r=\d+/.test(template)) {
-      template = template.replace(/([?&])r=\d+/g, '$1r={id}');
+    if (/[?&]r=[^&#]*/.test(template)) {
+      template = template.replace(/([?&])r=[^&#]*/g, '$1r={id}');
     } else {
       template += (template.includes('?') ? '&' : '?') + 'r={id}';
     }

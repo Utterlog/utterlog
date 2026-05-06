@@ -9,6 +9,18 @@ import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
 
+// 把任意字符串（友链 RSS link）哈希成 32-bit 无符号整数，
+// 用作 randomCoverUrl 的 seed —— 直接用整段 URL 作 r= 参数有时
+// 会被 img.et 截断或归一化导致几张卡拿到同一张图，hash 后是稳定
+// 的小整数，每个不同 link 一定映射到不同 r，4 张卡 4 张图。
+function hashFeedSeed(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
 function LazyCardImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
   const [inView, setInView] = useState(false);
@@ -263,26 +275,26 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
             </button>
           </div>
           <div className="post-related-grid">
-            {/* 友链更新 — 复用 16:10 卡片槽位，但左上站名 / 右上时间 /
-                底部标题的清晰布局，没有真实封面，用渐变背景 + RSS 水印。 */}
-            {activeTab === 'feeds' && feeds.length > 0 && feeds.map((item, idx) => {
+            {/* 友链更新 — 复用 16:10 卡片槽位，左上站名 / 右上时间 / 底部
+                hover 标题的清晰布局。RSS 拉不到友链文章特色图，所以用
+                randomCoverUrl(link) 拿稳定的 img.et 随机封面（每个 link
+                对应同一张图，刷新不闪），右上加 RSS 角标做"友链"标识。
+                feeds 也按 PAGE_SIZE 切片，Nebula pageSize={4} → 显示 4 卡。 */}
+            {activeTab === 'feeds' && feeds.length > 0 && feeds.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE).map((item, idx) => {
               const mon = formatDateInTimeZone(item.pub_date || 0, 'zh-CN', { month: 'short', day: 'numeric' }, timeZone);
+              // hash(link) → 32-bit 整数 seed，叠加 idx 确保即使 hash
+              // 碰撞 4 张卡也各不相同；同一 link 每次仍拿到同一张图，
+              // 重渲染不闪。link 缺失时退化到 pageIndex+idx 字符串。
+              const rawSeed = item.link || `feed-${pageIndex}-${idx}`;
+              const seed = hashFeedSeed(rawSeed) + idx;
+              const fallbackCover = randomCoverUrl(seed, options);
               return (
-                <a key={idx} href={item.link} target="_blank" rel="noopener noreferrer" className="post-related-card cover-zoom">
-                  <div className="post-related-card-cover" style={{
-                    background: 'linear-gradient(135deg, var(--color-bg-soft) 0%, rgba(0,82,217,0.08) 100%)',
-                  }}>
-                    {/* RSS 水印 */}
-                    <i className="fa-light fa-rss" style={{
-                      position: 'absolute', inset: 0, margin: 'auto',
-                      width: '64px', height: '64px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '54px', color: 'rgba(0,0,0,0.06)',
-                      pointerEvents: 'none',
-                    }} />
+                <a key={`${pageIndex}-${idx}`} href={item.link} target="_blank" rel="noopener noreferrer" className="post-related-card cover-zoom">
+                  <div className="post-related-card-cover">
+                    <LazyCardImage src={fallbackCover} alt={item.site_name} />
                     {/* 左上：站点名 */}
                     <span className="post-related-card-cat" title={item.site_name}>
-                      <i className="fa-regular fa-user" /> {item.site_name}
+                      <i className="fa-light fa-rss" /> {item.site_name}
                     </span>
                     {/* 右上：时间 */}
                     <span className="post-related-card-date">{mon}</span>

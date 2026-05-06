@@ -249,7 +249,7 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
 
   return (
     <>
-    <div style={{ border: '1px solid var(--color-border, #eee)', marginTop: '24px' }}>
+    <div className="comment-form" style={{ border: '1px solid var(--color-border, #eee)', marginTop: '24px' }}>
       {/* Header bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: '60px', borderBottom: '1px solid var(--color-border, #eee)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

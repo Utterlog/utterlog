@@ -54,7 +54,7 @@ export default async function BlogLayout({
           previous dangerouslySetInnerHTML approach tripped Next.js
           16's "Encountered a script tag while rendering React
           component" warning during hydration. */}
-      <link rel="stylesheet" href={`/themes/${ctx.theme.name}/styles.css`} />
+      <link rel="stylesheet" href={`/themes/${ctx.theme.name}/styles.css?v=${ctx.theme.manifest?.version || '0'}`} />
       <SlotHead options={ctx.options} />
       <Script src="https://id.utterlog.com/static/passport.js" strategy="lazyOnload" />
       <ThemeProvider value={ctx}>

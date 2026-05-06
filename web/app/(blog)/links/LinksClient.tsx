@@ -5,6 +5,8 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import PageTitle from '@/components/blog/PageTitle';
 
+type ViewMode = 'card' | 'compact';
+
 interface Link {
   id: number;
   name: string;
@@ -82,10 +84,22 @@ export default function LinksPage() {
   const [showApply, setShowApply] = useState(false);
   const [applying, setApplying] = useState(false);
   const [form, setForm] = useState({ name: '', url: '', description: '', logo: '', avatar: '', rss_url: '', email: '' });
+  // 用户视图切换：null = 跟随 admin per-group 配置；'card' / 'compact' = 全局覆盖
+  const [viewOverride, setViewOverride] = useState<ViewMode | null>(null);
 
   useEffect(() => {
     fetchLinks();
+    // 持久化用户视图选择
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem('links-view-mode');
+      if (saved === 'card' || saved === 'compact') setViewOverride(saved);
+    }
   }, []);
+
+  const setView = (mode: ViewMode) => {
+    setViewOverride(mode);
+    try { window.localStorage.setItem('links-view-mode', mode); } catch {}
+  };
 
   useEffect(() => {
     if (!showApply) return;
@@ -118,7 +132,8 @@ export default function LinksPage() {
   const visibleGroupKeys = [...configuredVisibleKeys, ...orphanVisibleKeys];
   const groups = ['all', ...visibleGroupKeys];
   const groupLabel = (key: string) => key === 'all' ? '全部' : groupMap.get(key)?.name || (key === DEFAULT_GROUP_KEY ? '默认' : key);
-  const groupStyle = (key: string) => groupMap.get(key)?.style || 'card';
+  // 视图覆盖优先：用户选了模式就强制全局，否则跟随 admin per-group
+  const groupStyle = (key: string): LinkGroupStyle => viewOverride || groupMap.get(key)?.style || 'card';
   const groupIcon = (key: string) => groupMap.get(key)?.icon || 'fa-regular fa-folder';
   const filteredLinks = activeGroup === 'all' ? links : links.filter(l => normalizeGroupKey(l.group_name) === activeGroup);
 
@@ -181,23 +196,44 @@ export default function LinksPage() {
       />
 
       <div style={{ padding: '32px' }}>
-        {/* Group tabs */}
-        {groups.length > 2 && (
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
-            {groups.map(g => (
-              <button key={g} onClick={() => setActiveGroup(g)} style={{
-                padding: '6px 16px', fontSize: '13px', fontWeight: activeGroup === g ? 600 : 400,
-                border: '1px solid',
-                borderColor: activeGroup === g ? 'var(--color-primary, #0052D9)' : '#d9d9d9',
-                background: activeGroup === g ? 'var(--color-primary, #0052D9)' : '#fff',
-                color: activeGroup === g ? '#fff' : '#555',
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}>
+        {/* 顶部 toolbar：分组切换 + 视图切换 */}
+        <div className="links-toolbar">
+          <div className="links-group-tabs">
+            {groups.length > 2 && groups.map(g => (
+              <button
+                key={g}
+                onClick={() => setActiveGroup(g)}
+                className={`links-group-tab${activeGroup === g ? ' active' : ''}`}
+              >
                 {groupLabel(g)}
               </button>
             ))}
           </div>
-        )}
+          <div className="links-view-toggle" role="tablist" aria-label="视图模式">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={groupStyle(displayGroupKeys[0] || DEFAULT_GROUP_KEY) === 'card'}
+              className={`links-view-btn${(viewOverride || 'card') === 'card' ? ' active' : ''}`}
+              onClick={() => setView('card')}
+              title="卡片视图"
+              aria-label="卡片视图"
+            >
+              <i className="fa-solid fa-table-cells-large" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewOverride === 'compact'}
+              className={`links-view-btn${viewOverride === 'compact' ? ' active' : ''}`}
+              onClick={() => setView('compact')}
+              title="紧凑列表"
+              aria-label="紧凑列表"
+            >
+              <i className="fa-solid fa-grip" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px 0', color: '#999' }}>加载中…</div>
