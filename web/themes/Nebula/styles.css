@@ -1905,9 +1905,13 @@
 }
 
 /* ─── 强调 / 删除 / 高亮 / 键盘键 / 缩写 / 上下标 ─── */
-[data-theme="Nebula"] .nebula-post-prose .blog-prose strong {
+/* 加粗 <strong> / <b>：之前 font-weight: 600 + 颜色跟正文一样
+   都是 --nebula-white，视觉上几乎看不出加粗。改成真正的 700（系统
+   字体 / Google Sans Display / Noto Sans SC 都有这个 weight） */
+[data-theme="Nebula"] .nebula-post-prose .blog-prose strong,
+[data-theme="Nebula"] .nebula-post-prose .blog-prose b {
   color: var(--nebula-white);
-  font-weight: 600;
+  font-weight: 700;
 }
 [data-theme="Nebula"] .nebula-post-prose .blog-prose em { font-style: italic; }
 [data-theme="Nebula"] .nebula-post-prose .blog-prose del {
@@ -3047,6 +3051,13 @@
   border-top: 1px solid var(--nebula-border-subtle);
   background: var(--nebula-black);
   position: relative; /* 给 .nebula-back-to-top 做绝对定位的参照 */
+  /* 没备案号时只有一行 stats，整个 footer 视觉太薄；保底 96px 高度，
+     用户配了备案号后第二行自然撑开会更高，但底线先有一个稳定值。
+     之前没备案的站点 footer 看着像被踩扁了 */
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 [data-theme="Nebula"] .nebula-footer-row {
@@ -3054,8 +3065,8 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 14px;
-  padding-top: 12px;
-  padding-bottom: 4px;
+  padding-top: 18px;
+  padding-bottom: 14px;
   font-size: 12px;
   font-family: var(--nebula-font-mono);
   color: rgba(255, 255, 255, 0.45);
@@ -3976,17 +3987,23 @@
 [data-theme="Nebula"] .moments-toolbar [style*="background:#e2dfd8"] {
   background: rgba(255, 255, 255, 0.08) !important;
 }
-[data-theme="Nebula"] .moments-toolbar [style*="color:#7a7670"] {
-  color: rgba(255, 255, 255, 0.6) !important;
+/* 工具栏 inline 颜色（带空格 / 不带空格 都覆盖） —— React 实际序列化
+   是 "color: #7a7670"（带空格），之前只写了不带空格的版本所以图标
+   一直保持原色 #7a7670（灰）没翻成白。用 i 标志做大小写无关匹配。 */
+[data-theme="Nebula"] .moments-toolbar [style*="color: #7a7670" i],
+[data-theme="Nebula"] .moments-toolbar [style*="color:#7a7670" i] {
+  color: rgba(225, 231, 238, 0.7) !important;
 }
-[data-theme="Nebula"] .moments-toolbar [style*="color:#999"],
-[data-theme="Nebula"] .moments-toolbar [style*="color: #999"] {
-  color: rgba(255, 255, 255, 0.5) !important;
+[data-theme="Nebula"] .moments-toolbar [style*="color: #999" i],
+[data-theme="Nebula"] .moments-toolbar [style*="color:#999" i] {
+  color: rgba(225, 231, 238, 0.5) !important;
 }
-[data-theme="Nebula"] .moments-toolbar [style*="rgba(0,82,217,0.08)"] {
-  background: rgba(128, 207, 255, 0.12) !important;
+[data-theme="Nebula"] .moments-toolbar [style*="rgba(0, 82, 217, 0.08)" i],
+[data-theme="Nebula"] .moments-toolbar [style*="rgba(0,82,217,0.08)" i] {
+  background: rgba(128, 207, 255, 0.14) !important;
 }
-[data-theme="Nebula"] .moments-toolbar [style*="rgba(0,0,0,0.05)"] {
+[data-theme="Nebula"] .moments-toolbar [style*="rgba(0, 0, 0, 0.05)" i],
+[data-theme="Nebula"] .moments-toolbar [style*="rgba(0,0,0,0.05)" i] {
   background: rgba(255, 255, 255, 0.06) !important;
 }
 /* 弹出的日历 / 标签 popover ── 用 class 强覆盖（属性选择器在某些 React
@@ -4013,11 +4030,41 @@
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: rgba(255, 255, 255, 0.65) !important;
 }
-/* 标签 chip 类似 */
-[data-theme="Nebula"] .moments-popover button[style*="font-size:12px"] {
+/* 标签 chip / 月份 chip / 年份按钮 —— 用类钩子（之前用 inline-style
+   属性匹配 [style*="font-size:12px"] 不可靠：React 序列化是带空格的
+   "font-size: 12px"，原选择器没空格匹配不上） */
+[data-theme="Nebula"] .moments-tag-chip {
   background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: rgba(225, 231, 238, 0.75) !important;
+}
+[data-theme="Nebula"] .moments-tag-chip.is-active {
+  /* 激活态用 inline 颜色（每个 tag 不同），CSS 不强占；只调对比度 */
+  color: var(--nebula-navy-deep) !important;
+}
+[data-theme="Nebula"] .moments-month-chip {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: rgba(225, 231, 238, 0.65) !important;
+}
+[data-theme="Nebula"] .moments-month-chip.is-active {
+  background: var(--nebula-blue-accent) !important;
+  border-color: var(--nebula-blue-accent) !important;
+  color: var(--nebula-navy-deep) !important;
+}
+[data-theme="Nebula"] .moments-year-btn {
+  color: var(--nebula-white) !important;
+}
+[data-theme="Nebula"] .moments-year-btn.is-active {
+  color: var(--nebula-blue-accent) !important;
+}
+/* 兼容旧的 inline-style 匹配（带空格） */
+[data-theme="Nebula"] .moments-popover button[style*="font-size: 12px"],
+[data-theme="Nebula"] .moments-popover button[style*="font-size:12px"] {
+  /* 兜底：万一上面的 class 没生效（哪个 SSR 缓存的 HTML 还没带 class），
+     这条仍然把它翻深 */
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: rgba(225, 231, 238, 0.7) !important;
 }
 /* 分隔线 #f0f0f0 */
 [data-theme="Nebula"] .moments-popover button[style*="border-bottom"] {

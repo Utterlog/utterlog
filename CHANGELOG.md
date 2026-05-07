@@ -23,6 +23,39 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.5] - 2026-05-07
+
+### 新增
+
+- **后台升级日志改成模态框**：之前内联在升级面板中部，体验像"在页面里塞了一段终端"。改成 `<Modal size="xl">`，自带顶部状态条（spinner / ✓ / ✗ + start time）+ 60vh 高度可滚动正文 + 底部蓝色扫光进度条。模态框关闭后页面留一个"查看升级日志"按钮，状态还在的话能随时重开。
+- **升级日志动态滚动 + 飘入动画**：每条新行 `class="upgrade-log-line"` 触发 `upgradeLogLineIn` 关键帧（opacity 0→1 + translateX -4px→0，0.28s ease-out）；`useEffect` 在 `log_tail` 变化时调 `scrollIntoView` 平滑滚到末尾哨兵，最新一行始终在视口里（docker / k8s logs 经典体验）。`prefers-reduced-motion: reduce` 用户偏好下自动关掉动画。
+- **Nebula 菜单声明从 `footer` 改成 `category`（中部分类导航）**：admin 在「主题 → 菜单 → 分类导航」配的菜单项现在驱动首页中间的分类筛选条；不配时仍回退到自动列出所有分类（向后兼容）。
+
+### 优化
+
+- **Coding 页面热力图改成 rolling 365 天**：之前按"自然年 1/1 ~ 12/31"排版，5 月落在中间不符合 GitHub 风格。改成今天落在最右、往前数 365 天。
+- **Nebula 文章 `<strong>` 加粗效果**：`font-weight: 600` → `700`（系统字体 / Google Sans Display / Noto Sans SC 都加载了 700 weight），`<b>` 标签也加进选择器。之前 600 + 颜色跟正文同色 `--nebula-white`，加粗几乎看不出。
+- **评论提交后页面无感更新**：CommentList 的 `fetchComments` 加 `mode` 参数（initial / switch / silent），提交回复后走 silent 模式 —— 列表保持显示、新数据无缝替换、不显示 loading 骨架、不强制 smooth-scroll 到顶部。WordPress 风格"原地多一条卡片，其它结构不动"。
+- **Nebula footer 没备案号时高度偏低**：`.nebula-footer` 加 `min-height: 96px` + flex 垂直居中，`.nebula-footer-row` 上下 padding 提到 18/14。无备案号站点 footer 不再像被压扁了。
+- **后台版本号实时同步**：VersionBadge 之前用模块级 in-memory cache TTL 10 分钟，升级成功后左上角 pill 仍显示旧版本号要等 10 分钟或刷新页面。新增事件总线 `admin:version-changed`：SystemUpdatePanel 升级成功时 dispatch，VersionBadge 监听后立即清缓存 + 重拉。
+- **后台铃铛红点实时同步**：之前 NotificationBell 60s 轮询，审批评论后红点不消失要等下一轮。新增事件 `admin:notifications-changed`：Comments 页面 `fetchCounts` 完成后 dispatch（覆盖审批 / 拒绝 / 删除 / 移到垃圾箱 / 恢复 全场景），铃铛立即重拉。保留 60s 轮询作为兜底。
+- **后台路由切换不再全屏闪**：Suspense fallback 从 `<Spinner overlay />`（全屏遮罩）改成 `<RouteFallback />`（仅顶部 2px 蓝色不定进度条 + 透明主区域）。1.7MB 的 Analytics chunk 加载中也只有顶部一道扫光，侧栏 / 头部保持可见，体感顺滑。
+- **Nebula 说说工具栏图标初始灰色 bug**：CSS 写的 `[style*="color:#7a7670"]`（无空格）跟 React 实际序列化的 `color: #7a7670`（带空格）匹配不上 → 图标保持原色 #7a7670 灰，强制刷新才白。修复：每条 inline-style 选择器都补带空格的版本 + 加 `i` 大小写不敏感标志。
+- **Nebula 说说标签 / 月份弹出卡片配色**：之前用 inline-style 字符串匹配（不可靠），改用类钩子 `.moments-tag-chip` / `.moments-month-chip` / `.moments-year-btn`（含 `.is-active`），CSS 用类选择器强覆盖。默认半透白底 + 半透白字、选中态用 sky 蓝底 + navy 深字。
+- **Changelog 渲染支持 GFM 表格 + 分隔线**：admin 后台和 utterlog.io/changelog 同步修复，`renderChangelog()` 加 GFM table parser → 输出 `<table class="changelog-table">`（紧凑边框 + 表头浅灰底 + zebra 行）；`---` 分隔线 → `<hr/>`。
+- **后台"更新内容"标题只显示版本号**：`{info.latest.name || info.latest.version}` → `{info.latest.version}`。GitHub release name 经常带长描述，标题里啰嗦。
+- **GitHub releases 标题统一**：v2.3.1 / v2.3.2 / v2.3.3 / v2.3.4 历史 release 全部改成纯版本号；v2.0.2 补上 `v` 前缀。
+- **utterlog.io 静态版本代理**：utterlog-landing 站构建期生成 `public/api/version.json` + `public/api/releases.json`，所有用户的 utterlog 后台改成查 `https://utterlog.io/api/version.json`，不再直接打 GitHub API。N 个用户共享同一份 CDN 缓存，配额从 60/h（匿名共享 IP）→ 实质无限。GitHub API 仍是 fallback。
+- **`version_source_url` admin 选项**：私有部署 / 企业 fork 可指向自己的 mirror（指 `<url>/api/version.json` 兼容 schema）。
+
+### 修复
+
+- **管理员评论 / 回复邮件诊断日志**：之前修复了管理员评论早返回不发邮件，但用户报告偶尔仍发。在 `sendCommentNotifications` 增加两条 `log.Printf` 诊断日志：命中 admin 跳过时输出"skipped — sender is admin"，没跳过时输出 `role / user_id / senderIsAdmin` 完整字段。下次出现可以直接看日志定位是 DB JOIN 没拿到 role 还是别的代码路径。
+
+### 移除
+
+- 暂无。
+
 ## [2.3.4] - 2026-05-07
 
 ### 新增

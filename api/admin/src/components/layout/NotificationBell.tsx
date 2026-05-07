@@ -15,7 +15,15 @@ export default function NotificationBell() {
   useEffect(() => {
     fetchUnread();
     const interval = setInterval(fetchUnread, 60000); // poll every minute
-    return () => clearInterval(interval);
+    // 实时事件总线 —— 评论页 / 通知页操作完成后调
+    // window.dispatchEvent(new Event('admin:notifications-changed'))，
+    // 铃铛立刻重拉一次。之前要等下一轮 60s 轮询，红点不消失体验差。
+    const onChanged = () => fetchUnread();
+    window.addEventListener('admin:notifications-changed', onChanged);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('admin:notifications-changed', onChanged);
+    };
   }, []);
 
   const fetchUnread = async () => {
@@ -43,6 +51,9 @@ export default function NotificationBell() {
       await api.post('/notifications/read-all');
       setUnread(0);
       setNotifications(ns => ns.map(n => ({ ...n, is_read: true })));
+      // 同步重拉 pendingComments —— 万一这次刚好审批了评论让数据
+      // 跟服务器端短暂不一致，再 fetch 一次保证准确
+      window.dispatchEvent(new Event('admin:notifications-changed'));
     } catch {}
   };
 

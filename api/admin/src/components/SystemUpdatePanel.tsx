@@ -200,7 +200,32 @@ export default function SystemUpdatePanel() {
   const [releasesErr, setReleasesErr] = useState('');
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // 升级进度模态框 —— 点升级时自动打开；完成 / 失败后用户可关闭。
+  // 关闭后还能从"查看升级日志"按钮重新打开（只要 log_tail 还在）
+  const [logModalOpen, setLogModalOpen] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // 升级日志滚动容器 + 末尾哨兵 —— 每次 log_tail 变化都自动滚到底部，
+  // 让最新一行始终在视口里，符合"日志在持续滚动"的预期视觉
+  const logScrollRef = useRef<HTMLDivElement | null>(null);
+  const logEndRef = useRef<HTMLDivElement | null>(null);
+
+  // 自动跟随：log_tail 变化 → 平滑滚到末尾哨兵；用户手动滚到中间想
+  // 看历史时，下次有新行还是会被拖回底部。这是 docker / k8s logs
+  // 经典行为，期望"实时刷"的用户最熟悉。
+  useEffect(() => {
+    if (!logModalOpen) return;
+    const tail = upgradeStatus?.log_tail || '';
+    if (!tail) return;
+    requestAnimationFrame(() => {
+      logEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    });
+  }, [upgradeStatus?.log_tail, logModalOpen]);
+
+  // 升级开始 → 自动弹模态框；完成后保留模态框直到用户主动关闭。
+  // 进行中时关掉再点也能再开（log_tail 还在 SystemUpgradeStatus 接口里）
+  useEffect(() => {
+    if (upgrading) setLogModalOpen(true);
+  }, [upgrading]);
 
   async function load(refresh = false) {
     setLoading(true);
@@ -262,14 +287,19 @@ export default function SystemUpdatePanel() {
         lastCommit = commit;
         if (expected && got === expected) {
           toast.success(`升级完成 — 已运行 ${got}`);
+          // 通知所有 mounted 的 VersionBadge 立刻清缓存重拉，左上角
+          // 版本号 pill 不用等 10 分钟 TTL 也能立刻显示新版本
+          window.dispatchEvent(new Event('admin:version-changed'));
           return true;
         }
         if (baseCommit && commit && baseCommit !== commit) {
           toast.success(`升级完成 — 容器已重建（commit ${commit.slice(0, 7)}）`);
+          window.dispatchEvent(new Event('admin:version-changed'));
           return true;
         }
         if (!baseCommit && !commit && baseBuiltAt && builtAt && baseBuiltAt !== builtAt) {
           toast.success('升级完成 — 容器已重建');
+          window.dispatchEvent(new Event('admin:version-changed'));
           return true;
         }
       } catch (e: any) {
@@ -518,55 +548,124 @@ export default function SystemUpdatePanel() {
         </div>
       )}
 
-      {/* Live upgrade log —— 1Panel-style 终端面板 + 语义高亮：
-          - 时间戳 / [START] / [TASK-END]   暗灰
-          - [括号内容]（容器名 / 路径）        天蓝
-          - 成功                              亮绿
-          - WARN                              黄
-          - ERROR / 失败                     红
-          - 其它正文                          浅灰白
-          每条日志一行，hover 加微微高亮背景。
-       */}
-      {upgradeStatus && (upgrading || upgradeStatus.log_tail) && (
+      {/* 升级日志重开按钮 —— 模态框被用户关掉后还能再打开（只要状态在）。
+          升级进行中保持显示，方便用户随时观察 */}
+      {upgradeStatus && (upgrading || upgradeStatus.log_tail) && !logModalOpen && (
+        <button
+          type="button"
+          onClick={() => setLogModalOpen(true)}
+          className="btn btn-sm"
+          style={{
+            marginBottom: 16,
+            background: upgradeStatus.running ? 'var(--color-primary)' : 'var(--color-bg-soft)',
+            color: upgradeStatus.running ? '#fff' : 'var(--color-text)',
+            border: '1px solid var(--color-border)',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+          }}
+        >
+          <i
+            className={`fa-solid ${upgradeStatus.running ? 'fa-circle-notch fa-spin' : upgradeStatus.success ? 'fa-circle-check' : 'fa-circle-xmark'}`}
+            style={{ color: upgradeStatus.running ? '#fff' : upgradeStatus.success ? '#16a34a' : '#dc2626' }}
+          />
+          {upgradeStatus.running ? '查看升级进度…' : upgradeStatus.success ? '查看升级日志（成功）' : '查看升级日志（失败）'}
+        </button>
+      )}
+
+      {/* 升级日志模态框 —— 1Panel-style 终端面板 + 语义高亮 + 自动
+          滚动到最新一行 + 新行 fade-in 动画。
+          每行 className="upgrade-log-line" 触发 CSS 关键帧，新挂载的
+          DOM 节点（即新出现的行）自动跑一次飘入动画 */}
+      <Modal
+        isOpen={logModalOpen && !!upgradeStatus && (upgrading || !!upgradeStatus.log_tail)}
+        onClose={() => setLogModalOpen(false)}
+        title={
+          upgradeStatus?.running
+            ? '升级进行中 — 实时日志'
+            : upgradeStatus?.success
+            ? '升级完成 — 日志归档'
+            : '升级失败 — 错误日志'
+        }
+        size="xl"
+      >
         <div style={{
-          border: '1px solid #1e293b',
           background: '#0a0e1a',
           color: '#cbd5e1',
-          padding: '14px 0 0',
+          padding: 0,
           fontFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
           fontSize: 12.5,
-          lineHeight: 1.7,
-          marginBottom: 16,
-          maxHeight: 360,
-          overflow: 'auto',
+          lineHeight: 1.75,
           borderRadius: 6,
+          border: '1px solid #1e293b',
+          margin: '-20px -20px',  /* 抵消 Modal 内部 padding 让终端贴边 */
         }}>
+          {/* 顶部状态条：spinner / 对勾 / 叉 + 文案 */}
           <div style={{
-            fontSize: 11,
+            fontSize: 11.5,
             color: '#94a3b8',
-            margin: '0 16px 10px',
-            paddingBottom: 10,
+            padding: '14px 20px 10px',
             borderBottom: '1px solid #1e293b',
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 8,
             fontWeight: 500,
             letterSpacing: 0.3,
+            background: 'linear-gradient(180deg, #0f1729 0%, #0a0e1a 100%)',
           }}>
             <i
-              className={`fa-solid ${upgradeStatus.running ? 'fa-circle-notch fa-spin' : upgradeStatus.success ? 'fa-circle-check' : 'fa-circle-xmark'}`}
-              style={{ color: upgradeStatus.running ? '#60a5fa' : upgradeStatus.success ? '#4ade80' : '#f87171' }}
+              className={`fa-solid ${upgradeStatus?.running ? 'fa-circle-notch fa-spin' : upgradeStatus?.success ? 'fa-circle-check' : 'fa-circle-xmark'}`}
+              style={{ color: upgradeStatus?.running ? '#60a5fa' : upgradeStatus?.success ? '#4ade80' : '#f87171', fontSize: 13 }}
             />
-            {upgradeStatus.running ? '升级进行中…' : upgradeStatus.success ? '升级完成' : '升级失败'}
+            <span style={{ color: '#cbd5e1' }}>
+              {upgradeStatus?.running ? '正在拉取镜像 / 重建容器…' : upgradeStatus?.success ? '完成' : '失败'}
+            </span>
+            {upgradeStatus?.started_at && (
+              <span style={{ marginLeft: 'auto', color: '#64748b', fontSize: 11 }}>
+                started: {new Date(upgradeStatus.started_at).toLocaleTimeString('zh-CN', { hour12: false })}
+              </span>
+            )}
           </div>
-          <div style={{ padding: '0 16px 12px' }}>
-            {(upgradeStatus.log_tail || '').split('\n').filter(Boolean).map((line, i) => (
-              <div key={i} dangerouslySetInnerHTML={{ __html: highlightLogLine(line) }} />
+
+          {/* 日志正文 —— max-height 控制滚动，ref 存到 logScrollRef
+              方便 useEffect 调 scrollIntoView */}
+          <div
+            ref={logScrollRef}
+            style={{
+              maxHeight: '60vh',
+              minHeight: 280,
+              overflowY: 'auto',
+              padding: '12px 20px 16px',
+            }}
+          >
+            {(upgradeStatus?.log_tail || '').split('\n').filter(Boolean).map((line, i) => (
+              <div
+                key={i}
+                className="upgrade-log-line"
+                dangerouslySetInnerHTML={{ __html: highlightLogLine(line) }}
+              />
             ))}
-            {!upgradeStatus.log_tail && <div style={{ color: '#64748b' }}>(尚无输出)</div>}
+            {!upgradeStatus?.log_tail && (
+              <div style={{ color: '#64748b' }}>
+                <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 6 }} />
+                正在启动 sidecar 容器...
+              </div>
+            )}
+            {/* 末尾哨兵：useEffect 会让它 scrollIntoView，强制日志贴底显示 */}
+            <div ref={logEndRef} style={{ height: 1 }} />
           </div>
+
+          {/* 底部进度条（running 时无限循环动画，完成后固定） */}
+          {upgradeStatus?.running && (
+            <div style={{
+              height: 2,
+              background: '#1e293b',
+              overflow: 'hidden',
+              position: 'relative',
+            }}>
+              <div className="upgrade-log-progress-bar" />
+            </div>
+          )}
         </div>
-      )}
+      </Modal>
 
       {/* Data preservation notice */}
       <div style={{ border: '1px solid var(--color-border)', background: '#fefce8', padding: '14px 18px', fontSize: 12, color: '#713f12', marginBottom: 24 }}>

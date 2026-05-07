@@ -615,6 +615,7 @@ export default function MomentsPage() {
                     {years.map(year => (
                       <div key={year} style={{ marginBottom: '8px' }}>
                         <button
+                          className={`moments-year-btn${filterYear === year ? ' is-active' : ''}`}
                           onClick={() => { setFilterYear(year); setFilterMonth(null); setShowCalendar(false); }}
                           style={{
                             fontSize: '13px', fontWeight: 600, color: filterYear === year ? 'var(--color-primary, #0052D9)' : '#1a1a1a',
@@ -627,6 +628,7 @@ export default function MomentsPage() {
                           {Array.from(yearMonths.get(year)!).sort((a, b) => a - b).map(month => (
                             <button
                               key={month}
+                              className={`moments-month-chip${filterYear === year && filterMonth === month ? ' is-active' : ''}`}
                               onClick={() => { setFilterYear(year); setFilterMonth(month); setShowCalendar(false); }}
                               style={{
                                 padding: '3px 8px', fontSize: '11px', borderRadius: '4px',
@@ -700,6 +702,7 @@ export default function MomentsPage() {
                         return (
                           <button
                             key={tag}
+                            className={`moments-tag-chip${isActive ? ' is-active' : ''}`}
                             onClick={() => { setFilterTag(isActive ? null : tag); setShowTagPanel(false); }}
                             style={{
                               padding: '4px 10px', fontSize: '12px', borderRadius: '4px',

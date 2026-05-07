@@ -133,11 +133,34 @@ function AuthGate() {
   return (
     <DashboardLayout>
       <ChunkErrorBoundary>
-        <Suspense fallback={<RouteLoading />}>
+        {/* Suspense fallback：之前用 <RouteLoading />（全屏 overlay）会让
+            每次路由切换都闪一下；改成透明占位 + 顶部细进度条 —— 侧栏 /
+            头部保持可见，仅内容区轻微闪动，体感顺滑很多。 */}
+        <Suspense fallback={<RouteFallback />}>
           <Outlet />
         </Suspense>
       </ChunkErrorBoundary>
     </DashboardLayout>
+  );
+}
+
+// 路由 chunk 加载中的占位：顶部 2px 蓝色不定进度条，主内容区透明。
+// 切到 1.7MB 的 Analytics chunk 时尤其明显，原 overlay 闪一下太重。
+function RouteFallback() {
+  return (
+    <div style={{ position: 'relative', width: '100%', minHeight: 100 }}>
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: 2,
+          zIndex: 100, pointerEvents: 'none',
+          background: 'linear-gradient(90deg, transparent, var(--color-primary, #0052D9), transparent)',
+          backgroundSize: '40% 100%',
+          backgroundRepeat: 'no-repeat',
+          animation: 'routeFallbackBar 1.2s linear infinite',
+        }}
+      />
+    </div>
   );
 }
 

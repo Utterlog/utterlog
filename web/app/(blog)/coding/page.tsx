@@ -278,7 +278,20 @@ export default async function CodingPage() {
   const username = data.username || profile.login || '';
   const activityDays = Array.isArray(data.activity_days) ? data.activity_days : [];
   const activityBuckets = groupActivityDays(activityDays, timeZone).filter(b => b.days.length > 0);
-  const days = Array.isArray(data.contributions) ? data.contributions : [];
+  // 热力图改成 rolling 365 天：以"今天"为最后一格，往前 1 整年（含
+   // 当周到周日补齐一列）。GitHub 风格 —— 不再以"自然年 1/1 到 12/31"
+   // 排版（那种排法 5 月会落在中间，跟 GitHub 的"今天在最右"习惯不符）。
+   const allDays = Array.isArray(data.contributions) ? data.contributions : [];
+   const rollingDays = (() => {
+     if (!allDays.length) return allDays;
+     const todayISO = new Date().toISOString().slice(0, 10);
+     // 从 today - 364 天 开始
+     const cutoff = new Date(`${todayISO}T00:00:00Z`);
+     cutoff.setUTCDate(cutoff.getUTCDate() - 364);
+     const cutoffISO = cutoff.toISOString().slice(0, 10);
+     return allDays.filter((d) => d.date >= cutoffISO && d.date <= todayISO);
+   })();
+  const days = rollingDays;
   const weeks = contributionWeeks(days);
   const todayContributions = todayContributionCount(days);
   const heatmapYear = contributionYear(days);

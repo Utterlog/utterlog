@@ -627,8 +627,13 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 	//     reply 分支没看 senderIsAdmin，导致博主每次回复都触发邮件）
 	// 这里直接 early-return，两条路径一起跳过。
 	if senderIsAdmin {
+		log.Printf("[comment-notify] skipped — sender is admin (commentID=%d, role=%s, user_id=%d)", commentID, sender.Role, sender.UserID)
 		return
 	}
+	// 看到 sender.Role 是空（比如 user_id=0 的访客）也是预期的。但如果
+	// 看到 admin reply 没触发这条 log，说明 SELECT JOIN 拿不到 role，
+	// 进一步排查方向就明确了。
+	log.Printf("[comment-notify] sender role check: role=%q user_id=%d senderIsAdmin=%v commentID=%d", sender.Role, sender.UserID, senderIsAdmin, commentID)
 
 	// Parse stored geo JSON (set on insert by model.LookupAndStoreGeo).
 	var senderGeo struct {

@@ -32,8 +32,30 @@ export default function HomePage({
   categories: serverCategories = [],
   archiveStats = {},
 }: HomePageProps) {
-  const { site, categories: contextCategories, archiveStats: contextStats } = useThemeContext();
-  const categories = serverCategories.length ? serverCategories : contextCategories;
+  const { site, categories: contextCategories, archiveStats: contextStats, menus } = useThemeContext();
+  const allCategories = serverCategories.length ? serverCategories : contextCategories;
+  // 分类导航（中间筛选条）：优先用 admin 在「主题 → 菜单 → 分类导航」
+  // 配的菜单项；admin 不配 → 自动列出所有分类（向后兼容旧站点）。
+  // 菜单项的 `slug` / `category_id` 用来匹配 contextCategories 拿到 id。
+  const customCatNav = (menus as any)?.category as any[] | undefined;
+  const categories = (() => {
+    if (!customCatNav || customCatNav.length === 0) return allCategories;
+    return customCatNav.map((m) => {
+      const matched = allCategories.find((c: any) =>
+        (m.category_id && c.id === m.category_id) ||
+        (m.slug && c.slug === m.slug) ||
+        (m.label && c.name === m.label),
+      );
+      // 把 admin 菜单项叠加到 category 数据上（保留 admin 改写的 label / icon）
+      return {
+        id: matched?.id ?? m.category_id ?? 0,
+        slug: matched?.slug ?? m.slug ?? '',
+        name: m.label || matched?.name || '未命名',
+        icon: m.icon || matched?.icon || '',
+        count: matched?.count ?? m.count ?? 0,
+      };
+    });
+  })();
   const stats = archiveStats?.post_count ? archiveStats : contextStats;
   const totalPosts = stats?.post_count || initialPosts.length || 0;
   const totalWords = stats?.word_count ? Number(stats.word_count).toLocaleString() : '0';

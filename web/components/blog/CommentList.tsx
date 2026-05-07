@@ -622,8 +622,12 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
   }, []);
 
   const initialLoaded = useRef(false);
-  const fetchComments = async (isSwitch?: boolean) => {
-    if (isSwitch) setSwitching(true); else setLoading(true);
+  // mode='initial' 显示主 loading 骨架；'switch' 显示排序切换的轻提示；
+  // 'silent' 完全静默，UI 看不到任何变化（评论提交完成后用） —— WordPress
+  // 风格：原列表保持显示，新数据回来后无缝替换，不让用户感觉"页面重载"。
+  const fetchComments = async (mode: 'initial' | 'switch' | 'silent' = 'initial') => {
+    if (mode === 'initial') setLoading(true);
+    else if (mode === 'switch') setSwitching(true);
     try {
       const r: any = await api.get('/comments', { params: {
         post_id: postId, status: 'approved', per_page: 500,
@@ -641,8 +645,8 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
   };
 
   useEffect(() => {
-    if (!initialLoaded.current) { initialLoaded.current = true; fetchComments(); }
-    else fetchComments(true);
+    if (!initialLoaded.current) { initialLoaded.current = true; fetchComments('initial'); }
+    else fetchComments('switch');
   }, [postId, order]);
 
   const tree = buildCommentTree(comments);
@@ -657,10 +661,12 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
 
   const handleCommentSuccess = (commentId?: number) => {
     if (commentId) addEditableId(commentId);
-    fetchComments();
-    setTimeout(() => {
-      listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 300);
+    // WordPress 风格：列表静默拉新数据，不显示 loading 骨架，不滚动。
+    // 之前 fetchComments() 默认走 'initial' 模式 → setLoading(true) 让
+    // 整个评论区瞬间空一下再填回来，加上 setTimeout(scrollIntoView) 把
+    // 页面拽到评论区顶部，整体感觉像"页面刷新了"。改成 'silent' +
+    // 取消 scroll，提交回复 = 仅多出一条卡片，其它结构不动。
+    fetchComments('silent');
   };
 
   const topLevelCount = tree.length;
@@ -718,7 +724,7 @@ export default function CommentList({ postId, title, onCommentCountChange }: { p
           )}
           {tree.map((comment, idx) => {
             const floor = order === 'oldest' ? idx + 1 : tree.length - idx;
-            return <CommentCard key={comment.id} comment={comment} postId={postId} floor={floor} onReplySuccess={(id) => { if (id) addEditableId(id); fetchComments(); }} editableIds={editableIds} />;
+            return <CommentCard key={comment.id} comment={comment} postId={postId} floor={floor} onReplySuccess={(id) => { if (id) addEditableId(id); fetchComments('silent'); }} editableIds={editableIds} />;
           })}
         </div>
       )}

@@ -14,10 +14,17 @@ interface VersionPayload {
 let cached: { at: number; data: VersionPayload | null } = { at: 0, data: null };
 const TTL = 10 * 60 * 1000;
 
-async function fetchVersion(): Promise<VersionPayload | null> {
-  if (cached.data && Date.now() - cached.at < TTL) return cached.data;
+// 升级成功后立刻让缓存失效，让所有 mounted VersionBadge 重新拉一次。
+// SystemUpdatePanel 的 verifyUpgradeApplied 成功时调
+// `window.dispatchEvent(new Event('admin:version-changed'))` 触发。
+export function bustVersionCache() {
+  cached = { at: 0, data: null };
+}
+
+async function fetchVersion(force = false): Promise<VersionPayload | null> {
+  if (!force && cached.data && Date.now() - cached.at < TTL) return cached.data;
   try {
-    const r = await api.get<any>('/admin/system/version');
+    const r = await api.get<any>(`/admin/system/version${force ? '?refresh=1' : ''}`);
     cached = { at: Date.now(), data: r.data as VersionPayload };
     return cached.data;
   } catch {
@@ -35,6 +42,14 @@ export default function VersionBadge({ variant = 'compact' }: Props) {
 
   useEffect(() => {
     fetchVersion().then(setInfo);
+    // 监听升级完成事件 → 强制清缓存 + 重新拉，UI 立刻反映新版本号
+    // 不用再等 10 分钟 TTL 或用户手动刷新页面
+    const onVersionChanged = () => {
+      bustVersionCache();
+      fetchVersion(true).then(setInfo);
+    };
+    window.addEventListener('admin:version-changed', onVersionChanged);
+    return () => window.removeEventListener('admin:version-changed', onVersionChanged);
   }, []);
 
   const current = info?.current.version || 'v1.0';

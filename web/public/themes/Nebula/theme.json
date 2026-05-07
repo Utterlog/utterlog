@@ -13,8 +13,8 @@
     "headerStyle": "sticky"
   },
   "menuPositions": [
-    { "key": "header", "label": "顶部导航", "description": "网站顶部 Header 的导航菜单" },
-    { "key": "footer", "label": "底部导航", "description": "网站底部 Footer 的辅助链接" }
+    { "key": "header", "label": "顶部导航", "description": "网站顶部 Header 的主菜单" },
+    { "key": "category", "label": "分类导航", "description": "首页中部的分类筛选条；不配则自动列出所有分类" }
   ],
   "adminPanels": ["header_buttons"],
   "features": ["search", "random_post", "footer_menu"]

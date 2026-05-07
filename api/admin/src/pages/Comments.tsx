@@ -207,6 +207,9 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
       const d = r.data || r;
       setPendingCount(d.pending || 0);
       setSpamCount(d.spam || 0);
+      // 通知顶部铃铛立刻同步红点（不等 60s 轮询）。审批 / 拒绝 /
+      // 删除评论后都会调 fetchCounts，所以一处 dispatch 全场景覆盖
+      window.dispatchEvent(new Event('admin:notifications-changed'));
     } catch {}
   }, []);
 

@@ -202,15 +202,15 @@ var builtInThemes = []Extension{
 		AdminPanels: []string{"footer_icons"},
 	},
 	{
-		ID: "Nebula", Name: "Nebula", Version: "2.3.2",
+		ID: "Nebula", Name: "Nebula", Version: "2.3.4",
 		Author:      "Utterlog Team",
 		Description: "暗色科技风主题 — 电紫强调与深蓝表面，玻璃质感卡片与蓝调发光阴影",
 		Kind:        "theme",
 		Builtin:     true,
 		Preview:     "/themes/Nebula/screenshot.svg",
 		MenuPositions: []MenuPosition{
-			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
-			{Key: "footer", Label: "底部导航", Description: "网站底部 Footer 的辅助链接"},
+			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的主菜单"},
+			{Key: "category", Label: "分类导航", Description: "首页中部的分类筛选条；不配则自动列出所有分类"},
 		},
 		AdminPanels: []string{"header_buttons"},
 	},
