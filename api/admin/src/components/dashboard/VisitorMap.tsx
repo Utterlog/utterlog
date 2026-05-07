@@ -98,7 +98,30 @@ export default function VisitorMap({ period }: { period: string }) {
       }, 'country-label');
     });
 
+    // SPA 切到 /admin/analytics 时，容器布局往往还没稳定（侧栏过渡 /
+    // 卡片高度变化 / 异步加载子组件等），地图会用一个早期的不正确
+    // 宽高初始化 canvas，之后再也不刷新 —— 表现就是"打开页面地图空
+    // 白，强制刷新才能正常渲染"。监听容器尺寸变化主动调 resize。
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && mapRef.current) {
+      ro = new ResizeObserver(() => {
+        // requestAnimationFrame 合并多次回调，避免拖窗口时高频触发
+        requestAnimationFrame(() => {
+          if (mapObjRef.current) mapObjRef.current.resize();
+        });
+      });
+      ro.observe(mapRef.current);
+    }
+
+    // 兜底：mount 后下一帧 + 200ms 各 resize 一次，处理一些极端情况
+    // 下 ResizeObserver 不会触发的初始布局抖动
+    const raf = requestAnimationFrame(() => mapObjRef.current?.resize());
+    const t = window.setTimeout(() => mapObjRef.current?.resize(), 200);
+
     return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(t);
+      if (ro) ro.disconnect();
       map.remove();
       mapObjRef.current = null;
     };

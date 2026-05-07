@@ -305,6 +305,38 @@ export default function AIChatBubble() {
             }}>{streaming}</div>
           </div>
         )}
+        {sending && !streaming && (
+          // 等待第一个 chunk 期间的"打字中"占位气泡：3 颗圆点接力闪烁
+          // 颜色用 currentColor 由父级 .ai-chat-bubble-msg--assistant
+          // 控制（默认蓝色 #1d57e0；Nebula 暗主题里 CSS 翻成 sky 蓝）
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div className="ai-chat-bubble-msg ai-chat-bubble-msg--assistant ai-chat-bubble-typing" style={{
+              padding: '10px 14px', borderRadius: 8,
+              background: '#f4f6f8',
+              color: 'hsl(228, 97%, 42%)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg
+                className="ai-typing-dots"
+                width="32" height="8"
+                viewBox="0 9 24 6"
+                fill="currentColor"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-label="AI 正在输入"
+              >
+                <circle cx="4" cy="12" r="3" opacity="1">
+                  <animate id="ai-bubble-spinner-1" begin="0;ai-bubble-spinner-3.end-0.25s" attributeName="opacity" dur="0.75s" values="1;.2" fill="freeze" />
+                </circle>
+                <circle cx="12" cy="12" r="3" opacity=".4">
+                  <animate begin="ai-bubble-spinner-1.begin+0.15s" attributeName="opacity" dur="0.75s" values="1;.2" fill="freeze" />
+                </circle>
+                <circle cx="20" cy="12" r="3" opacity=".3">
+                  <animate id="ai-bubble-spinner-3" begin="ai-bubble-spinner-1.begin+0.3s" attributeName="opacity" dur="0.75s" values="1;.2" fill="freeze" />
+                </circle>
+              </svg>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Input */}

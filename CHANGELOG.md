@@ -23,6 +23,18 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.3] - 2026-05-07
+
+### 修复
+
+- **后台一键升级在自定义 compose 项目名下静默失败**：sidecar 脚本写死 `docker inspect utterlog-api-1`，但 docker compose 给容器命名是 `<project>-<service>-<index>` —— 项目名取决于安装目录的 basename（或 `COMPOSE_PROJECT_NAME` env / `name:` 字段）。装在 `/opt/utterlog-pancn/`（1Panel 默认）/ `/root/my-blog/` 等任何非 `/opt/utterlog/` 路径，容器都叫 `utterlog-pancn-api-1` / `my-blog-api-1`，全部 `docker inspect` 调用都拿不到容器，健康检查 120s 干等到超时，admin UI 报 "升级未生效"。
+- **修复方案**：`api/internal/handler/system_version.go` 新增 `apiContainerName()` 助手 —— api 进程用 `os.Hostname()`（docker 默认把 hostname 设成短 ID）+ `docker inspect <id>` 反查自己的真实容器名；`webContainerName(api)` 通过 `com.docker.compose.project` label 反查同项目里的 web 容器。所有原本写死 `utterlog-api-1` 的地方（`probeComposeWorkingDir` / `probeAPIUploadsMountSource` / sidecar 健康检查 loop / sidecar 终态 digest 输出）改成用动态名字；sidecar 启动时通过 `API_CONTAINER` / `WEB_CONTAINER` 环境变量传递。
+- **覆盖面**：未来任何用户不管装在哪个目录、用什么 compose project 名（`utterlog` / `utterlog-pancn` / `my-blog` / 大写小写下划线），后台升级按钮都能找到自己的容器、正确执行 pull / recreate / health check。
+- **GitHub API 403 rate-limit**：`api/internal/handler/system_version.go` 三个 GitHub API 调用（`releases/latest` / `releases?per_page=20` / `commits/{tag}`）都没鉴权，云出口共享 IP 的 60/h 匿名配额一打就爆。新增 `applyGitHubHeaders(req)` 助手，admin 配了 `github_access_token` / `coding_github_token` 时自动加 `Authorization: Bearer ...`，配额从 60/h 涨到 5000/h。403 错误信息也明确化（提示去后台填 token），不再是裸的 "github API 403: ..."。
+- **后台升级面板"升级未生效"误报**：`SystemUpdatePanel.tsx` 的 `verifyUpgradeApplied` 之前只看 version 字符串严格相等，dev 安装（BuildVersion='dev' 永不变）/ 生产 `:latest` 还没同步 / 用户 compose 锁定具体 tag 这些场景都会被卡 60s 然后误报 "升级未生效"。改成三层成功信号（version 等式 / commit 变化 / built_at 变化）任一命中即成功，超时 60s → 180s，错误信息显示实际拿到的 version + commit。
+- **生产 named volume 模式下 sidecar 日志看不到**：`docker-compose.prod.yml` 用 `uploads:/app/public/uploads`（命名卷），api 读卷里的 upgrade.log；sidecar 写到 `$INSTALL_DIR/uploads/upgrade.log`（宿主目录），两个完全不同的物理文件，admin 看不到 sidecar 真实输出。新增 `probeAPIUploadsMountSource()` 探测 api 容器 `/app/public/uploads` 的实际挂载源（bind 返宿主路径 / volume 返卷名），api 启动 sidecar 时把同一个源也挂载给 sidecar（`-v <source>:/api-uploads` + `API_UPLOADS_DIR=/api-uploads`），双方写读同一个文件。
+- **安装目录写死 `/opt/utterlog`**：`runUpgrade()` 之前默认 `installDir = /opt/utterlog`，1Panel 装在 `/opt/utterlog-pancn/` 或自定义路径直接报"找不到 docker-compose 文件"。新增 `probeComposeWorkingDir()` 用 `com.docker.compose.project.working_dir` label 自动探测真实路径，环境变量 / 兜底逻辑保留。
+
 ## [2.3.2] - 2026-05-07
 
 ### 新增

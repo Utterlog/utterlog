@@ -2974,6 +2974,13 @@
   background: var(--nebula-blue-accent) !important;
 }
 
+/* AI"打字中"动画 3 圆点 —— SVG 用 currentColor，跟随父气泡的 color。
+   Nebula 暗底气泡上把点改成 sky 亮蓝（默认 hsl(228 97 42) 太深，跟
+   半透蓝底融在一起看不清） */
+[data-theme="Nebula"] .ai-chat-bubble-typing {
+  color: var(--nebula-blue-accent) !important;
+}
+
 /* 输入区分割线 + 输入框 */
 [data-theme="Nebula"] .ai-chat-bubble-input-bar {
   border-top-color: rgba(128, 207, 255, 0.16) !important;

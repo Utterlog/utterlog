@@ -348,6 +348,11 @@ export interface ExtensionManifest {
   preview?: string;
   menuPositions?: { key: string; label: string; description?: string }[];
   menu_positions?: { key: string; label: string; description?: string }[];
+  // 主题声明它在后台「主题」页要展示哪几个自定义 panel tab。空数组 →
+  // 只显示「主题」「菜单」两个通用 tab。允许的 key：
+  //   profile_card / header_buttons / footer_icons
+  adminPanels?: string[];
+  admin_panels?: string[];
 }
 
 export const themesApi = {

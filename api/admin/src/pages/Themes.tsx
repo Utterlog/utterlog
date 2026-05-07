@@ -16,6 +16,16 @@ export default function Themes() {
   const [activating, setActivating] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 当前 active 主题在 manifest 里声明了哪些自定义 admin panel —— tabs
+  // 据此动态显示，避免给"用不到这个面板"的主题展示无效设置入口。
+  const activeManifest = themes.find((t) => t.id === active);
+  const adminPanels: string[] = activeManifest?.adminPanels
+    || activeManifest?.admin_panels
+    || [];
+  const showProfile = adminPanels.includes('profile_card');
+  const showHeader = adminPanels.includes('header_buttons');
+  const showFooter = adminPanels.includes('footer_icons');
+
   const fetchList = async () => {
     setLoading(true);
     try {
@@ -90,16 +100,22 @@ export default function Themes() {
     }
   };
 
-  // Tab bar — themes / menus / footer icons — so menu management
-  // lives inside the same 主题 surface instead of a top-level sidebar
-  // entry. Keeps related theme-customization controls together.
-  const tabs: { key: typeof tab; label: string; icon: string }[] = [
-    { key: 'themes', label: '主题', icon: 'fa-regular fa-palette' },
-    { key: 'menus', label: '菜单', icon: 'fa-regular fa-list' },
-    { key: 'profile', label: '资料卡', icon: 'fa-regular fa-id-card' },
-    { key: 'header', label: '头部按钮', icon: 'fa-regular fa-window-maximize' },
-    { key: 'footer', label: '页脚图标', icon: 'fa-regular fa-share-nodes' },
+  // Tab bar — themes / menus 始终显示；profile / header / footer 三个
+  // 自定义面板按 activeManifest.adminPanels 决定是否出现。新主题想用
+  // 哪个面板，在 manifest.json 里写 "adminPanels": [...] 即可。
+  const allTabs: { key: typeof tab; label: string; icon: string; visible: boolean }[] = [
+    { key: 'themes', label: '主题', icon: 'fa-regular fa-palette', visible: true },
+    { key: 'menus', label: '菜单', icon: 'fa-regular fa-list', visible: true },
+    { key: 'profile', label: '资料卡', icon: 'fa-regular fa-id-card', visible: showProfile },
+    { key: 'header', label: '头部按钮', icon: 'fa-regular fa-window-maximize', visible: showHeader },
+    { key: 'footer', label: '页脚图标', icon: 'fa-regular fa-share-nodes', visible: showFooter },
   ];
+  const tabs = allTabs.filter(t => t.visible);
+  // 如果当前 tab 在新主题里被隐藏（比如刚切了主题），自动回退到 themes
+  useEffect(() => {
+    if (!tabs.find(t => t.key === tab)) setTab('themes');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showProfile, showHeader, showFooter]);
 
   return (
     <div>
@@ -121,8 +137,8 @@ export default function Themes() {
       </div>
 
       {tab === 'menus' && <MenusPage />}
-      {tab === 'profile' && <AzureProfileSettings />}
-      {tab === 'header' && (
+      {tab === 'profile' && showProfile && <AzureProfileSettings />}
+      {tab === 'header' && showHeader && (
         <FooterIconsEditor
           optionKey="theme_header_buttons"
           title="头部图标按钮"
@@ -136,7 +152,7 @@ export default function Themes() {
           }
         />
       )}
-      {tab === 'footer' && <FooterIconsEditor />}
+      {tab === 'footer' && showFooter && <FooterIconsEditor />}
       {tab === 'themes' && <>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>

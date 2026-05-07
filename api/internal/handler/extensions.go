@@ -40,6 +40,14 @@ type Extension struct {
 	Preview       string         `json:"preview,omitempty"`
 	Path          string         `json:"-"` // filesystem path, not returned to client
 	MenuPositions []MenuPosition `json:"menuPositions,omitempty"`
+	// AdminPanels — theme 在后台 → 主题页面顶部 tab 里要出现哪几个
+	// 自定义设置面板。允许的 key：
+	//   profile_card    — 侧栏个人资料卡（Azure）
+	//   header_buttons  — 头部图标按钮（Azure / Nebula / Renascent）
+	//   footer_icons    — 页脚图标（Azure / Chred）
+	// 数组为空 → admin 只显示「主题 / 菜单」两个 tab。前端按本字段过滤
+	// 而不是写死，新主题只要在 manifest 里声明就能用上对应面板。
+	AdminPanels []string `json:"adminPanels,omitempty"`
 }
 
 type MenuPosition struct {
@@ -139,6 +147,7 @@ var builtInThemes = []Extension{
 		MenuPositions: []MenuPosition{
 			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
 		},
+		AdminPanels: []string{},
 	},
 	{
 		ID: "Azure", Name: "Azure", Version: "2.0.2",
@@ -151,6 +160,7 @@ var builtInThemes = []Extension{
 			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
 			{Key: "sidebar", Label: "侧栏导航", Description: "首页左侧分类标签导航"},
 		},
+		AdminPanels: []string{"profile_card", "header_buttons", "footer_icons"},
 	},
 	{
 		ID: "Renascent", Name: "Renascent", Version: "2.0.2",
@@ -163,6 +173,7 @@ var builtInThemes = []Extension{
 			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
 			{Key: "sidebar", Label: "侧栏导航", Description: "首页左侧分类标签导航"},
 		},
+		AdminPanels: []string{"header_buttons"},
 	},
 	{
 		ID: "Flux", Name: "Flux", Version: "2.0.2",
@@ -175,6 +186,7 @@ var builtInThemes = []Extension{
 			{Key: "header", Label: "顶部导航", Description: "顶部 Header 的导航链接"},
 			{Key: "footer", Label: "底部导航", Description: "Footer 的辅助链接"},
 		},
+		AdminPanels: []string{},
 	},
 	{
 		ID: "Chred", Name: "Chred", Version: "2.0.2",
@@ -187,9 +199,10 @@ var builtInThemes = []Extension{
 			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
 			{Key: "sidebar", Label: "侧栏导航", Description: "首页左侧分类标签导航"},
 		},
+		AdminPanels: []string{"footer_icons"},
 	},
 	{
-		ID: "Nebula", Name: "Nebula", Version: "2.3.1",
+		ID: "Nebula", Name: "Nebula", Version: "2.3.2",
 		Author:      "Utterlog Team",
 		Description: "暗色科技风主题 — 电紫强调与深蓝表面，玻璃质感卡片与蓝调发光阴影",
 		Kind:        "theme",
@@ -199,6 +212,7 @@ var builtInThemes = []Extension{
 			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的导航菜单"},
 			{Key: "footer", Label: "底部导航", Description: "网站底部 Footer 的辅助链接"},
 		},
+		AdminPanels: []string{"header_buttons"},
 	},
 }
 

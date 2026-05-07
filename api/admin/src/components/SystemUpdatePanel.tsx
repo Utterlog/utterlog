@@ -157,25 +157,44 @@ export default function SystemUpdatePanel() {
     });
   }
 
-  // Verifies whether the upgrade actually took effect. The backend
-  // marks `success=true` optimistically the moment it hands the pull
-  // off to the sidecar container, so the old "升级完成" toast was
-  // firing even when the pull later failed or the api was recreated
-  // into the same image. This re-polls /version, waits for the
-  // BuildVersion string to match the latest release, and only then
-  // declares success. If after `maxWaitSec` the running version is
-  // still the old one, we surface a "升级未生效" error so the user
-  // knows to investigate the docker logs.
-  async function verifyUpgradeApplied(expected: string, maxWaitSec = 60) {
+  // Verifies whether the upgrade actually took effect. 三种成功信号
+  // 任一命中就算成功：
+  //   1. current.version === 期望的 GitHub tag（最强信号）
+  //   2. current.commit 跟升级前不一样（容器二进制变了 = 拉到新镜像
+  //      重建过；覆盖 dev / sha-only 构建，BuildVersion 是 'dev' 时也能
+  //      认）
+  //   3. current.built_at 跟升级前不一样（兜底，仅当 commit 不可用时
+  //      用 build time 当代理）
+  // 之前只看 (1)，dev 安装永远 'dev' 永远过不了；生产里如果 docker
+  // 镜像 :latest 还没更新到新 tag、或者用户 compose 锁定了具体版本号，
+  // 也会被卡 60s 然后误报"升级未生效"。
+  async function verifyUpgradeApplied(expected: string, maxWaitSec = 180) {
+    // 升级前先记录基线 —— commit / built_at 跟 expected 都要拿来对比
+    const baseCommit = (info?.current?.commit || '').toLowerCase();
+    const baseBuiltAt = info?.current?.built_at || '';
     const started = Date.now();
     let lastErr = '';
+    let lastGot = '';
+    let lastCommit = '';
     while (Date.now() - started < maxWaitSec * 1000) {
       try {
         const r = await api.get<any>('/admin/system/version?refresh=1');
         setInfo(r.data);
         const got = r.data?.current?.version || '';
+        const commit = (r.data?.current?.commit || '').toLowerCase();
+        const builtAt = r.data?.current?.built_at || '';
+        lastGot = got;
+        lastCommit = commit;
         if (expected && got === expected) {
-          toast.success('升级完成 — 已运行 ' + got);
+          toast.success(`升级完成 — 已运行 ${got}`);
+          return true;
+        }
+        if (baseCommit && commit && baseCommit !== commit) {
+          toast.success(`升级完成 — 容器已重建（commit ${commit.slice(0, 7)}）`);
+          return true;
+        }
+        if (!baseCommit && !commit && baseBuiltAt && builtAt && baseBuiltAt !== builtAt) {
+          toast.success('升级完成 — 容器已重建');
           return true;
         }
       } catch (e: any) {
@@ -183,11 +202,24 @@ export default function SystemUpdatePanel() {
       }
       await new Promise((res) => setTimeout(res, 2000));
     }
-    toast.error(
-      lastErr
-        ? `无法确认升级结果（${lastErr}）—— 请手动刷新页面核对版本`
-        : `升级未生效 — 容器仍在旧版本，请检查 docker logs utterlog-api-1`
-    );
+    // 兜底失败：把实际拿到的版本号 / commit 显示出来，方便定位问题。
+    // 常见情形：
+    //   - dev 容器（go run，无 ldflags 注入）→ got='dev' 永远不变
+    //   - 用户 compose 锁定具体 tag，docker pull 拉不到新版本
+    //   - GHA 还没把 :latest 推到 registry（点早了）
+    if (lastErr) {
+      toast.error(`无法确认升级结果（${lastErr}）—— 请手动刷新页面核对版本`);
+    } else if (lastGot && lastGot === (info?.current?.version || '')) {
+      toast.error(
+        `升级未生效 —— 当前版本 ${lastGot}，期望 ${expected || '?'}。可能 docker 镜像还没更新到新 tag，` +
+        `或镜像源（registry）还没同步。等几分钟再试，或直接 \`docker pull\` 后 \`docker compose up -d\`。`
+      );
+    } else {
+      toast.error(
+        `升级未生效 —— 容器仍在 ${lastGot || '旧版本'}（commit ${lastCommit.slice(0, 7) || '?'}），期望 ${expected || '?'}。` +
+        `请检查 docker logs utterlog-api-1`
+      );
+    }
     return false;
   }
 

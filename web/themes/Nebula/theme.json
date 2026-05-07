@@ -16,5 +16,6 @@
     { "key": "header", "label": "顶部导航", "description": "网站顶部 Header 的导航菜单" },
     { "key": "footer", "label": "底部导航", "description": "网站底部 Footer 的辅助链接" }
   ],
+  "adminPanels": ["header_buttons"],
   "features": ["search", "random_post", "footer_menu"]
 }

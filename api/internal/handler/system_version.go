@@ -206,12 +206,155 @@ func splitPre(v string) (main, pre string) {
 	return v, ""
 }
 
+// applyGitHubHeaders sets the standard GitHub API headers on req. When
+// admin has saved a `github_access_token` (or `coding_github_token`)
+// option we add Authorization: Bearer ... so the request counts against
+// the user's 5000/hour quota instead of the 60/hour anonymous quota
+// (per public IP, easily exhausted on shared cloud egress).
+func applyGitHubHeaders(req *http.Request) {
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "utterlog-api")
+	if auth := githubAuthorizationHeader(); auth != "" {
+		req.Header.Set("Authorization", auth)
+	}
+}
+
+// apiContainerName 探测当前 api 容器的真实名字 —— compose project 名
+// 不一定是 "utterlog"（1Panel 默认 "utterlog-pancn"，用户可以叫任何
+// 名字），所以容器名也不一定是 "utterlog-api-1"。
+//
+// 探测顺序：
+//   1. UTTERLOG_API_CONTAINER 环境变量（用户显式覆盖）
+//   2. os.Hostname() 拿到当前容器的短 ID（docker 默认把 hostname
+//      设成短 ID 12 字符），docker inspect 它得到完整 .Name
+//   3. 兜底 "utterlog-api-1"
+//
+// 后面所有 docker inspect / health check / digest 比对都用这里返回
+// 的真实名字。
+func apiContainerName() string {
+	if v := strings.TrimSpace(os.Getenv("UTTERLOG_API_CONTAINER")); v != "" {
+		return v
+	}
+	host, err := os.Hostname()
+	if err == nil && host != "" {
+		out, err := exec.Command("docker", "inspect",
+			"--format", "{{.Name}}", host,
+		).Output()
+		if err == nil {
+			name := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(string(out)), "/"))
+			if name != "" {
+				return name
+			}
+		}
+	}
+	return "utterlog-api-1"
+}
+
+// webContainerName 用 api 容器同 compose project + service=web 反查，
+// 而不是简单地把 "-api-1" 替换成 "-web-1"。失败兜底用替换法 + 默认值。
+func webContainerName(apiName string) string {
+	if v := strings.TrimSpace(os.Getenv("UTTERLOG_WEB_CONTAINER")); v != "" {
+		return v
+	}
+	// 用 api 容器的 compose project label 找 web
+	if apiName != "" {
+		out, err := exec.Command("docker", "inspect",
+			"--format", `{{ index .Config.Labels "com.docker.compose.project"}}`,
+			apiName,
+		).Output()
+		if err == nil {
+			project := strings.TrimSpace(string(out))
+			if project != "" {
+				ps, err := exec.Command("docker", "ps", "-a",
+					"--filter", "label=com.docker.compose.project="+project,
+					"--filter", "label=com.docker.compose.service=web",
+					"--format", "{{.Names}}",
+				).Output()
+				if err == nil {
+					name := strings.TrimSpace(strings.Split(string(ps), "\n")[0])
+					if name != "" {
+						return name
+					}
+				}
+			}
+		}
+	}
+	// 兜底：把 -api-1 / -api 末尾改成 -web-1 / -web
+	if strings.HasSuffix(apiName, "-api-1") {
+		return strings.TrimSuffix(apiName, "-api-1") + "-web-1"
+	}
+	if strings.HasSuffix(apiName, "-api") {
+		return strings.TrimSuffix(apiName, "-api") + "-web"
+	}
+	return "utterlog-web-1"
+}
+
+// probeComposeWorkingDir 尝试从当前 api 容器的 docker label 里读
+// docker-compose.yml 所在的宿主路径。docker compose 起容器时会自动
+// 打 `com.docker.compose.project.working_dir` label，无需用户配置。
+// 失败返回空字符串，让调用方走兜底路径。
+func probeComposeWorkingDir() string {
+	out, err := exec.Command("docker", "inspect",
+		"--format", "{{ index .Config.Labels \"com.docker.compose.project.working_dir\"}}",
+		apiContainerName(),
+	).Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// probeAPIUploadsMountSource 探测 api 容器里 /app/public/uploads 实际
+// 挂载源（host 路径或 docker volume 名）。生产 compose 用 named volume
+// 时返回 "<project>_uploads" 之类，dev compose 用 bind mount 时返回
+// 宿主路径如 "/opt/utterlog/api/public/uploads"。返回值可以直接拿来
+// 当 docker -v 的 source 用，sidecar 挂载后看到的就是 api 看到的同一个
+// uploads 目录 —— 升级日志才能写到 api 真正读取的位置。
+func probeAPIUploadsMountSource() string {
+	// docker inspect 返回 [{Type: "volume"|"bind", Source: "...", Destination: "..."}]
+	// 用 Go template 找 Destination=/app/public/uploads 的那一项，输出 Source。
+	out, err := exec.Command("docker", "inspect",
+		"--format", `{{range .Mounts}}{{if eq .Destination "/app/public/uploads"}}{{.Type}}|{{or .Name .Source}}{{end}}{{end}}`,
+		apiContainerName(),
+	).Output()
+	if err != nil {
+		return ""
+	}
+	s := strings.TrimSpace(string(out))
+	if s == "" {
+		return ""
+	}
+	parts := strings.SplitN(s, "|", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+	// volume → 用 volume 名（docker -v <name>:<dest> 自动解析）
+	// bind   → 用宿主路径
+	return parts[1]
+}
+
+// formatGitHubError 把 GitHub API 的错误响应翻译成 admin UI 上有用的
+// 文案。403 + "rate limit" 是最常见的 —— 共享云出口 IP 60/h 匿名配额
+// 一打就爆。明确告诉用户去后台 → 第三方服务里填一个 GitHub Token，
+// 不要让他们看着 "github API 403: ..." 一头雾水。
+func formatGitHubError(status int, body string) string {
+	if status == 403 && strings.Contains(strings.ToLower(body), "rate limit") {
+		if githubAPIToken() == "" {
+			return "github API 403：匿名配额（60/小时/IP）已用完。请到「后台 → 系统设置 → 第三方服务」填写 GitHub Token，配额会提升到 5000/小时。"
+		}
+		return "github API 403：已配置的 GitHub Token 配额（5000/小时）也已用完，等几分钟再试。"
+	}
+	if status == 401 {
+		return "github API 401：GitHub Token 无效或已过期，请到「后台 → 系统设置 → 第三方服务」更新。"
+	}
+	return fmt.Sprintf("github API %d: %s", status, body)
+}
+
 func fetchLatestRelease() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, "GET", ghReleasesURL, nil)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "utterlog-api")
+	applyGitHubHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -236,7 +379,7 @@ func fetchLatestRelease() {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		verCache.mu.Lock()
 		verCache.fetched = time.Now()
-		verCache.errorMsg = fmt.Sprintf("github API %d: %s", resp.StatusCode, string(body))
+		verCache.errorMsg = formatGitHubError(resp.StatusCode, string(body))
 		verCache.mu.Unlock()
 		return
 	}
@@ -274,8 +417,7 @@ func fetchTagCommit(tag string) string {
 	defer cancel()
 	url := "https://api.github.com/repos/utterlog/utterlog/commits/" + tag
 	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "utterlog-api")
+	applyGitHubHeaders(req)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil || resp == nil {
 		return ""
@@ -336,8 +478,7 @@ func fetchReleases() {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, "GET", ghAllReleasesURL, nil)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "utterlog-api")
+	applyGitHubHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -353,7 +494,7 @@ func fetchReleases() {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		relCache.mu.Lock()
 		relCache.fetched = time.Now()
-		relCache.errorMsg = fmt.Sprintf("github API %d: %s", resp.StatusCode, string(body))
+		relCache.errorMsg = formatGitHubError(resp.StatusCode, string(body))
 		// keep existing items so UI shows stale data rather than a blank list
 		relCache.mu.Unlock()
 		return
@@ -421,7 +562,7 @@ func SystemUpgrade(c *gin.Context) {
 	util.Success(c, gin.H{
 		"started":  true,
 		"log_path": "/uploads/upgrade.log",
-		"hint":     "API 将在 15-30 秒内重启；期间请勿刷新页面",
+		"hint":     "utterlog-api 容器将在 15-30 秒内被 sidecar 重新创建；期间请勿刷新页面",
 	})
 }
 
@@ -497,9 +638,32 @@ func runUpgrade() {
 	// api-1 gets recreated. Its log tail is written to
 	// ./public/uploads/upgrade.log which is bind-mounted so the UI
 	// can still read it.
+	// 容器名探测：用户的 compose project 名不一定是默认 "utterlog"
+	// （1Panel 默认 "utterlog-pancn"，docker compose 在 -p 参数 / 父
+	// 目录名也会影响），容器名跟着变成 <project>-<service>-1。所有
+	// docker inspect / health check 都得用真实名字才不会 "container
+	// not found" 静默失败。
+	apiName := apiContainerName()
+	webName := webContainerName(apiName)
+	appendLog(fmt.Sprintf("detected containers: api=%s web=%s", apiName, webName))
+
+	// 安装目录探测优先级：
+	//   1. 环境变量 UTTERLOG_INSTALL_DIR（用户显式覆盖）
+	//   2. docker inspect 当前 api 容器的 compose label
+	//      `com.docker.compose.project.working_dir` —— compose 起容器时
+	//      会自动打上，值就是 docker-compose.yml 所在的宿主目录。
+	//      支持任何安装路径（/opt/utterlog / /root/utterlog / 1Panel
+	//      默认的 /opt/1panel/utterlog 等），不再要求用户手填。
+	//   3. 兜底 /opt/utterlog（landing 站官方安装脚本的默认路径）
 	installDir := os.Getenv("UTTERLOG_INSTALL_DIR")
 	if installDir == "" {
-		installDir = "/opt/utterlog"
+		if probed := probeComposeWorkingDir(); probed != "" {
+			installDir = probed
+			appendLog(fmt.Sprintf("install dir detected from compose label: %s", installDir))
+		} else {
+			installDir = "/opt/utterlog"
+			appendLog("install dir defaulted to /opt/utterlog (no env / label)")
+		}
 	}
 	// Everything the sidecar prints goes to the shared upgrade.log that
 	// the API's SystemUpgradeStatus endpoint reads — so the admin UI
@@ -510,8 +674,12 @@ func runUpgrade() {
 	sidecarScript := `
 set -e
 # Write everything to the host-mounted upgrade.log so the api can tail it.
-mkdir -p "$INSTALL_DIR/uploads"
-LOG="$INSTALL_DIR/uploads/upgrade.log"
+# 优先 API_UPLOADS_DIR（api 启动 sidecar 时把自己 /app/public/uploads
+# 的挂载源转挂过来 —— 生产 named volume / dev bind 都兼容），兜底
+# $INSTALL_DIR/uploads（老路径）。
+LOG_DIR="${API_UPLOADS_DIR:-$INSTALL_DIR/uploads}"
+mkdir -p "$LOG_DIR"
+LOG="$LOG_DIR/upgrade.log"
 exec >>"$LOG" 2>&1
 
 ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
@@ -532,12 +700,9 @@ fi
 
 # Refresh docker-compose.yml from utterlog.io BEFORE the pull so new
 # bind mounts / env vars added in recent releases actually apply on
-# recreate. Previously the admin's 一键升级 only pulled images; if a
-# release introduced a new volume (e.g. /etc/os-release for the host
-# OS reporting), users stayed on the old compose spec and wondered
-# why the feature didn't work after upgrading. Only refresh in slim
-# mode (one file, matches what utterlog.io serves); overlay mode
-# assumes the user maintains docker-compose.prod.yml themselves.
+# recreate. Only refresh in slim mode (one file, matches what
+# utterlog.io serves); overlay mode assumes the user maintains
+# docker-compose.prod.yml themselves.
 if [ "$MODE" = "slim" ]; then
   BASE_URL="${UTTERLOG_BASE_URL:-https://utterlog.io}"
   if command -v curl >/dev/null 2>&1; then
@@ -578,21 +743,21 @@ esac
 
 echo "[$(ts)] waiting for api health ..."
 for i in $(seq 1 60); do
-  code=$(docker inspect --format='{{.State.Health.Status}}' utterlog-api-1 2>/dev/null || echo unknown)
+  code=$(docker inspect --format='{{.State.Health.Status}}' "$API_CONTAINER" 2>/dev/null || echo unknown)
   if [ "$code" = "healthy" ]; then
     echo "[$(ts)] api healthy after ${i}s"
     break
   fi
   if [ "$i" = "60" ]; then
-    echo "[$(ts)] WARN: api not healthy after 120s (state=$code); check docker logs utterlog-api-1"
+    echo "[$(ts)] WARN: api not healthy after 120s (state=$code); check docker logs $API_CONTAINER"
   fi
   sleep 2
 done
 
 # Print the running binary's version tag so the admin UI can confirm
 # the upgrade actually flipped. Relies on the image label set by GHA.
-IMG=$(docker inspect utterlog-api-1 --format='{{.Config.Image}}' 2>/dev/null || echo '?')
-DIGEST=$(docker inspect utterlog-api-1 --format='{{.Image}}' 2>/dev/null | cut -c1-19)
+IMG=$(docker inspect "$API_CONTAINER" --format='{{.Config.Image}}' 2>/dev/null || echo '?')
+DIGEST=$(docker inspect "$API_CONTAINER" --format='{{.Image}}' 2>/dev/null | cut -c1-19)
 echo "[$(ts)] done — image=$IMG digest=$DIGEST"
 `
 
@@ -601,17 +766,48 @@ echo "[$(ts)] done — image=$IMG digest=$DIGEST"
 	// Remove any previous sidecar first (ignore error).
 	exec.Command("docker", "rm", "-f", "utterlog-upgrade-worker").Run()
 
-	cmd := exec.Command("docker", "run", "--rm", "-d",
+	// 关键：api 容器的 /app/public/uploads 在生产里通常挂的是 named
+	// volume（docker-compose.prod.yml 用 `uploads:/app/public/uploads`），
+	// 不是宿主目录。sidecar 之前往 $INSTALL_DIR/uploads/upgrade.log 写
+	// log，api 从 named volume 里读 upgrade.log，**两个完全不是同一个
+	// 文件**，admin 看到的 upgrade.log 永远只有 api 自己写的那几行。
+	//
+	// 修复：api 直接 inspect 自己的 mounts，找出 /app/public/uploads
+	// 实际指向的宿主路径（可能是宿主目录、也可能是 docker volume 名），
+	// 把它**也**挂给 sidecar，sidecar 写 log 写到同一个目标 → api
+	// 读得到完整的升级进度。
+	apiUploadsSource := probeAPIUploadsMountSource()
+	dockerArgs := []string{
+		"run", "--rm", "-d",
 		"--name", sidecarName,
 		"-v", "/var/run/docker.sock:/var/run/docker.sock",
-		"-v", installDir+":"+installDir,
+		"-v", installDir + ":" + installDir,
+	}
+	if apiUploadsSource != "" {
+		// 同名挂法：sidecar 里就用 /app/public/uploads 这个路径；
+		// 既兼容宿主目录（"/opt/.../uploads"），也兼容 docker volume
+		// （直接传 volume name 给 -v 即可）
+		dockerArgs = append(dockerArgs, "-v", apiUploadsSource+":/api-uploads")
+		appendLog("sidecar 共享 api 的 uploads 挂载源：" + apiUploadsSource)
+	} else {
+		appendLog("WARN: 无法探测 api 的 /app/public/uploads 挂载源，sidecar log 可能跟 api log 不同步")
+	}
+	dockerArgs = append(dockerArgs,
 		"-e", "INSTALL_DIR="+installDir,
 		"-e", "UTTERLOG_COMPOSE_MODE="+os.Getenv("UTTERLOG_COMPOSE_MODE"),
+		"-e", "API_UPLOADS_DIR=/api-uploads",
+		// 关键：把动态探测出的 api / web 容器名传给 sidecar，让它的
+		// docker inspect / health check 都用真实名字（compose project
+		// 名不一定是默认的 "utterlog"，1Panel 用 "utterlog-pancn" 等
+		// 自定义名导致容器全叫 utterlog-pancn-api-1）。
+		"-e", "API_CONTAINER="+apiName,
+		"-e", "WEB_CONTAINER="+webName,
 		"-w", installDir,
 		// Official Docker CLI image — includes compose v2 plugin.
 		"docker:27-cli",
 		"sh", "-c", sidecarScript,
 	)
+	cmd := exec.Command("docker", dockerArgs...)
 	cmd.Stdout, _ = os.OpenFile(upgrade.logPath, os.O_APPEND|os.O_WRONLY, 0o644)
 	cmd.Stderr = cmd.Stdout
 
@@ -627,7 +823,7 @@ echo "[$(ts)] done — image=$IMG digest=$DIGEST"
 	}
 
 	appendLog(fmt.Sprintf("sidecar %s launched (docker logs %s -f)", sidecarName, sidecarName))
-	appendLog("API will restart shortly; sidecar continues independently.")
+	appendLog("utterlog-api-1 容器马上会被 sidecar 重新创建（这是正常的，sidecar 在独立容器里继续跑）。这里的 'api' 指的是你本地的 utterlog api 容器，跟 GitHub API 无关。")
 
 	// Can't wait for the sidecar — our api will be recreated mid-run,
 	// killing this goroutine. Optimistic success: the sidecar owns the
