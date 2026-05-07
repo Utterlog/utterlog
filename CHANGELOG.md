@@ -23,6 +23,17 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.7] - 2026-05-08
+
+### 修复
+
+- **全主题 coding 页热力图尺寸 GitHub-style 收口**：globals.css 之前 `.coding-heatmap` 只有 `min-width: 920px` + `width: 100%`、没有 `max-width`，53 列 cell 在 Azure 1304px 内容区里被拉到 ~20px 巨型方块，远比 GitHub 真实贡献图（~11px）大。Nebula 之前自己写了一份 `min-width: 720 + max-width: 740 + gap: 3` 的覆写绕过这个问题，但其他主题没动。本次把 GitHub-style 紧凑（`min-width: 740 / max-width: 740 / gap: 3px`、`.coding-heatmap-week` 同 gap 3px）写进 globals.css，全主题共用一份；Nebula 那份覆写删掉避免漂移，仅保留绿色阶梯颜色覆写。
+- **非 Nebula 主题（Azure / Chred / Flux / Renascent / Utterlog）的友链页 / 订阅页错位**：v2.3.1 把这两个共享客户端组件 (`web/app/(blog)/feeds/FeedsClient.tsx` / `web/app/(blog)/links/LinksClient.tsx`) 重做成 toolbar + className 驱动的新布局（`feeds-toolbar` / `feeds-view-toggle` / `feed-card-*`、`links-toolbar` / `links-view-btn` / `links-group-tab`），但相关 CSS 只在 `web/themes/Nebula/styles.css` 里写了，没给其他主题留 baseline。Azure / Chred / Flux 等渲染时拿不到任何样式 → toolbar 按钮散落 + 卡片裸奔。修复：把每个客户端组件拆成 `Nebula*View`（v2.3.x 新版本）+ `Legacy*View`（v2.3.0 inline-style 版本），原 `FeedsClient` / `LinksClient` 改成 `useThemeContext()` 主题分发器，Nebula 走新版、其他主题走老版。老版纯 inline 样式不依赖任何主题 class，跨主题安全；Nebula 版的视觉特性 (toolbar / 视图切换 / 随机骰子) 完全不污染其他主题。
+
+### 移除
+
+暂无。
+
 ## [2.3.6] - 2026-05-07
 
 ### 新增

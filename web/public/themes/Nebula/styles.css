@@ -4617,21 +4617,9 @@
   border-radius: 15px;
 }
 
-/* coding 热力图视觉压缩 ── v2.3.5 把日期范围从「自然年 1/1~12/31」
-   改成 rolling 365 天，年中访问时渲染列数从 ~20 周变成满 53 周，整个
-   图占满了 960px 内容宽度，看起来比 v2.3.4 大得多。这里用 Nebula
-   覆写把 min-width 从 920 → 720、gap 从 4 → 3px、加 max-width 740px
-   不让它再撑满全宽 ── 单格回到 GitHub-style 的 ~11px，整体视觉跟
-   v2.3.4 时（部分年）的紧凑感对齐。 */
-[data-theme="Nebula"] .coding-heatmap {
-  min-width: 720px !important;
-  max-width: 740px;
-  gap: 3px !important;
-  margin-inline: 0; /* 配合 max-width 左对齐，不再居中拉伸 */
-}
-[data-theme="Nebula"] .coding-heatmap-week {
-  gap: 3px !important;
-}
+/* coding 热力图尺寸现在统一在 globals.css 收口（min-width / max-width
+   740px + gap 3px → GitHub-style 紧凑），全主题共用，Nebula 这里不再
+   单独覆写避免漂移。颜色阶梯下面继续 Nebula 覆写。 */
 
 /* coding 热力图：GitHub 绿色阶梯（4 级 + 空白）
    颜色取自 GitHub dark contribution graph：
