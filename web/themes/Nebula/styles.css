@@ -146,10 +146,21 @@
   flex: 1;
   min-height: 0;
   width: 100%;
+  /* main 自身改成 column flex container，让里面的 .nebula-frame 占满
+     可用空间、把 <Footer> 顶到底。之前 main 是 block 布局，短内容
+     页（tags / categories / search / 空 archive 等）footer 会浮在
+     页面中部，下面留一大片黑。 */
+  display: flex;
+  flex-direction: column;
   -webkit-overflow-scrolling: touch;
 }
 
-[data-theme="Nebula"] .nebula-frame { width: 100%; }
+[data-theme="Nebula"] .nebula-frame {
+  width: 100%;
+  /* 配合 .nebula-main 的 column flex：frame 占满剩余高度，把
+     footer 推到视口底部。内容长时不影响（自然撑开） */
+  flex: 1 0 auto;
+}
 
 [data-theme="Nebula"] .nebula-container {
   max-width: 960px;
@@ -3051,10 +3062,10 @@
   border-top: 1px solid var(--nebula-border-subtle);
   background: var(--nebula-black);
   position: relative; /* 给 .nebula-back-to-top 做绝对定位的参照 */
-  /* 没备案号时只有一行 stats，整个 footer 视觉太薄；保底 96px 高度，
-     用户配了备案号后第二行自然撑开会更高，但底线先有一个稳定值。
-     之前没备案的站点 footer 看着像被踩扁了 */
-  min-height: 96px;
+  /* 没备案号时只有一行 stats，整个 footer 视觉太薄；保底 86px 高度
+     （v2.3.5 的 96px 偏高，本次降 10% → 86px），用户配了备案号后
+     第二行自然撑开会更高，但底线先有一个稳定值。 */
+  min-height: 86px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -3065,8 +3076,9 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 14px;
-  padding-top: 18px;
-  padding-bottom: 14px;
+  /* v2.3.5 用 18/14（总 32px），本次同步降 10% → 16/13（总 29px） */
+  padding-top: 16px;
+  padding-bottom: 13px;
   font-size: 12px;
   font-family: var(--nebula-font-mono);
   color: rgba(255, 255, 255, 0.45);
@@ -3751,7 +3763,11 @@
 /* ============================================================ */
 
 [data-theme="Nebula"] .nebula-frame > div:not(.nebula-home):not(.nebula-article):not(.nebula-post):not(.moments-page) {
-  max-width: 960px;
+  /* 960 → 1200：tags / categories 页 chip 多列时，960 太窄迫使大量
+     换行；archive / search / links 页 grid 在大屏下也能多展示一列。
+     文章页 (.nebula-article / .nebula-post) 仍然走自己的窄栏（正文
+     可读性优先），不受影响。 */
+  max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
   padding-left: 24px;
@@ -3801,7 +3817,15 @@
 }
 
 [data-theme="Nebula"] .blog-page-title-text {
-  font-family: var(--nebula-font-display);
+  /* 标题字体从 Google Sans Display（英文为主）改成 PingFang SC 栈：
+     tags / categories / archive / search 这些页的标题都是中文，
+     用 PingFang SC 比 Google Sans 的中文回退更清爽、字形更规整，
+     跟 macOS / iOS 系统字体一致的视觉。Windows / Android 走
+     Microsoft YaHei / Noto Sans SC 兜底；coding 页另有自己的
+     .coding-page-title 覆盖，不受影响。 */
+  font-family: 'PingFang SC', -apple-system, BlinkMacSystemFont,
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui,
+    'Segoe UI', sans-serif;
   font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--nebula-white);
@@ -3977,8 +4001,21 @@
   border-color: rgba(255, 255, 255, 0.08) !important;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55) !important;
 }
+/* "说说" 标题专用类钩子 —— inline-style 选择器在客户端路由切换后
+   不可靠：React 在客户端 DOM 上设置 element.style 时浏览器会把
+   #1a1a1a 规范化成 rgb(26, 26, 26)，原 [style*="#1a1a1a"] 选择器
+   匹配不上 → 标题保持深灰跟暗背景撞色看不见，强制刷新（拿到 SSR
+   原始 HTML 字符串 #1a1a1a）才白。改用类钩子后跟 React 序列化形
+   态完全解耦。 */
+[data-theme="Nebula"] .moments-toolbar-title {
+  color: var(--nebula-white) !important;
+}
+/* 兜底：保留 inline-style 属性匹配（覆盖 SSR 原始 HTML 形态 + 极
+   端情况下没带 class 的旧缓存） */
 [data-theme="Nebula"] .moments-toolbar [style*="color:#1a1a1a" i],
-[data-theme="Nebula"] .moments-toolbar [style*="color: #1a1a1a" i] {
+[data-theme="Nebula"] .moments-toolbar [style*="color: #1a1a1a" i],
+[data-theme="Nebula"] .moments-toolbar [style*="rgb(26, 26, 26)" i],
+[data-theme="Nebula"] .moments-toolbar [style*="rgb(26,26,26)" i] {
   color: var(--nebula-white) !important;
 }
 [data-theme="Nebula"] .moments-toolbar [style*="background:#4a9e8e"] {
@@ -4580,6 +4617,22 @@
   border-radius: 15px;
 }
 
+/* coding 热力图视觉压缩 ── v2.3.5 把日期范围从「自然年 1/1~12/31」
+   改成 rolling 365 天，年中访问时渲染列数从 ~20 周变成满 53 周，整个
+   图占满了 960px 内容宽度，看起来比 v2.3.4 大得多。这里用 Nebula
+   覆写把 min-width 从 920 → 720、gap 从 4 → 3px、加 max-width 740px
+   不让它再撑满全宽 ── 单格回到 GitHub-style 的 ~11px，整体视觉跟
+   v2.3.4 时（部分年）的紧凑感对齐。 */
+[data-theme="Nebula"] .coding-heatmap {
+  min-width: 720px !important;
+  max-width: 740px;
+  gap: 3px !important;
+  margin-inline: 0; /* 配合 max-width 左对齐，不再居中拉伸 */
+}
+[data-theme="Nebula"] .coding-heatmap-week {
+  gap: 3px !important;
+}
+
 /* coding 热力图：GitHub 绿色阶梯（4 级 + 空白）
    颜色取自 GitHub dark contribution graph：
    blank #161b22 / l1 #0e4429 / l2 #006d32 / l3 #26a641 / l4 #39d353 */
@@ -4820,6 +4873,46 @@
   background: var(--nebula-tile);
   border: 1px solid var(--nebula-border-blue-soft);
   border-radius: 15px;
+}
+
+/* ---- footprint mapbox 暗色适配 ----
+   FootprintMap.tsx 在 Nebula 下走 dark-v11 底图（深底）。底图换了，
+   但 popup tip（小三角箭头）默认由 mapbox-gl CSS 写死白色，浮在暗色
+   底图上很突兀；popup 内容已经走 var(--color-bg-card)（解析成 Nebula
+   深卡片）OK，三角和外边框这里补一下。 */
+[data-theme="Nebula"] .footprint-map {
+  border-color: var(--nebula-border-blue-soft);
+}
+/* tip 是三角形：4 个 border 中只有 1 个非透明（决定指向）。给 8 个
+   anchor 方向各自的"实色 border"翻成 Nebula 卡片色，其余 transparent
+   不动。 */
+[data-theme="Nebula"] .footprint-mapbox-popup.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+[data-theme="Nebula"] .footprint-mapbox-popup.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+[data-theme="Nebula"] .footprint-mapbox-popup.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+  border-top-color: var(--nebula-card) !important;
+}
+[data-theme="Nebula"] .footprint-mapbox-popup.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+[data-theme="Nebula"] .footprint-mapbox-popup.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+[data-theme="Nebula"] .footprint-mapbox-popup.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+  border-bottom-color: var(--nebula-card) !important;
+}
+[data-theme="Nebula"] .footprint-mapbox-popup.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+  border-right-color: var(--nebula-card) !important;
+}
+[data-theme="Nebula"] .footprint-mapbox-popup.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-left-color: var(--nebula-card) !important;
+}
+/* popup 内容外层加 Nebula 蓝细边 + 阴影更深 */
+[data-theme="Nebula"] .footprint-mapbox-popup .mapboxgl-popup-content {
+  border-color: var(--nebula-border-blue-soft) !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55) !important;
+}
+/* 卡片之间的分隔线翻深 */
+[data-theme="Nebula"] .footprint-map-popup-card {
+  border-top-color: var(--nebula-border-subtle) !important;
+}
+[data-theme="Nebula"] .footprint-map-popup-card:hover {
+  background: rgba(128, 207, 255, 0.06) !important;
 }
 
 /* ---- archive-cat-card hover ::after 默认是白雾 backdrop-filter，

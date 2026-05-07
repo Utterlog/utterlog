@@ -78,9 +78,11 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   // visibleCats = hero 切换实际能落到的分类。自定义 sidebar 时只使用
   // sidebar 配置里映射成分类的那几项；否则退回全部分类。这样 hero
   // 状态空间和侧栏 UI 一致，不会切到 sidebar 里看不见的隐藏分类。
-  const visibleCats: any[] = useCustomSidebar
+  // 额外过滤 0 篇文章的分类（用户要求"侧栏 / 分类导航 文章数量 0 不显示"）
+  const visibleCats: any[] = (useCustomSidebar
     ? sidebarMenu.map(categoryFromMenuItem).filter((c: any) => !!c)
-    : categories;
+    : categories
+  ).filter((c: any) => (c.count || 0) > 0);
   const allTabs = ['', ...visibleCats.map((c: any) => c.slug)];
   // Clamp activeCatIdx to visible range (defensive — user toggling
   // sidebar config in admin shrinks visibleCats while a stale idx
@@ -220,7 +222,9 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
 
   // Hero height — tab row count depends on which sidebar mode we're in.
   // Custom menu still keeps the fixed "全部" tab at the top.
-  const tabCount = useCustomSidebar ? 1 + sidebarMenu.length : 1 + categories.length;
+  // 改用 visibleCats.length（过滤掉 0 count 的分类后），让 hero 高度
+  // 不会为隐藏的空分类预留行高造成空白。
+  const tabCount = useCustomSidebar ? 1 + sidebarMenu.length : 1 + visibleCats.length;
   const heroHeight = Math.max(280, tabCount * 56); // min 280px
   // Title bar height = exactly one sidebar tab's height. When the
   // hero is taller than tabCount * 56 (the min-280 floor kicks in
@@ -258,6 +262,8 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                   {sidebarMenu.map((item: any, i: number) => {
                     const cat = categoryFromMenuItem(item);
                     if (cat) {
+                      // 0 篇文章的分类不显示（用户要求只展示有内容的）
+                      if ((cat.count || 0) === 0) return null;
                       // tabIdx 按 visibleCats 顺序（即 sidebar 配置中分类
                       // 项的相对位置 + 1），不再走全集 categories.findIndex。
                       // 这样 activeCatIdx 永远落在 sidebar 实际显示的范围
@@ -291,7 +297,9 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
               ) : (
                 <>
                   {renderAllHeroTab()}
-                  {categories.map((cat, i) => (
+                  {/* 用 visibleCats（已 filter 0 count）保证渲染顺序和
+                     allTabs / activeCatIdx 索引完全对齐 */}
+                  {visibleCats.map((cat: any, i: number) => (
                     <button key={cat.id} type="button" onClick={() => handleTabClick(i + 1)} className={`azure-hero-tab${safeActiveIdx === i + 1 ? ' active' : ''}`}>
                       <span className="azure-hero-tab-label">
                         {cat.name} <span className="azure-hero-tab-count">({cat.count || 0})</span>

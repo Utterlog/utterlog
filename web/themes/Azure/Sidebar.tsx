@@ -205,13 +205,19 @@ export default function Sidebar() {
       </div>
 
       {/* Categories — full list */}
+      {/* 过滤掉 0 篇文章的分类：站点新建分类还没分配文章时，留在侧栏
+         看起来像"列表里有空目录"，用户要求只展示有内容的。 */}
+      {(() => {
+        const visibleCategories = (categories || []).filter((c: any) => (c.count || 0) > 0);
+        if (visibleCategories.length === 0) return null;
+        return (
       <div style={{ borderBottom: '1px solid #e5e5e5' }}>
         {sectionTitle('fa-solid fa-folder-tree', '文章分类')}
-        {categories.map((cat, idx) => (
+        {visibleCategories.map((cat, idx) => (
           <Link key={cat.id} href={`/categories/${cat.slug}`} prefetch={false} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '8px 16px', fontSize: '13px', color: '#333',
-            textDecoration: 'none', borderBottom: idx < categories.length - 1 ? '1px solid #f5f5f5' : 'none',
+            textDecoration: 'none', borderBottom: idx < visibleCategories.length - 1 ? '1px solid #f5f5f5' : 'none',
             transition: 'background 0.1s',
           }}
             onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
@@ -225,6 +231,8 @@ export default function Sidebar() {
           </Link>
         ))}
       </div>
+        );
+      })()}
 
       {/* Archive — current year expanded, other years collapsed */}
       <div style={{ borderBottom: '1px solid #e5e5e5' }}>

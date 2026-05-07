@@ -47,7 +47,9 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   // Preloaded cache: heroCache[catSlug][modeKey] = post
   const heroCacheRef = useRef<Record<string, Record<string, any>>>({});
 
-  const allTabs = ['', ...categories.map(c => c.slug)];
+  // 过滤掉 0 篇文章的分类（用户要求侧栏 / 分类导航 不显示 0 文章分类）
+  const visibleCategories = categories.filter((c: any) => (c.count || 0) > 0);
+  const allTabs = ['', ...visibleCategories.map(c => c.slug)];
   const activeCatSlug = allTabs[activeCatIdx] || '';
 
   useEffect(() => {
@@ -83,9 +85,9 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
 
   // 自动轮播：每 5 秒切到下一个 (分类, 随机模式)，hero 上 hover 暂停。
   const advance = useCallback(() => {
-    setActiveCatIdx(prev => (prev + 1) % (categories.length + 1));
+    setActiveCatIdx(prev => (prev + 1) % (visibleCategories.length + 1));
     setModeIdx(Math.floor(Math.random() * MODES.length));
-  }, [categories.length]);
+  }, [visibleCategories.length]);
 
   useEffect(() => {
     if (paused) return;
@@ -106,11 +108,11 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
   // Playback controls
   const goFirst = () => { setActiveCatIdx(0); setModeIdx(Math.floor(Math.random() * MODES.length)); };
   const goPrev = () => {
-    setActiveCatIdx(p => (p - 1 + categories.length + 1) % (categories.length + 1));
+    setActiveCatIdx(p => (p - 1 + visibleCategories.length + 1) % (visibleCategories.length + 1));
     setModeIdx(Math.floor(Math.random() * MODES.length));
   };
   const goNext = () => advance();
-  const goLast = () => { setActiveCatIdx(categories.length); setModeIdx(Math.floor(Math.random() * MODES.length)); };
+  const goLast = () => { setActiveCatIdx(visibleCategories.length); setModeIdx(Math.floor(Math.random() * MODES.length)); };
 
   // PJAX 分页切换
   const handlePageChange = useCallback(async (newPage: number) => {
@@ -147,7 +149,7 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
 
   // Hero height — tab row count depends on which sidebar mode we're in.
   // Custom menu uses its own length; default uses 1 全部 + N categories.
-  const tabCount = useCustomSidebar ? sidebarMenu.length : 1 + categories.length;
+  const tabCount = useCustomSidebar ? sidebarMenu.length : 1 + visibleCategories.length;
   const heroHeight = Math.max(280, tabCount * 56); // min 280px
   // Title bar height = exactly one sidebar tab's height. When the
   // hero is taller than tabCount * 56 (the min-280 floor kicks in
@@ -193,13 +195,15 @@ export default function HomePage({ posts, page, totalPages, categories: serverCa
                     <span>全部 ({totalPostCount})</span>
                     <i className="fa-sharp fa-light fa-grid-2" style={{ fontSize: activeCatIdx === 0 ? '26px' : '22px', opacity: activeCatIdx === 0 ? 1 : 0.6, color: activeCatIdx === 0 ? '#fff' : undefined, transition: 'all 0.15s' }} />
                   </button>
-                  {categories.map((cat, i) => (
+                  {/* 用 visibleCategories 渲染（已过滤掉 0 count），保
+                     allTabs 索引和按钮渲染顺序对齐 */}
+                  {visibleCategories.map((cat, i) => (
                     <button key={cat.id} onClick={() => handleTabClick(i + 1)} style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       width: '100%', flex: 1, padding: '0 16px', fontSize: '14px',
                       color: activeCatIdx === i + 1 ? '#fff' : '#555',
                       background: activeCatIdx === i + 1 ? ACCENT : 'transparent',
-                      border: 'none', borderBottom: i < categories.length - 1 ? '1px solid #e5e5e5' : 'none', cursor: 'pointer',
+                      border: 'none', borderBottom: i < visibleCategories.length - 1 ? '1px solid #e5e5e5' : 'none', cursor: 'pointer',
                       textAlign: 'left', transition: 'all 0.15s',
                     }}>
                       <span>{cat.name} ({cat.count || 0})</span>

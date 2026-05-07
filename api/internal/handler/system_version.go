@@ -833,32 +833,76 @@ log "检测部署模式 [$MODE]"
 # recreate. Only refresh in slim mode (one file, matches what
 # utterlog.io serves); overlay mode assumes the user maintains
 # docker-compose.prod.yml themselves.
+#
+# 双源策略：先 utterlog.io（CDN，国内快），失败自动 fallback 到
+# GitHub raw（raw.githubusercontent.com）。两个都不可达才放弃刷新，
+# 用本地旧文件继续升级流程（仍然能拿到新镜像 tag）。
+try_fetch_compose() {
+  local url="$1" label="$2"
+  log "刷新 compose 文件 from [$url]"
+  if curl -fsSL --max-time 10 "$url" -o docker-compose.yml.new 2>>"$LOG"; then
+    if [ -s docker-compose.yml.new ] && head -n1 docker-compose.yml.new | grep -qE '^[a-zA-Z_]+:'; then
+      cp docker-compose.yml docker-compose.yml.bak 2>/dev/null || true
+      mv docker-compose.yml.new docker-compose.yml
+      log "刷新 compose 文件 成功 from $label（备份 [docker-compose.yml.bak]）"
+      return 0
+    fi
+    rm -f docker-compose.yml.new
+    log "WARN $label 返回内容非合法 YAML"
+    return 1
+  fi
+  log "WARN $label 网络下载失败"
+  return 1
+}
+
 if [ "$MODE" = "slim" ]; then
   BASE_URL="${UTTERLOG_BASE_URL:-https://utterlog.io}"
+  GH_RAW_URL="https://raw.githubusercontent.com/utterlog/utterlog/main/docker-compose.yml"
   if command -v curl >/dev/null 2>&1; then
-    log "刷新 compose 文件 from [$BASE_URL/docker-compose.yml]"
-    if curl -fsSL --max-time 10 "$BASE_URL/docker-compose.yml" -o docker-compose.yml.new 2>>"$LOG"; then
-      if [ -s docker-compose.yml.new ] && head -n1 docker-compose.yml.new | grep -qE '^[a-zA-Z_]+:'; then
-        cp docker-compose.yml docker-compose.yml.bak 2>/dev/null || true
-        mv docker-compose.yml.new docker-compose.yml
-        log "刷新 compose 文件 成功（备份 [docker-compose.yml.bak]）"
-      else
-        rm -f docker-compose.yml.new
-        log "刷新 compose 文件 跳过（下载内容非合法 YAML）"
+    if ! try_fetch_compose "$BASE_URL/docker-compose.yml" "utterlog.io"; then
+      if ! try_fetch_compose "$GH_RAW_URL" "GitHub raw"; then
+        log "刷新 compose 文件 跳过（utterlog.io + GitHub 均不可达，沿用本地旧文件）"
       fi
-    else
-      log "刷新 compose 文件 跳过（网络下载失败）"
     fi
   fi
 fi
 
-log "拉取镜像 [docker compose pull]"
-case "$MODE" in
-  overlay) docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull ;;
-  slim)    docker compose pull ;;
-  *)       log "ERROR 未知部署模式 [$MODE]"; log "升级应用 [Utterlog] 失败 [TASK-END]"; exit 1 ;;
-esac
-log "拉取镜像 成功"
+# 镜像拉取双源策略：默认 registry.utterlog.io（来自 docker-compose.pull.yml
+# 里的 ${UTTERLOG_IMAGE_PREFIX:-registry.utterlog.io/utterlog}）；失败时
+# export UTTERLOG_IMAGE_PREFIX=ghcr.io/utterlog 重试 —— GHA workflow
+# (.github/workflows/docker-publish.yml) 把每个 release 的镜像同时推到
+# 这两个 registry，所以 GHCR 能完整顶替 registry.utterlog.io。
+#
+# 注意：必须 export（不只是赋值），后面的 docker compose up -d 子进程
+# 才会读到同一个 prefix —— 否则会出现"拉了 ghcr 的，up 时找
+# registry.utterlog.io 找不到"的不一致状态。
+do_pull() {
+  case "$MODE" in
+    overlay) docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull ;;
+    slim)    docker compose pull ;;
+    *)       log "ERROR 未知部署模式 [$MODE]"; return 2 ;;
+  esac
+}
+
+log "拉取镜像 [docker compose pull] —— 主源 registry.utterlog.io"
+PULL_OK=0
+if do_pull; then
+  PULL_OK=1
+fi
+
+if [ "$PULL_OK" = "1" ]; then
+  log "拉取镜像 成功 (registry.utterlog.io)"
+else
+  log "WARN registry.utterlog.io 拉取失败，fallback 到 ghcr.io/utterlog"
+  export UTTERLOG_IMAGE_PREFIX="ghcr.io/utterlog"
+  if do_pull; then
+    log "拉取镜像 成功 (ghcr.io fallback)"
+  else
+    log "ERROR registry.utterlog.io + ghcr.io 均拉取失败"
+    log "升级应用 [Utterlog] 失败 [TASK-END]"
+    exit 1
+  fi
+fi
 
 log "重建容器 [$API_CONTAINER, $WEB_CONTAINER]"
 case "$MODE" in

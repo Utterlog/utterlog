@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
+import { useThemeContext } from '@/lib/theme-context';
 
 type FootprintPoint = {
   id: number;
@@ -35,6 +36,16 @@ export default function FootprintMap({
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapObjRef = useRef<mapboxgl.Map | null>(null);
+  const { theme } = useThemeContext();
+  // Nebula 是暗色主题，Mapbox 默认 light-v11 底图在暗色页面里跟周围
+  // 撞色刺眼。切到 dark-v11，国家高亮也用更亮的天蓝（#80cfff 系，
+  // 跟 Nebula --nebula-sky 一致）+ 更高 opacity，确保深底上仍能看清。
+  const isDark = theme?.name === 'Nebula';
+  const mapStyle = isDark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11';
+  const fillColor = isDark ? '#80cfff' : '#4f9cff';
+  const fillOpacity = isDark ? 0.22 : 0.18;
+  const lineColor = isDark ? '#80cfff' : '#0052d9';
+  const lineOpacity = isDark ? 0.55 : 0.38;
 
   const coords = useMemo(() => {
     const unique = new Map<string, { point: FootprintPoint; points: FootprintPoint[]; lngLat: [number, number] }>();
@@ -75,7 +86,7 @@ export default function FootprintMap({
 
     const map = new mapboxgl.Map({
       container: mapRef.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+      style: mapStyle,
       center,
       zoom,
       minZoom: 1,
@@ -109,8 +120,8 @@ export default function FootprintMap({
           'source-layer': 'country_boundaries',
           filter: countryFilter,
           paint: {
-            'fill-color': '#4f9cff',
-            'fill-opacity': 0.18,
+            'fill-color': fillColor,
+            'fill-opacity': fillOpacity,
           },
         } as any, labelLayer?.id);
 
@@ -121,8 +132,8 @@ export default function FootprintMap({
           'source-layer': 'country_boundaries',
           filter: countryFilter,
           paint: {
-            'line-color': '#0052d9',
-            'line-opacity': 0.38,
+            'line-color': lineColor,
+            'line-opacity': lineOpacity,
             'line-width': 1.2,
           },
         } as any, labelLayer?.id);
@@ -195,7 +206,7 @@ export default function FootprintMap({
       map.remove();
       mapObjRef.current = null;
     };
-  }, [token, center[0], center[1], zoom, coordsKey, countryCodesKey]);
+  }, [token, center[0], center[1], zoom, coordsKey, countryCodesKey, mapStyle]);
 
   if (!token) {
     return (

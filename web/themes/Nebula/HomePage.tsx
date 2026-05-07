@@ -9,8 +9,6 @@ import PostCard from './PostCard';
 import MomentBubble from './MomentBubble';
 import LatestCommenters from './LatestCommenters';
 
-const PER_PAGE = 10;
-
 function catIconClass(icon?: string) {
   if (icon && (icon.startsWith('fa-') || icon.startsWith('fa '))) return icon;
   return 'fa-sharp fa-light fa-folder';
@@ -31,6 +29,11 @@ export default function HomePage({
   totalPages: initialTotalPages,
   categories: serverCategories = [],
   archiveStats = {},
+  // perPage 来自 server (`/app/(blog)/page.tsx` → 读 admin 选项
+  // `posts_per_page`)。之前 Nebula 写死 const PER_PAGE = 10 → 客户端
+  // 切分类 / 翻页 AJAX 时永远按 10 拉，跟 SSR 首屏数量 + totalPages 都
+  // 对不上。fallback 10 跟 server 的 fallback 保持一致。
+  perPage = 10,
 }: HomePageProps) {
   const { site, categories: contextCategories, archiveStats: contextStats, menus } = useThemeContext();
   const allCategories = serverCategories.length ? serverCategories : contextCategories;
@@ -39,22 +42,26 @@ export default function HomePage({
   // 菜单项的 `slug` / `category_id` 用来匹配 contextCategories 拿到 id。
   const customCatNav = (menus as any)?.category as any[] | undefined;
   const categories = (() => {
-    if (!customCatNav || customCatNav.length === 0) return allCategories;
-    return customCatNav.map((m) => {
-      const matched = allCategories.find((c: any) =>
-        (m.category_id && c.id === m.category_id) ||
-        (m.slug && c.slug === m.slug) ||
-        (m.label && c.name === m.label),
-      );
-      // 把 admin 菜单项叠加到 category 数据上（保留 admin 改写的 label / icon）
-      return {
-        id: matched?.id ?? m.category_id ?? 0,
-        slug: matched?.slug ?? m.slug ?? '',
-        name: m.label || matched?.name || '未命名',
-        icon: m.icon || matched?.icon || '',
-        count: matched?.count ?? m.count ?? 0,
-      };
-    });
+    const derived = (() => {
+      if (!customCatNav || customCatNav.length === 0) return allCategories;
+      return customCatNav.map((m) => {
+        const matched = allCategories.find((c: any) =>
+          (m.category_id && c.id === m.category_id) ||
+          (m.slug && c.slug === m.slug) ||
+          (m.label && c.name === m.label),
+        );
+        // 把 admin 菜单项叠加到 category 数据上（保留 admin 改写的 label / icon）
+        return {
+          id: matched?.id ?? m.category_id ?? 0,
+          slug: matched?.slug ?? m.slug ?? '',
+          name: m.label || matched?.name || '未命名',
+          icon: m.icon || matched?.icon || '',
+          count: matched?.count ?? m.count ?? 0,
+        };
+      });
+    })();
+    // 过滤掉 0 篇文章的分类（用户要求侧栏 / 分类导航 不显示 0 文章分类）
+    return derived.filter((c: any) => (c.count || 0) > 0);
   })();
   const stats = archiveStats?.post_count ? archiveStats : contextStats;
   const totalPosts = stats?.post_count || initialPosts.length || 0;
@@ -79,7 +86,7 @@ export default function HomePage({
     try {
       const r: any = await getPosts({
         page: pageNum,
-        per_page: PER_PAGE,
+        per_page: perPage,
         status: 'publish',
         ...(categoryId ? { category_id: categoryId } : {}),
       });
@@ -200,7 +207,7 @@ export default function HomePage({
               <PostCard
                 key={post.id}
                 post={post}
-                index={(page - 1) * PER_PAGE + index + 1}
+                index={(page - 1) * perPage + index + 1}
               />
             ))
           ) : loading ? (

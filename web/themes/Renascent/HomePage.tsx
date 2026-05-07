@@ -13,6 +13,11 @@ export default function HomePage({
   totalPages,
   categories: serverCategories = [],
   archiveStats = {},
+  // perPage 来自 server (admin `posts_per_page`)。之前 Renascent 类型
+  // 上有 perPage 但没解构，下面 PostCard 的 index 用 `posts.length` 算
+  // → 末页只显示 N 篇时，编号会从 (page-1)*N + 1 重复跟前页冲突。
+  // 解构出来 + 用它重算 index，fallback 10 跟 server 一致。
+  perPage = 10,
 }: {
   posts: any[];
   page: number;
@@ -93,17 +98,22 @@ export default function HomePage({
         </div>
       )}
 
-      {categories.length > 0 && (
-        <nav className="renascent-category-strip" aria-label="分类">
-          <Link prefetch={false} href="/" className="active">全部</Link>
-          {categories.slice(0, 10).map((cat: any) => (
-            <Link prefetch={false} key={cat.id || cat.slug} href={`/categories/${cat.slug}`}>
-              {cat.name}
-              <span>{cat.count || 0}</span>
-            </Link>
-          ))}
-        </nav>
-      )}
+      {(() => {
+        // 过滤掉 0 篇文章的分类（用户要求侧栏 / 分类导航 不显示 0 文章分类）
+        const visibleCategories = categories.filter((c: any) => (c.count || 0) > 0);
+        if (visibleCategories.length === 0) return null;
+        return (
+          <nav className="renascent-category-strip" aria-label="分类">
+            <Link prefetch={false} href="/" className="active">全部</Link>
+            {visibleCategories.slice(0, 10).map((cat: any) => (
+              <Link prefetch={false} key={cat.id || cat.slug} href={`/categories/${cat.slug}`}>
+                {cat.name}
+                <span>{cat.count || 0}</span>
+              </Link>
+            ))}
+          </nav>
+        );
+      })()}
 
       <section className="renascent-section-heading">
         <span>§ 01 · ARTICLES</span>
@@ -113,7 +123,7 @@ export default function HomePage({
 
       <div className="renascent-post-list">
         {posts.length > 0
-          ? posts.map((post, index) => <PostCard key={post.id} post={post} index={(page - 1) * posts.length + index + 1} />)
+          ? posts.map((post, index) => <PostCard key={post.id} post={post} index={(page - 1) * perPage + index + 1} />)
           : <div className="renascent-empty">暂无文章</div>}
       </div>
 

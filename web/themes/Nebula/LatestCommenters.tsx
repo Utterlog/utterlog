@@ -40,7 +40,9 @@ export default function LatestCommenters() {
   const [comments, setComments] = useState<Comment[]>([]);
 
   useEffect(() => {
-    fetch(`${API}/comments?per_page=40&status=approved&exclude_admin=0`)
+    // exclude_admin=1：博主自己的评论不进头像墙（用户要求只展示访客社区氛围）。
+    // per_page 提到 60：dedup 后还要保证有 20 个去重的访客可选，留足缓冲。
+    fetch(`${API}/comments?per_page=60&status=approved&exclude_admin=1`)
       .then((r) => r.json())
       .then((r) => {
         const list: Comment[] = r?.data?.comments || r?.data || [];

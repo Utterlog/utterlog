@@ -556,7 +556,7 @@ export default function MomentsPage() {
               onClick={() => { setFilterTag(null); setFilterYear(null); setFilterMonth(null); setShowCalendar(false); setShowTagPanel(false); }}
               style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
             >
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#1a1a1a' }}>说说</span>
+              <span className="moments-toolbar-title" style={{ fontSize: '12px', fontWeight: 600, color: '#1a1a1a' }}>说说</span>
               <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '-8px', width: '4px', height: '4px', borderRadius: '50%', background: '#4a9e8e' }} />
             </button>
           </div>

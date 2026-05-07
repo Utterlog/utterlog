@@ -23,6 +23,41 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.6] - 2026-05-07
+
+### 新增
+
+暂无。
+
+### 优化
+
+- **升级流程 compose 文件双源拉取**：sidecar 之前只从 `utterlog.io/docker-compose.yml` 拉，下载失败就跳过。现在 utterlog.io 不可达时自动 fallback 到 `https://raw.githubusercontent.com/utterlog/utterlog/main/docker-compose.yml`；两源都不可达才放弃刷新（仍能继续后续的镜像拉取流程）。新封装 `try_fetch_compose()` 助手函数统一处理 HTTP/合法性校验，日志里清晰标出主源 / 兜底源命中情况。
+- **升级流程镜像拉取双源策略**：默认 `registry.utterlog.io/utterlog/utterlog-{api,web}`；若 `docker compose pull` 失败（注册中心维护、网络抖动、限流），sidecar 自动 `export UTTERLOG_IMAGE_PREFIX=ghcr.io/utterlog` 重试一次 —— GHA 的 `docker-publish.yml` workflow 把每个 release 的镜像同时推到这两个 registry，GHCR 能完整顶替 registry.utterlog.io。注意要 `export`（不只是赋值）这样后面 `docker compose up -d` 子进程才会读到同一个 prefix，避免「拉了 ghcr 的但 up 时又去找 registry.utterlog.io」的不一致。两源都失败才报 `[TASK-END]` 退出。
+- **Nebula coding 热力图视觉压缩回到 v2.3.4 紧凑感**：v2.3.5 把日期范围从「自然年 1/1~12/31」改成 rolling 365 天，年中访问从 ~20 周变成满 53 周，整张图占满 960px 内容区，视觉上比之前大得多。Nebula 加覆写：`.coding-heatmap` 的 `min-width` 920 → 720、`gap` 4px → 3px、加 `max-width: 740px` 不让它再撑满全宽；`.coding-heatmap-week` 同步把 gap 改 3px。单格回到 GitHub-style 的 ~11px，整体视觉跟 v2.3.4（部分年渲染）的紧凑感对齐。功能（rolling 365 天）保留不变。
+- **Nebula footer 整体降 10%**：v2.3.5 用 `min-height: 96px` + `padding 18/14`（总 32px）解决「无备案号站点 footer 看着像被踩扁」，但放在已经有备案号 / 多行内容的站点上偏高了。本次 `min-height` 96 → 86、`padding-top` 18 → 16、`padding-bottom` 14 → 13（总 29px）—— 三个值各降约 10%，无备案站点底线仍稳定不踩扁，有备案 / 内容多的站点不再显得头重脚也重。
+- **Nebula 首页"最新评论者头像墙"屏蔽管理员**：`LatestCommenters.tsx` 之前用 `exclude_admin=0` 把博主自己的评论也算进来，头像墙第一个永远是博主，喧宾夺主。改成 `exclude_admin=1`（API 端按 admin email + `user_id != 1` 双重过滤），只展示访客社区氛围；`per_page` 同步从 40 提到 60 留缓冲，dedup 后仍能稳定凑齐 20 个去重头像。
+
+- **Nebula tags / categories / archive / search 等通用页 max-width 960 → 1200**：之前 960px 在 tags 页 chip 多时被迫频繁换行；archive / search / links 在大屏上左右留白偏宽。统一拉到 1200px，文章页（`.nebula-article` / `.nebula-post`）保持自己的窄栏不受影响。
+- **Nebula 短内容页页脚贴底**：之前 `.nebula-main` 是默认 block 布局，短内容页（tags 空、categories 几个、search 无结果）`<Footer>` 浮在页面中部，下面一大片黑。改成 `display: flex; flex-direction: column`，`.nebula-frame` 加 `flex: 1 0 auto` 占满剩余高度把 footer 顶到视口底；内容长时 frame 自然撑开不影响。
+- **全主题：侧栏 / 首页分类导航过滤掉 0 篇文章的分类**：之前侧栏 / 首页中部 hero tabs / 分类筛选条都直接 `categories.map` 渲染，新建但还没分配文章的分类（count = 0）会作为"空目录"留在 UI 上喧宾夺主。覆盖范围：Azure / Chred / Flux 的 `Sidebar.tsx`「文章分类」区（全部为空时整段隐藏）、Azure / Chred / Flux 的 `HomePage.tsx` hero 左侧 tabs、Nebula 的 `nebula-category-strip` 中部分类筛选条、Renascent 的 `renascent-category-strip` —— 统一在渲染前 `filter(c => (c.count || 0) > 0)`，并把 `allTabs` / `tabCount` / 自动轮播下标基数 / 边框最后一项判定 等所有依赖原 `categories.length` 的地方改成 `visibleCategories.length`，保证活跃 tab 索引、auto-rotate cycle、hero 高度全部跟实际渲染对齐。Azure 自定义 sidebar 路径里 admin 配进菜单的 0 count 分类也单独 `return null` 跳过。
+
+- **Nebula 足迹页 Mapbox 底图改暗色 (dark-v11)**：之前 `FootprintMap.tsx` 把 style 写死 `mapbox/light-v11`，在 Nebula 暗主题里像页面中间嵌了一块大白板，跟周围撞色刺眼。改成 `useThemeContext()` 读 `theme.name`，命中 Nebula 时切到 `mapbox/dark-v11`；高亮国家的填充色 `#4f9cff → #80cfff` (Nebula sky 系)，描边色 `#0052d9 → #80cfff` 并把 opacity 从 0.18/0.38 提到 0.22/0.55，确保深底上仍能看清。`mapStyle` 加进 `useEffect` 依赖数组，主题切换会重建地图。Nebula CSS 同步加 `.footprint-mapbox-popup` 适配：popup tip 小三角（mapbox-gl 默认写死白色）按 8 个 anchor 方向各自翻成 `var(--nebula-card)`、popup 内容外层换蓝细边 + 更深的阴影、卡片分隔线翻深、hover 用 sky 蓝半透。
+- **Nebula 通用页标题字体改 PingFang SC 栈**：`.blog-page-title-text` 之前用 `var(--nebula-font-display)`（Google Sans Display 英文优先 + 系统字体 fallback），中文标题在 macOS 上回退到 SF/Helvetica 字形偏单薄。改成 `'PingFang SC', -apple-system, ..., 'Microsoft YaHei', 'Noto Sans SC'` 栈，中文标题字形规整紧凑跟 macOS / iOS 系统字体一致；Windows / Android 走 YaHei / Noto SC 兜底；`.coding-page-title` 仍保留自己的 display 字体（页面定调不一样）。
+
+### 修复
+
+- **Nebula 首页文章每页数量没跟 admin `posts_per_page` 设置走**：`web/themes/Nebula/HomePage.tsx` 顶部写死 `const PER_PAGE = 10`，server 端 `/app/(blog)/page.tsx` 已经按 admin 选项 `posts_per_page` 拉了 SSR 首屏数据并把 `perPage` 作 prop 传过来，但 Nebula 完全忽略这个 prop。后果：admin 配 6 篇/页时 SSR 首屏 6 篇 + totalPages 按 6 算，但点分类筛选 / 翻页时 AJAX `fetchPage` 用 PER_PAGE = 10 重新拉 → 数量对不上、totalPages 也错位。修复：删掉模块级常量，析构 `perPage = 10`（fallback 跟 server 一致）作 prop，`fetchPage` 和 PostCard `index={(page-1) * perPage + index + 1}` 全部改用 prop 值。
+- **Renascent 首页 PostCard 序号跨页冲突**：`(page - 1) * posts.length + index + 1` 在末页只显示 N 篇时（N < perPage），从下一页第一条会重新从前面的小数字开始，跟前页编号撞车。`posts.length` 是当前页实际数量不是固定值，根本不能当步长。改用 `perPage` 作步长，类型上 `perPage?: number` 早就声明了但一直没解构进函数体；这次解构 + 替换。
+- **Nebula 说说工具栏"说说"标题客户端导航后变深灰看不见**：`MomentsClient.tsx` 的 `<span>说说</span>` 写的是 inline `color: #1a1a1a`，Nebula CSS 用 `[style*="color:#1a1a1a"]` 属性选择器翻成白。SSR 直接进 `/moments` 时 HTML 串里就是 `#1a1a1a` 选择器命中没问题；但用户从首页客户端路由跳过去时，React 在 DOM 上重设 inline style，浏览器把它规范化成 `rgb(26, 26, 26)` —— 原选择器失配 → "说说" 仍是 #1a1a1a 深灰，跟 Nebula 暗背景撞色几乎看不见，必须强制刷新才白。修复跟 v2.3.5「moments-tag-chip / moments-month-chip / moments-year-btn 改用类钩子」同思路：`<span>说说</span>` 加 `className="moments-toolbar-title"`，Nebula 用 `[data-theme="Nebula"] .moments-toolbar-title { color: var(--nebula-white) !important; }` 强覆盖；inline-style 属性匹配保留作兜底，并补 `rgb(26, 26, 26)` / `rgb(26,26,26)` 两种规范化形态，万一旧 SSR 缓存 / 旧 client 的 HTML 没带 class 也能命中。
+
+### 修复
+
+暂无。
+
+### 移除
+
+暂无。
+
 ## [2.3.5] - 2026-05-07
 
 ### 新增
