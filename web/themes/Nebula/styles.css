@@ -3062,10 +3062,12 @@
   border-top: 1px solid var(--nebula-border-subtle);
   background: var(--nebula-black);
   position: relative; /* 给 .nebula-back-to-top 做绝对定位的参照 */
-  /* 没备案号时只有一行 stats，整个 footer 视觉太薄；保底 86px 高度
-     （v2.3.5 的 96px 偏高，本次降 10% → 86px），用户配了备案号后
-     第二行自然撑开会更高，但底线先有一个稳定值。 */
-  min-height: 86px;
+  /* 默认情况（无备案号 / 单行内容）footer 高度跟 header 完全对齐：
+     header 的 .nebula-header-inner 是 height: 64px，footer 用
+     min-height: 64px + flex 垂直居中匹配。
+     有备案号 / 多行内容时，内容自然撑开超过 64px（min-height 不限制
+     上界），不影响。 */
+  min-height: 64px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -3076,9 +3078,10 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 14px;
-  /* v2.3.5 用 18/14（总 32px），本次同步降 10% → 16/13（总 29px） */
-  padding-top: 16px;
-  padding-bottom: 13px;
+  /* min-height: 64 + flex 居中已经撑起整体高度；padding 留一点点
+     安全余量给极少数横排被字体撑高的场景（10px 上下足够） */
+  padding-top: 10px;
+  padding-bottom: 10px;
   font-size: 12px;
   font-family: var(--nebula-font-mono);
   color: rgba(255, 255, 255, 0.45);
@@ -3763,11 +3766,10 @@
 /* ============================================================ */
 
 [data-theme="Nebula"] .nebula-frame > div:not(.nebula-home):not(.nebula-article):not(.nebula-post):not(.moments-page) {
-  /* 960 → 1200：tags / categories 页 chip 多列时，960 太窄迫使大量
-     换行；archive / search / links 页 grid 在大屏下也能多展示一列。
-     文章页 (.nebula-article / .nebula-post) 仍然走自己的窄栏（正文
-     可读性优先），不受影响。 */
-  max-width: 1200px;
+  /* Nebula 全站统一 960px：跟首页 / 文章页 / coding 等页面的内容栏宽度
+     对齐，视觉一致。v2.3.6 临时拉到 1200 是为了 tags / categories chip
+     多列时少换行，但破坏了全站宽度统一感，本次回到 960。 */
+  max-width: 960px;
   margin-left: auto;
   margin-right: auto;
   padding-left: 24px;
@@ -4617,9 +4619,8 @@
   border-radius: 15px;
 }
 
-/* coding 热力图尺寸现在统一在 globals.css 收口（min-width / max-width
-   740px + gap 3px → GitHub-style 紧凑），全主题共用，Nebula 这里不再
-   单独覆写避免漂移。颜色阶梯下面继续 Nebula 覆写。 */
+/* coding 热力图尺寸交给 globals.css（flex / gap 2px / flex: 1 0 0），
+   跟 /archives 页 nebula-heatmap 完全一致；Nebula 这里只覆写颜色阶梯。 */
 
 /* coding 热力图：GitHub 绿色阶梯（4 级 + 空白）
    颜色取自 GitHub dark contribution graph：

@@ -23,6 +23,24 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.8] - 2026-05-08
+
+### 优化
+
+- **coding 缓存键加版本号 `v2` —— 强制让旧形态缓存失效**：本次后端 contributions 数据从「自然年 Jan-Dec」形态改成「rolling 365 天」形态，但 Redis 缓存保留 30 天 stale-while-revalidate，旧 key 命中会继续返回旧形态数据 → 用户升级后看到的还是 ~19 周老视图。`coding.go` 加 `codingCacheVersion = "v2"` 常量并把它前缀到 cache key 上 (`v2:<usernames>:<repos>:<token>`)，旧 `<usernames>:<repos>:<token>` 形态的 key 全部失配，新代码冷启动就拉新数据，30 天 stale 期里那些条目自然 TTL 失效不再占用。未来 contributions 形态再调时把版本 bump 到 v3 / v4 即可。
+- **后端 coding contributions API 改成 rolling 365 天（修复"数量不对"）**：v2.3.5 前端把热力图改成 GitHub-style "今天落在最右、往前 1 整年"（53 周 / 12 个月）排版，但后端 `coding.go` 的 `currentYearContributionRange` / `emptyCodingContributions` 一直只取「自然年 Jan 1 到今天」(年中访问时只 ~18 周数据)，前端 `rollingDays` 过滤后只剩这一小段 → 热力图实际只渲染 ~18 列，看起来"数量不对，没有完整显示出来"。本次新增 `rolling365Range(now)` helper 返回 `[今天 - 364, 今天]`，`fetchGitHubContributionCalendar` 改用它向 GitHub 拉数据；`emptyCodingContributions` 同步改成 365 天 rolling 占位底盘。前端 53 周自动撑满，跨年边界正常。GraphQL `contributionsCollection` 接受任意 from/to 区间，跨年没问题。
+- **coding 热力图等分页面宽度（12 个月 / 53 周）**：v2.3.6 / v2.3.7 一直用 `min-width / max-width 720~740 + gap 3-4px` 的 grid 布局，整张图被强制锁在 720~740px，跟页面内容区宽度脱节；某些容器里 cell 还会被拉到 60+px。本次彻底重写：`globals.css` 的 `.coding-heatmap` 改成 flex 布局，`.coding-heatmap-week { flex: 1 0 0 }` 53 个 week 等分父级宽度，cell 走 `width: 100%; aspect-ratio: 1` 自然变方块。整张图自动撑满页面内容区不留白边、不出现横滚（Nebula 960px 容器 cell ~15px / Azure ~1300px 容器 cell ~22px / 各主题随自己页面宽度变化），跟 archive 页 `.nebula-heatmap` 同款行为，cell 尺寸跨页面自动一致。各主题之前 v2.3.7/v2.3.8 加的尺寸覆写（Azure / Chred / Flux / Nebula / Renascent / Utterlog 6 份各自的 `min-width / max-width / gap !important`）全部移除。`page.tsx` 在 `.coding-heatmap` 元素上 inline 设的 `gridTemplateColumns` 在 flex 容器下被自动忽略，无需改 React。
+- **Nebula 通用页宽度回到 960px**：v2.3.6 把 tags / categories / archive / search / links 这些页的容器从 960 临时拉到 1200，但跟 Nebula 首页 / 文章页 / coding 页统一的 960px 内容栏宽度对不上，破坏了全站视觉统一感。本次回退到 960px，跟其他页面对齐。tags / categories 多 chip 时换行多一些，但视觉一致优先。
+- **Nebula footer 默认高度跟 header 对齐（64px）**：v2.3.6 footer 用 `min-height: 86px`，跟 header 的 `.nebula-header-inner height: 64px` 不齐。本次 footer `min-height: 86 → 64`、`padding 10/10`（v2.3.6 是 16/13）—— 默认无备案号 / 单行内容时跟 header 完全对齐；有备案号 / 多行内容时 min-height 不限制上界，内容自然撑开。
+
+### 修复
+
+暂无。
+
+### 移除
+
+暂无。
+
 ## [2.3.7] - 2026-05-08
 
 ### 修复

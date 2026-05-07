@@ -36,6 +36,12 @@ const (
 	codingCacheRedisTTL           = codingCacheTTL + codingCacheStaleTTL
 	codingAllContributionCacheTTL = 24 * time.Hour
 	codingGitHubRefreshTimeout    = 45 * time.Second
+
+	// 缓存键版本号 —— 当 contributions 数据形态改变时（比如本次从「自然年
+	// Jan-Dec」改成「rolling 365 天」），bump 这个 version，让 30 天 stale
+	// 期里所有旧缓存条目都自动失效（key 不命中），新代码冷启动就拉新数据，
+	// 避免旧形态被缓存继续返回。
+	codingCacheVersion = "v2"
 )
 
 var githubUsernamePattern = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$`)
@@ -442,7 +448,7 @@ func isReservedGitHubPath(value string) bool {
 }
 
 func loadCodingGitHubData(ctx context.Context, usernames []string, sourceRepos map[string]bool) (codingPageData, error) {
-	key := strings.Join(normalizeCodingUsernames(usernames), ",") + ":" + normalizeCodingRepoSelection(sourceRepos) + ":" + strings.TrimSpace(model.GetOption("coding_selected_repos")) + ":" + githubTokenCacheKey()
+	key := codingCacheVersion + ":" + strings.Join(normalizeCodingUsernames(usernames), ",") + ":" + normalizeCodingRepoSelection(sourceRepos) + ":" + strings.TrimSpace(model.GetOption("coding_selected_repos")) + ":" + githubTokenCacheKey()
 	now := time.Now()
 
 	codingCache.Lock()
@@ -1456,7 +1462,9 @@ func contributionCountsToDays(counts map[string]int) []codingContributionDay {
 }
 
 func fetchGitHubContributionCalendar(ctx context.Context, username string, now time.Time) ([]codingContributionDay, error) {
-	from, to := currentYearContributionRange(now)
+	// rolling 365 天窗口（[今天 - 364, 今天]），跟前端热力图 53 周
+	// rolling 排版对齐
+	from, to := rolling365Range(now)
 	if githubAPIToken() != "" {
 		if days, err := fetchGitHubContributionCalendarGraphQL(ctx, username, from, to); err == nil && len(days) > 0 {
 			return normalizeCurrentYearContributionDays(days, now), nil
@@ -1667,6 +1675,19 @@ func currentYearContributionRange(now time.Time) (time.Time, time.Time) {
 	return contributionYearRange(now.Year(), now)
 }
 
+// rolling365Range 返回热力图的 rolling 12-month 窗口：[今天 - 364 天, 今天]。
+// 前端 v2.3.5 起把热力图改成 GitHub-style "今天落在最右、往前 1 整年"
+// 排版，但后端原本用 currentYearContributionRange (Jan 1 ~ today of
+// current year) 只回 ~该年到今天的数据，导致前端 rollingDays 过滤出来
+// 只剩 ~年初到今天 这段，热力图列数远少于 53 周（"数量不对"）。
+// 这个 helper 让 fetchGitHubContributionCalendar / emptyCodingContributions
+// 都能拿到完整的 365 天范围，跟前端预期对齐。
+func rolling365Range(now time.Time) (time.Time, time.Time) {
+	to := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, time.UTC)
+	from := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -364)
+	return from, to
+}
+
 func contributionYearRange(year int, now time.Time) (time.Time, time.Time) {
 	from := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(year, 12, 31, 23, 59, 59, 0, time.UTC)
@@ -1744,12 +1765,17 @@ func parseContributionCount(raw string) int {
 	return n
 }
 
+// emptyCodingContributions 返回 rolling 365 天范围内每天 count: 0 的占位
+// 数组（[今天 - 364, 今天]，共 365 条）。前端热力图排满 53 周需要这 365
+// 天作底盘，再由真实 API 数据 normalize 时填入 count。
+// 之前用整个自然年（Jan 1 ~ Dec 31）：年中访问时返回 ~年初~今天的数据
+// （~128 天 / 18 周），前端 rollingDays 过滤后只剩这一小段，热力图列数
+// 远少于 53 周 → "数量不对"。本次改成 rolling 365 天对齐前端预期。
 func emptyCodingContributions(now time.Time) []codingContributionDay {
-	year := now.Year()
-	start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
-	end := time.Date(year, 12, 31, 0, 0, 0, 0, time.UTC)
-	days := make([]codingContributionDay, 0, int(end.Sub(start).Hours()/24)+1)
-	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
+	from, _ := rolling365Range(now)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	days := make([]codingContributionDay, 0, 366)
+	for d := from; !d.After(today); d = d.AddDate(0, 0, 1) {
 		days = append(days, codingContributionDay{Date: d.Format("2006-01-02"), Count: 0})
 	}
 	return days

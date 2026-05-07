@@ -389,10 +389,13 @@ export default async function CodingPage() {
               </div>
             </div>
             <div className="coding-heatmap-scroll">
+              {/* 布局走 globals.css 的 flex（53 周等分父级宽度），不再
+                  inline 设 gridTemplateColumns —— 之前是 display: grid
+                  时代的遗物，现在 flex 下无效，留着只会让人误以为还在
+                  用 grid。CSS 单一来源，跨主题一致。 */}
               <div
                 className="coding-heatmap"
                 aria-label="GitHub activity heatmap"
-                style={{ gridTemplateColumns: `repeat(${Math.max(weeks.length, 1)}, minmax(0, 1fr))` }}
               >
                 {weeks.map((week, weekIndex) => (
                   <span className="coding-heatmap-week" key={`week-${weekIndex}`}>
