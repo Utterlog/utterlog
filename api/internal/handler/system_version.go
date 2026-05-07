@@ -768,23 +768,30 @@ func runUpgrade() {
 	webName := webContainerName(apiName)
 	appendLog(fmt.Sprintf("检测容器名 api=[%s] web=[%s]", apiName, webName))
 
-	// 安装目录探测优先级：
-	//   1. 环境变量 UTTERLOG_INSTALL_DIR（用户显式覆盖）
-	//   2. docker inspect 当前 api 容器的 compose label
+	// 安装目录探测优先级（v2.3.9 起调整）：
+	//   1. docker inspect 当前 api 容器的 compose label
 	//      `com.docker.compose.project.working_dir` —— compose 起容器时
-	//      会自动打上，值就是 docker-compose.yml 所在的宿主目录。
-	//      支持任何安装路径（/opt/utterlog / /root/utterlog / 1Panel
-	//      默认的 /opt/1panel/utterlog 等），不再要求用户手填。
-	//   3. 兜底 /opt/utterlog（landing 站官方安装脚本的默认路径）
-	installDir := os.Getenv("UTTERLOG_INSTALL_DIR")
-	if installDir == "" {
-		if probed := probeComposeWorkingDir(); probed != "" {
-			installDir = probed
-			appendLog(fmt.Sprintf("检测安装目录 [%s]（来自 compose label）", installDir))
-		} else {
-			installDir = "/opt/utterlog"
-			appendLog("检测安装目录 [/opt/utterlog]（兜底默认）")
-		}
+	//      会自动打上，值就是 docker-compose.yml 所在的宿主目录。这个
+	//      是 docker compose 自己写的，最权威。
+	//   2. UTTERLOG_INSTALL_DIR 环境变量（用户显式覆盖；docker label
+	//      探测失败时的兜底）。
+	//   3. 兜底 /opt/utterlog。
+	//
+	// 之前 env 变量优先级最高，但 docker-compose.yml 默认会写
+	//   - UTTERLOG_INSTALL_DIR=${UTTERLOG_INSTALL_DIR:-/opt/utterlog}
+	// env 永远非空 → label 探测从来没机会跑 → 用户实际装在
+	// /opt/utterlog-pancn/ 这种自定义路径时升级永远拿到错的 /opt/utterlog
+	// 然后报"未找到 docker-compose 文件"。改成 label 优先即修复。
+	installDir := ""
+	if probed := probeComposeWorkingDir(); probed != "" {
+		installDir = probed
+		appendLog(fmt.Sprintf("检测安装目录 [%s]（来自 compose label）", installDir))
+	} else if envDir := strings.TrimSpace(os.Getenv("UTTERLOG_INSTALL_DIR")); envDir != "" {
+		installDir = envDir
+		appendLog(fmt.Sprintf("检测安装目录 [%s]（来自 UTTERLOG_INSTALL_DIR env）", installDir))
+	} else {
+		installDir = "/opt/utterlog"
+		appendLog("检测安装目录 [/opt/utterlog]（兜底默认）")
 	}
 	// Everything the sidecar prints goes to the shared upgrade.log that
 	// the API's SystemUpgradeStatus endpoint reads — so the admin UI

@@ -23,6 +23,12 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.9] - 2026-05-08
+
+### 修复
+
+- **后台升级在自定义安装路径下"未找到 docker-compose 文件"**：v2.3.3 加的 `probeComposeWorkingDir()` (用 docker compose label 自动探测真实安装目录) 实际从来没被触发，因为 `docker-compose.yml` 默认 `UTTERLOG_INSTALL_DIR=${UTTERLOG_INSTALL_DIR:-/opt/utterlog}` 让 env 变量永远非空，老逻辑「env 优先 → 非空就直接用 → label 探测被跳过」导致用户装在 `/opt/utterlog-pancn/`、`/root/my-blog/` 等任何非 `/opt/utterlog` 路径时升级一律拿到错的 `/opt/utterlog` 然后报错。本次调整优先级 → docker compose label > env 变量 > `/opt/utterlog` 兜底。compose label 是 docker compose 自己起容器时打上的最权威路径，永远准确；env 变量退到 fallback（万一 label 探测失败 / docker socket 不可用时仍能用）。日志里也明确标出来源（`(来自 compose label)` / `(来自 UTTERLOG_INSTALL_DIR env)` / `(兜底默认)`）方便排查。
+
 ## [2.3.8] - 2026-05-08
 
 ### 优化
