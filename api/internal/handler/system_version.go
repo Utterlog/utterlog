@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"utterlog-go/internal/model"
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -62,10 +63,30 @@ type versionCache struct {
 var verCache = &versionCache{}
 
 const (
-	ghReleasesURL     = "https://api.github.com/repos/utterlog/utterlog/releases/latest"
-	ghAllReleasesURL  = "https://api.github.com/repos/utterlog/utterlog/releases?per_page=20"
-	cacheTTL          = 10 * time.Minute
+	// 默认走 utterlog.io 自家代理（构建期生成的静态 JSON），不直接打
+	// GitHub API。原因：
+	//   1. utterlog.io 用单一 GHA 构建 token 拉一次 → 5000/h 一台机
+	//      器够万级用户共享，永远不会爆
+	//   2. 用户**不需要**自己配 GitHub Token，开箱即用
+	//   3. 国内访问 utterlog.io 通常比 api.github.com 快得多
+	// 失败时（utterlog.io 暂时挂掉 / 内网部署不能出公网）自动 fallback
+	// 到 GitHub 直连（变量 ghReleasesFallback / ghAllReleasesFallback）。
+	defaultVersionURL  = "https://utterlog.io/api/version.json"
+	defaultReleasesURL = "https://utterlog.io/api/releases.json"
+	ghReleasesFallback = "https://api.github.com/repos/utterlog/utterlog/releases/latest"
+	ghAllReleasesFallback = "https://api.github.com/repos/utterlog/utterlog/releases?per_page=20"
+	cacheTTL           = 10 * time.Minute
 )
+
+// versionSourceURL 让用户可以在后台 `version_source_url` 选项里覆盖
+// 默认 utterlog.io —— 私有部署 / 自托管 fork 可以指向自己的代理。
+// 空 → 用 utterlog.io 默认。
+func versionSourceURL() string {
+	if v := strings.TrimSpace(model.GetOption("version_source_url")); v != "" {
+		return strings.TrimRight(v, "/")
+	}
+	return ""
+}
 
 // Separate cache for the full release list (admin changelog view).
 type releasesCache struct {
@@ -350,24 +371,51 @@ func formatGitHubError(status int, body string) string {
 	return fmt.Sprintf("github API %d: %s", status, body)
 }
 
+// fetchLatestRelease 优先走 utterlog.io 静态 JSON 代理（包含
+// commit SHA），失败再 fallback 到 GitHub API 直连。99% 用户不需要
+// 配 GitHub Token —— utterlog.io 已经做了集中代理 + 缓存。
 func fetchLatestRelease() {
+	// 1) Try utterlog.io proxy (or admin-configured override)
+	base := versionSourceURL()
+	if base == "" {
+		if rel, ok := tryFetchProxyVersion(defaultVersionURL); ok {
+			verCache.mu.Lock()
+			verCache.fetched = time.Now()
+			verCache.release = rel
+			verCache.errorMsg = ""
+			verCache.mu.Unlock()
+			return
+		}
+	} else {
+		// 用户自定义代理 URL（私有部署 / fork）—— 假设格式跟 utterlog.io
+		// 的 /api/version.json 一致
+		if rel, ok := tryFetchProxyVersion(base + "/api/version.json"); ok {
+			verCache.mu.Lock()
+			verCache.fetched = time.Now()
+			verCache.release = rel
+			verCache.errorMsg = ""
+			verCache.mu.Unlock()
+			return
+		}
+	}
+
+	// 2) Fallback: GitHub API direct
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	req, _ := http.NewRequestWithContext(ctx, "GET", ghReleasesURL, nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", ghReleasesFallback, nil)
 	applyGitHubHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		verCache.mu.Lock()
 		verCache.fetched = time.Now()
-		verCache.errorMsg = "github API: " + err.Error()
+		verCache.errorMsg = "version proxy + GitHub fallback both failed: " + err.Error()
 		verCache.mu.Unlock()
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 404 {
-		// No releases yet — treat as "up to date" with dev.
 		verCache.mu.Lock()
 		verCache.fetched = time.Now()
 		verCache.release = nil
@@ -394,9 +442,7 @@ func fetchLatestRelease() {
 	}
 
 	// Second call: resolve tag → commit SHA so the admin UI can show
-	// the "latest" commit hash alongside the version label, matching
-	// how the current build displays v1.0.18 · 3ac2f03. Silent on
-	// failure — commit is decorative, don't let it block the release.
+	// the "latest" commit hash alongside the version label.
 	rel.Commit = fetchTagCommit(rel.TagName)
 
 	verCache.mu.Lock()
@@ -404,6 +450,62 @@ func fetchLatestRelease() {
 	verCache.release = &rel
 	verCache.errorMsg = ""
 	verCache.mu.Unlock()
+}
+
+// tryFetchProxyVersion 抓 utterlog.io 风格的 version.json：
+//   { generated_at, latest: { tag_name, name, body, html_url, ..., commit }, source }
+// 成功返回 (release, true)；任何 HTTP / decode / 字段缺失错误返回 (nil, false)
+// 让调用方走 GitHub fallback。
+func tryFetchProxyVersion(url string) (*githubRelease, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req.Header.Set("User-Agent", "utterlog-api")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, false
+	}
+	var payload struct {
+		Latest *githubRelease `json:"latest"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, false
+	}
+	if payload.Latest == nil || payload.Latest.TagName == "" {
+		return nil, false
+	}
+	return payload.Latest, true
+}
+
+// tryFetchProxyReleases 抓 utterlog.io 风格的 releases.json：
+//   { generated_at, items: [release...], source }
+func tryFetchProxyReleases(url string) ([]githubRelease, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req.Header.Set("User-Agent", "utterlog-api")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, false
+	}
+	var payload struct {
+		Items []githubRelease `json:"items"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, false
+	}
+	if len(payload.Items) == 0 {
+		return nil, false
+	}
+	return payload.Items, true
 }
 
 // fetchTagCommit hits GitHub's commits-by-ref endpoint to turn a tag
@@ -475,9 +577,25 @@ func SystemReleases(c *gin.Context) {
 }
 
 func fetchReleases() {
+	// 1) 优先 utterlog.io 静态 JSON 代理
+	base := versionSourceURL()
+	proxyURL := defaultReleasesURL
+	if base != "" {
+		proxyURL = base + "/api/releases.json"
+	}
+	if items, ok := tryFetchProxyReleases(proxyURL); ok {
+		relCache.mu.Lock()
+		relCache.fetched = time.Now()
+		relCache.items = items
+		relCache.errorMsg = ""
+		relCache.mu.Unlock()
+		return
+	}
+
+	// 2) Fallback: GitHub API direct
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
-	req, _ := http.NewRequestWithContext(ctx, "GET", ghAllReleasesURL, nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", ghAllReleasesFallback, nil)
 	applyGitHubHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -551,9 +669,10 @@ func SystemUpgrade(c *gin.Context) {
 	upgrade.message = ""
 	upgrade.mu.Unlock()
 
-	// Truncate log file
+	// Truncate log file. 时间戳格式跟 sidecar 一致 —— 1Panel 风格本地
+	// 时区：2026/05/07 23:30:20
 	_ = os.MkdirAll("./public/uploads", 0o755)
-	_ = os.WriteFile(upgrade.logPath, []byte(fmt.Sprintf("[%s] upgrade starting\n", time.Now().UTC().Format(time.RFC3339))), 0o644)
+	_ = os.WriteFile(upgrade.logPath, []byte(fmt.Sprintf("%s 升级请求 已收到\n", time.Now().Format("2006/01/02 15:04:05"))), 0o644)
 
 	// Detach: run the upgrade in the background so we can return 202
 	// before the api container recreates itself.
@@ -608,12 +727,14 @@ func runUpgrade() {
 			return
 		}
 		defer f.Close()
-		fmt.Fprintf(f, "[%s] %s\n", time.Now().UTC().Format(time.RFC3339), line)
+		// 跟 sidecar 同款时间格式 —— 本地时区，1Panel 风格
+		fmt.Fprintf(f, "%s %s\n", time.Now().Format("2006/01/02 15:04:05"), line)
 	}
 
 	// Validate docker socket access — api image must mount /var/run/docker.sock
 	if _, err := os.Stat("/var/run/docker.sock"); err != nil {
-		appendLog("ERROR: /var/run/docker.sock not mounted. Add `-v /var/run/docker.sock:/var/run/docker.sock` to docker-compose.prod.yml api service to enable one-click upgrade.")
+		appendLog("ERROR /var/run/docker.sock 未挂载，请在 docker-compose 的 api 服务下加 `-v /var/run/docker.sock:/var/run/docker.sock` 才能启用一键升级")
+		appendLog("升级应用 [Utterlog] 失败 [TASK-END]")
 		upgrade.mu.Lock()
 		upgrade.running = false
 		upgrade.finished = true
@@ -623,7 +744,7 @@ func runUpgrade() {
 		return
 	}
 
-	appendLog("Launching upgrade sidecar (survives api recreation)...")
+	appendLog("启动升级 sidecar 容器（独立运行，不受 api 重建影响）")
 
 	// CRITICAL: we cannot run `docker compose up -d` from within the
 	// api container's own process tree. The moment compose recreates
@@ -645,7 +766,7 @@ func runUpgrade() {
 	// not found" 静默失败。
 	apiName := apiContainerName()
 	webName := webContainerName(apiName)
-	appendLog(fmt.Sprintf("detected containers: api=%s web=%s", apiName, webName))
+	appendLog(fmt.Sprintf("检测容器名 api=[%s] web=[%s]", apiName, webName))
 
 	// 安装目录探测优先级：
 	//   1. 环境变量 UTTERLOG_INSTALL_DIR（用户显式覆盖）
@@ -659,10 +780,10 @@ func runUpgrade() {
 	if installDir == "" {
 		if probed := probeComposeWorkingDir(); probed != "" {
 			installDir = probed
-			appendLog(fmt.Sprintf("install dir detected from compose label: %s", installDir))
+			appendLog(fmt.Sprintf("检测安装目录 [%s]（来自 compose label）", installDir))
 		} else {
 			installDir = "/opt/utterlog"
-			appendLog("install dir defaulted to /opt/utterlog (no env / label)")
+			appendLog("检测安装目录 [/opt/utterlog]（兜底默认）")
 		}
 	}
 	// Everything the sidecar prints goes to the shared upgrade.log that
@@ -682,8 +803,15 @@ mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/upgrade.log"
 exec >>"$LOG" 2>&1
 
-ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
-echo "[$(ts)] sidecar starting in $INSTALL_DIR"
+# 日志格式参照 1Panel：本地时区 + 中文动作 + [对象] + 状态/[标记]
+# 例如：2026/05/07 23:30:20 升级应用 [Utterlog] 任务开始 [START]
+ts() { date '+%Y/%m/%d %H:%M:%S'; }
+log() { echo "$(ts) $*"; }
+
+log "升级应用 [Utterlog] 任务开始 [START]"
+log "检测容器名 api=[$API_CONTAINER] web=[$WEB_CONTAINER]"
+log "检测安装目录 [$INSTALL_DIR]"
+
 cd "$INSTALL_DIR"
 
 MODE="${UTTERLOG_COMPOSE_MODE:-}"
@@ -693,10 +821,12 @@ if [ -z "$MODE" ]; then
   elif [ -f docker-compose.yml ]; then
     MODE=slim
   else
-    echo "[$(ts)] ERROR: no docker-compose files under $(pwd)"
+    log "ERROR 未找到 docker-compose 文件 [$INSTALL_DIR]"
+    log "升级应用 [Utterlog] 失败 [TASK-END]"
     exit 1
   fi
 fi
+log "检测部署模式 [$MODE]"
 
 # Refresh docker-compose.yml from utterlog.io BEFORE the pull so new
 # bind mounts / env vars added in recent releases actually apply on
@@ -706,59 +836,59 @@ fi
 if [ "$MODE" = "slim" ]; then
   BASE_URL="${UTTERLOG_BASE_URL:-https://utterlog.io}"
   if command -v curl >/dev/null 2>&1; then
+    log "刷新 compose 文件 from [$BASE_URL/docker-compose.yml]"
     if curl -fsSL --max-time 10 "$BASE_URL/docker-compose.yml" -o docker-compose.yml.new 2>>"$LOG"; then
-      # Only replace if the download is non-empty and parses as YAML
-      # (crude check — first non-blank line starts with a valid key).
       if [ -s docker-compose.yml.new ] && head -n1 docker-compose.yml.new | grep -qE '^[a-zA-Z_]+:'; then
         cp docker-compose.yml docker-compose.yml.bak 2>/dev/null || true
         mv docker-compose.yml.new docker-compose.yml
-        echo "[$(ts)] docker-compose.yml refreshed from $BASE_URL"
+        log "刷新 compose 文件 成功（备份 [docker-compose.yml.bak]）"
       else
         rm -f docker-compose.yml.new
-        echo "[$(ts)] skipped compose refresh — downloaded file looks invalid"
+        log "刷新 compose 文件 跳过（下载内容非合法 YAML）"
       fi
     else
-      echo "[$(ts)] skipped compose refresh — download failed (keeping local file)"
+      log "刷新 compose 文件 跳过（网络下载失败）"
     fi
   fi
 fi
 
-echo "[$(ts)] mode=$MODE — pulling images ..."
+log "拉取镜像 [docker compose pull]"
 case "$MODE" in
-  overlay)
-    docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull
-    echo "[$(ts)] recreating containers ..."
-    docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans
-    ;;
-  slim)
-    docker compose pull
-    echo "[$(ts)] recreating containers ..."
-    docker compose up -d --remove-orphans
-    ;;
-  *)
-    echo "[$(ts)] ERROR: unknown UTTERLOG_COMPOSE_MODE=$MODE"
-    exit 1
-    ;;
+  overlay) docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull ;;
+  slim)    docker compose pull ;;
+  *)       log "ERROR 未知部署模式 [$MODE]"; log "升级应用 [Utterlog] 失败 [TASK-END]"; exit 1 ;;
 esac
+log "拉取镜像 成功"
 
-echo "[$(ts)] waiting for api health ..."
+log "重建容器 [$API_CONTAINER, $WEB_CONTAINER]"
+case "$MODE" in
+  overlay) docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans ;;
+  slim)    docker compose up -d --remove-orphans ;;
+esac
+log "重建容器 成功"
+
+log "等待 api 健康检查 [$API_CONTAINER]"
+HEALTHY=0
 for i in $(seq 1 60); do
   code=$(docker inspect --format='{{.State.Health.Status}}' "$API_CONTAINER" 2>/dev/null || echo unknown)
   if [ "$code" = "healthy" ]; then
-    echo "[$(ts)] api healthy after ${i}s"
+    log "api 健康检查 成功 (${i}s)"
+    HEALTHY=1
     break
-  fi
-  if [ "$i" = "60" ]; then
-    echo "[$(ts)] WARN: api not healthy after 120s (state=$code); check docker logs $API_CONTAINER"
   fi
   sleep 2
 done
+if [ "$HEALTHY" != "1" ]; then
+  log "WARN api 120s 内未进入 healthy 状态 (state=$code)，请检查 [docker logs $API_CONTAINER]"
+fi
 
 # Print the running binary's version tag so the admin UI can confirm
 # the upgrade actually flipped. Relies on the image label set by GHA.
 IMG=$(docker inspect "$API_CONTAINER" --format='{{.Config.Image}}' 2>/dev/null || echo '?')
 DIGEST=$(docker inspect "$API_CONTAINER" --format='{{.Image}}' 2>/dev/null | cut -c1-19)
-echo "[$(ts)] done — image=$IMG digest=$DIGEST"
+log "当前镜像 [$IMG] digest=[$DIGEST]"
+
+log "升级应用 [Utterlog] 成功 [TASK-END]"
 `
 
 	// Name the sidecar so we can find/cleanup stale runs.
@@ -788,9 +918,9 @@ echo "[$(ts)] done — image=$IMG digest=$DIGEST"
 		// 既兼容宿主目录（"/opt/.../uploads"），也兼容 docker volume
 		// （直接传 volume name 给 -v 即可）
 		dockerArgs = append(dockerArgs, "-v", apiUploadsSource+":/api-uploads")
-		appendLog("sidecar 共享 api 的 uploads 挂载源：" + apiUploadsSource)
+		appendLog("检测 uploads 挂载源 [" + apiUploadsSource + "]（与 api 共享）")
 	} else {
-		appendLog("WARN: 无法探测 api 的 /app/public/uploads 挂载源，sidecar log 可能跟 api log 不同步")
+		appendLog("WARN 无法探测 api 的 uploads 挂载源，sidecar 日志可能跟 api 不同步")
 	}
 	dockerArgs = append(dockerArgs,
 		"-e", "INSTALL_DIR="+installDir,
@@ -812,7 +942,8 @@ echo "[$(ts)] done — image=$IMG digest=$DIGEST"
 	cmd.Stderr = cmd.Stdout
 
 	if err := cmd.Run(); err != nil {
-		appendLog("failed to launch sidecar: " + err.Error())
+		appendLog("ERROR 启动 sidecar 容器失败：" + err.Error())
+		appendLog("升级应用 [Utterlog] 失败 [TASK-END]")
 		upgrade.mu.Lock()
 		upgrade.running = false
 		upgrade.finished = true
@@ -822,8 +953,8 @@ echo "[$(ts)] done — image=$IMG digest=$DIGEST"
 		return
 	}
 
-	appendLog(fmt.Sprintf("sidecar %s launched (docker logs %s -f)", sidecarName, sidecarName))
-	appendLog("utterlog-api-1 容器马上会被 sidecar 重新创建（这是正常的，sidecar 在独立容器里继续跑）。这里的 'api' 指的是你本地的 utterlog api 容器，跟 GitHub API 无关。")
+	appendLog(fmt.Sprintf("sidecar 容器 [%s] 启动 成功", sidecarName))
+	appendLog(fmt.Sprintf("api 容器 [%s] 即将被 sidecar 重建（正常现象，sidecar 独立运行）", apiName))
 
 	// Can't wait for the sidecar — our api will be recreated mid-run,
 	// killing this goroutine. Optimistic success: the sidecar owns the

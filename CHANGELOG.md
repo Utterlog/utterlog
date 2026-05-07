@@ -23,6 +23,24 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.4] - 2026-05-07
+
+### 新增
+
+- **版本检查走 utterlog.io 自家代理（不再依赖 GitHub API）**：之前每个用户的 admin 后台都直接打 `api.github.com/repos/utterlog/utterlog/releases/latest`，匿名 60/h 配额（按 IP 计）经常爆 → 403 → 升级面板看不到新版本号。新架构：utterlog-landing 站构建期跑 `scripts/build-api-cache.js`，用 GitHub Actions 的 `GITHUB_TOKEN` 拉一次 release 列表，写到 `public/api/version.json` 和 `public/api/releases.json` 静态文件 → next build 自动导出 → Cloudflare CDN 缓存。所有用户的 utterlog 后台改成查 `https://utterlog.io/api/version.json`，**单一 token 在 landing 上，N 个用户共享同一份缓存，永远不会 rate-limit**。用户**不用配任何 GitHub Token**，开箱即用；国内访问也比直连 `api.github.com` 快得多。GitHub API 仍然是 fallback，主路径失败时自动切换。
+- **`version_source_url` admin 选项**：私有部署 / 企业 fork 想用自己的 mirror，可以在 admin options 加 `version_source_url`（如 `https://your-mirror.example.com`），代码会自动去 `<url>/api/version.json` 拉取。空 → 用默认 utterlog.io。
+
+### 优化
+
+- **升级日志输出格式参考 1Panel**：原 `[2026-05-07T15:30:20Z] sidecar starting in /opt/...` 改成 `2026/05/07 23:30:20 升级应用 [Utterlog] 任务开始 [START]` 风格 —— 时间戳本地时区 + 中文动作 + `[对象]` + 状态/`[标记]`，每一步语义清晰。容器名（`[utterlog-pancn-api-1]`）、安装目录、镜像 tag、digest 全部动态显示在日志里，肉眼能确认探测正确。
+- **后台升级日志面板高亮**：`SystemUpdatePanel.tsx` 新增 `highlightLogLine(line)` 函数，按语义着色：时间戳 → 暗灰 / `[START]` `[TASK-END]` → 琥珀加粗 / `[xxx]` 容器名/路径/镜像 → 天蓝 / `成功` → 亮绿 / `WARN` → 黄 / `ERROR` `失败` → 红。容器外观也调整：背景 `#0f172a` → 更深的 `#0a0e1a`（终端感）+ 圆角 6px + 顶部状态徽标分割线 + max-height 280 → 360px。
+- **GFM 表格在 changelog 渲染中支持**：admin 后台 `SystemUpdatePanel.tsx` 的 `renderChangelog()` 之前不识别 `| col1 | col2 |` + `|---|---|` 表格语法，release notes 里的对比表都显示成原文 raw 字符。补上 GFM table parser → 输出 `<table class="changelog-table">`，新增 CSS（紧凑边框 + 表头浅灰底 + zebra 行）。`---` 分隔线 → `<hr/>` 也补上。utterlog-landing 的 `app/changelog/page.tsx` 同步修复。
+- **后台升级面板"更新内容"标题只显示版本号**：`{info.latest.name || info.latest.version}` 改成 `{info.latest.version}`。GitHub release name 经常是 `v2.3.3 — upgrade works on any compose project name` 这种长描述，标题里啰嗦。现在固定显示 `更新内容 — v2.3.3`。配套：把 GitHub releases 上的 v2.3.1 / v2.3.2 / v2.3.3 标题改成纯版本号，v2.0.2 补上 `v` 前缀。
+
+### 修复
+
+- 暂无。
+
 ## [2.3.3] - 2026-05-07
 
 ### 修复

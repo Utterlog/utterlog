@@ -38,6 +38,50 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// 升级日志的语义高亮 —— 1Panel 风格：时间戳 / [对象] / 状态词 各自上色。
+// 必须先 escapeHtml，再用 token regex 加 <span> 包装着色（避免 XSS）。
+//
+//   2026/05/07 23:30:20  ← 暗灰 (#64748b)
+//   [START] [TASK-END]   ← 琥珀 (#fbbf24)
+//   [其它内容]            ← 天蓝 (#7dd3fc)
+//   成功                  ← 亮绿 (#4ade80)
+//   WARN                  ← 黄   (#fbbf24)
+//   ERROR / 失败          ← 红   (#f87171)
+function highlightLogLine(line: string): string {
+  let s = escapeHtml(line);
+
+  // 时间戳 2026/05/07 23:30:20 (放在最前面着色，避免被后续规则吃掉)
+  s = s.replace(
+    /^(\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2})/,
+    '<span style="color:#64748b;margin-right:8px">$1</span>',
+  );
+
+  // [START] / [TASK-END] —— 任务边界标记，琥珀色加粗
+  s = s.replace(
+    /\[(START|TASK-END)\]/g,
+    '<span style="color:#fbbf24;font-weight:600">[$1]</span>',
+  );
+
+  // 其它 [...] —— 容器名 / 路径 / 镜像 tag 等"对象"，天蓝
+  // 注意：因为 escapeHtml 把 [ 没动，所以可以直接匹配
+  s = s.replace(
+    /\[([^\]]+)\]/g,
+    (m, inner) => {
+      // 已经被前面的 START/TASK-END 规则替换过的不再二次处理
+      if (m.includes('color:#fbbf24')) return m;
+      return `<span style="color:#7dd3fc">[${inner}]</span>`;
+    },
+  );
+
+  // 状态词 / 错误词
+  s = s.replace(/(?<!\w)(成功)(?!\w)/g, '<span style="color:#4ade80;font-weight:500">$1</span>');
+  s = s.replace(/(?<!\w)(失败)(?!\w)/g, '<span style="color:#f87171;font-weight:500">$1</span>');
+  s = s.replace(/(?<!\w)(ERROR)(?!\w)/g, '<span style="color:#f87171;font-weight:600">$1</span>');
+  s = s.replace(/(?<!\w)(WARN)(?!\w)/g, '<span style="color:#fbbf24;font-weight:600">$1</span>');
+
+  return s;
+}
+
 function renderChangelog(md: string): string {
   if (!md) return '';
   const rawLines = md.split('\n');
@@ -75,7 +119,12 @@ function renderChangelog(md: string): string {
     return t;
   };
 
-  for (const rawLine of rawLines) {
+  // GFM 表格切分：把 | a | b | 拆成单元格数组（首尾空字符串过滤）
+  const splitRow = (line: string): string[] =>
+    line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim());
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const rawLine = rawLines[i];
     const fence = rawLine.match(/^```\s*([\w-]*)\s*$/);
     if (fence) {
       if (inCode) { flushCode(); }
@@ -83,6 +132,30 @@ function renderChangelog(md: string): string {
       continue;
     }
     if (inCode) { codeBuf.push(rawLine); continue; }
+
+    // GFM 表格：当前行以 | 开头 + 下一行像 |---|---| 分隔行 → 整段做表格
+    // 这是之前缺的功能，导致 release notes 里的对比表格全部当成 <p> 显示
+    // 成 "| col | col |" 的原文 raw 字符。
+    if (/^\s*\|.*\|\s*$/.test(rawLine) && i + 1 < rawLines.length && /^\s*\|?[\s|:-]+\|?\s*$/.test(rawLines[i + 1]) && rawLines[i + 1].includes('-')) {
+      flushList();
+      const headers = splitRow(rawLine);
+      i++; // 吃掉分隔行
+      const rows: string[][] = [];
+      while (i + 1 < rawLines.length && /^\s*\|.*\|\s*$/.test(rawLines[i + 1])) {
+        i++;
+        rows.push(splitRow(rawLines[i]));
+      }
+      out.push('<div class="changelog-table-wrap"><table class="changelog-table"><thead><tr>');
+      for (const h of headers) out.push(`<th>${inlineFmt(h)}</th>`);
+      out.push('</tr></thead><tbody>');
+      for (const r of rows) {
+        out.push('<tr>');
+        for (const c of r) out.push(`<td>${inlineFmt(c)}</td>`);
+        out.push('</tr>');
+      }
+      out.push('</tbody></table></div>');
+      continue;
+    }
 
     if (/^\s*[-*]\s+/.test(rawLine)) {
       if (!inList) { out.push('<ul>'); inList = true; }
@@ -94,6 +167,8 @@ function renderChangelog(md: string): string {
     if (/^#+\s+/.test(rawLine)) {
       const level = Math.min(rawLine.match(/^#+/)![0].length + 2, 6);
       out.push(`<h${level}>${inlineFmt(rawLine.replace(/^#+\s+/, ''))}</h${level}>`);
+    } else if (/^---+\s*$/.test(rawLine)) {
+      out.push('<hr />');
     } else if (rawLine.trim()) {
       out.push(`<p>${inlineFmt(rawLine)}</p>`);
     }
@@ -433,7 +508,7 @@ export default function SystemUpdatePanel() {
         <div style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)', padding: '20px 24px', marginBottom: 16 }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <i className="fa-solid fa-clipboard-list" style={{ color: 'var(--color-primary)' }} />
-            更新内容 — {info.latest.name || info.latest.version}
+            更新内容 — {info.latest.version}
           </h3>
           <div
             className="changelog-body"
@@ -443,14 +518,53 @@ export default function SystemUpdatePanel() {
         </div>
       )}
 
-      {/* Live upgrade log */}
+      {/* Live upgrade log —— 1Panel-style 终端面板 + 语义高亮：
+          - 时间戳 / [START] / [TASK-END]   暗灰
+          - [括号内容]（容器名 / 路径）        天蓝
+          - 成功                              亮绿
+          - WARN                              黄
+          - ERROR / 失败                     红
+          - 其它正文                          浅灰白
+          每条日志一行，hover 加微微高亮背景。
+       */}
       {upgradeStatus && (upgrading || upgradeStatus.log_tail) && (
-        <div style={{ border: '1px solid var(--color-border)', background: '#0f172a', color: '#e2e8f0', padding: '16px 20px', fontFamily: 'ui-monospace, monospace', fontSize: 12, lineHeight: 1.6, marginBottom: 16, whiteSpace: 'pre-wrap', maxHeight: 280, overflow: 'auto' }}>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <i className={`fa-solid ${upgradeStatus.running ? 'fa-circle-notch fa-spin' : upgradeStatus.success ? 'fa-circle-check' : 'fa-circle-xmark'}`} />
+        <div style={{
+          border: '1px solid #1e293b',
+          background: '#0a0e1a',
+          color: '#cbd5e1',
+          padding: '14px 0 0',
+          fontFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+          fontSize: 12.5,
+          lineHeight: 1.7,
+          marginBottom: 16,
+          maxHeight: 360,
+          overflow: 'auto',
+          borderRadius: 6,
+        }}>
+          <div style={{
+            fontSize: 11,
+            color: '#94a3b8',
+            margin: '0 16px 10px',
+            paddingBottom: 10,
+            borderBottom: '1px solid #1e293b',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontWeight: 500,
+            letterSpacing: 0.3,
+          }}>
+            <i
+              className={`fa-solid ${upgradeStatus.running ? 'fa-circle-notch fa-spin' : upgradeStatus.success ? 'fa-circle-check' : 'fa-circle-xmark'}`}
+              style={{ color: upgradeStatus.running ? '#60a5fa' : upgradeStatus.success ? '#4ade80' : '#f87171' }}
+            />
             {upgradeStatus.running ? '升级进行中…' : upgradeStatus.success ? '升级完成' : '升级失败'}
           </div>
-          {upgradeStatus.log_tail || '(尚无输出)'}
+          <div style={{ padding: '0 16px 12px' }}>
+            {(upgradeStatus.log_tail || '').split('\n').filter(Boolean).map((line, i) => (
+              <div key={i} dangerouslySetInnerHTML={{ __html: highlightLogLine(line) }} />
+            ))}
+            {!upgradeStatus.log_tail && <div style={{ color: '#64748b' }}>(尚无输出)</div>}
+          </div>
         </div>
       )}
 
