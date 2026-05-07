@@ -9,10 +9,12 @@ import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
 
-// 把任意字符串（友链 RSS link）哈希成 32-bit 无符号整数，
-// 用作 randomCoverUrl 的 seed —— 直接用整段 URL 作 r= 参数有时
-// 会被 img.et 截断或归一化导致几张卡拿到同一张图，hash 后是稳定
-// 的小整数，每个不同 link 一定映射到不同 r，4 张卡 4 张图。
+// 把任意字符串（友链 RSS link）哈希成 32-bit 无符号整数，用作 randomCoverUrl
+// 的 seed。直接用整段 URL 当 r= 参数会被 img.et 截断或归一化，导致几张卡
+// 命中同一张图。hash 后是稳定的整数 seed —— 同一 link 每次都拿同一张图
+// （刷新不闪），不同 link 4 张卡 4 张图。
+// 注意：img.et 的 r 参数可能内部 mod 一个限值（图池大小），seed 太小或
+// 太接近会 collide。这里用 djb2 + 大素数偏移，让相邻 idx 的 seed 也散得开。
 function hashFeedSeed(s: string): number {
   let h = 5381;
   for (let i = 0; i < s.length; i++) {
@@ -282,11 +284,11 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
                 feeds 也按 PAGE_SIZE 切片，Nebula pageSize={4} → 显示 4 卡。 */}
             {activeTab === 'feeds' && feeds.length > 0 && feeds.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE).map((item, idx) => {
               const mon = formatDateInTimeZone(item.pub_date || 0, 'zh-CN', { month: 'short', day: 'numeric' }, timeZone);
-              // hash(link) → 32-bit 整数 seed，叠加 idx 确保即使 hash
-              // 碰撞 4 张卡也各不相同；同一 link 每次仍拿到同一张图，
-              // 重渲染不闪。link 缺失时退化到 pageIndex+idx 字符串。
+              // hash(link) → 32-bit 整数 seed，再叠加大素数 × idx 让 4 张卡
+              // 的 seed 散得更开（避免 img.et 内部 mod 图池大小后 collide）。
+              // 同一 link 每次仍拿到同一张图（刷新不闪）。link 缺失时退化。
               const rawSeed = item.link || `feed-${pageIndex}-${idx}`;
-              const seed = hashFeedSeed(rawSeed) + idx;
+              const seed = (hashFeedSeed(rawSeed) + idx * 999983) >>> 0;
               const fallbackCover = randomCoverUrl(seed, options);
               return (
                 <a key={`${pageIndex}-${idx}`} href={item.link} target="_blank" rel="noopener noreferrer" className="post-related-card cover-zoom">

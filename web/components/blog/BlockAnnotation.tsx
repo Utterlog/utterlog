@@ -25,6 +25,11 @@ export default function BlockAnnotation({ blockId, children }: BlockAnnotationPr
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  // 弹窗用 position: fixed 浮在视口上，靠 triggerRef 的 bounding rect
+  // 动态计算 left/top —— 这样它绝对不会影响段落本身的 box / 文档流，
+  // 也不会被父级 overflow: hidden 裁掉
+  const [panelPos, setPanelPos] = useState<{ left: number; top: number } | null>(null);
   const blockAnnotations = annotations[blockId] || [];
   const isActive = activeBlock === blockId;
   const hasAnnotations = blockAnnotations.length > 0;
@@ -40,6 +45,37 @@ export default function BlockAnnotation({ blockId, children }: BlockAnnotationPr
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [isActive, setActiveBlock]);
+
+  // 弹窗位置：基于 trigger 的 bounding rect 计算 fixed 坐标，并在滚动 /
+  // 窗口尺寸变化时同步跟随。.blog-main 是真正的滚动容器（globals.css
+  // 给它 overflow-y: scroll !important），所以两个事件源都得监听。
+  useEffect(() => {
+    if (!isActive) { setPanelPos(null); return; }
+    const compute = () => {
+      const t = triggerRef.current;
+      if (!t) return;
+      const r = t.getBoundingClientRect();
+      const PANEL_W = 320;
+      const GAP = 8;
+      // 默认放在 trigger 的右下方；视口右溢出则左对齐到 trigger 右边
+      let left = r.left;
+      const overflowR = left + PANEL_W - window.innerWidth + 12;
+      if (overflowR > 0) left -= overflowR;
+      if (left < 12) left = 12;
+      setPanelPos({ left, top: r.bottom + GAP });
+    };
+    compute();
+    const main = document.querySelector('.blog-main') as HTMLElement | null;
+    const onScroll = () => requestAnimationFrame(compute);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', compute);
+    if (main) main.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', compute);
+      if (main) main.removeEventListener('scroll', onScroll);
+    };
+  }, [isActive]);
 
   const handleSubmit = async () => {
     if (!input.trim() || sending) return;
@@ -58,6 +94,7 @@ export default function BlockAnnotation({ blockId, children }: BlockAnnotationPr
       {/* Left-side annotation trigger */}
       {(hovered || isActive || hasAnnotations) && (
         <div
+          ref={triggerRef}
           style={{
             position: 'absolute', left: '0px', top: '2px', width: '32px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -112,10 +149,14 @@ export default function BlockAnnotation({ blockId, children }: BlockAnnotationPr
       {/* Content */}
       {children}
 
-      {/* Annotation panel */}
-      {isActive && (
-        <div ref={panelRef} style={{
-          position: 'absolute', left: '0px', top: '32px', zIndex: 100,
+      {/* Annotation panel —— position: fixed 浮在视口上，绝对不影响
+          文档流；left/top 由 panelPos 实时跟随 trigger 滚动 */}
+      {isActive && panelPos && (
+        <div ref={panelRef} className="block-annotation-panel" style={{
+          position: 'fixed',
+          left: panelPos.left,
+          top: panelPos.top,
+          zIndex: 1000,
           width: '320px', maxHeight: '400px',
           background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
           borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
@@ -167,6 +208,7 @@ export default function BlockAnnotation({ blockId, children }: BlockAnnotationPr
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
                 placeholder="写下你的点评…"
+                className="block-annotation-input"
                 style={{
                   flex: 1, padding: '6px 10px', fontSize: '12px',
                   border: '1px solid var(--color-border)', borderRadius: '6px',

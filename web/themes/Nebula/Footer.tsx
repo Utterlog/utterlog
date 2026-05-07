@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import toast from 'react-hot-toast';
-import { useAuthStore, useReaderChatStore } from '@/lib/store';
+import { useAuthStore } from '@/lib/store';
 import { authApi } from '@/lib/api';
 import { useThemeContext } from '@/lib/theme-context';
+import { useMiniMusic } from '@/lib/use-mini-music';
+import BackToTop from './BackToTop';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
@@ -19,9 +21,8 @@ export default function Footer() {
   const year = new Date().getFullYear();
   const siteName = site.title || 'Utterlog';
   const footerItems = menus.footer || [];
-  const readerActive = useReaderChatStore(state => state.active);
-  const readerDismissed = useReaderChatStore(state => state.dismissed);
-  const showReader = useReaderChatStore(state => state.show);
+  const { open: miniMusicOpen, toggle: toggleMiniMusic } = useMiniMusic();
+  const [rssCopied, setRssCopied] = useState(false);
 
   // ── 登录态 ──
   const {
@@ -211,18 +212,10 @@ export default function Footer() {
 
   return (
     <>
-      {readerActive && readerDismissed && (
-        <button
-          type="button"
-          className="nebula-reader-button"
-          title="重新打开陪读"
-          aria-label="重新打开陪读"
-          onClick={showReader}
-        >
-          <i className="fa-sharp fa-solid fa-message-bot" aria-hidden="true" />
-        </button>
-      )}
       <footer className="nebula-footer">
+        {/* 回到顶部按钮：贴在 footer 右侧、container 之外。
+            滚动 ≤ 400px 时 visibility:hidden（组件内 .is-hidden 处理） */}
+        <BackToTop />
         <div className="nebula-container nebula-footer-row">
           {/* 版权 */}
           <span className="nebula-footer-copy">
@@ -257,7 +250,7 @@ export default function Footer() {
               <span className="nebula-footer-stat-label">最近访客来自</span>
               <img
                 className="nebula-footer-flag"
-                src={`https://flagcdn.io/flags/4x3/${visitor.code}.svg`}
+                src={`https://flagcdn.io/flags/1x1/${visitor.code}.svg`}
                 alt={visitor.code}
               />
               <strong>{visitor.city}</strong>
@@ -271,7 +264,42 @@ export default function Footer() {
                 {item.label}
               </Link>
             ))}
-            <a href="/feed" title="RSS"><i className="fa-solid fa-square-rss" aria-hidden="true" /></a>
+            {/* 音乐按钮：mini 打开时 visibility:hidden 占位但不显示，
+                避免后面 RSS / Logo / 头像 三个按钮位置左移 */}
+            <button
+              type="button"
+              title="音乐"
+              aria-label="打开迷你播放器"
+              className={`nebula-footer-music-btn${miniMusicOpen ? ' is-hidden' : ''}`}
+              onClick={() => toggleMiniMusic(true)}
+              aria-hidden={miniMusicOpen}
+              tabIndex={miniMusicOpen ? -1 : 0}
+            >
+              <i className="fa-solid fa-music" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              title={rssCopied ? '已复制' : '复制 RSS 订阅地址'}
+              aria-label={rssCopied ? 'RSS 地址已复制' : '复制 RSS 订阅地址'}
+              className={`nebula-footer-rss-btn${rssCopied ? ' is-copied' : ''}`}
+              onClick={async () => {
+                if (rssCopied) return;
+                const url = `${window.location.origin}/feed`;
+                try {
+                  await navigator.clipboard.writeText(url);
+                  toast.success('RSS 地址已复制');
+                  setRssCopied(true);
+                  setTimeout(() => setRssCopied(false), 1800);
+                } catch {
+                  toast.error('复制失败，请手动复制');
+                }
+              }}
+            >
+              <i
+                className={`fa-solid ${rssCopied ? 'fa-check' : 'fa-rss'}`}
+                aria-hidden="true"
+              />
+            </button>
             <a
               href="https://utterlog.io"
               target="_blank"
@@ -311,7 +339,7 @@ export default function Footer() {
                 {user && avatarUrl ? (
                   <img src={avatarUrl} alt="" className="nebula-footer-auth-avatar" />
                 ) : (
-                  <i className="fa-light fa-user" aria-hidden="true" />
+                  <i className="fa-solid fa-user" aria-hidden="true" />
                 )}
               </button>
 

@@ -392,7 +392,7 @@ export default function CommentForm({ postId, parentId, onSuccess, onCancel, com
       {!isAdmin && (
         <CommentCaptcha onVerified={setCaptchaResult} onReset={() => setCaptchaResult(null)} />
       )}
-      <button onClick={handleSubmit} disabled={submitting}
+      <button onClick={handleSubmit} disabled={submitting} className="comment-submit-button"
         style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 600, border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: submitting ? 'wait' : 'pointer', opacity: submitting ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '80px' }}>
         {submitting ? (
           <svg width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#fff">

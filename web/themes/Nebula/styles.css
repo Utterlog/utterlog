@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Text:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+@import url('https://static.utterlog.com/fonts/noto-sans-sc/result.css');
+@import url('https://static.utterlog.com/fonts/google-sans-display/result.css');
 @import url('https://static.utterlog.com/fonts/kuaikanshijieti/result.css');
 @import url('https://static.utterlog.com/fonts/AlimamaFangYuanTi/result.css');
 @import url('https://static.utterlog.com/fonts/SourceHanSerifCN/result.css');
@@ -17,7 +18,7 @@
 /* Nebula — 暗色科技风（Code Wiki 风格）                         */
 /* 调色板：纯黑底 #000 + 浅蓝副标 #A8C7FA + 蓝边深蓝卡片          */
 /* 强调：天蓝 #7FCFFF（CTA） / 鲜蓝 #80CFFF（图标 / 边框光）       */
-/* 字体：Google Sans / Google Sans Text                           */
+/* 字体：Google Sans Display（统一替换之前的 Google Sans / Text）     */
 /* ============================================================ */
 
 [data-theme="Nebula"] {
@@ -71,21 +72,21 @@
   --nebula-shadow-tile-hover: rgba(8, 66, 160, 0.42) 0px 40px 100px -25px;
 
   /* Fonts */
-  --nebula-font-display: 'Google Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --nebula-font-body: 'Google Sans Text', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --nebula-font-display: 'Google Sans Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --nebula-font-body: 'Google Sans Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --nebula-font-mono: 'Courier New', Menlo, Consolas, monospace;
   /* 文章页（PostPage）专用字体：
      - banner-title：快看世界体（中文圆体），仅文章封面 banner 上的大标题
      - title：Noto Sans SC（思源黑体），用于 h1-h6 / AI 摘要
      - article-body：LXGW WenKai 霞鹜文楷（仅 markdown 正文）
      - article-code：Google Sans Code（代码块 + Prism 高亮 token） */
-  --nebula-font-banner-title: '快看世界体', 'Noto Sans SC', 'Google Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --nebula-font-logo: 'Alimama FangYuanTi VF', 'Noto Sans SC', 'Google Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --nebula-font-title: 'Noto Sans SC', 'Google Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --nebula-font-banner-title: '快看世界体', 'Noto Sans SC', 'Google Sans Display', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --nebula-font-logo: 'Alimama FangYuanTi VF', 'Noto Sans SC', 'Google Sans Display', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --nebula-font-title: 'Noto Sans SC', 'Google Sans Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   /* 文章正文 h2–h6 专用：思源宋体 VF（衬线 / 中文阅读节奏感强） */
   --nebula-font-prose-heading: 'Source Han Serif CN VF', 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, ui-serif, serif;
   /* 装饰性大字水印（评论区"讨论区"等）：腾讯体 W7（黑体/重体） */
-  --nebula-font-deco: 'TencentSans W7', 'Noto Sans SC', 'Google Sans', system-ui, sans-serif;
+  --nebula-font-deco: 'TencentSans W7', 'Noto Sans SC', 'Google Sans Display', system-ui, sans-serif;
   --nebula-font-article-body: 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui, 'Segoe UI', sans-serif;
   --nebula-font-article-code: 'Google Sans Code', 'Courier New', Menlo, Consolas, monospace;
 
@@ -192,9 +193,50 @@
   font-size: 16px;
 }
 
+/* ─── 全局顶部进度条（路由切换时展示，跟 GitHub / YouTube 同款） ───
+   - .nebula-top-progress       —— 容器，全屏顶部 fixed，淡入淡出
+   - .nebula-top-progress-bar   —— 实际滚动的蓝条，宽度由 inline width 驱动
+   注意：Layout 在 .blog-shell 里，所以容器位置基于视口顶部 = 0 */
+[data-theme="Nebula"] .nebula-top-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+[data-theme="Nebula"] .nebula-top-progress.is-visible {
+  opacity: 1;
+}
+[data-theme="Nebula"] .nebula-top-progress-bar {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(
+    90deg,
+    var(--nebula-blue-accent) 0%,
+    var(--nebula-sky-hover) 50%,
+    var(--nebula-blue-accent) 100%
+  );
+  background-size: 200% 100%;
+  box-shadow: 0 0 8px rgba(128, 207, 255, 0.6),
+              0 0 2px rgba(128, 207, 255, 0.8);
+  transition: width 0.25s ease;
+  animation: nebulaProgressShimmer 2s linear infinite;
+}
+@keyframes nebulaProgressShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 [data-theme="Nebula"] .nebula-brand-title {
   font-family: var(--nebula-font-logo);
   letter-spacing: 0.02em;
+  display: inline-block;
+  transform-origin: center;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 [data-theme="Nebula"] .nebula-brand-mark {
@@ -209,6 +251,8 @@
   font-weight: 700;
   font-size: 14px;
   color: var(--nebula-black);
+  transform-origin: center;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 [data-theme="Nebula"] .nebula-brand-logo {
@@ -216,6 +260,17 @@
   height: 32px;
   border-radius: 8px;
   object-fit: cover;
+  transform-origin: center;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Header logo hover：从中心放大 1.15x，弹簧缓动 —— 跟 footer 图标按钮
+   的 1.2x hover 风格一致。纯文字模式下（site_brand_mode = 'text'）站名
+   也跟着一起放大，保持「整个 brand 区域有反馈」的一致体验 */
+[data-theme="Nebula"] .nebula-brand:hover .nebula-brand-logo,
+[data-theme="Nebula"] .nebula-brand:hover .nebula-brand-mark,
+[data-theme="Nebula"] .nebula-brand:hover .nebula-brand-title {
+  transform: scale(1.15);
 }
 
 [data-theme="Nebula"] .nebula-nav {
@@ -720,6 +775,57 @@
   background: var(--nebula-sky-hover);
 }
 
+/* ─── /search 搜索结果页的搜索表单 —— 跟 header 弹出搜索框保持一致样式 ───
+   组件 inline 写死浅色 + 直角，这里用 !important 翻深 + 圆角 999px 胶囊化 */
+[data-theme="Nebula"] .search-page-form .search-page-leading {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--nebula-blue-light);
+  font-size: 14px;
+  z-index: 2;
+  pointer-events: none;
+}
+[data-theme="Nebula"] .search-page-form .search-page-input {
+  height: 44px !important;
+  padding: 0 18px 0 40px !important;
+  border-radius: 999px !important;
+  background: var(--nebula-tile) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: var(--nebula-white) !important;
+  font-family: var(--nebula-font-body) !important;
+  font-size: 14px !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.2s ease;
+}
+[data-theme="Nebula"] .search-page-form .search-page-input:focus {
+  border-color: var(--nebula-sky) !important;
+}
+[data-theme="Nebula"] .search-page-form .search-page-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+[data-theme="Nebula"] .search-page-form .search-page-submit {
+  height: 44px !important;
+  padding: 0 22px !important;
+  border-radius: 999px !important;
+  background: var(--nebula-sky) !important;
+  color: var(--nebula-navy-deep) !important;
+  font-family: var(--nebula-font-display) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  border: 0 !important;
+  cursor: pointer !important;
+  transition: background 0.2s ease;
+}
+[data-theme="Nebula"] .search-page-form .search-page-submit:hover {
+  background: var(--nebula-sky-hover) !important;
+}
+
 [data-theme="Nebula"] .nebula-icon-button.active {
   color: var(--nebula-sky);
   background: rgba(127, 207, 255, 0.1);
@@ -914,11 +1020,19 @@
   font-family: var(--nebula-font-body);
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  /* 加 transform 一起过渡，hover 微抬 + active 时弹簧 */
+  transition: background 0.25s ease,
+              border-color 0.25s ease,
+              color 0.25s ease,
+              transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 [data-theme="Nebula"] .nebula-category-strip button:hover:not(:disabled) {
   border-color: var(--nebula-border-blue);
   color: var(--nebula-white);
+  transform: translateY(-1px);
+}
+[data-theme="Nebula"] .nebula-category-strip button:active:not(:disabled) {
+  transform: scale(0.96);
 }
 [data-theme="Nebula"] .nebula-category-strip button.active {
   background: rgba(128, 207, 255, 0.12);
@@ -942,11 +1056,42 @@
   cursor: wait;
 }
 
-/* 加载态 list 透明度 */
-[data-theme="Nebula"] .nebula-post-list.is-loading {
-  opacity: 0.5;
-  pointer-events: none;
+/* 加载态 list 透明度 —— 切分类时旧卡片留在原位，整列表淡掉一档
+   屏蔽交互；新数据回来 .is-loading 移除 → 平滑回到完全不透明 */
+[data-theme="Nebula"] .nebula-post-list {
   transition: opacity 0.2s ease;
+}
+[data-theme="Nebula"] .nebula-post-list.is-loading {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ── 切分类时 stagger fade-in：新 post.id 让 React 把卡片 re-mount，
+      animation 自动重跑；前 12 张错开 30ms，超出按 12 张循环 ── */
+@keyframes nebulaListItemIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+[data-theme="Nebula"] .nebula-post-list > * {
+  animation: nebulaListItemIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(1)  { animation-delay: 0ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(2)  { animation-delay: 30ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(3)  { animation-delay: 60ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(4)  { animation-delay: 90ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(5)  { animation-delay: 120ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(6)  { animation-delay: 150ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(7)  { animation-delay: 180ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(8)  { animation-delay: 210ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(9)  { animation-delay: 240ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(10) { animation-delay: 270ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(11) { animation-delay: 300ms; }
+[data-theme="Nebula"] .nebula-post-list > *:nth-child(12) { animation-delay: 330ms; }
+/* 用户偏好减少动效时，stagger 关掉 —— 直接展示，不闪烁 */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="Nebula"] .nebula-post-list > * {
+    animation: none !important;
+  }
 }
 [data-theme="Nebula"] .nebula-post-list .nebula-empty i {
   color: var(--nebula-sky);
@@ -1809,9 +1954,11 @@
 }
 
 /* ─── 代码块（pre 由 CodeBlock 组件封装，加 wrapper / copy / collapse）—— Google Sans Code ─── */
+/* 代码块底色 #0a0d14 —— 跟文章卡片底色 #131314 拉开层次（之前 #0f1115
+   /  --nebula-input #121212 跟 #131314 太接近，几乎看不出代码块边界） */
 [data-theme="Nebula"] .nebula-post-prose .blog-prose pre {
   margin: 1.5em 0;
-  background: #0f1115;
+  background: #0a0d14;
   border: 1px solid var(--nebula-border-subtle);
   border-radius: var(--nebula-radius-md);
   padding: 18px 20px;
@@ -1831,7 +1978,12 @@
   background: transparent;
   border: 0;
   padding: 0;
-  color: var(--nebula-white);
+  /* 注意：这里不再写 color: var(--nebula-white)。
+     之前用了高优先级覆盖会让 prism-tomorrow 的 token 配色全被吞掉
+     （token 是 <span class="token x">；color 由 .token.x 显式声明），
+     再加上 Nebula 自己的 token 调色板（见文件底部）需要让其颜色
+     穿透到 token 上。code 不带 language 时由 prism-tomorrow 的
+     `code[class*="language-"]` 兜底为 #ccc，足够亮 */
 }
 
 /* ─── 引用 ─── */
@@ -2582,27 +2734,76 @@
 /* 提交按钮：去除 inline opacity 在 disabled 下，加 hover 反馈 */
 [data-theme="Nebula"] .comment-form + div button[disabled] { opacity: 0.5 !important; }
 
+/* "提交评论" 按钮：底色保留蓝色（var(--color-primary)），文字 inline 写死
+   #fff 在浅色品牌色上对比度差，Nebula 把字色翻成黑色 */
+[data-theme="Nebula"] .comment-submit-button {
+  color: var(--nebula-navy-deep) !important;
+}
+[data-theme="Nebula"] .comment-submit-button svg {
+  fill: var(--nebula-navy-deep) !important;
+}
+
 /* ─── 边读边聊（AIReaderChat）暗色主题适配 ───
    组件 inline 写死浅色（白底 / #1a1a1a 字 / #999 灰提示 / #fafafa 提示卡），
-   暗主题下用 attribute selector + !important 全部翻深 */
+   暗主题下用 attribute selector + !important 全部翻深。
+   Nebula 还额外做：圆角 12px + 毛玻璃 + 蓝细边，跟左下角迷你播放器视觉一致 */
 
 /* 折叠卡片 + 展开窗口：通用容器 */
 [data-theme="Nebula"] .ai-reader-chat {
-  background: rgba(15, 17, 21, 0.96) !important;
+  background: rgba(15, 17, 21, 0.92) !important;
   border-color: rgba(128, 207, 255, 0.2) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55) !important;
   color: rgba(225, 231, 238, 0.92);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+          backdrop-filter: blur(20px) saturate(160%);
 }
 [data-theme="Nebula"] .ai-reader-chat--collapsed {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, bottom 0.25s ease !important;
 }
 [data-theme="Nebula"] .ai-reader-chat--collapsed:hover {
-  box-shadow: 0 6px 24px rgba(128, 207, 255, 0.18) !important;
+  box-shadow: 0 10px 32px rgba(128, 207, 255, 0.18) !important;
+  border-color: rgba(128, 207, 255, 0.32) !important;
+  transform: translateY(-1px);
+}
+
+/* 折叠卡内右上 × 关闭按钮（inline 写 #bbb / 白底 hover #f0f0f0 → 暗主题翻深） */
+[data-theme="Nebula"] .ai-reader-chat-dismiss {
+  color: rgba(225, 231, 238, 0.45) !important;
+}
+[data-theme="Nebula"] .ai-reader-chat-dismiss:hover {
+  color: var(--nebula-white) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* 头像外框：从 #e5e5e5 浅灰边换成蓝细边 */
 [data-theme="Nebula"] .ai-reader-chat div[style*="border: 2px solid rgb(229, 229, 229)"] {
   border-color: rgba(128, 207, 255, 0.3) !important;
+}
+
+/* AI 角标：原 #0052D9 蓝底 → 用主题 sky 蓝 + 深底字（跟"提交评论"
+   按钮一致的对比策略） */
+[data-theme="Nebula"] .ai-reader-chat span[style*="background: rgb(0, 82, 217)"] {
+  background: var(--nebula-blue-accent) !important;
+  color: var(--nebula-navy-deep) !important;
+}
+
+/* 机器人图标 #0052D9 → sky 蓝 */
+[data-theme="Nebula"] .ai-reader-chat i[style*="color: rgb(0, 82, 217)"] {
+  color: var(--nebula-blue-light) !important;
+}
+
+/* 用户消息气泡 #0052D9 蓝底 + 白字 → sky 蓝 + 深底字 */
+[data-theme="Nebula"] .ai-reader-chat div[style*="background: rgb(0, 82, 217)"] {
+  background: var(--nebula-blue-accent) !important;
+  color: var(--nebula-navy-deep) !important;
+}
+
+/* 发送按钮启用态 #0052D9 + 白字 → sky 蓝 + 深底字 */
+[data-theme="Nebula"] .ai-reader-chat button[style*="background: rgb(0, 82, 217)"] {
+  background: var(--nebula-blue-accent) !important;
+  color: var(--nebula-navy-deep) !important;
 }
 
 /* "边读边聊" 副标 / 推荐问题副标 / 副信息 #999 → 暗底亮一点 */
@@ -2632,6 +2833,13 @@
   background: rgba(128, 207, 255, 0.05) !important;
   border-color: rgba(128, 207, 255, 0.18) !important;
   color: rgba(225, 231, 238, 0.85) !important;
+  border-radius: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+[data-theme="Nebula"] .ai-reader-chat button[style*="background: rgb(250, 250, 250)"]:hover {
+  background: rgba(128, 207, 255, 0.12) !important;
+  border-color: rgba(128, 207, 255, 0.36) !important;
+  color: var(--nebula-white) !important;
 }
 
 /* Header 区域：#fafafa 浅底 → 深底 */
@@ -2652,6 +2860,7 @@
   background: rgba(255, 255, 255, 0.04) !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
   color: rgba(225, 231, 238, 0.92) !important;
+  border-radius: 8px !important;
 }
 [data-theme="Nebula"] .ai-reader-chat input::placeholder,
 [data-theme="Nebula"] .ai-reader-chat textarea::placeholder {
@@ -2667,6 +2876,16 @@
 [data-theme="Nebula"] .ai-reader-chat div[style*="background: rgb(245, 245, 245)"] {
   background: rgba(128, 207, 255, 0.06) !important;
   color: rgba(225, 231, 238, 0.92) !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(128, 207, 255, 0.12);
+}
+
+/* 用户消息气泡 + 发送按钮：圆角 */
+[data-theme="Nebula"] .ai-reader-chat div[style*="background: rgb(0, 82, 217)"] {
+  border-radius: 10px !important;
+}
+[data-theme="Nebula"] .ai-reader-chat button[style*="background: rgb(0, 82, 217)"] {
+  border-radius: 8px !important;
 }
 
 /* 发送按钮 disabled 状态 #f0f0f0 / #ccc → 暗底 */
@@ -2698,6 +2917,87 @@
 [data-theme="Nebula"] .ai-reader-chat .ai-reader-md blockquote {
   border-left-color: var(--nebula-blue-accent) !important;
   color: rgba(225, 231, 238, 0.7) !important;
+}
+
+/* ─── AI 聊天气泡（首页 / 列表页等非文章页浮动）暗色适配 ───
+   AIChatBubble 组件 inline 写死浅色（白底 / #1a1a1a 字 / #f4f6f8 气泡 /
+   #888 提示），Nebula 主题用类钩子整体翻深 */
+
+/* 折叠态浮标按钮：底色保留品牌蓝，文字 inline 是 #fff —— 改成深色对比 */
+[data-theme="Nebula"] .ai-chat-bubble-fab {
+  color: var(--nebula-navy-deep) !important;
+  background: var(--nebula-blue-accent) !important;
+  box-shadow: 0 4px 16px rgba(128, 207, 255, 0.32) !important;
+}
+[data-theme="Nebula"] .ai-chat-bubble-fab:hover {
+  background: var(--nebula-sky-hover) !important;
+}
+
+/* 展开面板容器 */
+[data-theme="Nebula"] .ai-chat-bubble-panel {
+  background: rgba(15, 17, 21, 0.96) !important;
+  border-color: rgba(128, 207, 255, 0.2) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7) !important;
+  color: rgba(225, 231, 238, 0.92);
+}
+
+/* Header 分割线 + 文字 */
+[data-theme="Nebula"] .ai-chat-bubble-header {
+  border-bottom-color: rgba(128, 207, 255, 0.16) !important;
+}
+[data-theme="Nebula"] .ai-chat-bubble-name {
+  color: var(--nebula-white) !important;
+}
+[data-theme="Nebula"] .ai-chat-bubble-status {
+  color: rgba(225, 231, 238, 0.55) !important;
+}
+[data-theme="Nebula"] .ai-chat-bubble-close {
+  color: rgba(225, 231, 238, 0.5) !important;
+}
+[data-theme="Nebula"] .ai-chat-bubble-close:hover {
+  color: var(--nebula-white) !important;
+}
+
+/* 空状态提示 */
+[data-theme="Nebula"] .ai-chat-bubble-empty {
+  color: rgba(225, 231, 238, 0.5) !important;
+}
+
+/* 消息气泡：assistant 翻深，user 保留品牌蓝但文字翻黑 */
+[data-theme="Nebula"] .ai-chat-bubble-msg--assistant {
+  background: rgba(128, 207, 255, 0.08) !important;
+  color: rgba(225, 231, 238, 0.92) !important;
+  border: 1px solid rgba(128, 207, 255, 0.14);
+}
+[data-theme="Nebula"] .ai-chat-bubble-msg--user {
+  color: var(--nebula-navy-deep) !important;
+  background: var(--nebula-blue-accent) !important;
+}
+
+/* 输入区分割线 + 输入框 */
+[data-theme="Nebula"] .ai-chat-bubble-input-bar {
+  border-top-color: rgba(128, 207, 255, 0.16) !important;
+  background: rgba(0, 0, 0, 0.25);
+}
+[data-theme="Nebula"] .ai-chat-bubble-input {
+  background: rgba(15, 17, 21, 0.6) !important;
+  color: rgba(225, 231, 238, 0.92) !important;
+  border-color: rgba(128, 207, 255, 0.18) !important;
+}
+[data-theme="Nebula"] .ai-chat-bubble-input::placeholder {
+  color: rgba(225, 231, 238, 0.4);
+}
+[data-theme="Nebula"] .ai-chat-bubble-input:focus {
+  border-color: rgba(128, 207, 255, 0.4) !important;
+}
+
+/* 发送按钮：底色保留品牌蓝，inline #fff 文字翻黑 */
+[data-theme="Nebula"] .ai-chat-bubble-send {
+  color: var(--nebula-navy-deep) !important;
+  background: var(--nebula-blue-accent) !important;
+}
+[data-theme="Nebula"] .ai-chat-bubble-send:hover:not(:disabled) {
+  background: var(--nebula-sky-hover) !important;
 }
 
 /* 时间 / 中点分隔符 / 楼层号 在暗底上提亮 */
@@ -2739,6 +3039,7 @@
 [data-theme="Nebula"] .nebula-footer {
   border-top: 1px solid var(--nebula-border-subtle);
   background: var(--nebula-black);
+  position: relative; /* 给 .nebula-back-to-top 做绝对定位的参照 */
 }
 
 [data-theme="Nebula"] .nebula-footer-row {
@@ -2804,12 +3105,12 @@
 }
 
 [data-theme="Nebula"] .nebula-footer-flag {
-  width: 16px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   object-fit: cover;
-  vertical-align: -2px;
-  border-radius: 1px;
-  /* 国旗保持原色，不灰化 */
+  vertical-align: -3px;
+  border-radius: 0;
+  /* 国旗保持原色，不灰化；1x1 正方形小角标 */
 }
 
 [data-theme="Nebula"] .nebula-footer-stat-label {
@@ -2859,20 +3160,22 @@
   opacity: 1;
 }
 
-/* ICP 备案盾形 icon：SVG 内 fill 写死 #0649D0（深品牌蓝）跟主题不搭，
-   用 CSS 覆盖 path fill 改成 Nebula 天蓝；默认半透灰、hover 还原 */
+/* ICP 备案盾形 icon：SVG 内 fill 写死 #0649D0（品牌蓝）。
+   默认翻成灰色（跟旁边其它备案文字/链接同色调），hover 才恢复成
+   Nebula 天蓝。之前默认就是蓝色，跟"备案号默认灰、hover 高亮"的
+   一致体验对不上 */
 [data-theme="Nebula"] .nebula-footer-icp-icon {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  opacity: 0.55;
   transition: opacity 0.2s ease;
 }
 [data-theme="Nebula"] .nebula-footer-icp-icon path {
-  fill: var(--nebula-blue-accent) !important;
+  fill: rgba(225, 231, 238, 0.5) !important;
+  transition: fill 0.2s ease;
 }
-[data-theme="Nebula"] .nebula-footer-beian:hover .nebula-footer-icp-icon {
-  opacity: 1;
+[data-theme="Nebula"] .nebula-footer-beian:hover .nebula-footer-icp-icon path {
+  fill: var(--nebula-blue-accent) !important;
 }
 
 /* 链接组（右） */
@@ -2902,9 +3205,12 @@
   font-size: 10px;
 }
 
-/* RSS / Utterlog logo / 登录按钮 三个 icon 按钮统一为 24×24 外框 + 内部
-   元素严格 16×16，三个视觉重量完全一致 */
-[data-theme="Nebula"] .nebula-footer-links a[title="RSS"],
+/* 音乐 / RSS / Utterlog logo / 登录按钮 —— 统一 24×24 外框 + 22%
+   squircle 圆角（小米 / iOS logo 风格） + 半透明深底 + 蓝细边，整体呈
+   "图标在中心 + 外边框"的 logo 形状。hover 1.2x 弹簧放大 */
+[data-theme="Nebula"] .nebula-footer-music-btn,
+[data-theme="Nebula"] .nebula-footer-links a[title="音乐"],
+[data-theme="Nebula"] .nebula-footer-rss-btn,
 [data-theme="Nebula"] .nebula-footer-tag,
 [data-theme="Nebula"] .nebula-footer-auth-btn {
   width: 24px !important;
@@ -2916,9 +3222,240 @@
   flex-shrink: 0;
   box-sizing: border-box;
   overflow: hidden;
+  border-radius: 22% !important;       /* 小米 / iOS 风 squircle */
+  background: rgba(15, 17, 21, 0.6) !important;
+  border: 1px solid rgba(128, 207, 255, 0.2) !important;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-color 0.15s ease,
+              background 0.15s ease !important;
 }
-/* 三种内部元素都强制 16×16 */
-[data-theme="Nebula"] .nebula-footer-links a[title="RSS"] i {
+[data-theme="Nebula"] .nebula-footer-music-btn:hover,
+[data-theme="Nebula"] .nebula-footer-links a[title="音乐"]:hover,
+[data-theme="Nebula"] .nebula-footer-rss-btn:hover,
+[data-theme="Nebula"] .nebula-footer-tag:hover,
+[data-theme="Nebula"] .nebula-footer-auth-btn:hover {
+  transform: scale(1.2) !important;
+  border-color: rgba(128, 207, 255, 0.4) !important;
+  background: rgba(20, 24, 30, 0.85) !important;
+}
+[data-theme="Nebula"] .nebula-footer-music-btn,
+[data-theme="Nebula"] .nebula-footer-rss-btn {
+  cursor: pointer;
+}
+/* RSS 复制成功 1.8s 内：图标变绿对号 */
+[data-theme="Nebula"] .nebula-footer-rss-btn.is-copied i {
+  color: #4ade80 !important; /* tailwind green-400，跟 toast 成功色一致 */
+}
+[data-theme="Nebula"] .nebula-footer-rss-btn.is-copied {
+  cursor: default;
+}
+/* mini-player 打开时音乐按钮：visibility:hidden 占位但不可见，
+   保证后排 RSS / Logo / 头像 三个按钮位置不跟着前移 */
+[data-theme="Nebula"] .nebula-footer-music-btn.is-hidden {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* ─── 回到顶部按钮（footer 右侧、container 之外，垂直居中） ───
+   独立浮在 footer 右内边距 20px，36×36 squircle，毛玻璃 + 蓝细边 */
+[data-theme="Nebula"] .nebula-back-to-top {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 17, 21, 0.92);
+  border: 1px solid rgba(128, 207, 255, 0.2);
+  border-radius: 22%;
+  color: rgba(225, 231, 238, 0.7);
+  font-size: 14px;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+          backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.2s ease,
+              color 0.15s ease,
+              background 0.15s ease,
+              border-color 0.15s ease;
+}
+[data-theme="Nebula"] .nebula-back-to-top:hover {
+  transform: translateY(-50%) scale(1.12);
+  color: var(--nebula-white);
+  border-color: rgba(128, 207, 255, 0.4);
+  background: rgba(20, 24, 30, 0.96);
+}
+[data-theme="Nebula"] .nebula-back-to-top i {
+  font-size: 14px;
+  line-height: 1;
+}
+/* 滚动 ≤ 400px：占位但不可见 + 不可点 */
+[data-theme="Nebula"] .nebula-back-to-top.is-hidden {
+  visibility: hidden !important;
+  opacity: 0;
+  pointer-events: none !important;
+}
+@media (max-width: 640px) {
+  [data-theme="Nebula"] .nebula-back-to-top {
+    right: 12px;
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ─── 迷你音乐播放器（左下角浮动） ─── */
+[data-theme="Nebula"] .nebula-mini-music {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 320px;
+  padding: 10px 12px;
+  background: rgba(15, 17, 21, 0.92);
+  border: 1px solid rgba(128, 207, 255, 0.18);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+          backdrop-filter: blur(20px) saturate(160%);
+  color: var(--nebula-white);
+  animation: nebulaMiniMusicIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* lift 滚动避让 footer 时平滑过渡 */
+  transition: transform 0.2s ease-out;
+}
+@keyframes nebulaMiniMusicIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 封面 */
+[data-theme="Nebula"] .nebula-mini-music-cover {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(128, 207, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nebula-blue-light);
+  text-decoration: none;
+  transition: transform 0.25s ease;
+}
+[data-theme="Nebula"] .nebula-mini-music-cover:hover {
+  transform: scale(1.05);
+}
+[data-theme="Nebula"] .nebula-mini-music-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* 标题 + 艺人 */
+[data-theme="Nebula"] .nebula-mini-music-info {
+  flex: 1;
+  min-width: 0;
+}
+[data-theme="Nebula"] .nebula-mini-music-title {
+  font-family: var(--nebula-font-display);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nebula-white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-theme="Nebula"] .nebula-mini-music-artist {
+  font-family: var(--nebula-font-mono);
+  font-size: 11px;
+  color: rgba(225, 231, 238, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* 控制按钮 */
+[data-theme="Nebula"] .nebula-mini-music-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+[data-theme="Nebula"] .nebula-mini-music-ctrl button {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: rgba(225, 231, 238, 0.7);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+[data-theme="Nebula"] .nebula-mini-music-ctrl button:hover {
+  color: var(--nebula-white);
+  background: rgba(255, 255, 255, 0.06);
+}
+[data-theme="Nebula"] .nebula-mini-music-play {
+  width: 30px !important;
+  height: 30px !important;
+  background: var(--nebula-blue-accent) !important;
+  color: var(--nebula-navy-deep) !important;
+  font-size: 12px !important;
+}
+[data-theme="Nebula"] .nebula-mini-music-play:hover {
+  background: var(--nebula-sky-hover) !important;
+  color: var(--nebula-navy-deep) !important;
+}
+
+/* 关闭 × */
+[data-theme="Nebula"] .nebula-mini-music-close {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: rgba(225, 231, 238, 0.5);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+  margin-left: 4px;
+}
+[data-theme="Nebula"] .nebula-mini-music-close:hover {
+  color: var(--nebula-white);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 640px) {
+  [data-theme="Nebula"] .nebula-mini-music {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+  }
+}
+
+/* 三种内部元素都强制 16×16 + 统一 60% 白图标色 */
+[data-theme="Nebula"] .nebula-footer-music-btn i,
+[data-theme="Nebula"] .nebula-footer-links a[title="音乐"] i,
+[data-theme="Nebula"] .nebula-footer-rss-btn i {
   font-size: 16px !important;
   line-height: 1 !important;
   width: 16px !important;
@@ -2926,6 +3463,13 @@
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+[data-theme="Nebula"] .nebula-footer-music-btn:hover i,
+[data-theme="Nebula"] .nebula-footer-links a[title="音乐"]:hover i,
+[data-theme="Nebula"] .nebula-footer-rss-btn:hover i,
+[data-theme="Nebula"] .nebula-footer-auth-btn:hover i {
+  color: var(--nebula-sky) !important;
 }
 [data-theme="Nebula"] .nebula-footer-tag .nebula-footer-utterlog-logo {
   width: 16px !important;
@@ -2941,17 +3485,26 @@
   height: 16px !important;
   display: block !important;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: 22%; /* 跟外层 22% squircle 一致，避免 gravatar 白底突兀 */
+  background: rgba(255, 255, 255, 0.06); /* 透明头像下兜底色，不再是纯白 */
 }
-/* Utterlog logo 链接：默认灰、hover sky 蓝（尺寸由上方统一规则决定，这里只控颜色） */
+/* 未登录占位 fa-user 图标颜色统一 */
+[data-theme="Nebula"] .nebula-footer-auth-btn i {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+/* Utterlog logo 链接：默认与音乐/RSS 一样的 60% 白（之前 35% 太暗），
+   hover sky 蓝，跟其他三个按钮视觉重量对齐 */
 [data-theme="Nebula"] .nebula-footer-tag {
-  color: rgba(255, 255, 255, 0.35) !important;
-  transition: color 0.2s ease, background 0.2s ease;
-  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: color 0.2s ease, background 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 [data-theme="Nebula"] .nebula-footer-tag:hover {
   color: var(--nebula-sky) !important;
-  background: rgba(128, 207, 255, 0.08) !important;
+}
+/* logo 内部 cutout 用透明而不是纯黑，避免 footer 黑底上看不到内圈线条
+   currentColor 控制外圆，inner 透明让背景透出做出"双色"效果 */
+[data-theme="Nebula"] .nebula-footer-tag .nebula-footer-utterlog-logo path:nth-child(2) {
+  fill: var(--nebula-black) !important;
 }
 
 /* ── 登录按钮 + 弹窗 ── */
@@ -2960,17 +3513,15 @@
   display: inline-flex;
 }
 
+/* 登录按钮的 box / 边框 / 圆角 / hover 全部由上面"音乐/RSS/Logo/登录"
+   统一规则负责（24×24 + 22% squircle + 蓝细边 + 半透深底）。这里
+   只剩下文字色钩子（避免重复声明背景色把上面的覆盖掉） */
 [data-theme="Nebula"] .nebula-footer-auth-btn {
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
   color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
 }
 [data-theme="Nebula"] .nebula-footer-auth-btn:hover {
   color: var(--nebula-sky);
-  background: rgba(128, 207, 255, 0.08);
 }
 
 /* 弹窗：从按钮上方弹出 */
@@ -3124,36 +3675,55 @@
   flex: 2;
 }
 
-/* 已登录菜单 */
+/* 已登录菜单 —— 注意 menu 本身在 .nebula-footer-links 里面，会被
+   `.nebula-footer-links a { padding/gap/font-size }` (specificity 0,2,1)
+   打中。<Link> 渲染成 <a>、<button> 不会，导致两行 padding/gap 对不上。
+   全部用 !important 盖死，跟 a/button 谁渲染都一致 */
 [data-theme="Nebula"] .nebula-footer-login-menu {
   width: 160px;
   padding: 6px 0;
 }
+[data-theme="Nebula"] .nebula-footer-login-menu .nebula-footer-login-menu-item,
 [data-theme="Nebula"] .nebula-footer-login-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 16px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
-  text-decoration: none;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  text-align: left;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  padding: 8px 16px !important;
+  /* button 元素默认不继承 font-family/size，需要显式重设保证 <Link>(a)
+     和 <button> 两种 tag 的视觉一致 */
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  border: 0 !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  box-sizing: border-box !important;
+  border-radius: 0 !important;
   transition: color 0.15s ease, background 0.15s ease;
 }
-[data-theme="Nebula"] .nebula-footer-login-menu-item:hover {
-  color: var(--nebula-white);
-  background: rgba(255, 255, 255, 0.04);
-}
+/* icon 也强制同样字号 + 固定列宽，确保两个图标对齐到同一基线 */
+[data-theme="Nebula"] .nebula-footer-login-menu .nebula-footer-login-menu-item i,
 [data-theme="Nebula"] .nebula-footer-login-menu-item i {
-  font-size: 12px;
-  color: var(--nebula-sky);
+  font-size: 13px !important;
+  width: 16px !important;
+  text-align: center !important;
+  flex-shrink: 0 !important;
+  color: var(--nebula-sky) !important;
+  line-height: 1 !important;
+}
+[data-theme="Nebula"] .nebula-footer-login-menu .nebula-footer-login-menu-item:hover,
+[data-theme="Nebula"] .nebula-footer-login-menu-item:hover {
+  color: var(--nebula-white) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
 }
 [data-theme="Nebula"] .nebula-footer-login-logout:hover {
-  color: var(--nebula-sky);
+  color: var(--nebula-sky) !important;
 }
 
 /* ============================================================ */
@@ -3180,6 +3750,15 @@
   padding-left: 0 !important;
   padding-right: 0 !important;
   padding-bottom: 0 !important;
+}
+
+/* 友链 / 订阅等页面 inline `padding: '32px'`（四边）—— 跟外层 .nebula-frame
+   > div 的 24/32 padding 双重叠加导致内容缩进过深。这里清掉 inline 的
+   左右 padding，只保留垂直方向，让卡片网格对齐 PageTitle 的左右沿 */
+[data-theme="Nebula"] .nebula-frame > div:not(.nebula-home):not(.nebula-article):not(.nebula-post) > div[style*="padding: 32px"],
+[data-theme="Nebula"] .nebula-frame > div:not(.nebula-home):not(.nebula-article):not(.nebula-post) > div[style*="padding:32px"] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* 裸展示：icon + 标题 + 右侧信息直接落在页面背景上，
@@ -3310,6 +3889,40 @@
   color: var(--nebula-navy-deep);
 }
 
+/* ─── 段落点评弹窗（BlockAnnotation）—— 默认 var(--color-bg-card) 在
+   Nebula 下被映射到 #121212，跟文章正文/底色完全一样，弹窗"消失"在
+   背景里。这里用一个略浮起的深底 + 蓝细边 + 加重阴影区分层次 */
+[data-theme="Nebula"] .block-annotation-panel {
+  background: #1a1d22 !important;
+  border-color: rgba(128, 207, 255, 0.22) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55),
+              0 0 0 1px rgba(128, 207, 255, 0.06) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+          backdrop-filter: blur(20px) saturate(160%);
+}
+/* 内部分割线 / Header / 输入框分割线 都映射成 --color-border / --color-divider
+   全局已经有覆盖，但弹窗顶上 / 底上的 border 默认是 var(--color-border)，
+   在 Nebula 下是低对比 —— 给一个更醒目的蓝调分割 */
+[data-theme="Nebula"] .block-annotation-panel > div[style*="border-bottom"] {
+  border-bottom-color: rgba(128, 207, 255, 0.14) !important;
+}
+[data-theme="Nebula"] .block-annotation-panel > div[style*="border-top"] {
+  border-top-color: rgba(128, 207, 255, 0.14) !important;
+}
+/* 输入框背景：弹窗已是 #1a1d22，输入框继续用 --color-bg-card 的话会
+   再次跟弹窗底色撞色（还是 #121212）。输入框单独翻成更深一档，加蓝边 */
+[data-theme="Nebula"] .block-annotation-input {
+  background: rgba(0, 0, 0, 0.35) !important;
+  border-color: rgba(128, 207, 255, 0.18) !important;
+  color: var(--nebula-white) !important;
+}
+[data-theme="Nebula"] .block-annotation-input::placeholder {
+  color: rgba(225, 231, 238, 0.42);
+}
+[data-theme="Nebula"] .block-annotation-input:focus {
+  border-color: var(--nebula-blue-accent) !important;
+}
+
 /* PostNavigation / Related posts 在 Nebula 容器里时给点上下间距 */
 [data-theme="Nebula"] .nebula-related-wrap > * { margin: 0; }
 
@@ -3324,7 +3937,10 @@
 
 /* moments-page 单一权威规则：
    - 居中 960 max-width 跟全站对齐（JS 锁 cols=3，containerW 870 < 960）
-   - min-height 拉到视口高度，footer 自然落到下方（滚动才显示）
+   - min-height 100dvh + 内部 padding-bottom 120px 双重保险：
+       · 100dvh 让 moments-page 总高至少占满视口，footer 起点 100dvh+64 永远在视口外
+       · padding-bottom: 120px 在 moments-page 内部留出工具栏占据的 86px + 余量，
+         避免内容（最底一行说说卡）被浮动工具栏遮挡
    - 不依赖 flex / :has，避免浏览器实现差异
    - 不要被通用 .nebula-frame > div 规则的 padding 污染（已用 :not 排除） */
 [data-theme="Nebula"] .moments-page {
@@ -3332,8 +3948,8 @@
   max-width: 960px;
   width: 100%;
   margin: 0 auto;
-  padding: 0;
-  min-height: calc(100dvh - 64px);
+  padding: 0 0 120px !important;
+  min-height: 100dvh !important;
 }
 
 /* moments 底部浮动工具栏：默认 inline 是白底 + 黑字 + 米色分隔线，
@@ -3343,7 +3959,8 @@
   border-color: rgba(255, 255, 255, 0.08) !important;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55) !important;
 }
-[data-theme="Nebula"] .moments-toolbar [style*="color:#1a1a1a"] {
+[data-theme="Nebula"] .moments-toolbar [style*="color:#1a1a1a" i],
+[data-theme="Nebula"] .moments-toolbar [style*="color: #1a1a1a" i] {
   color: var(--nebula-white) !important;
 }
 [data-theme="Nebula"] .moments-toolbar [style*="background:#4a9e8e"] {
@@ -3424,17 +4041,55 @@
 }
 /* 标签 chip 默认色 (#7a7670 暖灰文字 / #e2dfd8 暖边) */
 [data-theme="Nebula"] .moments-composer [style*="color:#7a7670"] {
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
 }
-[data-theme="Nebula"] .moments-composer [style*="#e2dfd8"] {
-  border-color: rgba(255, 255, 255, 0.1) !important;
+/* 关键词 / 添加图片 / 位置按钮 默认 #e2dfd8 暖灰边 → Nebula sky 蓝边
+   双保险匹配：
+     · 大小写都覆盖（CSS 默认大小写敏感，加 `i` flag）
+     · 兜底规则：composer 里所有非 submit 的有边框 button 统一处理 */
+[data-theme="Nebula"] .moments-composer [style*="#e2dfd8" i],
+[data-theme="Nebula"] .moments-composer button[style*="1px solid"]:not(.moments-composer-submit) {
+  border-color: rgba(128, 207, 255, 0.28) !important;
+  background: rgba(128, 207, 255, 0.04) !important;
 }
-/* textarea 文字 #2b2a28 暖黑 → 冷白 */
-[data-theme="Nebula"] .moments-composer [style*="color:#2b2a28"] {
+[data-theme="Nebula"] .moments-composer [style*="#e2dfd8" i]:hover,
+[data-theme="Nebula"] .moments-composer button[style*="1px solid"]:not(.moments-composer-submit):hover {
+  border-color: rgba(128, 207, 255, 0.5) !important;
+  background: rgba(128, 207, 255, 0.1) !important;
+  color: var(--nebula-white) !important;
+}
+/* 位置已选中（绿色系）→ 蓝色系，与 Nebula 主题统一 */
+[data-theme="Nebula"] .moments-composer [style*="rgba(74,158,142,0.08)"],
+[data-theme="Nebula"] .moments-composer [style*="rgba(74, 158, 142, 0.08)"] {
+  background: rgba(128, 207, 255, 0.1) !important;
+  color: var(--nebula-blue-accent) !important;
+}
+[data-theme="Nebula"] .moments-composer [style*="rgba(74,158,142,0.2)"],
+[data-theme="Nebula"] .moments-composer [style*="rgba(74, 158, 142, 0.2)"] {
+  border-color: rgba(128, 207, 255, 0.4) !important;
+}
+/* textarea 文字 #2b2a28 暖黑 → 冷白
+   多重匹配 + 直接 textarea 兜底，确保不论 React 怎么序列化都能命中 */
+[data-theme="Nebula"] .moments-composer [style*="color:#2b2a28" i],
+[data-theme="Nebula"] .moments-composer [style*="color: #2b2a28" i],
+[data-theme="Nebula"] .moments-composer textarea {
   color: var(--nebula-white) !important;
 }
 [data-theme="Nebula"] .moments-composer textarea::placeholder {
   color: rgba(255, 255, 255, 0.35) !important;
+}
+/* textarea 始终有 1px 灰边（不聚焦也有），完全去掉浏览器默认 outline */
+[data-theme="Nebula"] .moments-composer textarea {
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 6px !important;
+  padding: 10px 12px !important;
+  box-sizing: border-box;
+}
+[data-theme="Nebula"] .moments-composer textarea:focus,
+[data-theme="Nebula"] .moments-composer textarea:focus-visible {
+  outline: none !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: none !important;
 }
 /* 图片上传 / 取消按钮 #b8b4ad 暖灰 → 半透白 */
 [data-theme="Nebula"] .moments-composer [style*="color:#b8b4ad"] {
@@ -3444,10 +4099,15 @@
 [data-theme="Nebula"] .moments-composer [style*="background:#f5f4f1"] {
   background: rgba(255, 255, 255, 0.04) !important;
 }
-/* footer 顶分隔线 #f0ede8 暖米色 */
-[data-theme="Nebula"] .moments-composer [style*="border-top:1px solid #f0ede8"],
-[data-theme="Nebula"] .moments-composer [style*="border-top: 1px solid #f0ede8"] {
+/* footer 顶分隔线 —— React 序列化 hex 时不一定保留，多重选择器兜底：
+     · attribute matcher 大小写不敏感
+     · 结构匹配：composer 内 wrapper 的最后一个直接子 div 永远是按钮行 */
+[data-theme="Nebula"] .moments-composer [style*="border-top:1px solid #f0ede8" i],
+[data-theme="Nebula"] .moments-composer [style*="border-top: 1px solid #f0ede8" i],
+[data-theme="Nebula"] .moments-composer [style*="#f0ede8" i],
+[data-theme="Nebula"] .moments-composer > div > div:last-child {
   border-top-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 /* 定位按钮激活态：青绿色 #4a9e8e → sky 蓝 */
 [data-theme="Nebula"] .moments-composer [style*="color:#4a9e8e"] {
@@ -3814,13 +4474,21 @@
   border-radius: 8px;
 }
 
-/* ---- /coding 页（globals.css 给的是浅色稿纸视觉）---- */
+/* ---- /coding 页（globals.css 给的是浅色稿纸视觉）----
+   宽度收到 960，跟 Nebula 其他页面（friend links / archives / search 等）
+   保持一致；section / grid 通过覆盖 CSS 变量 --coding-content-width 拉齐 */
 [data-theme="Nebula"] .coding-page {
-  background: var(--nebula-black);
+  --coding-content-width: min(960px, calc(100% - 48px));
+  background: #121212 !important;
   color: var(--nebula-white);
 }
 [data-theme="Nebula"] .coding-hero {
-  background-color: var(--nebula-black);
+  max-width: 960px;
+  margin-inline: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  box-sizing: border-box;
+  background-color: #121212 !important;
   background-image:
     linear-gradient(rgba(168, 199, 250, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(168, 199, 250, 0.04) 1px, transparent 1px);
@@ -3835,6 +4503,22 @@
 [data-theme="Nebula"] .coding-section-head h3 em {
   color: var(--nebula-sky); /* 原 #8f2f24 burgundy → 天蓝 */
 }
+/* "代码持续生长" 中文主标 字号 -5px */
+[data-theme="Nebula"] .coding-hero-title span {
+  font-size: 67px !important;
+}
+/* "Code keeps moving, one commit at a time." 单行显示不换行 */
+[data-theme="Nebula"] .coding-hero-title em {
+  font-size: 34px !important;
+  white-space: nowrap !important;
+}
+/* 副标双语：中文 21px / 英文 15px（两个 span 分开控制） */
+[data-theme="Nebula"] .coding-hero-copy {
+  font-size: 21px !important;
+}
+[data-theme="Nebula"] .coding-hero-copy span:last-child {
+  font-size: 15px !important;
+}
 [data-theme="Nebula"] .coding-notice {
   background: var(--nebula-tile);
   border-color: var(--nebula-border-blue-soft);
@@ -3842,25 +4526,42 @@
   border-radius: 15px;
 }
 
-/* coding 热力图：浅蓝阶梯 → 深蓝阶梯 */
+/* coding 热力图：GitHub 绿色阶梯（4 级 + 空白）
+   颜色取自 GitHub dark contribution graph：
+   blank #161b22 / l1 #0e4429 / l2 #006d32 / l3 #26a641 / l4 #39d353 */
+[data-theme="Nebula"] .coding-heatmap-cell {
+  background: #161b22 !important; /* 兜底：所有 cell 默认深底（globals 默认 #e9edf3 浅） */
+}
 [data-theme="Nebula"] .coding-heatmap-cell.level-blank {
-  background: var(--nebula-near-black) !important;
+  background: #161b22 !important;
 }
 [data-theme="Nebula"] .coding-heatmap-cell.level-1,
 [data-theme="Nebula"] .coding-heatmap-legend i.level-1 {
-  background: rgba(127, 207, 255, 0.18) !important;
+  background: #0e4429 !important;
 }
 [data-theme="Nebula"] .coding-heatmap-cell.level-2,
 [data-theme="Nebula"] .coding-heatmap-legend i.level-2 {
-  background: rgba(127, 207, 255, 0.4) !important;
+  background: #006d32 !important;
 }
 [data-theme="Nebula"] .coding-heatmap-cell.level-3,
 [data-theme="Nebula"] .coding-heatmap-legend i.level-3 {
-  background: rgba(127, 207, 255, 0.65) !important;
+  background: #26a641 !important;
 }
 [data-theme="Nebula"] .coding-heatmap-cell.level-4,
 [data-theme="Nebula"] .coding-heatmap-legend i.level-4 {
-  background: var(--nebula-sky) !important;
+  background: #39d353 !important;
+}
+/* 图例默认（无 level 类）方块也用深底 */
+[data-theme="Nebula"] .coding-heatmap-legend i {
+  background: #161b22 !important;
+}
+/* 图例文字 #555 灰 → 半透白 */
+[data-theme="Nebula"] .coding-heatmap-legend {
+  color: rgba(225, 231, 238, 0.55) !important;
+}
+/* 头像边框 #d4d4d4 → 蓝细边 */
+[data-theme="Nebula"] .coding-heatmap-avatar {
+  border-color: rgba(128, 207, 255, 0.18) !important;
 }
 
 /* ---- highlight.js 配色（globals.css 内 .hljs-* 是 Gruvbox light）---- */
@@ -3920,19 +4621,21 @@
 }
 
 /* ---- code-block-wrapper（PostContent 渲染的代码块外层）---- */
-/* globals: border-radius:0; collapsed::after 用 #1d1f21 渐变兜底 */
+/* globals: border-radius:0; collapsed::after 用 #1d1f21 渐变兜底
+   底色统一 #0a0d14（跟上面 .blog-prose pre 一致）—— 跟文章卡片
+   #131314 拉开 9 个亮度档，代码块边界肉眼可见 */
 [data-theme="Nebula"] .code-block-wrapper {
   border-radius: 15px;
   border: 1px solid var(--nebula-border-subtle);
 }
 [data-theme="Nebula"] .code-block-wrapper pre {
-  background: var(--nebula-input) !important;
+  background: #0a0d14 !important;
 }
 [data-theme="Nebula"] .code-block-wrapper.collapsed::after {
-  background: linear-gradient(transparent, var(--nebula-input));
+  background: linear-gradient(transparent, #0a0d14);
 }
 [data-theme="Nebula"] .code-expand-btn {
-  background: var(--nebula-input);
+  background: #0a0d14;
   color: var(--nebula-blue-light);
   border-top-color: var(--nebula-border-subtle);
 }
@@ -3946,6 +4649,91 @@
 [data-theme="Nebula"] .code-copy-btn:hover {
   background: rgba(225, 231, 238, 0.16);
   color: var(--nebula-white);
+}
+
+/* ─── Prism token 配色（参考 Azure 用 prism-tomorrow，但调成 Nebula
+       蓝调暖色平衡；优先级用 [data-theme] + .blog-prose pre 顶到 (0,4,2)
+       以上，确保 prism-tomorrow 默认色被取代，且不被任何兜底 color 吃掉） ─── */
+[data-theme="Nebula"] .blog-prose pre .token.comment,
+[data-theme="Nebula"] .blog-prose pre .token.block-comment,
+[data-theme="Nebula"] .blog-prose pre .token.prolog,
+[data-theme="Nebula"] .blog-prose pre .token.doctype,
+[data-theme="Nebula"] .blog-prose pre .token.cdata {
+  color: rgba(225, 231, 238, 0.42);
+  font-style: italic;
+}
+[data-theme="Nebula"] .blog-prose pre .token.punctuation {
+  color: rgba(225, 231, 238, 0.62);
+}
+[data-theme="Nebula"] .blog-prose pre .token.tag,
+[data-theme="Nebula"] .blog-prose pre .token.attr-name,
+[data-theme="Nebula"] .blog-prose pre .token.namespace,
+[data-theme="Nebula"] .blog-prose pre .token.deleted {
+  color: #FF9694;
+}
+[data-theme="Nebula"] .blog-prose pre .token.function-name {
+  color: #A0DDFF;
+}
+[data-theme="Nebula"] .blog-prose pre .token.boolean,
+[data-theme="Nebula"] .blog-prose pre .token.number,
+[data-theme="Nebula"] .blog-prose pre .token.function {
+  color: #FFB36B;
+}
+[data-theme="Nebula"] .blog-prose pre .token.property,
+[data-theme="Nebula"] .blog-prose pre .token.class-name,
+[data-theme="Nebula"] .blog-prose pre .token.constant,
+[data-theme="Nebula"] .blog-prose pre .token.symbol {
+  color: #FFD56B;
+}
+[data-theme="Nebula"] .blog-prose pre .token.selector,
+[data-theme="Nebula"] .blog-prose pre .token.important,
+[data-theme="Nebula"] .blog-prose pre .token.atrule,
+[data-theme="Nebula"] .blog-prose pre .token.keyword,
+[data-theme="Nebula"] .blog-prose pre .token.builtin {
+  color: var(--nebula-blue-accent);
+}
+[data-theme="Nebula"] .blog-prose pre .token.string,
+[data-theme="Nebula"] .blog-prose pre .token.char,
+[data-theme="Nebula"] .blog-prose pre .token.attr-value,
+[data-theme="Nebula"] .blog-prose pre .token.regex,
+[data-theme="Nebula"] .blog-prose pre .token.variable {
+  color: #B5E48C;
+}
+[data-theme="Nebula"] .blog-prose pre .token.operator,
+[data-theme="Nebula"] .blog-prose pre .token.entity,
+[data-theme="Nebula"] .blog-prose pre .token.url {
+  color: #67CDCC;
+}
+[data-theme="Nebula"] .blog-prose pre .token.important,
+[data-theme="Nebula"] .blog-prose pre .token.bold {
+  font-weight: 600;
+}
+[data-theme="Nebula"] .blog-prose pre .token.italic {
+  font-style: italic;
+}
+[data-theme="Nebula"] .blog-prose pre .token.inserted {
+  color: #4ade80;
+}
+
+/* 代码块内默认行文本 / 行号 */
+[data-theme="Nebula"] .blog-prose pre code[class*="language-"],
+[data-theme="Nebula"] .blog-prose pre[class*="language-"] {
+  color: rgba(225, 231, 238, 0.92);
+  background: transparent;
+  text-shadow: none;
+}
+[data-theme="Nebula"] .blog-prose pre .line-number-style {
+  color: rgba(225, 231, 238, 0.32) !important;
+  border-right: 1px solid rgba(128, 207, 255, 0.12);
+  padding-right: 0.8em;
+  margin-right: 0.8em;
+}
+/* 高亮整行 */
+[data-theme="Nebula"] .blog-prose pre .code-line.highlight-line {
+  background: rgba(128, 207, 255, 0.08);
+  border-left: 3px solid var(--nebula-blue-accent);
+  margin-left: -20px;
+  padding-left: 17px;
 }
 
 /* ---- md-download-card：tokens 化已支持，对齐到 Nebula ---- */
@@ -4035,6 +4823,10 @@
   cursor: pointer; font-size: 12px;
   transition: color 0.15s ease, background 0.15s ease;
 }
+/* 4 个按钮之间加 1px 竖线分隔（最后一个不加） */
+[data-theme="Nebula"] .links-view-btn:not(:last-child) {
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
 [data-theme="Nebula"] .links-view-btn:hover {
   color: var(--nebula-white); background: rgba(255, 255, 255, 0.04);
 }
@@ -4064,6 +4856,335 @@
 [data-theme="Nebula"] .friend-link-card-item .friend-link-logo {
   width: 40px; height: 40px;
 }
+
+/* 分组标题（"默认 / 学习 / 朋友 ..."）—— inline 写死 #1a1a1a 暗色 + #999
+   计数灰，在 Nebula 黑底上几乎看不见。同时用 className 钩子（更稳）+
+   inline style attr matcher（兜底）双重命中 */
+[data-theme="Nebula"] .friend-link-group-title,
+[data-theme="Nebula"] [style*="color:#1a1a1a" i],
+[data-theme="Nebula"] [style*="color: #1a1a1a" i] {
+  color: var(--nebula-white) !important;
+}
+[data-theme="Nebula"] .friend-link-group-count,
+[data-theme="Nebula"] [style*="color:#999" i],
+[data-theme="Nebula"] [style*="color: #999" i] {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* ─── 随机友链骰子弹窗（极简风）───
+   全屏磨砂遮罩 + 居中大骰子 + 结果卡 + 倒计时按钮
+   状态：idle (隐藏) / rolling (摇 1.2s) / result (5s 倒计时) */
+[data-theme="Nebula"] .dice-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.65);
+  -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: nebulaDiceFadeIn 0.2s ease-out;
+}
+
+@keyframes nebulaDiceFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+[data-theme="Nebula"] .dice-modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  max-width: 420px;
+  width: 100%;
+  padding: 32px;
+}
+
+[data-theme="Nebula"] .dice-modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  font-size: 16px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+[data-theme="Nebula"] .dice-modal-close:hover {
+  color: var(--nebula-white);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+}
+
+/* 大骰子图标 */
+[data-theme="Nebula"] .dice-icon {
+  font-size: 160px;
+  line-height: 1;
+  color: var(--nebula-white);
+  filter: drop-shadow(0 0 40px rgba(128, 207, 255, 0.45));
+}
+[data-theme="Nebula"] .dice-icon--rolling {
+  animation: nebulaDiceRoll 0.5s linear infinite;
+}
+[data-theme="Nebula"] .dice-icon--result {
+  font-size: 96px;
+  transition: font-size 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.35s ease;
+  filter: drop-shadow(0 0 24px rgba(128, 207, 255, 0.35));
+}
+
+@keyframes nebulaDiceRoll {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+[data-theme="Nebula"] .dice-hint {
+  margin: 0;
+  font-family: var(--nebula-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+}
+
+/* 结果卡片（玻璃磨砂） */
+[data-theme="Nebula"] .dice-result-card {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  -webkit-backdrop-filter: blur(20px);
+          backdrop-filter: blur(20px);
+  animation: nebulaDiceCardIn 0.3s ease-out;
+}
+
+@keyframes nebulaDiceCardIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+[data-theme="Nebula"] .dice-result-card .friend-link-logo {
+  width: 48px !important;
+  height: 48px !important;
+  flex-shrink: 0;
+}
+[data-theme="Nebula"] .dice-result-info {
+  flex: 1;
+  min-width: 0;
+}
+[data-theme="Nebula"] .dice-result-info h3 {
+  margin: 0 0 4px;
+  font-family: var(--nebula-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nebula-white);
+}
+[data-theme="Nebula"] .dice-result-info p {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: rgba(225, 231, 238, 0.7);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+[data-theme="Nebula"] .dice-result-url {
+  font-family: var(--nebula-font-mono);
+  font-size: 11px;
+  color: var(--nebula-blue-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 操作按钮区 */
+[data-theme="Nebula"] .dice-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+[data-theme="Nebula"] .dice-actions button {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--nebula-font-display);
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+[data-theme="Nebula"] .dice-btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(225, 231, 238, 0.85);
+}
+[data-theme="Nebula"] .dice-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--nebula-white);
+}
+[data-theme="Nebula"] .dice-btn-primary {
+  background: var(--nebula-blue-accent);
+  border: 1px solid var(--nebula-blue-accent);
+  color: var(--nebula-navy-deep);
+  font-weight: 600;
+}
+[data-theme="Nebula"] .dice-btn-primary:hover {
+  background: var(--nebula-sky-hover);
+  border-color: var(--nebula-sky-hover);
+}
+
+@media (max-width: 640px) {
+  [data-theme="Nebula"] .dice-icon { font-size: 120px; }
+  [data-theme="Nebula"] .dice-icon--result { font-size: 72px; }
+  [data-theme="Nebula"] .dice-modal-content { padding: 20px; gap: 18px; }
+}
+
+/* 友链页右上角"骰子 / +" 方形按钮 —— 跟 Header dice 视觉一致 */
+[data-theme="Nebula"] .links-action-btn {
+  border: 1px solid rgba(128, 207, 255, 0.25) !important;
+  background: rgba(128, 207, 255, 0.04) !important;
+  color: rgba(225, 231, 238, 0.75) !important;
+}
+[data-theme="Nebula"] .links-action-btn:hover {
+  border-color: var(--nebula-blue-accent) !important;
+  background: rgba(128, 207, 255, 0.12) !important;
+  color: var(--nebula-blue-accent) !important;
+}
+
+/* ── 申请友链弹窗暗色适配 —— 用结构选择器代替 inline-style 字符串匹配
+   ── inline JS handlers (onFocus/onBlur/onMouseEnter) 设的颜色浏览器
+      可能序列化成 rgb()，hex matcher 不可靠；用元素结构 + 通配规则
+      硬覆盖所有内部样式 ── */
+
+[data-theme="Nebula"] .links-apply-backdrop {
+  background: rgba(0, 0, 0, 0.6) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+          backdrop-filter: blur(8px) !important;
+}
+[data-theme="Nebula"] .links-apply-modal {
+  background: var(--nebula-tile) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6) !important;
+  color: var(--nebula-white) !important;
+}
+
+/* 弹窗内所有 div / p / h1-h6 / span / label —— 强制继承父级文字色 */
+[data-theme="Nebula"] .links-apply-modal h1,
+[data-theme="Nebula"] .links-apply-modal h2,
+[data-theme="Nebula"] .links-apply-modal h3 {
+  color: var(--nebula-white) !important;
+}
+[data-theme="Nebula"] .links-apply-modal label {
+  color: rgba(225, 231, 238, 0.7) !important;
+}
+[data-theme="Nebula"] .links-apply-modal p {
+  color: rgba(225, 231, 238, 0.6) !important;
+}
+
+/* 弹窗内所有分隔线 —— header / footer 是 .links-apply-modal 的直接子 div，
+   不是孙子层。同时覆盖底部边、顶部边两个方向 */
+[data-theme="Nebula"] .links-apply-modal > div {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme="Nebula"] .links-apply-modal > div[style*="border-bottom"],
+[data-theme="Nebula"] .links-apply-modal > div[style*="border-top"] {
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* footer bar 浅底 #fafafa —— 同时兜底 rgb 序列化 */
+[data-theme="Nebula"] .links-apply-modal [style*="#fafafa" i],
+[data-theme="Nebula"] .links-apply-modal [style*="rgb(250, 250, 250)" i],
+[data-theme="Nebula"] .links-apply-modal [style*="rgb(250,250,250)" i] {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* 关闭按钮 hover 浅底 #f5f5f5（JS 动态设置，可能 rgb 化） */
+[data-theme="Nebula"] .links-apply-modal [style*="#f5f5f5" i],
+[data-theme="Nebula"] .links-apply-modal [style*="rgb(245, 245, 245)" i],
+[data-theme="Nebula"] .links-apply-modal [style*="rgb(245,245,245)" i] {
+  background: rgba(128, 207, 255, 0.1) !important;
+}
+
+/* 输入框：用元素选择器整体覆盖 background / border / text / placeholder */
+[data-theme="Nebula"] .links-apply-modal input,
+[data-theme="Nebula"] .links-apply-modal textarea {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: var(--nebula-white) !important;
+}
+[data-theme="Nebula"] .links-apply-modal input::placeholder,
+[data-theme="Nebula"] .links-apply-modal textarea::placeholder {
+  color: rgba(225, 231, 238, 0.35) !important;
+}
+/* focus 态 —— 覆盖 onFocus 设的 var(--color-primary)（Nebula 解析成 sky） */
+[data-theme="Nebula"] .links-apply-modal input:focus,
+[data-theme="Nebula"] .links-apply-modal textarea:focus {
+  border-color: var(--nebula-blue-accent) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+/* JS 在 onBlur 把 borderColor 重设为 #d9d9d9，覆盖一次 */
+[data-theme="Nebula"] .links-apply-modal input:not(:focus),
+[data-theme="Nebula"] .links-apply-modal textarea:not(:focus) {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* 关闭按钮（header 右上 ✕）—— transparent / 灰字 / hover 灰字 */
+[data-theme="Nebula"] .links-apply-modal > div:first-child button {
+  color: rgba(225, 231, 238, 0.5) !important;
+}
+[data-theme="Nebula"] .links-apply-modal > div:first-child button:hover {
+  color: var(--nebula-white) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* footer 取消按钮（白底 + 灰边 + 灰字）—— 第一个 footer button */
+[data-theme="Nebula"] .links-apply-modal > div:last-child button:first-child {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: rgba(225, 231, 238, 0.85) !important;
+}
+[data-theme="Nebula"] .links-apply-modal > div:last-child button:first-child:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* footer 提交申请按钮（var(--color-primary) 蓝胶囊）—— 字色加深、加粗 */
+[data-theme="Nebula"] .links-apply-modal > div:last-child button:last-child {
+  background: var(--nebula-blue-accent) !important;
+  border: none !important;
+  color: var(--nebula-navy-deep) !important;
+  font-weight: 600 !important;
+}
+[data-theme="Nebula"] .links-apply-modal > div:last-child button:last-child:hover {
+  background: var(--nebula-sky-hover) !important;
+}
+
+/* 头像兜底白底已下移到 .friend-link-logo 公共规则里（line ~4592），
+   避免两条规则相互覆盖。这里保留注释做指引。 */
 
 /* ── compact 视图 ── 紧凑小条，仅 logo + name */
 [data-theme="Nebula"] .friend-link-compact-grid {
@@ -4441,11 +5562,18 @@
     min-height: 200px;
   }
 }
-/* logo 公共：方形 + 4px 圆角，跟 Nebula 卡片语言一致 */
+/* logo 公共：squircle / 小米 logo 弧度（30% 圆角 + SVG mask 真 squircle）
+   border-radius 是圆弧，跟小米/iOS 真 squircle 数学曲线不一样；
+   用 SVG mask 实现真 squircle（superellipse 形状，曲率连续渐变） */
 [data-theme="Nebula"] .friend-link-logo {
-  background: var(--nebula-near-black) !important;
-  border-radius: 4px;
+  background: #fff !important;
+  border-radius: 30% !important;
   flex-shrink: 0;
+  object-fit: cover;
+  /* 真 squircle mask：M..C..Z 路径用 cubic Bézier 逼近超椭圆 n=4，
+     比 border-radius 的圆弧更接近小米/iOS app icon 的曲率 */
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M0,50 C0,8.5 8.5,0 50,0 C91.5,0 100,8.5 100,50 C100,91.5 91.5,100 50,100 C8.5,100 0,91.5 0,50 Z'/></svg>") no-repeat center / contain;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M0,50 C0,8.5 8.5,0 50,0 C91.5,0 100,8.5 100,50 C100,91.5 91.5,100 50,100 C8.5,100 0,91.5 0,50 Z'/></svg>") no-repeat center / contain;
 }
 [data-theme="Nebula"] .friend-link-name {
   color: var(--nebula-white) !important;

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useThemeContext } from '@/lib/theme-context';
+import { useReaderChatStore } from '@/lib/store';
 import { useReaderScrollReveal } from './useReaderScrollReveal';
 
 interface Message {
@@ -39,6 +40,17 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 跨组件解耦：把"我现在挂载在文章页 + 是否被 dismiss 了" 写到全局
+  // store，footer 据此决定是否显示「重新打开陪读」入口。
+  // dismissed 由用户点 × 设置；mount() / unmount() 在每次进新文章时
+  // 重置 dismissed=false，所以同一文章 dismiss 后只有真正卸载（切文章
+  // 或强制刷新）才能让卡片重新出现。
+  const dismissed = useReaderChatStore(s => s.dismissed);
+  useEffect(() => {
+    useReaderChatStore.getState().mount();
+    return () => useReaderChatStore.getState().unmount();
+  }, []);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -135,17 +147,53 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
     sessionStorage.setItem(`reader_session_${postId}`, sid);
   };
 
-  // 计算 footer 高度
-  const [footerH, setFooterH] = useState(56);
+  // 滚动避让 footer：默认 bottom: 24 贴底，footer 进入视口才上推。
+  // 防御：lift 上限 = 视口高 - 卡片高 - 16（保证卡片顶部至少留 16px 在视口里），
+  // 否则在小视口 / footer 巨大 / 把 footer.rect.top 滑过视口顶部 等场景下，
+  // 卡片会被推到视口外"消失"。
+  //
+  // 注意：必须用 querySelectorAll('footer') 取最后一个 —— Nebula 的
+  // PostPage 里有个 <footer class="nebula-post-foot"> 装文章 tags，DOM
+  // 顺序在主 .nebula-footer 之前；querySelector('footer') 拿到的是它，
+  // 卡片就会去躲那个标签 footer，结果反而被推到视口顶部。
+  //
+  // 滚动容器是 .blog-main（globals.css 给它 overflow-y: scroll !important），
+  // 不是 window。所以两个事件源都得监听。
+  const [bottomOffset, setBottomOffset] = useState(24);
+  const cardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const check = () => {
-      const footer = document.querySelector('footer');
-      if (footer) setFooterH(footer.offsetHeight + 8);
+    const compute = () => {
+      const footers = document.querySelectorAll('footer');
+      const footer = footers[footers.length - 1] as HTMLElement | undefined;
+      if (!footer) { setBottomOffset(24); return; }
+      const rect = footer.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      if (rect.top >= viewportH) {
+        setBottomOffset(24);
+        return;
+      }
+      // 想要的 lift：把卡片底边推到 footer 顶部 - 8（8px 呼吸）
+      // rect.top 可能为负 —— footer 顶部已经滑过视口顶（嵌入式滚动 /
+      // footer 比视口还高），clamp 一下避免 lift 算成天文数字
+      const desired = viewportH - Math.max(0, rect.top) + 8;
+      // 卡片自身高度（折叠时 ~90、展开时 70vh）—— 用 ref 实测，外加
+      // 16px 顶部安全间距；lift 不能超过 viewportH - cardHeight - 16
+      const cardH = cardRef.current?.offsetHeight ?? 90;
+      const maxLift = Math.max(24, viewportH - cardH - 16);
+      setBottomOffset(Math.max(24, Math.min(desired, maxLift)));
     };
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+    compute();
+    const main = document.querySelector('.blog-main');
+    const onScroll = () => requestAnimationFrame(compute);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', compute);
+    if (main) main.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', compute);
+      if (main) main.removeEventListener('scroll', onScroll);
+    };
+  }, [open]); // open 变化 → 卡片高度变 → 重算 maxLift
 
   // AI reader = site owner (admin) — use their avatar first.
   // `authorAvatar` is only a fallback for multi-author sites where owner.avatar is empty.
@@ -163,19 +211,23 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
     : { right: 24 };
 
   if (!readerRevealed) return null;
+  // 用户点了 × → 这次会话内不再渲染（footer 那个"重新打开陪读"按钮
+  // 会接管入口）。强制刷新 / 切换文章会调 mount() 重置 dismissed
+  if (dismissed) return null;
 
   // ━━ 折叠状态：卡片 ━━
   if (!open) {
     return (
       <div
+        ref={cardRef}
         className="ai-reader-chat ai-reader-chat--collapsed"
         onClick={() => setOpen(true)}
         style={{
-          position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 1000,
+          position: 'fixed', bottom: bottomOffset, ...positionStyle, zIndex: 1000,
           width: 300, padding: '14px 16px',
           background: '#fff', border: '1px solid #e5e5e5',
           boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          cursor: 'pointer', transition: 'box-shadow 0.2s, bottom 0.2s',
+          cursor: 'pointer', transition: 'box-shadow 0.2s, bottom 0.25s ease',
           display: 'flex', gap: 12, alignItems: 'flex-start',
         }}
         onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.12)'; }}
@@ -203,8 +255,25 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
             {excerpt || '点击开始和 AI 聊聊这篇文章'}
           </div>
         </div>
-        {/* 图标 */}
-        <i className="fa-sharp fa-solid fa-message-bot" style={{ color: '#0052D9', fontSize: 16, flexShrink: 0, marginTop: 2, opacity: 0.6 }} />
+        {/* × 关闭按钮：完全 dismiss 掉陪读，footer 出现重新打开按钮 */}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); useReaderChatStore.getState().dismiss(); }}
+          title="关闭陪读"
+          aria-label="关闭陪读"
+          className="ai-reader-chat-dismiss"
+          style={{
+            position: 'absolute', top: 6, right: 6,
+            width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: '#bbb', fontSize: 12, borderRadius: '50%',
+            transition: 'color 0.15s, background 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#333'; e.currentTarget.style.background = '#f0f0f0'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#bbb'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          <i className="fa-solid fa-xmark" />
+        </button>
       </div>
     );
   }
@@ -212,14 +281,15 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
   // ━━ 展开状态：聊天窗口（直角，加高） ━━
   return (
     <div
+      ref={cardRef}
       className="ai-reader-chat ai-reader-chat--open"
       style={{
-        position: 'fixed', bottom: footerH, ...positionStyle, zIndex: 1000,
+        position: 'fixed', bottom: bottomOffset, ...positionStyle, zIndex: 1000,
         width: 400, height: '70vh', maxHeight: 700, minHeight: 500,
         background: '#fff', border: '1px solid #e0e0e0',
         boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        transition: 'bottom 0.2s',
+        transition: 'bottom 0.25s ease',
       }}>
       {/* Header */}
       <div style={{

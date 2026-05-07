@@ -317,8 +317,8 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
               </span>
             )}
 
-            {/* 评论等级 */}
-            {comment.level && comment.level > 0 && (() => {
+            {/* 评论等级（博主有 crown 徽标，不再显示等级标签） */}
+            {comment.level && comment.level > 0 && !comment.is_admin && (() => {
               const levelColors: Record<number, { bg: string; color: string }> = {
                 1:  { bg: '#f0f0f0', color: '#999' },
                 2:  { bg: '#e8f5e9', color: '#388e3c' },

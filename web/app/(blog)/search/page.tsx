@@ -38,21 +38,23 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <PageTitle title="搜索" icon="fa-sharp fa-light fa-magnifying-glass" />
 
       <div style={{ padding: '0 32px 32px' }}>
-      <form action="/search" method="GET" style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
+      <form action="/search" method="GET" className="search-page-form" style={{ marginBottom: '24px' }}>
+        <div className="search-page-row" style={{ display: 'flex', gap: '8px', position: 'relative' }}>
+          <i className="fa-solid fa-magnifying-glass search-page-leading" aria-hidden="true" style={{ display: 'none' }} />
           <input
             type="text"
             name="q"
             defaultValue={query}
-            placeholder="搜索文章…"
+            placeholder="搜索文章、关键词或标题"
             autoFocus
+            className="search-page-input"
             style={{
               flex: 1, padding: '10px 16px', fontSize: '15px',
               border: '1px solid var(--color-border)', background: 'var(--color-bg-card)',
               color: 'var(--color-text-main)', outline: 'none',
             }}
           />
-          <button type="submit" style={{
+          <button type="submit" className="search-page-submit" style={{
             padding: '10px 24px', fontSize: '14px', fontWeight: 500,
             background: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer',
           }}>

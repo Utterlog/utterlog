@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { usePlayer } from './hooks/usePlayer';
 
 /* ━━━ 5 套播放器主题 ━━━ */
@@ -237,8 +238,25 @@ export default function MusicPage() {
       {/* 半透明遮罩 */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, background: t.overlay, pointerEvents: 'none' }} />
 
-      <audio ref={p.audioRef} src={song?.url || undefined} style={{ display: 'none' }}
-        onTimeUpdate={p.onTimeUpdate} onLoadedMetadata={p.onLoadedMetadata} onEnded={p.onEnded} />
+      <audio
+        ref={p.audioRef}
+        src={song?.url || undefined}
+        style={{ display: 'none' }}
+        onTimeUpdate={p.onTimeUpdate}
+        onLoadedMetadata={p.onLoadedMetadata}
+        onEnded={p.onEnded}
+        onError={(e) => {
+          // 第三方音源失效（meting.yite.net 404 / 版权限制 / MIME 不支持）
+          // 时浏览器抛 NotSupportedError；优雅跳到下一首避免卡死
+          const audio = e.currentTarget;
+          const errCode = audio.error?.code;
+          const errMsg = ['ABORTED', 'NETWORK', 'DECODE', 'SRC_NOT_SUPPORTED'][errCode ? errCode - 1 : 3] || 'UNKNOWN';
+          console.warn(`[Music] 音源加载失败 (${errMsg}):`, song?.title, song?.url);
+          if (song?.title) toast(`「${song.title}」无法播放，已跳过`, { icon: '⚠️' });
+          // 1 秒后跳下一首（避免连续失败时疯狂调 next()）
+          setTimeout(() => p.next(), 1000);
+        }}
+      />
 
       {/* ━━━ 播放器主体（直角，满宽） ━━━ */}
       <div style={{
@@ -265,6 +283,27 @@ export default function MusicPage() {
               }}
             />
           ))}
+          {/* ── 关闭按钮：返回上一页（卸载播放器，音乐自动停止） ── */}
+          <button
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                if (window.history.length > 1) window.history.back();
+                else window.location.href = '/';
+              }
+            }}
+            title="关闭音乐播放器"
+            aria-label="关闭音乐播放器"
+            style={{
+              width: 24, height: 24, marginLeft: 8,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              color: t.textSecondary, fontSize: 16, transition: 'color 0.15s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = t.textPrimary; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = t.textSecondary; }}
+          >
+            <i className="fa-solid fa-xmark" />
+          </button>
         </div>
 
         {/* ── 唱臂 ── */}

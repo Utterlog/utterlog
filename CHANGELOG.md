@@ -23,6 +23,48 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.2] - 2026-05-07
+
+### 新增
+
+- **Nebula 顶部进度条 `<TopProgress />`**：拦截全站 `<a>` 点击 + `popstate`，路由切换时顶部 2px 蓝色进度条带流光动画爬到 90%、`usePathname` 变化后跳到 100% 淡出；10s 兜底超时；支持 capture 阶段拦截，避免被业务 `stopPropagation` 截掉。
+- **首页分类 tabs stagger fade-in**：切分类时旧卡片留位 + `.is-loading` 半透明，新数据回来用 `nebulaListItemIn` 关键帧错峰 30ms 飘入；按钮 hover `translateY(-1px)`、`:active` `scale(0.96)` 弹簧反馈；`prefers-reduced-motion` 自动关掉动效。
+- **Nebula footer 回到顶部按钮**：贴在 footer 右内边距 20px、垂直居中、container 之外，36×36 squircle + 毛玻璃 + 蓝细边；滚动 ≤ 400px 时 visibility:hidden 占位不抖动；hover scale(1.12)。
+- **Header logo / 站名 hover 中心放大**：logo 图块 / 渐变 mark / 纯文字站名都加 `transform-origin: center` + 弹簧 cubic-bezier 过渡，hover 1.15x；纯文字模式 `display: inline-block` 让 transform 生效。
+- **/search 搜索结果页与 header 弹出搜索框样式统一**：input 44px 胶囊形 + 左 leading 放大镜 + sky 蓝胶囊 submit 按钮（深底字），共用一套 Nebula 视觉语言。
+- **Nebula 段落点评弹窗改 `position: fixed`**：基于 trigger `getBoundingClientRect` 实时计算 `left/top`，监听 `.blog-main` + window 滚动 + resize 同步跟随；视口右溢出自动左移、最左 12px 安全边距。彻底脱离文档流，不被父级 overflow 裁切，绝不影响段落 box。
+- **OG / Twitter Card 图片兜底**：`/[...permalink]` 路由原本只设 title/description，没 og:image —— 社交平台分享出来一直是占位卡片。现在跟 `/posts/[slug]` 一样用 `post.cover_url` 优先 + `randomCoverUrl(post.id)` 兜底，X / Telegram / 微信抓出来都有大图特色封面。
+
+### 优化
+
+- **代码块底色 `#0a0d14`**：之前 `--nebula-input` 是 `#121212`，跟文章卡片底色 `#131314` 仅差 1 个亮度档，代码块边界肉眼看不出来。改成更深的蓝调近黑（GitHub-style 嵌入感）。Prism token 配色（蓝/绿/橙/黄）在新底色上对比度更高、更易读。
+- **页脚四个图标按钮统一成"logo 框"风格**：音乐 / RSS / Utterlog logo / 登录 全部 24×24 squircle + `border: 1px solid rgba(128,207,255,0.2)` + 半透深底，图标 16×16 居中。RSS 图标从 `fa-square-rss` 换成 `fa-rss`（外层方框已由按钮自身提供，避免方中带方）；登录占位 `fa-light fa-user` → `fa-solid` 跟其它视觉重量对齐。删掉了之前重复声明 `.nebula-footer-auth-btn` 的旧规则（让登录按钮用统一规则）。
+- **Footer 已登录菜单对齐**：`.nebula-footer-login-menu-item` 全部规则加 `!important`（特异性 0,2,0），覆盖 `.nebula-footer-links a` (0,2,1) 偷过来的 `padding: 4px 8px / gap: 4px / font-size: 12px`。现在 `<Link>(a)` 和 `<button>` 两种 tag 视觉完全一致：相同 padding/gap、图标固定 16px 列宽、基线对齐。
+- **ICP 备案盾形 icon 默认翻灰**：之前 `fill: var(--nebula-blue-accent) !important` 永久覆盖成蓝色，跟旁边备案号"默认灰、hover 高亮"的一致体验对不上。现在默认 `fill: rgba(225,231,238,0.5)` + hover 才恢复天蓝，加 `transition: fill 0.2s` 平滑淡入。
+- **AIReaderChat 折叠卡片样式精炼**：右侧多余的 `fa-message-bot` 图标删掉；卡片 `border-radius: 12px` + `backdrop-filter: blur(20px) saturate(160%)` 毛玻璃 + 蓝细边；折叠态 hover 上抬 1px + 蓝边亮档 + 蓝光阴影；AI 角标 / 用户气泡 / 发送按钮全部翻 sky 蓝底 + navy 深字（跟"提交评论"按钮一致的对比策略）；推荐问题按钮加 hover 反馈。
+- **AIReaderChat / AIChatBubble 取最后一个 `<footer>`**：Nebula 的 PostPage 里有内嵌的 `<footer class="nebula-post-foot">` 装文章 tags，DOM 顺序在主 `.nebula-footer` 之前。`querySelector('footer')` 拿到它就让陪读卡片去躲那个内层 footer，结果反而被推到视口顶部。改成 `querySelectorAll('footer')` 取最后一个。
+- **AIReaderChat scroll-aware lift 加上限**：用 `cardRef` 实测卡片高度，`maxLift = viewportH - cardH - 16` 双向 clamp；`rect.top` 用 `Math.max(0, ...)` 兜底。在小视口 / footer 巨大 / footer 已滑过视口顶部等极端场景下卡片不再消失。
+- **Nebula AI 聊天气泡（AIChatBubble）暗色适配**：用类钩子（`.ai-chat-bubble-fab` / `-panel` / `-msg--user|assistant` / `-input` / `-send` 等）整体翻深；浮标和发送按钮用 sky 蓝 + navy 深字；assistant 气泡半透蓝调 + 蓝细边。
+- **段落点评弹窗暗色 + 抬升一档**：`.block-annotation-panel` 用 `#1a1d22`（比 `#121212` 浮起一档）+ 蓝细边 + 双层阴影 + 毛玻璃；输入框单独翻 `rgba(0,0,0,0.35)` 避免再次撞色。
+- **LatestCommenters 头像去重**：之前用 `(author_name || author || author_email || id).toLowerCase()` 单一兜底字段，同一人不同评论里 name 大小写 / 空白 / 空缺不一致就 dedup 失效。改成 `email + name + avatar_url` 三键交叉判断，任一命中就跳过。
+- **代码高亮 Prism token 配色**：之前 `pre code { color: var(--nebula-white) !important }` (specificity 0,4,2) 把 prism-tomorrow 所有 `.token.x` (0,2,0) 都吞掉，代码块一片白。去掉 white 强制覆盖 + 新增 Nebula 蓝调专属 token 调色板（keyword/string/number/property/tag/operator 各自配色）。
+- **首页"边读边聊"卡片下沉避让 footer**：之前用静态 `footer.offsetHeight` 当 bottom，卡片永远悬浮在半空 + 滚到底盖住 footer 顶部（吃掉回到顶部按钮）。改成跟 MiniMusicPlayer 一致的 scroll-aware lift：默认 `bottom: 24` 贴底，footer 进入视口才上推。
+- **字体托管全部转到 static.utterlog.com**：`Google Sans` / `Google Sans Text` → `Google Sans Display`（一套字重）；`Noto Sans SC` 也从 Google Fonts 换成自托管。Nebula 主题不再依赖 fonts.googleapis.com，国内访问更快。
+
+### 修复
+
+- **博主回复评论会发邮件**：`sendCommentNotifications` 的 reply 路径只检查 parent 是否 admin、不检查 sender 是否 admin。改成算完 `senderIsAdmin` 后直接 early-return，admin 的所有评论 / 回复一律跳过两条邮件路径。
+- **评论邮件里访客信息不全**：原代码 `go LookupAndStoreGeo(...)` 和 `go sendCommentNotifications(...)` 两个 goroutine 并行起跑，邮件几乎一定先于地理查询完成 → 模板里 `{{.IPLocation}}` / `{{.CountryCode}}` 全空。改成同一个 goroutine 串行，邮件能拿到完整 IP + 国旗 + 城市/省份。
+- **AIReaderChat × 关闭按钮无响应**：组件订阅了 `dismiss()` 但没读 store 的 `dismissed` 状态，也没调 `mount()`。补上 `useReaderChatStore(s => s.dismissed)` 订阅 + `mount()/unmount()` 生命周期 + `if (dismissed) return null`。点 × 立刻消失，强制刷新或切文章才会重新出现。
+- **博主评论显示等级标签**：`comment.level && comment.level > 0` 没排除 admin —— 博主自带 crown 角标，又叠一个 `Lv.x` 标签视觉冗余。所有 5 处 CommentList 加 `!comment.is_admin` 排除。
+- **首页 AIChatBubble 整体浅色**：组件 inline 写死白底 + #1a1a1a 字 + 蓝按钮白字，跟 Nebula 暗主题撞色。补上类钩子 + Nebula 暗色覆盖。
+- **footer ICP 盾形图标默认显示蓝色**：`.nebula-footer-icp-icon path { fill: blue !important }` 之前永久覆盖，hover 没有变化。改成默认灰、hover 才蓝。
+- **CommentForm 提交按钮蓝底白字看不清**：Nebula 主题的 `--color-primary` 是浅蓝 `--nebula-blue-accent`，浅蓝底上白字对比度差。加 `className="comment-submit-button"` 钩子 + Nebula 翻成 navy 深字。
+
+### 移除
+
+- **`<footer>` "重新打开陪读" 浮动按钮**：原本点 × 关闭后 footer 出现一个圆形 message-bot 按钮重新唤起卡片。按用户要求改为"关闭后只有强制刷新才重显"，简化交互。
+
 ## [2.3.1] - 2026-05-07
 
 ### 新增

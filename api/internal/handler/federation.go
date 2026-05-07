@@ -431,6 +431,7 @@ func runFeedFetch(limit int) (fetched, newItems int) {
 	// 滚动清理：仅保留最近 7 天的 feed_items —— 用 created_at（入库时间）
 	// 而非 pub_date（feed 提供的发布时间）作为窗口锚点，因为 pub_date 在
 	// 一些站点上不规范，会导致老条目反复被"重新认定为新"而误删。
+	// 用户预期是"所有订阅 7 天内的全部文章"，不再做 100 条 cap。
 	sevenDaysAgo := time.Now().Unix() - 7*24*3600
 	config.DB.Exec(fmt.Sprintf(
 		"DELETE FROM %s WHERE created_at < $1",
@@ -441,16 +442,6 @@ func runFeedFetch(limit int) (fetched, newItems int) {
 			"INSERT INTO %s (user_id, type, title, content, created_at) VALUES (1,'feed','关注动态更新',$1,$2)",
 			t("notifications")), fmt.Sprintf("发现 %d 条新内容", newItems), time.Now().Unix())
 	}
-
-	// Cap the feed items table at 100 newest rows globally. Anything
-	// older drops out so the subscription table stays lean and the
-	// /feeds page always surfaces the freshest 100. Uses pub_date so
-	// a late-arriving sync still respects the actual publish order.
-	config.DB.Exec(fmt.Sprintf(`
-		DELETE FROM %s WHERE id IN (
-		  SELECT id FROM %s ORDER BY pub_date DESC NULLS LAST, id DESC OFFSET 100
-		)
-	`, t("feed_items"), t("feed_items")))
 	return
 }
 

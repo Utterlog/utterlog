@@ -44,13 +44,23 @@ export default function LatestCommenters() {
       .then((r) => r.json())
       .then((r) => {
         const list: Comment[] = r?.data?.comments || r?.data || [];
-        // 按 author 名去重，保留每位最新的一条；最多 20 个头像
-        const seen = new Set<string>();
+        // 按"同一人"去重，保留每位最新的一条；最多 20 个头像
+        // 用 email + name + avatar_url 三个维度交叉判断，任一命中就视为同一人。
+        // 之前只按 (author_name || author || author_email || id) 单一字段
+        // 兜底：不同条目里 name 大小写 / 空白 / 空缺不一致就 dedup 失效，
+        // 同一人会出现两次。
+        const seenIds = new Set<string>();
+        const seenAvatars = new Set<string>();
         const dedup: Comment[] = [];
         for (const c of list) {
-          const key = (c.author_name || c.author || c.author_email || `${c.id}`).toLowerCase();
-          if (seen.has(key)) continue;
-          seen.add(key);
+          const email = String(c.author_email || '').trim().toLowerCase();
+          const name = String(c.author_name || c.author || '').trim().toLowerCase();
+          const avatar = String(c.avatar_url || '').trim();
+          const idKey = email || name || `id-${c.id}`;
+          if (seenIds.has(idKey)) continue;
+          if (avatar && seenAvatars.has(avatar)) continue;
+          seenIds.add(idKey);
+          if (avatar) seenAvatars.add(avatar);
           dedup.push(c);
           if (dedup.length >= 20) break;
         }

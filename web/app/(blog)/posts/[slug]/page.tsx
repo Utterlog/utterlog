@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getPostBySlug, getActiveTheme, getOptions } from '@/lib/blog-api';
 import { getThemeComponents } from '@/lib/theme';
+import { randomCoverUrl } from '@/lib/blog-image';
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
@@ -14,7 +15,21 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
     const post = response.data;
     const title = post.seo?.title || post.title;
     const description = post.seo?.description || post.excerpt || '';
-    const image = post.cover_url || undefined;
+    // OG / Twitter Card 图片：优先文章 cover_url，否则用 admin 配的
+    // 随机封面 API（同 PostCard / HomePage hero 的兜底逻辑），保证每篇
+    // 文章被分享时都有特色图，而不是社交平台的默认占位卡片
+    let image: string | undefined = post.cover_url || undefined;
+    if (!image) {
+      try {
+        const optsRes: any = await getOptions();
+        const opts = (optsRes?.data || {}) as Record<string, string>;
+        const fallback = randomCoverUrl(post.id, {
+          random_image_enabled: opts.random_image_enabled,
+          random_image_api: opts.random_image_api,
+        });
+        if (fallback) image = fallback;
+      } catch {}
+    }
     return {
       title,
       description,

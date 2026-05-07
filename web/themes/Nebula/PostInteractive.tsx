@@ -11,7 +11,7 @@ export function CommentCount({ initial }: { initial: number }) {
     (window as any).__nebulaSetCommentCount = setCount;
   }
 
-  return <span>{count} comments</span>;
+  return <span>{count}</span>;
 }
 
 export function CommentSection({

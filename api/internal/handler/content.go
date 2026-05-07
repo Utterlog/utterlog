@@ -396,13 +396,14 @@ func CreateComment(c *gin.Context) {
 		}(id, req.PostID, req.Author, req.Email, req.URL, req.Content, ip)
 	}
 
-	// Async: lookup geoip and store in comment
-	go func(commentID int, commentIP string) {
+	// Async: lookup geoip and THEN send email notifications. 之前两个
+	// goroutine 并行起跑 —— 邮件几乎一定先落地，结果 sender.Geo / IP 还
+	// 没写库，邮件里 IP / 国旗 / 归属地全空，"评论者信息没成功显示"。
+	// 串行起跑保证邮件能看到完整的 geo / IP。
+	go func(postID int, parentID *int, author, content, commentIP string, commentID int) {
 		model.LookupAndStoreGeo(commentID, commentIP)
-	}(id, ip)
-
-	// Send email notifications
-	go sendCommentNotifications(req.PostID, req.ParentID, req.Author, req.Content, id)
+		sendCommentNotifications(postID, parentID, author, content, commentID)
+	}(req.PostID, req.ParentID, req.Author, req.Content, ip, id)
 
 	// AI 智能回复（仅 approved 的评论触发；shouldReplyComments() 内部
 	// 自有开关检查，但提前判断省一次 goroutine 创建开销）。adminID
@@ -619,6 +620,15 @@ func sendCommentNotifications(postID int, parentID *int, commenterName, content 
 		  WHERE c.id = $1`,
 		config.T("comments"), config.T("users")), commentID)
 	senderIsAdmin := sender.Role == "admin"
+	// 管理员自己发表的评论 / 回复 —— 一律不发任何邮件：
+	//   - 不给管理员自己发"新评论"通知（之前已在下面 notifyAdmin 路径
+	//     通过 !senderIsAdmin 跳过）
+	//   - 也不给被回复的原评论者发"你的评论收到了回复"通知（之前的
+	//     reply 分支没看 senderIsAdmin，导致博主每次回复都触发邮件）
+	// 这里直接 early-return，两条路径一起跳过。
+	if senderIsAdmin {
+		return
+	}
 
 	// Parse stored geo JSON (set on insert by model.LookupAndStoreGeo).
 	var senderGeo struct {

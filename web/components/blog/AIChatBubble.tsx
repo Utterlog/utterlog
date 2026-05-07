@@ -53,8 +53,15 @@ export default function AIChatBubble() {
   // 滚动模型都返回正确的相对位置。
   const [bottomOffset, setBottomOffset] = useState(24);
   useEffect(() => {
+    // 选最后一个 <footer> —— 某些主题（Nebula）文章页里有内嵌的
+    // <footer class="nebula-post-foot"> 装 tags，querySelector('footer')
+    // 会拿到它而不是真正的页脚，导致气泡在中部错误避让
+    const findPageFooter = () =>
+      (document.querySelectorAll('footer'))[
+        Math.max(0, document.querySelectorAll('footer').length - 1)
+      ] as HTMLElement | undefined;
     const compute = () => {
-      const footer = document.querySelector('footer');
+      const footer = findPageFooter();
       if (!footer) { setBottomOffset(24); return; }
       const rect = footer.getBoundingClientRect();
       const viewportH = window.innerHeight;
@@ -76,7 +83,7 @@ export default function AIChatBubble() {
     // 用 ResizeObserver 监听 footer 自身尺寸抖动，避免初始一次 compute
     // 拿到的旧值在数据加载完后失真。
     let ro: ResizeObserver | null = null;
-    const footerEl = document.querySelector('footer');
+    const footerEl = findPageFooter();
     if (footerEl && typeof ResizeObserver !== 'undefined') {
       ro = new ResizeObserver(() => requestAnimationFrame(compute));
       ro.observe(footerEl);
@@ -208,6 +215,7 @@ export default function AIChatBubble() {
       <button
         onClick={() => setOpen(true)}
         title="跟博主 AI 助手聊聊"
+        className="ai-chat-bubble-fab"
         style={{
           position: 'fixed', bottom: bottomOffset, ...positionStyle, zIndex: 9999,
           width: 52, height: 52, borderRadius: '50%',
@@ -229,7 +237,7 @@ export default function AIChatBubble() {
   // 展开面板同样跟随 bottomOffset，避免滚到底部时面板被 footer 遮住。
   // transition 跟音乐卡片同款（0.25s ease），保证滚动到底部时面板平滑上推。
   return (
-    <div style={{
+    <div className="ai-chat-bubble-panel" style={{
       position: 'fixed', bottom: bottomOffset, ...positionStyle, zIndex: 9999,
       width: 380, height: '70vh', maxHeight: 640, minHeight: 440,
       background: '#fff', border: '1px solid #e5e5e5',
@@ -238,7 +246,7 @@ export default function AIChatBubble() {
       transition: 'bottom 0.25s ease',
     }}>
       {/* Header */}
-      <div style={{
+      <div className="ai-chat-bubble-header" style={{
         padding: '12px 16px', borderBottom: '1px solid #eee',
         display: 'flex', alignItems: 'center', gap: 10,
       }}>
@@ -246,12 +254,13 @@ export default function AIChatBubble() {
           <img src={avatarSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{owner?.nickname || '博主助手'}</div>
-          <div style={{ fontSize: 11, color: '#888' }}>AI 在线 · 跟我聊聊</div>
+          <div className="ai-chat-bubble-name" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{owner?.nickname || '博主助手'}</div>
+          <div className="ai-chat-bubble-status" style={{ fontSize: 11, color: '#888' }}>AI 在线 · 跟我聊聊</div>
         </div>
         <button
           onClick={() => setOpen(false)}
           aria-label="关闭"
+          className="ai-chat-bubble-close"
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             padding: 6, color: '#999', fontSize: 14,
@@ -262,13 +271,13 @@ export default function AIChatBubble() {
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} style={{
+      <div ref={scrollRef} className="ai-chat-bubble-messages" style={{
         flex: 1, overflowY: 'auto', padding: '16px',
         display: 'flex', flexDirection: 'column', gap: 12,
         fontSize: 13, lineHeight: 1.6,
       }}>
         {messages.length === 0 && !streaming && (
-          <div style={{ textAlign: 'center', color: '#888', fontSize: 12, padding: '24px 12px' }}>
+          <div className="ai-chat-bubble-empty" style={{ textAlign: 'center', color: '#888', fontSize: 12, padding: '24px 12px' }}>
             可以问我关于这个博客、最近文章、或博主本人的任何问题
           </div>
         )}
@@ -276,7 +285,7 @@ export default function AIChatBubble() {
           <div key={i} style={{
             display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
           }}>
-            <div style={{
+            <div className={`ai-chat-bubble-msg ai-chat-bubble-msg--${m.role}`} style={{
               maxWidth: '78%',
               padding: '8px 12px',
               borderRadius: 8,
@@ -290,7 +299,7 @@ export default function AIChatBubble() {
         ))}
         {streaming && (
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{
+            <div className="ai-chat-bubble-msg ai-chat-bubble-msg--assistant" style={{
               maxWidth: '78%', padding: '8px 12px', borderRadius: 8,
               background: '#f4f6f8', color: '#1a1a1a', wordBreak: 'break-word',
             }}>{streaming}</div>
@@ -299,13 +308,14 @@ export default function AIChatBubble() {
       </div>
 
       {/* Input */}
-      <div style={{ padding: 12, borderTop: '1px solid #eee', display: 'flex', gap: 8 }}>
+      <div className="ai-chat-bubble-input-bar" style={{ padding: 12, borderTop: '1px solid #eee', display: 'flex', gap: 8 }}>
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={sending ? 'AI 思考中…' : '问点什么…'}
           disabled={sending}
+          className="ai-chat-bubble-input"
           style={{
             flex: 1, padding: '8px 12px', fontSize: 13,
             border: '1px solid #e5e5e5', borderRadius: 4, outline: 'none',
@@ -315,6 +325,7 @@ export default function AIChatBubble() {
         <button
           onClick={() => send(input)}
           disabled={sending || !input.trim()}
+          className="ai-chat-bubble-send"
           style={{
             padding: '8px 14px', fontSize: 13, fontWeight: 500,
             background: 'var(--color-primary, #0052D9)', color: '#fff',

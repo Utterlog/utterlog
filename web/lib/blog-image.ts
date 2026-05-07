@@ -1,6 +1,6 @@
 import type { CSSProperties, ImgHTMLAttributes } from 'react';
 
-const DEFAULT_RANDOM_TEMPLATE = 'https://img.et/1920/1080?type=landscape&r={id}';
+const DEFAULT_RANDOM_TEMPLATE = 'https://img.et/800/600?type=landscape&r={id}';
 
 /**
  * Resolve a fallback random-cover URL for a post that has no cover_url.
@@ -40,8 +40,8 @@ export function randomCoverUrl(
   }
   return template
     .replace(/\{id\}/g, String(postId))
-    .replace(/\{w\}/g, '1920')
-    .replace(/\{h\}/g, '1080');
+    .replace(/\{w\}/g, '800')
+    .replace(/\{h\}/g, '600');
 }
 
 export interface CoverPropsInput {

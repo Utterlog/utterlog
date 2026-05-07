@@ -169,11 +169,11 @@ export default function HomePage({
         </section>
 
         <div className={`nebula-post-list${loading ? ' is-loading' : ''}`}>
-          {loading ? (
-            <div className="nebula-empty">
-              <i className="fa-solid fa-spinner fa-spin" aria-hidden="true" /> 加载中…
-            </div>
-          ) : posts.length > 0 ? (
+          {posts.length > 0 ? (
+            // 切分类时不再清空 posts，只让列表加 .is-loading 半透明 +
+            // 屏蔽点击 —— 旧卡片留在原位避免视觉跳动；新数据一回来，
+            // React 用新 post.id 作为 key 自动 re-mount，stagger fade-in
+            // 动画会跑一遍（CSS 里 nebulaListItemIn）
             posts.map((post, index) => (
               <PostCard
                 key={post.id}
@@ -181,6 +181,11 @@ export default function HomePage({
                 index={(page - 1) * PER_PAGE + index + 1}
               />
             ))
+          ) : loading ? (
+            // 仅初始首屏 + 切到完全没数据的分类时才显示 spinner
+            <div className="nebula-empty">
+              <i className="fa-solid fa-spinner fa-spin" aria-hidden="true" /> 加载中…
+            </div>
           ) : (
             <div className="nebula-empty">该分类暂无文章</div>
           )}
