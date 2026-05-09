@@ -23,6 +23,19 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.3.10] - 2026-05-09
+
+### 修复
+
+- **后台升级"提示了升级失败"但实际升级成功**：`SystemUpdatePanel.tsx` 的 `pollStatus()` 调 `verifyUpgradeApplied(expected, 60)` 写死 60s 超时，但真实升级流程包括 sidecar 拉镜像（~30s）+ 重建容器（~5s）+ 新 api 启动 + DB 初始化 + cron 启动（~15s）+ utterlog.io 缓存同步（~10s），总计经常 60-90s。导致升级实际还在跑，UI 已经报"升级未生效"。本次超时 60s → 240s（verify 内部命中任一成功信号就立即 return，加长只惩罚真失败，不延后真成功的反馈）。
+- **错误语气分级**：之前所有 verify 失败都用红色 `toast.error('升级未生效 — ...')` 吓到用户。改成三档语气：
+  - 网络/鉴权报错 → red error 保留（真坏了）
+  - api 在响应、commit 已变（升级 OK，仅版本号字串没匹配，比如 docker label `version=main` 跟 BuildVersion `v2.3.10` 不对齐） → blue **info** "升级已应用，commit 已更新到 xxxxxxx，但版本号自动确认超时"
+  - api 在响应、版本号没变（registry 没同步）→ yellow **warning** "升级超时未确认，等几分钟刷新再看"
+  - 容器仍在旧版本（真没升级成功）→ red error 保留
+- **历史 4 个 commits 删除 Claude co-author trailer**：v2.3.6 ~ v2.3.9 是另一台机的 Claude session 提交时违规加了 `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`，导致 GitHub Contributors 列表挂上 Claude bot。本次用 `git filter-branch` 重写这 4 个 commit 的 message 删 trailer，重新打 v2.3.6 / v2.3.7 / v2.3.8 / v2.3.9 tag 指向新 commit hash，force push 到 main。Contributors 列表几小时内会自动剔除 Claude。
+- **TLS 证书 SAN 补 utterlog.com / www.utterlog.com / id.utterlog.com**：迁到新主机 Aliyun HK 后初始证书只覆盖 4 个域名（utterlog.io / www / docs / registry），utterlog.com 和 id.utterlog.com 走 HTTPS 拿不到正确证书。本次 `certbot --expand` 加上后变 7 个 SAN：utterlog.io / www.utterlog.io / docs.utterlog.io / registry.utterlog.io / utterlog.com / www.utterlog.com / id.utterlog.com，全部走同一张 Let's Encrypt 证书。
+
 ## [2.3.9] - 2026-05-08
 
 ### 修复

@@ -307,22 +307,35 @@ export default function SystemUpdatePanel() {
       }
       await new Promise((res) => setTimeout(res, 2000));
     }
-    // 兜底失败：把实际拿到的版本号 / commit 显示出来，方便定位问题。
-    // 常见情形：
-    //   - dev 容器（go run，无 ldflags 注入）→ got='dev' 永远不变
-    //   - 用户 compose 锁定具体 tag，docker pull 拉不到新版本
-    //   - GHA 还没把 :latest 推到 registry（点早了）
+    // 兜底：3 种语气分级，避免一律用红色 error toast 吓到用户
+    //   A. 网络 / 鉴权错误 —— 真的有问题，error toast
+    //   B. api 在响应、版本号没变化 —— 镜像 / tag 同步问题，warning info
+    //   C. api 在响应、commit 已变（但版本号字串没匹配）—— 实际上升级了，
+    //      只是 docker label 跟 BuildVersion 注入对不上（main vs v2.x.x）。
+    //      这种情况是"成功未确认"，不是失败 —— 用 info toast 告诉用户
+    //      "升级已应用，但版本号自动确认超时，可手动刷新核对"。
+    const baseSnapshot = info?.current?.version || '';
     if (lastErr) {
       toast.error(`无法确认升级结果（${lastErr}）—— 请手动刷新页面核对版本`);
-    } else if (lastGot && lastGot === (info?.current?.version || '')) {
-      toast.error(
-        `升级未生效 —— 当前版本 ${lastGot}，期望 ${expected || '?'}。可能 docker 镜像还没更新到新 tag，` +
-        `或镜像源（registry）还没同步。等几分钟再试，或直接 \`docker pull\` 后 \`docker compose up -d\`。`
+    } else if (lastCommit && lastCommit !== (info?.current?.commit || '').toLowerCase()) {
+      // commit 已经变了 —— 升级实际生效，但版本字串可能因为 docker
+      // label "main" 跟 BuildVersion ldflags 注入不一致而对不上。
+      // 这不是失败，是"成功 + 自动确认信号有歧义"。
+      toast(
+        `升级已应用 —— 容器 commit 已更新到 ${lastCommit.slice(0, 7)}，` +
+        `但版本号自动确认超时。可手动刷新页面核对。`,
+        { icon: 'ℹ️' }
+      );
+    } else if (lastGot && lastGot === baseSnapshot) {
+      toast(
+        `升级超时未确认 —— 当前版本 ${lastGot}，期望 ${expected || '?'}。` +
+        `镜像可能还在拉取或 registry 还没同步，等几分钟刷新页面再看。`,
+        { icon: '⚠️' }
       );
     } else {
       toast.error(
         `升级未生效 —— 容器仍在 ${lastGot || '旧版本'}（commit ${lastCommit.slice(0, 7) || '?'}），期望 ${expected || '?'}。` +
-        `请检查 docker logs utterlog-api-1`
+        `请检查 docker logs。`
       );
     }
     return false;
@@ -338,9 +351,17 @@ export default function SystemUpdatePanel() {
         if (r.data.success) {
           // Backend's "success" is optimistic — verify the running
           // version actually flipped before declaring victory.
+          // 这里超时**必须**给足时间 —— 真实升级流程包括：
+          //   sidecar pull 镜像 (~30s) + recreate container (~5s) +
+          //   新 api 启动 + DB 初始化 + cron 启动 (~15s) +
+          //   utterlog.io 缓存同步 (~10s)
+          // 总计经常 60-90s。之前写死 60s 导致升级实际成功了但 UI 还
+          // 在 60s 截止时误报"升级未生效 / 升级失败"，吓到用户。
+          // 给 240s 留足空间，verify 自己内部成功信号命中就立刻 return
+          // 不会真等满 240s。
           const expected = info?.latest?.version || '';
           toast('升级脚本已执行，正在确认容器版本…');
-          await verifyUpgradeApplied(expected, 60);
+          await verifyUpgradeApplied(expected, 240);
           setUpgrading(false);
         } else {
           toast.error('升级失败：' + r.data.message);
