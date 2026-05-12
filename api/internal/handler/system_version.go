@@ -686,9 +686,16 @@ func SystemUpgrade(c *gin.Context) {
 }
 
 // SystemUpgradeStatus reports whether an upgrade is in progress plus a
-// tail of the log. After the api container restarts, "running" resets
-// to false but the log file persists so the UI can show the final
-// result on next poll.
+// tail of the log. After the api container restarts (sidecar recreates
+// it mid-upgrade) the in-memory upgradeState is reset to zero values —
+// 'running' and 'finished' are both false. Without recovery the UI
+// would never see finished=true and spin forever waiting for the final
+// status. Recover by parsing the persisted upgrade.log: the sidecar
+// always writes a "[TASK-END]" line with either 成功 or 失败 prefix on
+// completion. This is robust to any number of restarts and survives
+// even if the api is killed while the sidecar is still working
+// (running stays false but UI keeps polling — once sidecar writes
+// TASK-END the next poll picks it up).
 func SystemUpgradeStatus(c *gin.Context) {
 	upgrade.mu.Lock()
 	running := upgrade.running
@@ -705,6 +712,18 @@ func SystemUpgradeStatus(c *gin.Context) {
 			b = b[len(b)-4096:]
 		}
 		tail = string(b)
+	}
+
+	// Restart-recovery: when the api container was recreated by the
+	// sidecar, in-memory state is empty but the log file is the truth.
+	// Don't overwrite live in-memory state (would mask a brand new
+	// upgrade run that hasn't written TASK-END yet).
+	if !running && !finished && strings.Contains(tail, "[TASK-END]") {
+		finished = true
+		success = strings.Contains(tail, "成功 [TASK-END]")
+		if !success && msg == "" {
+			msg = "升级失败（详见日志）"
+		}
 	}
 
 	util.Success(c, gin.H{
