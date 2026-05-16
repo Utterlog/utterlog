@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { optionsApi } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Button, Input, SettingsTabs, Toggle, Spinner } from '@/components/ui';
+import { Button, Input, SaveButton, SettingsTabs, Toggle, Spinner } from '@/components/ui';
 import api from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { invalidateSiteOptions, loadSiteOptions } from '@/lib/site';
@@ -289,7 +289,7 @@ export default function SettingsPage() {
         // 第三方服务
         mapbox_access_token: s.mapbox_access_token || s.footprint_mapbox_token || '',
         mapbox_api_url: s.mapbox_api_url || 'https://api.mapbox.com',
-        github_access_token: s.github_access_token || s.coding_github_token || '',
+        github_access_token: s.github_access_token || '',
         google_maps_api_key: s.google_maps_api_key || '',
         amap_api_key: s.amap_api_key || '',
         tencent_maps_api_key: s.tencent_maps_api_key || '',
@@ -409,9 +409,6 @@ export default function SettingsPage() {
         // mapbox_access_token becomes the canonical site-wide key.
         if (activeTab === 'services' && 'mapbox_access_token' in filtered) {
           filtered.footprint_mapbox_token = filtered.mapbox_access_token;
-        }
-        if (activeTab === 'services' && 'github_access_token' in filtered) {
-          filtered.coding_github_token = filtered.github_access_token;
         }
         await optionsApi.updateMany(filtered);
       } else {
@@ -913,7 +910,7 @@ export default function SettingsPage() {
                               const vals = getValues();
                               const r: any = await api.post('/telegram/get-chat-id', { bot_token: vals.telegram_bot_token });
                               setTgChats(r.data?.chats || []);
-                              if (!r.data?.chats?.length) toast(r.data?.hint || t('admin.settings.telegram.noChats', '未找到聊天记录，请先向 Bot 发送一条消息'), { icon: 'ℹ️' });
+                              if (!r.data?.chats?.length) toast(r.data?.hint || t('admin.settings.telegram.noChats', '未找到聊天记录，请先向 Bot 发送一条消息'));
                             } catch (e: any) { toast.error(e?.response?.data?.error?.message || t('admin.common.fetchFailed', '获取失败')); }
                             finally { setFetchingChatId(false); }
                           }}
@@ -1614,9 +1611,7 @@ export default function SettingsPage() {
           {/* Save button — only shows on editable tabs (not read-only "update" tab) */}
           {activeTab !== 'update' && (
             <div className="settings-actions">
-              <Button onClick={handleSubmit(onSubmit)} loading={saving}>
-                {t('admin.settings.saveSettings', '保存设置')}
-              </Button>
+              <SaveButton onClick={handleSubmit(onSubmit)} loading={saving} label={t('admin.settings.saveSettings', '保存设置')} />
             </div>
           )}
         </form>

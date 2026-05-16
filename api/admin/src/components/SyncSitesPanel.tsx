@@ -33,6 +33,31 @@ interface CreatedToken {
   label: string;
 }
 
+type SyncPlatform = 'wordpress' | 'typecho';
+
+interface SyncSitesPanelProps {
+  /** 哪一类源站同步面板。决定 API 路径前缀、UI 文案、图标 */
+  platform?: SyncPlatform;
+}
+
+// UI 文案 / 图标 / 插件名按平台分流；handler 完全共享，差异只在标签
+const PLATFORM_META: Record<SyncPlatform, {
+  icon: string;
+  pluginName: string;
+  uploadsPath: string;
+}> = {
+  wordpress: {
+    icon: 'fa-brands fa-wordpress',
+    pluginName: 'utterlog-sync',
+    uploadsPath: '/wp-content/uploads/',
+  },
+  typecho: {
+    icon: 'fa-regular fa-feather',
+    pluginName: 'utterlog-sync-typecho',
+    uploadsPath: '/usr/uploads/',
+  },
+};
+
 function fmtTime(ts: number, locale = 'zh-CN') {
   if (!ts) return '—';
   const d = new Date(ts * 1000);
@@ -51,8 +76,12 @@ function stageLabel(stage: string, t: (key: string, fallback?: string, vars?: Re
   return map[stage] || stage;
 }
 
-export default function SyncSitesPanel() {
+export default function SyncSitesPanel({ platform = 'wordpress' }: SyncSitesPanelProps) {
   const { t, locale } = useI18n();
+  const meta = PLATFORM_META[platform];
+  const platformLabel = platform === 'typecho' ? 'Typecho' : 'WordPress';
+  const apiBase = `/admin/sync/${platform}`;
+
   const [sites, setSites] = useState<SyncSite[]>([]);
   const [jobs, setJobs] = useState<SyncJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +94,7 @@ export default function SyncSitesPanel() {
 
   async function loadSites() {
     try {
-      const r = await api.get<any>('/admin/sync/wordpress/sites');
+      const r = await api.get<any>(`${apiBase}/sites?platform=${platform}`);
       setSites(r.data?.sites || []);
     } catch (e: any) {
       toast.error(t('admin.syncSites.toast.loadSitesFailed', '加载站点失败：{reason}', { reason: e?.message || t('admin.common.unknownError', '未知错误') }));
@@ -74,7 +103,7 @@ export default function SyncSitesPanel() {
 
   async function loadJobs() {
     try {
-      const r = await api.get<any>('/admin/sync/wordpress/jobs?limit=10');
+      const r = await api.get<any>(`${apiBase}/jobs?limit=10&platform=${platform}`);
       setJobs(r.data?.jobs || []);
     } catch (e: any) {
       // quietly ignore — jobs empty initially
@@ -141,7 +170,7 @@ export default function SyncSitesPanel() {
       return;
     }
     try {
-      const r = await api.post<any>('/admin/sync/wordpress/sites', createForm);
+      const r = await api.post<any>(`${apiBase}/sites`, { ...createForm, platform });
       setCreated(r.data);
       setCreateOpen(false);
       setCreateForm({ label: '', source_url: '' });
@@ -155,7 +184,7 @@ export default function SyncSitesPanel() {
   async function deleteSite(site: SyncSite) {
     if (!confirm(t('admin.syncSites.confirmDelete', '确定删除站点「{name}」？\n\n只删除授权，不影响已导入的内容。\n要删除内容请另外用 rollback 接口。', { name: site.label || site.site_uuid }))) return;
     try {
-      await api.delete(`/admin/sync/wordpress/sites/${encodeURIComponent(site.site_uuid)}`);
+      await api.delete(`${apiBase}/sites/${encodeURIComponent(site.site_uuid)}`);
       toast.success(t('admin.common.deleted', '已删除'));
       await loadSites();
     } catch (e: any) {
@@ -177,11 +206,11 @@ export default function SyncSitesPanel() {
   return (
     <div>
       <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <i className="fa-brands fa-wordpress" style={{ color: 'var(--color-primary)' }} />
-        {t('admin.syncSites.title', 'WordPress 同步')}
+        <i className={meta.icon} style={{ color: 'var(--color-primary)' }} />
+        {platformLabel} 同步
       </div>
       <p style={{ fontSize: 13, color: 'var(--color-text-dim)', lineHeight: 1.7, marginBottom: 20 }}>
-        {t('admin.syncSites.descriptionPrefix', '授权一个 WordPress 站点推送内容到 Utterlog。每个站点生成独立的 Site UUID + Token，装')} <code>utterlog-sync</code> {t('admin.syncSites.descriptionSuffix', '插件后填入对应字段即可。Token')} <b>{t('admin.syncSites.onceOnly', '只显示一次')}</b>。
+        授权一个 {platformLabel} 站点推送内容到 Utterlog。每个站点生成独立的 Site UUID + Token，装 <code>{meta.pluginName}</code> 插件后填入对应字段即可。Token <b>只显示一次</b>。
       </p>
 
       {/* Sites list */}
@@ -193,8 +222,8 @@ export default function SyncSitesPanel() {
           <div style={{ fontSize: 13, fontWeight: 600 }}>
             {t('admin.syncSites.authorizedSites', '已授权站点')} <span style={{ color: 'var(--color-text-muted)', fontWeight: 400, marginLeft: 6 }}>({sites.length})</span>
           </div>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <i className="fa-solid fa-plus" style={{ marginRight: 6 }} /> {t('admin.syncSites.newAuthorization', '新建授权')}
+          <Button size="sm" className="btn-square" title={t('admin.syncSites.newAuthorization', '新建授权')} onClick={() => setCreateOpen(true)}>
+            <i className="fa-solid fa-plus" />
           </Button>
         </div>
 
@@ -205,9 +234,9 @@ export default function SyncSitesPanel() {
         ) : sites.length === 0 ? (
           <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: 13 }}>
             <div style={{ fontSize: 32, color: 'var(--color-text-muted)', marginBottom: 10 }}>
-              <i className="fa-brands fa-wordpress" />
+              <i className={meta.icon} />
             </div>
-            {t('admin.syncSites.empty', '还没有授权任何 WordPress 站点。')}
+            还没有授权任何 {platformLabel} 站点。
             <br />
             {t('admin.syncSites.emptyHint', '点上方「新建授权」生成第一个。')}
           </div>
@@ -274,7 +303,7 @@ export default function SyncSitesPanel() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600, color: 'var(--color-primary)' }}>
-              <i className="fa-solid fa-circle-notch fa-spin" />
+              <i className="fa-solid fa-spinner fa-spin" />
               {t('admin.syncSites.job.running', '任务进行中')}
               <span style={{ fontSize: 11, color: 'var(--color-text-dim)', fontFamily: 'ui-monospace,monospace', fontWeight: 400 }}>
                 {(j.job_id || '').slice(0, 16)}…
@@ -376,7 +405,7 @@ export default function SyncSitesPanel() {
       )}
 
       {/* Create site modal */}
-      <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title={t('admin.syncSites.createTitle', '新建 WordPress 同步授权')} size="sm">
+      <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title={`新建 ${platformLabel} 同步授权`} size="sm">
         <div>
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 6 }}>{t('admin.syncSites.siteNamePrivate', '站点名称（自己记）')}</div>
@@ -389,23 +418,21 @@ export default function SyncSitesPanel() {
             />
           </div>
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 6 }}>{t('admin.syncSites.sourceUrlLabel', '源站地址（旧 WordPress 博客 URL）')}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 6 }}>源站地址（旧 {platformLabel} 博客 URL）</div>
             <input
               type="text"
               value={createForm.source_url}
               onChange={(e) => setCreateForm((f) => ({ ...f, source_url: e.target.value }))}
-              placeholder="https://your-old-wp-site.com"
+              placeholder={platform === 'typecho' ? 'https://your-old-typecho-site.com' : 'https://your-old-wp-site.com'}
               style={{ width: '100%', height: 40, padding: '0 12px', border: '1px solid var(--color-border)', fontFamily: 'inherit', fontSize: 13 }}
             />
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 6 }}>
-              {t('admin.syncSites.sourceUrlHintPrefix', 'server 扫文章内容里的图片 URL 时会匹配这个域名下的')} <code>/wp-content/uploads/</code> {t('admin.syncSites.sourceUrlHintSuffix', '路径。')}
+              server 扫文章内容里的图片 URL 时会匹配这个域名下的 <code>{meta.uploadsPath}</code> 路径。
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>{t('admin.common.cancel', '取消')}</Button>
-            <Button onClick={submitCreate}>
-              <i className="fa-solid fa-key" style={{ marginRight: 6 }} /> {t('admin.syncSites.generateToken', '生成 UUID + Token')}
-            </Button>
+            <Button onClick={submitCreate}>{t('admin.syncSites.generateToken', '生成授权')}</Button>
           </div>
         </div>
       </Modal>
@@ -453,7 +480,7 @@ export default function SyncSitesPanel() {
             </div>
 
             <div style={{ padding: '10px 14px', background: '#f0fdf4', borderLeft: '3px solid #16a34a', fontSize: 12, color: '#166534', marginBottom: 16, lineHeight: 1.6 }}>
-              <b>{t('admin.syncSites.nextStep', '下一步')}</b>：{t('admin.syncSites.nextStepInstallPrefix', '在你的 WordPress 后台装')} <code>utterlog-sync</code> {t('admin.syncSites.nextStepInstallSuffix', '插件，设置页填：')}
+              <b>{t('admin.syncSites.nextStep', '下一步')}</b>：在你的 {platformLabel} 后台装 <code>{meta.pluginName}</code> 插件，设置页填：
               <br />
               URL: <code>{window.location.origin}</code>
               <br />

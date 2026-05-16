@@ -1480,7 +1480,7 @@
     "admin.syncSites.sourceUrlLabel": "Origin address (old WordPress blog URL)",
     "admin.syncSites.sourceUrlHintPrefix": "When the server scans the image URL in the article content, it will match the URL under this domain name.",
     "admin.syncSites.sourceUrlHintSuffix": "path.",
-    "admin.syncSites.generateToken": "Generate UUID + Token",
+    "admin.syncSites.generateToken": "Generate authorization",
     "admin.syncSites.createdTitle": "Authorization has been generated · Please save now",
     "admin.syncSites.tokenOnce": "Token is only displayed this time",
     "admin.syncSites.tokenOnceHint": "It cannot be viewed again after closing and needs to be regenerated if lost.",

@@ -23,6 +23,71 @@ interface HomePageProps {
   perPage?: number;
 }
 
+// 4 个内置默认图块 —— admin 在「主题 → 首页图块」里没配置或全清空时
+// 兜底，保留 OOB 的视觉效果。配置了哪怕 1 个就以 admin 数组为准（不
+// 跟默认混合）。位置/旋转/动画由 .nebula-tile--1..4 这 4 个 CSS 类
+// 控制，所以最多渲染 4 个，多出的忽略。
+interface HeroTile {
+  icon: string;
+  label: string;
+  href?: string;
+}
+const DEFAULT_HERO_TILES: HeroTile[] = [
+  { icon: 'fa-solid fa-tv-music', label: '影音' },
+  { icon: 'fa-solid fa-code', label: '代码' },
+  { icon: 'fa-solid fa-plane', label: '旅行' },
+  { icon: 'fa-solid fa-citrus', label: '日常' },
+];
+
+function parseHeroTiles(raw: unknown): HeroTile[] {
+  if (!raw) return DEFAULT_HERO_TILES;
+  try {
+    const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(arr) || arr.length === 0) return DEFAULT_HERO_TILES;
+    const cleaned = arr
+      .filter((t) => t && typeof t === 'object' && (t.icon || t.label))
+      .slice(0, 4)
+      .map((t) => ({
+        icon: String(t.icon || '').trim(),
+        label: String(t.label || '').trim(),
+        href: t.href ? String(t.href).trim() : undefined,
+      }));
+    return cleaned.length > 0 ? cleaned : DEFAULT_HERO_TILES;
+  } catch {
+    return DEFAULT_HERO_TILES;
+  }
+}
+
+function renderTileIcon(icon: string) {
+  if (!icon) return <i className="fa-solid fa-circle" aria-hidden="true" />;
+  const trimmed = icon.trim();
+  if (trimmed.startsWith('<svg')) {
+    return (
+      <span
+        className="nebula-tile-svg"
+        aria-hidden="true"
+        dangerouslySetInnerHTML={{ __html: trimmed }}
+      />
+    );
+  }
+  if (trimmed.startsWith('http') || trimmed.startsWith('/uploads/') || trimmed.startsWith('/')) {
+    // 用 <span> + background-image 渲染上传图片，故意不用 <img> 元素：
+    // 1) 浏览器右键菜单里不会出现「查看图像」「另存为图像」
+    // 2) 用户也无法拖拽保存
+    // 3) 图块是纯装饰，无需 alt / 语义化 <img>
+    // encodeURI + 转义双引号，防 admin 输入意外破坏 CSS url() 语法。
+    const safeUrl = encodeURI(trimmed).replace(/"/g, '%22');
+    return (
+      <span
+        className="nebula-tile-img"
+        aria-hidden="true"
+        style={{ backgroundImage: `url("${safeUrl}")` }}
+      />
+    );
+  }
+  return <i className={trimmed} aria-hidden="true" />;
+}
+
 export default function HomePage({
   posts: initialPosts,
   page: initialPage,
@@ -35,7 +100,8 @@ export default function HomePage({
   // 对不上。fallback 10 跟 server 的 fallback 保持一致。
   perPage = 10,
 }: HomePageProps) {
-  const { site, categories: contextCategories, archiveStats: contextStats, menus } = useThemeContext();
+  const { site, categories: contextCategories, archiveStats: contextStats, menus, options } = useThemeContext();
+  const heroTiles = parseHeroTiles(options?.nebula_hero_tiles);
   const allCategories = serverCategories.length ? serverCategories : contextCategories;
   // 分类导航（中间筛选条）：优先用 admin 在「主题 → 菜单 → 分类导航」
   // 配的菜单项；admin 不配 → 自动列出所有分类（向后兼容旧站点）。
@@ -140,20 +206,41 @@ export default function HomePage({
         <div className="nebula-hero-inner">
           <p className="nebula-hero-intro">{heroIntro}</p>
 
-          {/* 4 个爱好图块（不是分类，仅展示个人爱好；hover 显示文字 + icon 弹跳） */}
+          {/* 4 个 hero 图块。默认是「影音/代码/旅行/日常」展示个人爱好；
+              admin 在「主题 → 首页图块」可改成自定义入口（导航/作品集
+              /外链等）。href 有值就渲染为 <a>，否则为纯展示 <div>。
+              hover 显示 label + icon 弹跳。位置由 .nebula-tile--1..4 控制。*/}
           <div className="nebula-tile-stage">
-            <div className="nebula-tile nebula-tile--1" data-label="影音" aria-label="影音">
-              <i className="fa-solid fa-tv-music" aria-hidden="true" />
-            </div>
-            <div className="nebula-tile nebula-tile--2" data-label="代码" aria-label="代码">
-              <i className="fa-solid fa-code" aria-hidden="true" />
-            </div>
-            <div className="nebula-tile nebula-tile--3" data-label="旅行" aria-label="旅行">
-              <i className="fa-solid fa-plane" aria-hidden="true" />
-            </div>
-            <div className="nebula-tile nebula-tile--4" data-label="日常" aria-label="日常">
-              <i className="fa-solid fa-citrus" aria-hidden="true" />
-            </div>
+            {heroTiles.map((tile, i) => {
+              const cls = `nebula-tile nebula-tile--${i + 1}`;
+              const label = tile.label || `图块 ${i + 1}`;
+              const inner = renderTileIcon(tile.icon);
+              if (tile.href) {
+                const isExternal = /^https?:/i.test(tile.href);
+                return isExternal ? (
+                  <a
+                    key={i}
+                    className={cls}
+                    data-label={label}
+                    aria-label={label}
+                    href={tile.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <Link key={i} prefetch={false} href={tile.href} className={cls} data-label={label} aria-label={label}>
+                    {inner}
+                  </Link>
+                );
+              }
+              return (
+                <div key={i} className={cls} data-label={label} aria-label={label}>
+                  {inner}
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

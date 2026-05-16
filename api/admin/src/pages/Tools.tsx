@@ -1,6 +1,6 @@
 
-import { useRef, useState, useEffect } from 'react';
-import { importApi, optionsApi } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { optionsApi } from '@/lib/api';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui';
@@ -10,12 +10,10 @@ import { useI18n } from '@/lib/i18n';
 
 export default function ToolsPage() {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<'import' | 'backup' | 'wp-sync'>('import');
-
-  // WordPress import state
-  const [wpImporting, setWpImporting] = useState(false);
-  const [wpResult, setWpResult] = useState<any>(null);
-  const wpFileRef = useRef<HTMLInputElement>(null);
+  // 2026-05: 移除「导入工具」tab —— 历史 WordPress XML 导入只是初版临时
+  // 入口，已被「WordPress 同步」插件 + 推送流程完全取代。Typecho 走同样
+  // 的同步插件，没必要再保留 XML 上传那个分支。
+  const [activeTab, setActiveTab] = useState<'backup' | 'wp-sync' | 'typecho-sync'>('wp-sync');
 
   // Backup state
   const [stats, setStats] = useState<any>(null);
@@ -31,28 +29,6 @@ export default function ToolsPage() {
   const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => { if (activeTab === 'backup') { fetchBackupData(); fetchBackupSettings(); } }, [activeTab]);
-
-  const handleWordPressImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.name.endsWith('.xml')) { toast.error(t('admin.tools.toast.needWordPressXml', '请上传 WordPress 导出的 XML 文件')); return; }
-    if (!confirm(t('admin.tools.confirm.wpImport', '导入将清空现有文章、分类、标签、评论数据，确定继续？'))) {
-      if (wpFileRef.current) wpFileRef.current.value = '';
-      return;
-    }
-    setWpImporting(true);
-    setWpResult(null);
-    try {
-      const res: any = await importApi.wordpress(file);
-      const data = res.data || res;
-      setWpResult(data);
-      toast.success(t('admin.tools.toast.wpImportSuccess', '导入成功：{posts} 篇文章，{categories} 个分类，{tags} 个标签，{comments} 条评论', { posts: data.posts, categories: data.categories, tags: data.tags, comments: data.comments }));
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || t('admin.tools.toast.importFailed', '导入失败'));
-    }
-    setWpImporting(false);
-    if (wpFileRef.current) wpFileRef.current.value = '';
-  };
 
   // Backup handlers
   const fetchBackupData = () => {
@@ -122,8 +98,8 @@ export default function ToolsPage() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--color-border)', marginBottom: '20px' }}>
         {[
-          { key: 'import' as const, label: t('admin.tools.tabs.import', '导入工具') },
           { key: 'wp-sync' as const, label: t('admin.tools.tabs.wpSync', 'WordPress 同步') },
+          { key: 'typecho-sync' as const, label: t('admin.tools.tabs.typechoSync', 'Typecho 同步') },
           { key: 'backup' as const, label: t('admin.tools.tabs.backup', '备份恢复') },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
@@ -136,55 +112,18 @@ export default function ToolsPage() {
         ))}
       </div>
 
-      {/* ==================== 导入工具 ==================== */}
-      {activeTab === 'import' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
-          <div className="card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="20" height="20" viewBox="0 0 1024 1024" fill="#fff"><path d="M512 1024C132.647385 1024 0 891.313231 0 512S132.647385 0 512 0s512 132.686769 512 512-132.647385 512-512 512zM236.307692 354.461538h551.384616V275.692308H236.307692v78.76923z m0 196.923077h393.846154v-78.76923H236.307692v78.76923z m0 196.923077h472.615385v-78.76923H236.307692v78.76923z" /></svg>
-              </div>
-              <div>
-                <h3 className="text-main" style={{ fontSize: '15px', fontWeight: 600 }}>{t('admin.tools.import.wordpress.title', 'WordPress 导入')}</h3>
-                <p className="text-dim" style={{ fontSize: '12px' }}>{t('admin.tools.import.wordpress.description', '从 WordPress 导出的 XML 文件导入文章、分类、标签和评论')}</p>
-              </div>
-            </div>
-            <input ref={wpFileRef} type="file" accept=".xml" onChange={handleWordPressImport} style={{ display: 'none' }} />
-            <Button onClick={() => wpFileRef.current?.click()} disabled={wpImporting} style={{ width: '100%' }}>
-              <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '16px' }} /> {wpImporting ? t('admin.common.importing', '导入中…') : t('admin.tools.import.wordpress.chooseXml', '选择 XML 文件并导入')}
-            </Button>
-            {wpResult && (
-              <div style={{ padding: '12px', borderRadius: '4px', background: 'var(--color-bg-soft)', fontSize: '13px', marginTop: '12px' }}>
-                <p className="text-main" style={{ fontWeight: 600, marginBottom: '8px' }}>{t('admin.tools.import.result', '导入结果')}</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                  <span className="text-sub">{t('admin.common.posts', '文章')}：<strong>{wpResult.posts}</strong></span>
-                  <span className="text-sub">{t('admin.common.categories', '分类')}：<strong>{wpResult.categories}</strong></span>
-                  <span className="text-sub">{t('admin.common.tags', '标签')}：<strong>{wpResult.tags}</strong></span>
-                  <span className="text-sub">{t('admin.common.comments', '评论')}：<strong>{wpResult.comments}</strong></span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="card" style={{ padding: '24px', opacity: 0.6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--color-text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="20" height="20" viewBox="0 0 1024 1024" fill="#fff"><path d="M512 1024C132.647385 1024 0 891.313231 0 512S132.647385 0 512 0s512 132.686769 512 512-132.647385 512-512 512zM236.307692 354.461538h551.384616V275.692308H236.307692v78.76923z m0 196.923077h393.846154v-78.76923H236.307692v78.76923z m0 196.923077h472.615385v-78.76923H236.307692v78.76923z" /></svg>
-              </div>
-              <div>
-                <h3 className="text-main" style={{ fontSize: '15px', fontWeight: 600 }}>{t('admin.tools.import.typecho.title', 'Typecho 导入')}</h3>
-                <p className="text-dim" style={{ fontSize: '12px' }}>{t('admin.tools.import.typecho.description', '通过数据库连接从 Typecho 导入数据')}</p>
-              </div>
-            </div>
-            <p className="text-dim" style={{ fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>{t('admin.common.comingSoon', '即将推出')}</p>
-          </div>
-        </div>
-      )}
-
       {/* ==================== WordPress 同步 ==================== */}
       {activeTab === 'wp-sync' && (
         <>
-          <SyncSitesPanel />
+          <SyncSitesPanel platform="wordpress" />
+          <RebuildStatsPanel />
+        </>
+      )}
+
+      {/* ==================== Typecho 同步 ==================== */}
+      {activeTab === 'typecho-sync' && (
+        <>
+          <SyncSitesPanel platform="typecho" />
           <RebuildStatsPanel />
         </>
       )}

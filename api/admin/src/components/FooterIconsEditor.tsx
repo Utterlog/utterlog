@@ -133,8 +133,8 @@ export default function FooterIconsEditor({
     <div className="card" style={{ padding: 20, marginTop: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <h3 className="text-main" style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</h3>
-        <button className="btn btn-secondary" onClick={addRow} style={{ fontSize: 12 }}>
-          <i className="fa-regular fa-plus" style={{ fontSize: 11 }} /> 添加
+        <button className="btn btn-secondary btn-square" onClick={addRow} title="添加">
+          <i className="fa-regular fa-plus" style={{ fontSize: 12 }} />
         </button>
       </div>
       <p className="text-dim" style={{ fontSize: 12, lineHeight: 1.6, marginBottom: 16 }}>

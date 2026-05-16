@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/lib/store';
 import toast from 'react-hot-toast';
-import { Button, Input, Modal } from '@/components/ui';
+import { Button, Input, SaveButton, Modal } from '@/components/ui';
 import api, { authApi, optionsApi } from '@/lib/api';
 import { useForm } from 'react-hook-form';
 import { useI18n } from '@/lib/i18n';
@@ -361,7 +361,7 @@ export default function ProfilePage() {
               {t('admin.profile.sensitiveChangeHint', '修改登录账号或邮箱需要验证当前密码和邮箱验证码')}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button type="submit" loading={saving}>{t('admin.common.save', '保存')}</Button>
+              <SaveButton type="submit" loading={saving} />
             </div>
           </form>
         </div>
@@ -460,7 +460,7 @@ export default function ProfilePage() {
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <Button onClick={saveSocialLinks} loading={socialSaving}>{t('admin.common.save', '保存')}</Button>
+            <SaveButton onClick={saveSocialLinks} loading={socialSaving} />
           </div>
         </div>
 

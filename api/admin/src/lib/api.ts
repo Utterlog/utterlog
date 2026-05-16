@@ -234,6 +234,16 @@ export const momentsApi = {
   delete: (id: number) => api.delete(`/moments/${id}`),
 };
 
+// Reverse geocoding — single source of truth, shared with the public web
+// (web/lib/api.ts geoApi.reverse). Backend tries Mapbox → Amap → Tencent
+// and returns city-level granularity ({location, city, region, country}),
+// never street/POI level. Both admin and frontend MUST use this endpoint
+// so the location stored on a moment is consistent regardless of where
+// it was published from.
+export const geoApi = {
+  reverse: (lat: number, lng: number) => api.get('/location/reverse', { params: { lat, lng } }),
+};
+
 // Music API
 export const musicApi = {
   list: (params?: any) => api.get('/music', { params }),

@@ -1476,7 +1476,7 @@
     "admin.syncSites.sourceUrlLabel": "源站地址（旧 WordPress 博客 URL）",
     "admin.syncSites.sourceUrlHintPrefix": "server 扫文章内容里的图片 URL 时会匹配这个域名下的",
     "admin.syncSites.sourceUrlHintSuffix": "路径。",
-    "admin.syncSites.generateToken": "生成 UUID + Token",
+    "admin.syncSites.generateToken": "生成授权",
     "admin.syncSites.createdTitle": "授权已生成 · 请立即保存",
     "admin.syncSites.tokenOnce": "Token 只显示这一次",
     "admin.syncSites.tokenOnceHint": "关闭后无法再次查看，丢失需要重新生成。",

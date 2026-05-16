@@ -11,6 +11,7 @@ import (
 	"time"
 	"utterlog-go/config"
 	"utterlog-go/internal/model"
+	"utterlog-go/internal/textutil"
 )
 
 // agentToolDefs is the OpenAI-compatible function calling schema sent to the AI.
@@ -298,6 +299,7 @@ func executeAgentTool(name string, args map[string]interface{}) string {
 		if name == "" || url == "" {
 			return "错误：name 和 url 为必填"
 		}
+		name = textutil.NormalizeDisplayName(name) // 防 HTML 实体进 DB
 		desc, _ := args["description"].(string)
 		logo, _ := args["logo"].(string)
 		group, _ := args["group_name"].(string)

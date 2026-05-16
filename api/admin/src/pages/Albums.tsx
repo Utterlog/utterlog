@@ -131,10 +131,11 @@ export default function AlbumsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <p className="text-dim" style={{ fontSize: '13px' }}>管理照片相册，公开相册将在前端展示</p>
         <Button
-          style={{ minWidth: '136px', padding: '0 24px', whiteSpace: 'nowrap' }}
+          className="btn-square"
+          title="新建相册"
           onClick={() => { setShowCreate(true); setForm({ title: '', slug: '', description: '', status: 'private' }); }}
         >
-          <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} /> 新建相册
+          <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />
         </Button>
       </div>
 

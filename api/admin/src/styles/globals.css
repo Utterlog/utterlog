@@ -148,50 +148,8 @@ body {
   font-display: swap;
 }
 
-/* FontAwesome Pro 7.2.0 — re-declare the families used by the admin
-   panel with font-display: swap to override FA's default block. */
-@font-face {
-  font-family: "Font Awesome 7 Pro";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-light-300.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Font Awesome 7 Pro";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-regular-400.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Font Awesome 7 Pro";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-solid-900.woff2") format("woff2");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Font Awesome 7 Brands";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-brands-400.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Font Awesome 7 Sharp";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-sharp-light-300.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Font Awesome 7 Sharp";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-sharp-solid-900.woff2") format("woff2");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
+/* FontAwesome Pro 7.2.0 走 index.html 引入的 official all.min.css —— 不再
+   在这里 @font-face 覆盖一份，与前台保持一致，避免重复源。 */
 
 /* ========================================
    Theme Variables — CSS custom properties
@@ -364,7 +322,6 @@ body {
    Global Resets
    ======================================== */
 * {
-  box-sizing: border-box;
   padding: 0;
   margin: 0;
 }
@@ -376,9 +333,6 @@ html {
 
 body {
   max-width: 100vw;
-}
-
-body {
   color: var(--color-text-main);
   background: var(--color-bg-main);
 }
@@ -652,7 +606,6 @@ body {
   color: var(--color-text-sub);
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   flex-shrink: 0;
-  box-sizing: border-box;
 }
 .action-btn:hover {
   background: var(--color-bg-soft);
@@ -1390,18 +1343,11 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
 /* v2.3.1: 删 @keyframes spin / .animate-spin。
    全 admin loading 走 components/ui/Spinner.tsx,使用 FontAwesome
    自带的 fa-spin(动画在 FA CSS 内部定义),不再需要本地 keyframes。
-   .animate-spin 整个项目无人引用 —— 死代码。 */
+   .animate-spin 整个项目无人引用 —— 死代码。
 
-@keyframes vinyl-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.vinyl-spinning {
-  animation: vinyl-spin 8s linear infinite;
-}
-.vinyl-paused {
-  animation-play-state: paused;
-}
+   v2.3.11: vinyl-spin / .vinyl-spinning / .vinyl-paused 也一并删 ——
+   admin 里没人用，应该是早期音乐播放器残留。前台播放器有自己的
+   CSS，与本文件无关。 */
 
 .utter-moment-embed {
   --moment-accent: var(--color-primary, #0052d9);

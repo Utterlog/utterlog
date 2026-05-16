@@ -20,10 +20,8 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 [data-theme="Azure"] .azure-frame {
-  box-sizing: border-box;
   width: 100%;
   max-width: 1400px;
   min-height: calc(100vh - 60px);
@@ -89,7 +87,6 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  box-sizing: border-box;
   padding-right: 10px;
   background: rgba(255, 255, 255, 0.97);
   border-bottom: 1px solid #e5e5e5;
@@ -102,7 +99,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  box-sizing: border-box;
   max-width: 1400px;
   height: 56px;
   margin: 0 auto;
@@ -329,7 +325,6 @@
   stroke: #999;
 }
 [data-theme="Azure"] .azure-search-input {
-  box-sizing: border-box;
   flex: 1;
   min-width: 0;
   height: 100%;
@@ -394,7 +389,6 @@
   stroke: #999;
 }
 [data-theme="Azure"] .azure-search-modal-input {
-  box-sizing: border-box;
   flex: 1;
   min-width: 0;
   height: 100%;
@@ -1519,7 +1513,6 @@
     max-height: calc(min(520px, calc(100vh - 76px)) - 44px);
   }
   [data-theme="Azure"] .azure-footer {
-    box-sizing: border-box;
     overflow: hidden;
     padding-bottom: max(14px, env(safe-area-inset-bottom));
   }

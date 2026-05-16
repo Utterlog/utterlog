@@ -263,9 +263,8 @@ export default function FootprintsPage() {
   };
 
   const renderSettingsButton = () => (
-    <Button type="button" variant="secondary" size="sm" onClick={() => setSettingsOpen(true)} style={{ gap: 8 }}>
+    <Button type="button" variant="secondary" size="sm" className="btn-square" title={t('admin.footprints.settings', '足迹设置')} onClick={() => setSettingsOpen(true)}>
       <i className="fa-regular fa-sliders" />
-      {t('admin.footprints.settings', '足迹设置')}
     </Button>
   );
 
@@ -281,14 +280,12 @@ export default function FootprintsPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <Button variant="secondary" size="sm" onClick={openPublicPage} style={{ gap: 8 }}>
+          <Button variant="secondary" size="sm" className="btn-square" title={t('admin.footprints.frontPage', '前台足迹页')} onClick={openPublicPage}>
             <i className="fa-regular fa-arrow-up-right-from-square" />
-            {t('admin.footprints.frontPage', '前台足迹页')}
           </Button>
           {renderSettingsButton()}
-          <Button size="sm" onClick={() => fetchFootprints()} loading={loading} style={{ gap: 8 }}>
+          <Button size="sm" className="btn-square" title={t('admin.common.refresh', '刷新')} onClick={() => fetchFootprints()} loading={loading}>
             <i className="fa-regular fa-arrows-rotate" />
-            {t('admin.common.refresh', '刷新')}
           </Button>
         </div>
       </div>
@@ -322,22 +319,23 @@ export default function FootprintsPage() {
             style={{ height: 36 }}
           />
         </div>
-        <Button type="submit" size="sm" style={{ gap: 8, flexShrink: 0 }}>
+        <Button type="submit" size="sm" className="btn-square" title={t('admin.footprints.search', '搜索')} style={{ flexShrink: 0 }}>
           <i className="fa-regular fa-magnifying-glass" />
-          {t('admin.footprints.search', '搜索')}
         </Button>
         {keyword && (
           <Button
             type="button"
             variant="secondary"
             size="sm"
+            className="btn-square"
+            title={t('admin.common.reset', '重置')}
             onClick={() => {
               setQuery('');
               setKeyword('');
               fetchFootprints('');
             }}
           >
-            {t('admin.common.reset', '重置')}
+            <i className="fa-regular fa-xmark" />
           </Button>
         )}
       </form>

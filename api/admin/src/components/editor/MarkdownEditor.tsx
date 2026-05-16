@@ -10,7 +10,12 @@ import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeSlug from 'rehype-slug';
 import { useI18n } from '@/lib/i18n';
 
-/* ── toolbar shortcut helpers ── */
+/* ── toolbar shortcut helpers ──
+ * 工具栏按钮上都加了 onMouseDown preventDefault，所以理论上 textarea
+ * 不会失焦。但 onChange → React 重渲染 textarea，浏览器在极少数情况
+ * 下仍会重置 scrollTop；focus() 也可能自动滚动让光标可见。这里统一
+ * 在 rAF 里恢复点击前的 scrollTop，并用 preventScroll 防止 focus 自滚。
+ */
 function wrap(
   ta: HTMLTextAreaElement,
   before: string,
@@ -18,14 +23,15 @@ function wrap(
   onChange: (v: string) => void,
   placeholder = '',
 ) {
-  const { selectionStart: s, selectionEnd: e, value } = ta;
+  const { selectionStart: s, selectionEnd: e, value, scrollTop } = ta;
   const sel = value.slice(s, e) || placeholder;
   const next = value.slice(0, s) + before + sel + after + value.slice(e);
   onChange(next);
   requestAnimationFrame(() => {
-    ta.focus();
+    ta.focus({ preventScroll: true });
     ta.selectionStart = s + before.length;
     ta.selectionEnd = s + before.length + sel.length;
+    ta.scrollTop = scrollTop;
   });
 }
 
@@ -34,13 +40,14 @@ function linePrefix(
   prefix: string,
   onChange: (v: string) => void,
 ) {
-  const { selectionStart: s, value } = ta;
+  const { selectionStart: s, value, scrollTop } = ta;
   const lineStart = value.lastIndexOf('\n', s - 1) + 1;
   const next = value.slice(0, lineStart) + prefix + value.slice(lineStart);
   onChange(next);
   requestAnimationFrame(() => {
-    ta.focus();
+    ta.focus({ preventScroll: true });
     ta.selectionStart = ta.selectionEnd = s + prefix.length;
+    ta.scrollTop = scrollTop;
   });
 }
 
@@ -113,10 +120,14 @@ const toolbar: TBBtn[] = [
     label: '分割线',
     icon: <span style={{ fontSize: '12px', letterSpacing: '2px' }}>---</span>,
     action: (ta, fn) => {
-      const { selectionStart: s, value } = ta;
+      const { selectionStart: s, value, scrollTop } = ta;
       const next = value.slice(0, s) + '\n---\n' + value.slice(s);
       fn(next);
-      requestAnimationFrame(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = s + 5; });
+      requestAnimationFrame(() => {
+        ta.focus({ preventScroll: true });
+        ta.selectionStart = ta.selectionEnd = s + 5;
+        ta.scrollTop = scrollTop;
+      });
     },
   },
   { label: 'sep', icon: null, action: () => {} },
@@ -618,6 +629,7 @@ export default function MarkdownEditor({
             ref={headingBtnRef}
             type="button"
             title={t('admin.editor.toolbar.heading', '标题')}
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => toggleDropdown('heading')}
             style={{
               padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
@@ -629,7 +641,7 @@ export default function MarkdownEditor({
           </button>
           <ToolbarDropdown open={showHeadings} anchorRef={headingBtnRef} onClose={closeDropdowns} minWidth={80}>
               {[1, 2, 3, 4, 5, 6].map(n => (
-                <button key={n} type="button" onClick={() => {
+                <button key={n} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => {
                   if (taRef.current) linePrefix(taRef.current, '#'.repeat(n) + ' ', onChange);
                   setShowHeadings(false);
                 }} style={{
@@ -651,7 +663,7 @@ export default function MarkdownEditor({
             <span key={`sep-${idx}`} style={{ width: '1px', height: '16px', background: 'var(--color-border)', margin: '0 4px' }} />
           ) : btn.label === 'color' ? (
             <div key="color">
-              <button ref={colorBtnRef} type="button" title={t('admin.editor.toolbar.textColor', '字体颜色')} onClick={() => toggleDropdown('color')} style={{
+              <button ref={colorBtnRef} type="button" title={t('admin.editor.toolbar.textColor', '字体颜色')} onMouseDown={(e) => e.preventDefault()} onClick={() => toggleDropdown('color')} style={{
                 padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center',
               }}>
@@ -667,7 +679,7 @@ export default function MarkdownEditor({
                   <p style={{ fontSize: '11px', color: 'var(--color-text-dim)', marginBottom: '8px' }}>{t('admin.editor.chooseTextColor', '选择字体颜色')}</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
                     {['#f43f5e', '#f97316', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#1a1a1a', '#6b7280'].map(color => (
-                      <button key={color} type="button" onClick={() => {
+                      <button key={color} type="button" onMouseDown={(ev) => ev.preventDefault()} onClick={() => {
                         if (taRef.current) {
                           wrap(taRef.current, `[color=${color}]`, '[/color]', onChange, '彩色文本');
                         }
@@ -680,7 +692,7 @@ export default function MarkdownEditor({
                   </div>
                   <div style={{ marginTop: '8px', display: 'flex', gap: '4px' }}>
                     <input id="custom-color" type="color" defaultValue="#3b82f6" style={{ width: '28px', height: '28px', border: 'none', cursor: 'pointer', padding: 0 }} />
-                    <button type="button" onClick={() => {
+                    <button type="button" onMouseDown={(ev) => ev.preventDefault()} onClick={() => {
                       const el = document.getElementById('custom-color') as HTMLInputElement;
                       if (el && taRef.current) {
                         wrap(taRef.current, `[color=${el.value}]`, '[/color]', onChange, '彩色文本');
@@ -707,6 +719,7 @@ export default function MarkdownEditor({
               }}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-main)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-sub)')}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 const contentTypes = ['音乐', '图书', '电影', '说说'];
                 if (contentTypes.includes(btn.label) && onInsertContent) {
@@ -722,7 +735,7 @@ export default function MarkdownEditor({
         )}
         {/* Code block language picker */}
         <div>
-          <button ref={codeLangBtnRef} type="button" title={t('admin.editor.toolbar.codeBlock', '代码块')} onClick={() => toggleDropdown('code')} style={{
+          <button ref={codeLangBtnRef} type="button" title={t('admin.editor.toolbar.codeBlock', '代码块')} onMouseDown={(e) => e.preventDefault()} onClick={() => toggleDropdown('code')} style={{
             padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center',
           }}>
@@ -730,15 +743,17 @@ export default function MarkdownEditor({
           </button>
           <ToolbarDropdown open={showCodeLang} anchorRef={codeLangBtnRef} onClose={closeDropdowns} minWidth={120} maxHeight={240}>
               {['javascript', 'typescript', 'python', 'go', 'rust', 'java', 'php', 'ruby', 'swift', 'kotlin', 'c', 'cpp', 'csharp', 'html', 'css', 'scss', 'sql', 'bash', 'shell', 'json', 'yaml', 'toml', 'xml', 'markdown', 'diff', 'docker', 'nginx', 'lua', 'r', 'dart'].map(lang => (
-                <button key={lang} type="button" onClick={() => {
+                <button key={lang} type="button" onMouseDown={(ev) => ev.preventDefault()} onClick={() => {
                   if (taRef.current) {
-                    const { selectionStart: s, selectionEnd: e, value } = taRef.current;
+                    const ta = taRef.current;
+                    const { selectionStart: s, selectionEnd: e, value, scrollTop } = ta;
                     const sel = value.slice(s, e) || '';
                     const next = value.slice(0, s) + '```' + lang + '\n' + sel + '\n```' + value.slice(e);
                     onChange(next);
                     requestAnimationFrame(() => {
-                      taRef.current!.focus();
-                      taRef.current!.selectionStart = taRef.current!.selectionEnd = s + 4 + lang.length + sel.length;
+                      ta.focus({ preventScroll: true });
+                      ta.selectionStart = ta.selectionEnd = s + 4 + lang.length + sel.length;
+                      ta.scrollTop = scrollTop;
                     });
                   }
                   setShowCodeLang(false);
@@ -757,7 +772,7 @@ export default function MarkdownEditor({
         </div>
         {/* Table grid picker */}
         <div>
-          <button ref={tableBtnRef} type="button" title={t('admin.editor.toolbar.table', '表格')} onClick={() => toggleDropdown('table')} style={{
+          <button ref={tableBtnRef} type="button" title={t('admin.editor.toolbar.table', '表格')} onMouseDown={(e) => e.preventDefault()} onClick={() => toggleDropdown('table')} style={{
             padding: '5px 7px', background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center',
           }}>
@@ -776,14 +791,21 @@ export default function MarkdownEditor({
                     <div
                       key={i}
                       onMouseEnter={() => setTableHover({ r, c })}
+                      onMouseDown={(ev) => ev.preventDefault()}
                       onClick={() => {
                         if (taRef.current) {
-                          const { selectionStart: s, value } = taRef.current;
+                          const ta = taRef.current;
+                          const { selectionStart: s, value, scrollTop } = ta;
                           const header = '| ' + Array.from({ length: c }, (_, j) => t('admin.editor.tableColumn', '列{index}', { index: j + 1 })).join(' | ') + ' |';
                           const sep = '| ' + Array(c).fill('---').join(' | ') + ' |';
                           const rows = Array.from({ length: r }, () => '| ' + Array(c).fill('  ').join(' | ') + ' |').join('\n');
                           const table = `\n${header}\n${sep}\n${rows}\n`;
                           onChange(value.slice(0, s) + table + value.slice(s));
+                          requestAnimationFrame(() => {
+                            ta.focus({ preventScroll: true });
+                            ta.selectionStart = ta.selectionEnd = s + table.length;
+                            ta.scrollTop = scrollTop;
+                          });
                         }
                         setShowTable(false);
                         setTableHover({ r: 0, c: 0 });

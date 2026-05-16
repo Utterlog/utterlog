@@ -13,6 +13,7 @@ import (
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -82,6 +83,7 @@ type syncSite struct {
 	SourceURL  string `db:"source_url" json:"source_url"`
 	TokenHash  string `db:"token_hash" json:"-"` // never expose to client
 	Disabled   bool   `db:"disabled" json:"disabled"`
+	Platform   string `db:"platform" json:"platform"` // 'wordpress' | 'typecho'
 	LastSeenAt int64  `db:"last_seen_at" json:"last_seen_at"`
 	CreatedAt  int64  `db:"created_at" json:"created_at"`
 	UpdatedAt  int64  `db:"updated_at" json:"updated_at"`
@@ -407,6 +409,19 @@ func SyncWPRollback(c *gin.Context) {
 type createSiteReq struct {
 	Label     string `json:"label"`
 	SourceURL string `json:"source_url"`
+	Platform  string `json:"platform"` // 'wordpress' | 'typecho'，空值视为 wordpress
+}
+
+// resolveSyncPlatform 把任意来源（body / query / path）的 platform 值
+// 规范化成 'wordpress' / 'typecho'，其他（含空）一律按 wordpress
+// 处理 —— 既保持向后兼容（旧 WP 插件不传 platform），又防止脏数据。
+func resolveSyncPlatform(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "typecho":
+		return "typecho"
+	default:
+		return "wordpress"
+	}
 }
 
 // AdminSyncSiteCreate registers a sync source. By default the site_uuid
@@ -415,13 +430,20 @@ type createSiteReq struct {
 // already sees in their Utterlog settings, no separate "wp_xxx" id
 // ceremony. Only when an admin adds a SECOND WP source (rare) does a
 // fresh random UUID get generated to avoid the UNIQUE conflict.
+//
+// `platform` 字段（body 或 ?platform= query）决定该站点属于 WordPress
+// 还是 Typecho —— 不影响协议与 handler，只用于 admin UI 分 tab 展示。
 func AdminSyncSiteCreate(c *gin.Context) {
 	var req createSiteReq
 	c.ShouldBindJSON(&req)
+	platform := resolveSyncPlatform(req.Platform)
+	if platform == "wordpress" {
+		platform = resolveSyncPlatform(c.Query("platform"))
+	}
 
 	uuid := installationSiteUUID()
 	if uuid == "" {
-		uuid = "wp_" + randHex(16)
+		uuid = platform[:2] + "_" + randHex(16)
 	} else {
 		// If the installation UUID is already registered as a sync
 		// site, fall back to a fresh random one (second+ source).
@@ -429,7 +451,7 @@ func AdminSyncSiteCreate(c *gin.Context) {
 		config.DB.Get(&exists, fmt.Sprintf(
 			"SELECT COUNT(*) FROM %s WHERE site_uuid=$1", config.T("sync_sites")), uuid)
 		if exists > 0 {
-			uuid = "wp_" + randHex(16)
+			uuid = platform[:2] + "_" + randHex(16)
 		}
 	}
 
@@ -438,10 +460,10 @@ func AdminSyncSiteCreate(c *gin.Context) {
 	now := time.Now().Unix()
 
 	_, err := config.DB.Exec(fmt.Sprintf(`
-		INSERT INTO %s (site_uuid, label, source_url, token_hash, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $5)
+		INSERT INTO %s (site_uuid, label, source_url, token_hash, platform, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $6)
 	`, config.T("sync_sites")),
-		uuid, req.Label, req.SourceURL, string(hash), now)
+		uuid, req.Label, req.SourceURL, string(hash), platform, now)
 	if err != nil {
 		util.Error(c, 500, "DB_ERR", err.Error())
 		return
@@ -451,6 +473,7 @@ func AdminSyncSiteCreate(c *gin.Context) {
 		"site_uuid": uuid,
 		"token":     token,
 		"label":     req.Label,
+		"platform":  platform,
 		"note":      "请立即保存 token — 之后无法再次查看",
 	})
 }
@@ -465,17 +488,31 @@ func installationSiteUUID() string {
 	return strings.TrimSpace(v)
 }
 
-// AdminSyncSiteList returns all registered sync sites (no token).
+// AdminSyncSiteList returns registered sync sites (no token).
+// 可选 ?platform=wordpress|typecho 过滤；不传则返回所有平台。
 func AdminSyncSiteList(c *gin.Context) {
 	rows := []struct {
 		syncSite
 		RecentJobs int `db:"recent_jobs" json:"recent_jobs"`
 	}{}
-	config.DB.Select(&rows, fmt.Sprintf(`
-		SELECT s.*, COALESCE((SELECT COUNT(*) FROM %s j WHERE j.site_uuid = s.site_uuid), 0) AS recent_jobs
-		FROM %s s
-		ORDER BY s.created_at DESC
-	`, config.T("sync_jobs"), config.T("sync_sites")))
+	rawPlatform := strings.ToLower(strings.TrimSpace(c.Query("platform")))
+	if rawPlatform != "" && rawPlatform != "wordpress" && rawPlatform != "typecho" {
+		rawPlatform = "" // 无效值视作不过滤，避免空结果让用户困惑
+	}
+	if rawPlatform == "" {
+		config.DB.Select(&rows, fmt.Sprintf(`
+			SELECT s.*, COALESCE((SELECT COUNT(*) FROM %s j WHERE j.site_uuid = s.site_uuid), 0) AS recent_jobs
+			FROM %s s
+			ORDER BY s.created_at DESC
+		`, config.T("sync_jobs"), config.T("sync_sites")))
+	} else {
+		config.DB.Select(&rows, fmt.Sprintf(`
+			SELECT s.*, COALESCE((SELECT COUNT(*) FROM %s j WHERE j.site_uuid = s.site_uuid), 0) AS recent_jobs
+			FROM %s s
+			WHERE s.platform = $1
+			ORDER BY s.created_at DESC
+		`, config.T("sync_jobs"), config.T("sync_sites")), rawPlatform)
+	}
 	util.Success(c, gin.H{"sites": rows})
 }
 
@@ -497,22 +534,41 @@ func AdminSyncSiteDelete(c *gin.Context) {
 }
 
 // AdminSyncJobList returns recent sync jobs across all sites.
+// 可选 ?platform=wordpress|typecho 过滤（按 sync_sites.platform 关联）。
 func AdminSyncJobList(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	if limit <= 0 || limit > 200 {
 		limit = 20
 	}
-	rows := []map[string]interface{}{}
-	r, err := config.DB.Queryx(fmt.Sprintf(`
-		SELECT job_id, site_uuid, status, stage, media_total, media_done,
-		       posts_rewritten, started_at, finished_at
-		FROM %s ORDER BY started_at DESC LIMIT $1
-	`, config.T("sync_jobs")), limit)
+	rawPlatform := strings.ToLower(strings.TrimSpace(c.Query("platform")))
+	if rawPlatform != "" && rawPlatform != "wordpress" && rawPlatform != "typecho" {
+		rawPlatform = ""
+	}
+
+	var r *sqlx.Rows
+	var err error
+	if rawPlatform == "" {
+		r, err = config.DB.Queryx(fmt.Sprintf(`
+			SELECT job_id, site_uuid, status, stage, media_total, media_done,
+			       posts_rewritten, started_at, finished_at
+			FROM %s ORDER BY started_at DESC LIMIT $1
+		`, config.T("sync_jobs")), limit)
+	} else {
+		r, err = config.DB.Queryx(fmt.Sprintf(`
+			SELECT j.job_id, j.site_uuid, j.status, j.stage, j.media_total, j.media_done,
+			       j.posts_rewritten, j.started_at, j.finished_at
+			FROM %s j
+			INNER JOIN %s s ON s.site_uuid = j.site_uuid
+			WHERE s.platform = $1
+			ORDER BY j.started_at DESC LIMIT $2
+		`, config.T("sync_jobs"), config.T("sync_sites")), rawPlatform, limit)
+	}
 	if err != nil {
 		util.Error(c, 500, "DB_ERR", err.Error())
 		return
 	}
 	defer r.Close()
+	rows := []map[string]interface{}{}
 	for r.Next() {
 		m := map[string]interface{}{}
 		r.MapScan(m)

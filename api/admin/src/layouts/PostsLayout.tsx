@@ -27,7 +27,20 @@ export default function PostsLayout() {
   return (
     <ToolbarContext.Provider value={{ setToolbar }}>
       <div>
-        <div style={{ marginBottom: 16 }}>
+        {/* Tabs (left) + page toolbar (right) share one row, mirroring
+            the Links page layout. No bottom rule on the row — only the
+            active tab carries its own 2px primary underline. */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            marginBottom: 16,
+            flexWrap: 'wrap',
+            rowGap: 8,
+          }}
+        >
           <div
             role="tablist"
             aria-label={t('admin.nav.posts', '文章')}
@@ -35,8 +48,8 @@ export default function PostsLayout() {
               display: 'flex',
               alignItems: 'center',
               gap: 4,
-              borderBottom: '1px solid var(--color-border)',
               overflowX: 'auto',
+              minHeight: 40,
             }}
           >
             {tabs.map(tab => (
@@ -66,7 +79,7 @@ export default function PostsLayout() {
             ))}
           </div>
           {toolbar && (
-            <div style={{ display: 'flex', alignItems: 'center', marginTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minHeight: 40 }}>
               {toolbar}
             </div>
           )}

@@ -703,7 +703,88 @@ func InitDB() error {
 		T("options"),
 	))
 
+	// 2026-05: collapse coding_github_token into the site-wide
+	// github_access_token. Earlier rev had two duplicate option keys
+	// holding the same Token (Coding 页面配置 + 设置→第三方服务 each
+	// wrote both keys), which confused admins editing the same value
+	// from two places. Now github_access_token is the single source of
+	// truth; the Coding page editor no longer asks for a Token.
+	//
+	// Step 1 — backfill: if github_access_token row is missing OR empty,
+	// inherit value from coding_github_token. ON CONFLICT update only
+	// fires when the existing row is blank, so a deliberately-set
+	// github_access_token is never overwritten.
+	// Step 2 — drop coding_github_token rows.
+	// Idempotent: once coding_github_token is gone all subsequent runs
+	// are no-ops.
+	DB.Exec(fmt.Sprintf(
+		"INSERT INTO %s (name, value, autoload, created_at, updated_at) "+
+			"SELECT 'github_access_token', value, true, "+
+			"  EXTRACT(EPOCH FROM NOW())::bigint, EXTRACT(EPOCH FROM NOW())::bigint "+
+			"FROM %s WHERE name = 'coding_github_token' AND COALESCE(value, '') <> '' "+
+			"ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value, "+
+			"  updated_at = EXTRACT(EPOCH FROM NOW())::bigint "+
+			"WHERE COALESCE(%s.value, '') = ''",
+		T("options"), T("options"), T("options"),
+	))
+	DB.Exec(fmt.Sprintf(
+		"DELETE FROM %s WHERE name = 'coding_github_token'",
+		T("options"),
+	))
+
+	// 2026-05: add platform column to ul_sync_sites for Typecho support.
+	// Existing rows default to 'wordpress' — the old WP plugin keeps
+	// working unchanged. New Typecho sites store platform='typecho'
+	// so admin UI can list them in a separate tab.
+	// Idempotent — IF NOT EXISTS guards repeated runs.
+	DB.Exec(fmt.Sprintf(
+		"ALTER TABLE %s ADD COLUMN IF NOT EXISTS platform VARCHAR(32) NOT NULL DEFAULT 'wordpress'",
+		T("sync_sites"),
+	))
+
+	// 2026-05: decode HTML entities in display name fields.
+	// 一些导入路径（RSS channel title / 远端 API 直接落库）让
+	// "Kevin&#039;s" / "Foo &amp; Bar" 这种串进了 DB，前台 React
+	// 输出文本时原样显示。一次性把所有含 '&' 的行 unescape，
+	// 后续写入路径已用 textutil.NormalizeDisplayName 兜底。
+	// Idempotent — 干净的值再跑一次仍然是同值。
+	decodeHTMLEntitiesIn("links", "name")
+	decodeHTMLEntitiesIn("rss_subscriptions", "site_name")
+	decodeHTMLEntitiesIn("comments", "author_name")
+	decodeHTMLEntitiesIn("posts", "title")
+
 	return nil
+}
+
+// decodeHTMLEntitiesIn 把指定表指定列里所有含 '&' 的行（可能是 HTML
+// 实体）跑一遍 html.UnescapeString 写回。无 '&' 的行不查不动。
+//
+// 注意：列内容真有合法 '&' 字符的话，UnescapeString 也只会按实体语法
+// 解一次 —— "A & B" 解出来还是 "A & B"，无副作用。
+func decodeHTMLEntitiesIn(table, col string) {
+	if DB == nil {
+		return
+	}
+	type row struct {
+		ID  int    `db:"id"`
+		Val string `db:"val"`
+	}
+	var rows []row
+	q := fmt.Sprintf("SELECT id, COALESCE(%s,'') AS val FROM %s WHERE %s LIKE '%%&%%'", col, T(table), col)
+	if err := DB.Select(&rows, q); err != nil {
+		return
+	}
+	if len(rows) == 0 {
+		return
+	}
+	u := fmt.Sprintf("UPDATE %s SET %s = $1 WHERE id = $2", T(table), col)
+	for _, r := range rows {
+		decoded := textutil.NormalizeDisplayName(r.Val)
+		if decoded == r.Val {
+			continue
+		}
+		DB.Exec(u, decoded, r.ID)
+	}
 }
 
 // T returns table name with prefix

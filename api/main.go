@@ -315,16 +315,20 @@ func main() {
 	api.GET("/social/feed-timeline", handler.FeedTimeline)
 	api.GET("/social/feed-stats", handler.FeedStats)
 
-	// ===================== WordPress sync (public, body-token auth) =====================
+	// ===================== WordPress / Typecho sync (public, body-token auth) =====================
 	// Auth via {site_uuid, token} in each request body — site must be
-	// registered via admin POST /admin/sync/wordpress/sites first.
-	syncWP := api.Group("/sync/wordpress")
-	syncWP.POST("/ping", handler.SyncWPPing)
-	syncWP.POST("/start", handler.SyncWPStart)
-	syncWP.POST("/batch", handler.SyncWPBatch)
-	syncWP.POST("/finish", handler.SyncWPFinish)
-	syncWP.POST("/rollback", handler.SyncWPRollback)
-	syncWP.GET("/job/:id/status", handler.SyncWPJobStatus)
+	// registered via admin POST /admin/sync/sites first (with platform field).
+	// 协议本身平台无关，所以 /sync/typecho/* 是 /sync/wordpress/* 的别名 ——
+	// 用同一组 handler；路径名只为给插件作者读 URL 时一眼分辨平台。
+	for _, prefix := range []string{"/sync/wordpress", "/sync/typecho"} {
+		g := api.Group(prefix)
+		g.POST("/ping", handler.SyncWPPing)
+		g.POST("/start", handler.SyncWPStart)
+		g.POST("/batch", handler.SyncWPBatch)
+		g.POST("/finish", handler.SyncWPFinish)
+		g.POST("/rollback", handler.SyncWPRollback)
+		g.GET("/job/:id/status", handler.SyncWPJobStatus)
+	}
 
 	// ===================== Authenticated Routes =====================
 	authed := api.Group("", middleware.Auth())
@@ -493,13 +497,19 @@ func main() {
 		authed.GET("/admin/analytics/stats", handler.AnalyticsStats)
 		authed.POST("/admin/analytics/purge", handler.PurgeAnalytics)
 
-		// WordPress sync — admin management (create/list/delete sites,
-		// view job history, trigger rollback). The per-site token is
-		// shown once at creation and never again.
-		authed.POST("/admin/sync/wordpress/sites", handler.AdminSyncSiteCreate)
-		authed.GET("/admin/sync/wordpress/sites", handler.AdminSyncSiteList)
-		authed.DELETE("/admin/sync/wordpress/sites/:uuid", handler.AdminSyncSiteDelete)
-		authed.GET("/admin/sync/wordpress/jobs", handler.AdminSyncJobList)
+		// WordPress / Typecho sync — admin management (create/list/delete
+		// sites, view job history, trigger rollback). The per-site token
+		// is shown once at creation and never again.
+		// 两套前缀复用同一组 handler；handler 读 body / ?platform= 来区分
+		// 站点平台，路径前缀只是给 admin SPA / 浏览器开发者一眼看明白
+		// 当前 tab 是 WP 还是 Typecho。详见 sync_wp.go::AdminSyncSiteCreate。
+		for _, prefix := range []string{"/admin/sync/wordpress", "/admin/sync/typecho"} {
+			g := authed.Group(prefix)
+			g.POST("/sites", handler.AdminSyncSiteCreate)
+			g.GET("/sites", handler.AdminSyncSiteList)
+			g.DELETE("/sites/:uuid", handler.AdminSyncSiteDelete)
+			g.GET("/jobs", handler.AdminSyncJobList)
+		}
 
 		// Security
 		authed.GET("/security/overview", handler.SecurityOverview)

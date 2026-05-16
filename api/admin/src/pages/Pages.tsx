@@ -1,10 +1,10 @@
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { postsApi, optionsApi } from '@/lib/api';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Button, ConfirmDialog, Modal } from '@/components/ui';
+import { Button, SaveButton, ConfirmDialog, Modal } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 import AboutPageEditor from '@/components/AboutPageEditor';
@@ -125,8 +125,10 @@ export default function PagesPage() {
   const [aboutEditorOpen, setAboutEditorOpen] = useState(false);
   const [codingEditorOpen, setCodingEditorOpen] = useState(false);
   const [codingGitHubURL, setCodingGitHubURL] = useState('');
-  const [codingGitHubToken, setCodingGitHubToken] = useState('');
   const [codingDetectedURL, setCodingDetectedURL] = useState('');
+  // Token 已统一到「设置 → 第三方服务 → GitHub」(github_access_token)；
+  // 这里只显示状态，不再提供编辑入口，避免两处写入互相覆盖。
+  const [codingTokenConfigured, setCodingTokenConfigured] = useState(false);
   const [codingRepos, setCodingRepos] = useState<CodingRepoOption[]>([]);
   const [codingSelectedRepos, setCodingSelectedRepos] = useState<string[]>([]);
   const [loadingCodingRepos, setLoadingCodingRepos] = useState(false);
@@ -171,8 +173,6 @@ export default function PagesPage() {
       if (saveCurrent) {
         await optionsApi.updateMany({
           coding_github_url: codingGitHubURL.trim(),
-          github_access_token: codingGitHubToken.trim(),
-          coding_github_token: codingGitHubToken.trim(),
         });
       }
       const r: any = await api.get('/coding?include_repos=true');
@@ -195,7 +195,7 @@ export default function PagesPage() {
       const r: any = await api.get('/options');
       const opts = r.data || r || {};
       setCodingGitHubURL(String(opts.coding_github_url || '').trim());
-      setCodingGitHubToken(String(opts.github_access_token || opts.coding_github_token || '').trim());
+      setCodingTokenConfigured(String(opts.github_access_token || '').trim() !== '');
       setCodingDetectedURL(detectGitHubFromOptions(opts));
       setCodingSelectedRepos(parseCodingSelectedRepos(opts.coding_selected_repos));
       setCodingRepos([]);
@@ -212,8 +212,6 @@ export default function PagesPage() {
     try {
       await optionsApi.updateMany({
         coding_github_url: codingGitHubURL.trim(),
-        github_access_token: codingGitHubToken.trim(),
-        coding_github_token: codingGitHubToken.trim(),
         coding_selected_repos: JSON.stringify(codingSelectedRepos),
       });
       toast.success(t('admin.common.saved', '已保存'));
@@ -292,8 +290,8 @@ export default function PagesPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
         <span className="text-dim" style={{ fontSize: '13px' }}>{t('admin.pages.totalPages', '{count} 个页面', { count: builtinPages.length + pages.length })}</span>
         <div style={{ marginLeft: 'auto' }}>
-          <Button onClick={() => navigate('/pages/create')}>
-            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />{t('admin.pages.newPage', '新建页面')}
+          <Button className="btn-square" title={t('admin.pages.newPage', '新建页面')} onClick={() => navigate('/pages/create')}>
+            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />
           </Button>
         </div>
       </div>
@@ -424,14 +422,7 @@ export default function PagesPage() {
                 style={{ width: '100%', minHeight: '88px', resize: 'vertical', lineHeight: 1.6 }}
               />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px', alignItems: 'start', marginTop: '10px' }}>
-              <input
-                className="input"
-                type="password"
-                value={codingGitHubToken}
-                onChange={e => setCodingGitHubToken(e.target.value)}
-                placeholder="GitHub Token（可选，用于贡献统计和更高 API 速率）"
-              />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
               <Button variant="secondary" onClick={() => loadCodingRepos(true)} loading={loadingCodingRepos}>
                 <i className="fa-regular fa-rotate" />保存并刷新项目
               </Button>
@@ -441,8 +432,27 @@ export default function PagesPage() {
               <code style={{ marginLeft: '6px', color: 'var(--color-text-sub)', whiteSpace: 'pre-wrap' }}>
                 {codingDetectedURL || '未识别'}
               </code>
-              。点击右侧「保存并刷新项目」会先保存当前地址和 Token，再读取公开仓库。组织项目需要填写组织地址或仓库 URL；只填个人账号不会自动展开所有组织项目，避免混入无关仓库。
+              。点击右侧「保存并刷新项目」会先保存当前地址，再读取公开仓库。组织项目需要填写组织地址或仓库 URL；只填个人账号不会自动展开所有组织项目，避免混入无关仓库。
             </p>
+            <div
+              className="text-dim"
+              style={{
+                marginTop: '10px', padding: '10px 12px',
+                background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)',
+                fontSize: '12px', lineHeight: 1.7, display: 'flex',
+                alignItems: 'center', gap: '8px',
+              }}
+            >
+              <i
+                className={`fa-regular ${codingTokenConfigured ? 'fa-circle-check' : 'fa-circle-exclamation'}`}
+                style={{ color: codingTokenConfigured ? 'var(--color-success, #16a34a)' : 'var(--color-warning, #f59e0b)' }}
+              />
+              <span>
+                GitHub Token {codingTokenConfigured ? '已配置' : '未配置'}（全站统一，在「
+                <Link to="/admin/settings?tab=services" style={{ color: 'var(--color-primary)' }}>设置 → 第三方服务 → GitHub</Link>
+                」填写；留空只能用 60 次/小时的匿名 API，容易冷拉超时）
+              </span>
+            </div>
           </div>
 
           <div style={{ padding: '12px', border: '1px solid var(--color-border)', background: 'var(--color-bg-soft)' }}>
@@ -504,7 +514,7 @@ export default function PagesPage() {
             <span className="text-dim" style={{ fontSize: '12px' }}>已选择 {codingEffectiveSelectedCount} 个项目</span>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               <Button variant="secondary" onClick={() => setCodingEditorOpen(false)} disabled={savingCoding}>{t('admin.common.cancel', '取消')}</Button>
-              <Button onClick={saveCodingSettings} loading={savingCoding}>{t('admin.common.save', '保存')}</Button>
+              <SaveButton onClick={saveCodingSettings} loading={savingCoding} />
             </div>
           </div>
         </div>
@@ -546,7 +556,7 @@ export default function PagesPage() {
             </div>
             <div style={{ padding: '16px 20px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               <Button variant="secondary" onClick={() => setEditingKey(null)} disabled={savingContent}>{t('admin.common.cancel', '取消')}</Button>
-              <Button onClick={saveBuiltinContent} loading={savingContent}>{t('admin.common.save', '保存')}</Button>
+              <SaveButton onClick={saveBuiltinContent} loading={savingContent} />
             </div>
           </div>
         </div>

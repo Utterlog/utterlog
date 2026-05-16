@@ -174,62 +174,8 @@ html.lightbox-active body {
   font-display: swap;
 }
 
-/* ────────────────────────────────────────────────────────────────
-   FontAwesome Pro 7.2.0 @font-face overrides.
-   FA's official all.min.css ships font-display: block — that's the
-   140ms FCP loss Lighthouse reports. We re-declare each used family
-   here AFTER the FA stylesheet loads (CSS source order: <head> link
-   above → globals.css below) with font-display: swap, so icons fall
-   back to invisible text for the swap period and never block FCP.
-
-   Only the families actually used in code are listed: light /
-   regular / solid / brands / sharp-light / sharp-solid. Other
-   families (thin / duotone / sharp-regular / sharp-thin / sharp-duotone
-   variants) remain on FA's default block behaviour — they're not
-   referenced and won't load anyway.
-   ──────────────────────────────────────────────────────────────── */
-@font-face {
-  font-family: "Font Awesome 7 Pro";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-light-300.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Font Awesome 7 Pro";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-regular-400.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Font Awesome 7 Pro";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-solid-900.woff2") format("woff2");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Font Awesome 7 Brands";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-brands-400.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Font Awesome 7 Sharp";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-sharp-light-300.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Font Awesome 7 Sharp";
-  src: url("https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-sharp-solid-900.woff2") format("woff2");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
+/* FontAwesome Pro 7.2.0 走 layout.tsx 引入的 official all.min.css —— 不再
+   在这里 @font-face 覆盖一份，避免移动端弱网下重复源解析判定的体感慢。 */
 
 /* ========================================
    Theme Variables — CSS custom properties
@@ -420,7 +366,6 @@ html.lightbox-active body {
    Global Resets
    ======================================== */
 * {
-  box-sizing: border-box;
   padding: 0;
   margin: 0;
 }
@@ -432,9 +377,6 @@ html {
 
 body {
   max-width: 100vw;
-}
-
-body {
   color: var(--color-text-main);
   background: var(--color-bg-main);
 }
@@ -771,7 +713,6 @@ body {
   color: var(--color-text-sub);
   transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
-  box-sizing: border-box;
 }
 .action-btn:hover {
   background: var(--color-bg-soft);
@@ -912,15 +853,12 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   aspect-ratio: 16 / 9;
   object-fit: cover;
   background-color: var(--color-bg-soft);
-  filter: blur(20px);
-  -webkit-transition: .5s ease-in-out opacity;
-  transition: .5s ease-in-out opacity;
-}
-.blog-image.loaded img {
-  filter: blur(0);
-  opacity: 1;
-  -webkit-transition: .5s filter linear, .5s -webkit-filter linear;
-  transition: .5s filter linear, .5s -webkit-filter linear;
+  /* blur 与 transition 已不在这里硬写 —— 改由全局 html[data-img-effect="fade"]
+     的 `img[data-blog-image][data-loaded][data-img-visible]` 规则统一接管，
+     这样文章内图与封面/banner 都走同一条 fade 路径，能正确响应「视口外
+     的 lazy lookahead 不解模糊，进视口才淡入」的需求。`.blog-image.loaded`
+     类仍由 LazyImage 写入，但只用于控制 spinner / caption / EXIF 的显隐
+     （见下方对应规则），不再驱动图本身的模糊。 */
 }
 
 /* Loading spinner — stays mounted; opacity fades in sync with the
@@ -1141,11 +1079,15 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
      Chrome + Safari. An almost-opaque color reads as "focused"
      without any GPU cost. */
   background: rgba(18, 20, 24, 0.96);
-  animation: vi-in 300ms both;
+  /* 开图：稍长的曲线 + spring-out 缓动（cubic-bezier 是 expo-out 的
+     近似），后段慢慢收住，比 linear 视觉重量更"软"。 */
+  animation: vi-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
   will-change: opacity;
 }
 .vi-overlay.vi-closing {
-  animation: vi-out 300ms forwards;
+  /* 关图：用加速曲线 (ease-in 风) 快收，"果断"感强；JS 端 closeSoft
+     的 setTimeout 与此处时长保持一致（240ms）。 */
+  animation: vi-out 240ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 @keyframes vi-in  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes vi-out { from { opacity: 1; } to { opacity: 0; } }
@@ -1171,14 +1113,24 @@ div:hover > .comment-hint { opacity: 0.75 !important; }
   border-radius: 0;
   position: relative;
   z-index: 1;
-  animation: vi-img-in 300ms both;
+  /* 开图：scale 呼吸 + spring-out 缓动 —— 从 0.92 弹到 1，配合 overlay
+     的 opacity 渐入形成"软弹出"。比原来的 translateY(-20→0) 更有
+     重量感，少了"从天而降"的方向感问题。 */
+  animation: vi-img-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
   will-change: transform, opacity;
 }
-.vi-stage.vi-img-out .vi-img {
-  animation: vi-img-out 300ms forwards;
+/* 关图：跟随 overlay 一起收缩 + 淡出（240ms 与 vi-out 同步收尾）。 */
+.vi-overlay.vi-closing .vi-img {
+  animation: vi-img-close 240ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
-@keyframes vi-img-in  { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes vi-img-out { from { opacity: 1; transform: translateY(0); }     to { opacity: 0; transform: translateY(20px); } }
+/* 翻页：保留原 300ms 节奏（与 JS step 函数里的 setTimeout 一致），
+   只把 translateY 换成 translateY + 轻微 scale，曲线收尾更软。 */
+.vi-stage.vi-img-out .vi-img {
+  animation: vi-img-out 300ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes vi-img-in   { from { opacity: 0; transform: scale(0.92); }              to { opacity: 1; transform: scale(1); } }
+@keyframes vi-img-close { from { opacity: 1; transform: scale(1); }                 to { opacity: 0; transform: scale(0.95); } }
+@keyframes vi-img-out  { from { opacity: 1; transform: translateY(0) scale(1); }    to { opacity: 0; transform: translateY(16px) scale(0.98); } }
 
 /* Click-outside catch layer — sits behind the image but above the
    backdrop, so clicks miss the img and fire a close. */
@@ -1398,7 +1350,7 @@ img[data-blog-image][data-loaded="0"] {
   padding: 16px 20px;
   background: var(--md-download-bg);
   color: var(--md-download-text);
-  border-radius: 8px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1439,13 +1391,17 @@ img[data-blog-image][data-loaded="0"] {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+/* `!important` 用于覆盖各主题的 .blog-prose a 链接样式（下划线、prose
+   primary color）。否则 a.md-download-btn 在 Azure / Nebula / Renascent
+   下都会被主题加上 text-decoration: underline + 主题色 —— 看上去像链接
+   不像按钮。这里是按钮自有视觉，不该被 prose 链接规则染色。 */
 .md-download-btn {
   padding: 8px 20px;
   background: var(--md-download-accent);
-  color: var(--md-download-bg);
+  color: var(--md-download-bg) !important;
   font-weight: 600;
   font-size: 13px;
-  text-decoration: none;
+  text-decoration: none !important;
   border-radius: 6px;
   flex-shrink: 0;
   white-space: nowrap;
@@ -1454,6 +1410,8 @@ img[data-blog-image][data-loaded="0"] {
 .md-download-btn:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
+  color: var(--md-download-bg) !important;
+  text-decoration: none !important;
 }
 .md-download-btn:active {
   transform: translateY(0);
@@ -1513,15 +1471,17 @@ img[data-blog-image][data-loaded="0"] {
       rendered by themes directly — render immediately. Otherwise we
       hide them forever because they never fire the state change
       that would set `data-loaded="1"`. */
-/* Pre-load state is ONLY applied to images that explicitly declare
-   `data-loaded="0"` — i.e., JS-managed LazyImage instances that
-   will flip to "1" in their onLoad handler. Raw <img data-blog-image>
-   tags (PostPage hero banners, etc.) render without the blur since
-   they have no mechanism to fire a "loaded" signal and would
-   otherwise get stuck blurred forever. */
+/* Blurred state 涵盖两种情况：
+   1. `data-loaded="0"` — 还没下载完
+   2. `data-loaded="1"]:not([data-img-visible="1"])` — 已下载但还没进
+      视口（Chrome 原生 lazy 在视口外 3000px 就预拉，没这一条 fade
+      会在用户滚到之前播完，体感全是"已清晰"）
+   只有 data-loaded=1 AND data-img-visible=1 时进上方 post-load 规则。 */
 html[data-img-effect="fade"] :where(
   img[data-blog-image][data-loaded="0"],
-  [data-blog-image] img[data-loaded="0"]
+  [data-blog-image] img[data-loaded="0"],
+  img[data-blog-image][data-loaded="1"]:not([data-img-visible="1"]),
+  [data-blog-image] img[data-loaded="1"]:not([data-img-visible="1"])
 ) {
   background-color: var(--color-bg-soft);
   filter: blur(20px);
@@ -1534,18 +1494,21 @@ html[data-img-effect="fade"] :where(
      stays fixed because it's a hover-zoom unrelated to image-load
      animation — bumping it with the load duration would slow the
      mouse-over feel. */
-  -webkit-transition: opacity var(--img-effect-duration) ease-in-out, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
   transition: opacity var(--img-effect-duration) ease-in-out, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Post-load: blur releases linearly, opacity pinned to 1. */
+/* Post-load 解模糊条件改成「loaded=1 AND visible=1」—— 否则 Chrome
+   原生 lazy 的 3000px lookahead 会让视口外图片在用户滚到之前完成
+   过渡，用户看到的全是已清晰图。data-img-visible 由 ImageEffects 的
+   IntersectionObserver 在图进入视口时翻 1，确保 fade 永远跟随滚动。
+   loaded=1 但 visible=0 时不匹配此规则，留在上方 loaded=0 的 blurred
+   状态里。 */
 html[data-img-effect="fade"] :where(
-  img[data-blog-image][data-loaded="1"],
-  [data-blog-image] img[data-loaded="1"]
+  img[data-blog-image][data-loaded="1"][data-img-visible="1"],
+  [data-blog-image] img[data-loaded="1"][data-img-visible="1"]
 ) {
   filter: blur(0);
   opacity: 1;
-  -webkit-transition: filter var(--img-effect-duration) linear, -webkit-filter var(--img-effect-duration) linear, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
-  transition: filter var(--img-effect-duration) linear, -webkit-filter var(--img-effect-duration) linear, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: filter var(--img-effect-duration) linear, transform .6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 2. pixel — 10×10 mosaic of dark tiles lifting off the image in a

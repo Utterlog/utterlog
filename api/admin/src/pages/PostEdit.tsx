@@ -139,7 +139,11 @@ export default function EditPostPage() {
       const payload: any = {
         title: resolved.title.trim(), content: resolved.content,
         slug: slug || undefined,
-        cover_url: coverUrl || undefined,
+        // 始终发送 cover_url 字段（即使空串）—— 后端用指针区分「没传」
+        // 和「传空串」，空串 = 清空封面回退到首图 / 随机图。之前用
+        // `coverUrl || undefined` 会让空值被 JSON.stringify 整段丢掉，
+        // 后端收不到字段就不会更新，admin 删 URL 保存对前台不生效。
+        cover_url: coverUrl,
         category_ids: categoryId ? [categoryId] : [],
         tag_names: tagNames,
         status: nextStatus,

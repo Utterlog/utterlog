@@ -46,16 +46,13 @@
 [data-theme="Renascent"] .renascent-main {
   flex: 1;
   min-height: 0;
-  -webkit-overflow-scrolling: touch;
 }
 
 [data-theme="Renascent"] .renascent-frame {
-  box-sizing: border-box;
   width: 100%;
 }
 
 [data-theme="Renascent"] .renascent-container {
-  box-sizing: border-box;
   width: min(1168px, calc(100vw - 64px));
   margin-inline: auto;
 }
@@ -754,13 +751,18 @@
   border-bottom: 1px solid var(--renascent-line);
 }
 
+/* article-issue span/em 单独保留 mono 字体声明（这两个选择器没在上方
+   的 typography 集合里）；article-meta/stats 在上方 line 351 处已声明
+   font-family / size / line-height，这里只补 letter-spacing 即可。 */
 [data-theme="Renascent"] .renascent-article-issue span,
-[data-theme="Renascent"] .renascent-article-issue em,
-[data-theme="Renascent"] .renascent-article-meta,
-[data-theme="Renascent"] .renascent-article-stats {
+[data-theme="Renascent"] .renascent-article-issue em {
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.55;
+  letter-spacing: 0;
+}
+[data-theme="Renascent"] .renascent-article-meta,
+[data-theme="Renascent"] .renascent-article-stats {
   letter-spacing: 0;
 }
 
@@ -792,7 +794,8 @@
   flex-wrap: wrap;
   gap: 8px 12px;
   align-items: center;
-  color: var(--renascent-tertiary);
+  /* color: var(--renascent-tertiary) — 已由上方 line 351 的 typography
+     集合声明，这里不重复，避免 cascade 噪声。 */
 }
 
 [data-theme="Renascent"] .renascent-article-meta a,

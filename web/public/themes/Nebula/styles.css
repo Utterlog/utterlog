@@ -152,7 +152,6 @@
      页面中部，下面留一大片黑。 */
   display: flex;
   flex-direction: column;
-  -webkit-overflow-scrolling: touch;
 }
 
 [data-theme="Nebula"] .nebula-frame {
@@ -756,7 +755,6 @@
   color: var(--nebula-white);
   font-family: var(--nebula-font-body);
   font-size: 14px;
-  box-sizing: border-box;
   transition: border-color 0.2s ease;
 }
 
@@ -867,6 +865,41 @@
   transition: transform 0.4s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
   text-decoration: none;
   pointer-events: auto;       /* 子级单独可交互 */
+  overflow: hidden;           /* 上传图片走 object-fit: cover 时跟随 15px 圆角裁切，不溢出 */
+}
+
+/* 图片 / 内联 SVG 图标变体（admin 上传图片或填 URL 时使用）。
+   .nebula-tile 自身 font-size: 36px 控制 <i> 大小；图片改成 <span>
+   + background-image（不是 <img> 元素），目的：
+     · 浏览器右键菜单里不会出现「查看图像 / 另存为图像」
+     · 也无法拖拽保存
+     · 图块本就是纯装饰，无需 <img> 语义
+   绝对定位填满宽度 + bottom: 0，配合 tile 的 overflow: hidden 让 15px
+   圆角天然裁掉四角；background-size: cover 保证不变形，object-position
+   center bottom 让裁切时优先保留底部。SVG span 走原来的居中布局，跟
+   FontAwesome icon 视觉一致。 */
+[data-theme="Nebula"] .nebula-tile-img {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+[data-theme="Nebula"] .nebula-tile-svg {
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+}
+[data-theme="Nebula"] .nebula-tile-svg svg {
+  width: 100%;
+  height: 100%;
 }
 
 /* hover 时显示中文 label —— 用 ::after 显示在 tile 下方 */
@@ -1462,7 +1495,6 @@
   width: 100%;
   margin: 0 auto;
   padding: 56px 24px 64px;
-  box-sizing: border-box;
 }
 
 /* ── Head：面包屑 + 标题 + 摘要 + 一行 byline ── */
@@ -1693,7 +1725,6 @@
   border: 1px solid var(--nebula-border-subtle);
   border-radius: var(--nebula-radius-lg);
   padding: 32px 36px;
-  box-sizing: border-box;
 }
 
 @media (max-width: 767px) {
@@ -1732,7 +1763,6 @@
   font-size: 13px;
   max-height: calc(100vh - 120px);
   overflow-y: auto;
-  box-sizing: border-box;
 }
 
 @media (max-width: 1239px) {
@@ -1916,12 +1946,12 @@
 }
 
 /* ─── 强调 / 删除 / 高亮 / 键盘键 / 缩写 / 上下标 ─── */
-/* 加粗 <strong> / <b>：之前 font-weight: 600 + 颜色跟正文一样
-   都是 --nebula-white，视觉上几乎看不出加粗。改成真正的 700（系统
-   字体 / Google Sans Display / Noto Sans SC 都有这个 weight） */
+/* 加粗 <strong> / <b>：正文 --nebula-white 是冷调 off-white (#E1E7EE)，
+   strong 用纯白 + 700 拉开 ~10% 亮度差，PingFang SC / Noto Sans SC
+   下加粗才有视觉冲击。同色 700 在中文字体里几乎看不出来。 */
 [data-theme="Nebula"] .nebula-post-prose .blog-prose strong,
 [data-theme="Nebula"] .nebula-post-prose .blog-prose b {
-  color: var(--nebula-white);
+  color: #FFFFFF;
   font-weight: 700;
 }
 [data-theme="Nebula"] .nebula-post-prose .blog-prose em { font-style: italic; }
@@ -3253,7 +3283,6 @@
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0;
-  box-sizing: border-box;
   overflow: hidden;
   border-radius: 22% !important;       /* 小米 / iOS 风 squircle */
   background: rgba(15, 17, 21, 0.6) !important;
@@ -3607,7 +3636,6 @@
   color: var(--nebula-white);
   font-size: 13px;
   outline: none;
-  box-sizing: border-box;
   transition: border-color 0.15s ease;
 }
 [data-theme="Nebula"] .nebula-footer-login-form input:focus {
@@ -3777,7 +3805,6 @@
   padding-top: 32px;
   padding-bottom: 32px;
   width: 100%;
-  box-sizing: border-box;
 }
 
 [data-theme="Nebula"] .nebula-frame > div:not(.nebula-home):not(.nebula-article):not(.nebula-post) > div[style*="padding: 0 32px"],
@@ -3988,7 +4015,6 @@
    - 不依赖 flex / :has，避免浏览器实现差异
    - 不要被通用 .nebula-frame > div 规则的 padding 污染（已用 :not 排除） */
 [data-theme="Nebula"] .moments-page {
-  box-sizing: border-box;
   max-width: 960px;
   width: 100%;
   margin: 0 auto;
@@ -4176,7 +4202,6 @@
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 6px !important;
   padding: 10px 12px !important;
-  box-sizing: border-box;
 }
 [data-theme="Nebula"] .moments-composer textarea:focus,
 [data-theme="Nebula"] .moments-composer textarea:focus-visible {
@@ -4580,7 +4605,6 @@
   margin-inline: auto;
   padding-left: 24px;
   padding-right: 24px;
-  box-sizing: border-box;
   background-color: #121212 !important;
   background-image:
     linear-gradient(rgba(168, 199, 250, 0.04) 1px, transparent 1px),

@@ -23,6 +23,46 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.4.1] - 2026-05-16
+
+### 新增
+
+- **Typecho 同步功能 + 完整 Typecho 插件**：后台「工具」新增「Typecho 同步」tab（与「WordPress 同步」并列），共享同一套同步基础设施。`ul_sync_sites` 加 `platform` 列区分两类站点；服务端 `/api/v1/sync/typecho/*` 是 `/api/v1/sync/wordpress/*` 的别名（同一组 handler），保证协议平台无关。同时新增 `typecho-plugin/UtterlogSync/`（Plugin.php / Action.php / lib/Exporter.php / lib/Client.php / lib/Logger.php / panel.php + README）—— 与 WordPress 版功能对齐：后台设置页、测试连接、网络诊断（4 路 cURL 探针）、AJAX 分批推送（categories → tags → posts → pages → comments）、实时进度条 + 日志、断点重试。
+- **Nebula 主题首页 Hero 4 个图块自定义入口**：后台「主题管理 → 首页图块」配置 icon（FontAwesome / 图片 URL / 内联 SVG / 上传图片）+ 标题 + 链接，按数组顺序填充第 1-4 位。未配置时仍显示原内置默认图块（影音 / 代码 / 旅行 / 日常）保持 OOB 体验。图片走 `<span>` + background-image 渲染（不是 `<img>`），右键不会出现「查看图像」「另存为」；并跟随 tile 15px 圆角裁切。
+- **全站统一图片放大灯箱（FLIP 缩放）**：新增 `Lightbox.tsx` 共享组件，文章内图 / 说说图片 / 多主题图块 全部走同一份代码。打开时图片从被点缩略图位置以 FLIP（First, Last, Invert, Play）技术连续放大到全屏；关闭时反向飞回原位。Esc / ←→ 键盘导航、滚动锁定、UI 工具栏（上一张 / 下一张 / 关闭 / 计数 1/N / 加载指示）全部内置。说说页之前的简陋 `position: fixed` 层已替换。
+- **2 处 DB 迁移**：（1）legacy `coding_github_token` 自动合并到 `github_access_token` 后删除；（2）`ul_links.name` / `ul_rss_subscriptions.site_name` 等 4 张表的 HTML 实体（`Kevin&#039;s` 这类脏数据）启动期一次性 unescape；写入路径加 `textutil.NormalizeDisplayName` 兜底防新数据。
+
+### 优化
+
+- **默认主题切换为 Azure**：新装站点首屏渲染主题从 Utterlog 改回 Azure（6 处硬编码 fallback 同步更新：后端 fallback / 前端 `DEFAULT_THEME` / web/admin API client 等）。已激活其他主题的现有站点不受影响。
+- **Coding 页面同步策略调整**：缓存 TTL 30 分钟 → 60 分钟，配合现有 30 天 stale-while-revalidate 模型，等同于「最多 1 小时数据延迟，平时永不阻塞用户」的 feed 订阅体感。GitHub API 调用频率减半。
+- **GitHub Token 配置去重**：之前「设置 → 第三方服务 → GitHub」和「页面 → Coding」两处都有 Token 输入，互相覆盖让用户困惑。Coding 弹窗移除 Token 输入框，只保留 URL；Token 唯一入口移到设置页，弹窗内显示 Token 状态指示 + 跳转链接。
+- **全站 FontAwesome 单源加载**：移除 `web/app/layout.tsx` 的 4 个 woff2 preload 标签 + `web/app/globals.css` / `api/admin/src/styles/globals.css` 的 12 个 `@font-face` 覆盖声明，统一只引官方 `https://static.utterlog.com/libs/fontawesome/7.2.0/css/all.min.css`。移动端弱网下不再被多源解析判定为重复源拖慢首屏。
+- **Admin loading 视觉彻底统一为 `fa-spinner fa-spin`**：之前 6 种 loading 视觉混杂（Button 内 96×96 齿轮 SVG、5 处 `fa-circle-notch`、4 处手写 SVG 12 圆点环、vinyl-spin 死代码……）现在全部收敛到 FontAwesome 自带 spinner 动画。Button.loading / Spinner 组件 / 散写位置外观一致。
+- **Admin 全站按钮收敛为方形 icon-only + tooltip**：主题管理 / 插件管理 / 友链管理 / 足迹管理 / 媒体管理 / 相册管理 / 文章管理 / 分类管理 / 标签管理 / 页面管理 / 同步授权页等 30+ 个工具栏按钮统一改成 `btn-square` + FontAwesome icon + `title` hover 提示。搜索按钮全站蓝色 magnifier 风格一致。
+- **CSS 冗余清理**：删除 `body {}` 在 globals 里的 3 块重复声明（合并为 1）、各主题 21 处冗余 `box-sizing: border-box`（Tailwind preflight 已覆盖）、Renascent 主题 typography 重复字段、4 处过时 `-webkit-transition` + 3 处 `-webkit-overflow-scrolling: touch`（iOS 13+ 已无需）+ 2 处 transition 列表里的 `-webkit-filter`。
+- **图片懒加载真正跟随滚动淡入**：之前 fade 只看 `data-loaded`，但 Chrome 原生 `loading="lazy"` 默认在视口外 ~3000px 就预拉图，导致用户滚到时图早就清晰摆好没有 fade 体感。现在引入 `data-img-visible` 维度（IntersectionObserver 标记），CSS 要求 `data-loaded=1 AND data-img-visible=1` 才解模糊。视口外图保持模糊，进视口才淡入。文章内图（`.blog-image`）走同一规则，删了与全站冲突的 `.loaded .blog-image img` 旧规则。
+- **文章编辑工具栏点击不再滚回顶部**：所有 toolbar 按钮加 `onMouseDown={(e) => e.preventDefault()}` 防 textarea 失焦；helper 函数 `wrap` / `linePrefix` 等保存 `scrollTop` 并用 `focus({preventScroll: true})` 二层防御。包括文章编辑 + 页面编辑。
+- **下载卡片视觉收尾**：`[download]` shortcode 渲染按钮改造 —— `<a>` 不再被全局 ExternalLink 套上 favicon / 外链 icon / hover preview（在 `components.a` 拦截 `md-download-btn` className 透传原生 `<a>`），主题 prose 链接的下划线 + 链接色用 `!important` 强制覆盖。卡片 `border-radius` 8px → 4px 与全站直角风格收口。
+- **Nebula 主题文章正文粗体可见性**：`strong` / `b` 颜色从 `--nebula-white`（与正文同色 off-white）改为纯白 `#FFFFFF`，配合 700 weight 在 PingFang SC 等中文字体下视觉对比明显。
+
+### 修复
+
+- **文章编辑「自定义封面 URL」清空保存后端不更新**：后端 `UpdatePost` 的 `CoverURL` 字段改为 `*string` 指针，区分「没传字段」（nil 不动）和「传了空串」（清空到 NULL）；前端去掉 `coverUrl || undefined` 永远发送字符串。现在删 URL 保存能正确清空。
+- **「主题切换」toast 文字误导**：之前失败提示「访客下次访问后生效」，实际是 Next.js options ISR 60s 缓存到期才刷新。文案改为「约 1 分钟后自动刷新」贴合实际。
+- **Azure 文章页「友链更新」tab 可点 + 显示**：Azure 文章页 PostNavigation 友链 tab 因永久 disabled + tab 区可见性判断都用 `tab.items.length`（feeds 数据实际在 `data.feeds` 另一字段）一直点不动；本次把判断特殊化 feeds 数据源，并补上 `randomCoverUrl + LazyImage` 让友链卡片展示风景封面。
+- **主题 CSS 改完前台不生效**：`web/themes/<T>/styles.css` 与 `web/public/themes/<T>/styles.css` 是「源 + 服务」双份机制；记忆里加了改源后必须跑 `docker compose exec -T web npm run sync:themes` 的规则。
+- **Admin 文案改了不生效**：`t('key', 'fallback')` 的 fallback 仅在 i18n JSON 没此 key 时才用；记忆里加了「改 admin 文案要同时改 `api/internal/i18n/locales/*.json` 3 个语言文件并重启 api 让 embed.FS 重新加载」的规则。
+- **HTML 实体显示问题**：友链 `Kevin&#039;s` 这种串前台原样显示。一次性迁移把 4 张表的脏数据 unescape，写入路径加 `NormalizeDisplayName` 兜底。
+- **所有 toast emoji 装饰移除**：`✨ ℹ️ ⚠️` 不再出现在系统通知。`feedback_no_emoji_code.md` 规则扩展覆盖整个站点 UI。
+
+### 移除
+
+- Tools 页面「导入工具」tab —— WordPress XML 一次性导入已被「同步」插件流程完全取代，且没有 Typecho XML 标准，去掉避免误导。
+- `coding_github_token` DB 选项 + 后端兼容读取分支（迁移到 `github_access_token`）。
+- `vinyl-spin` keyframe + `.vinyl-spinning` / `.vinyl-paused` CSS 类（admin 无消费者，孤儿代码）。
+- 4 处手写 SVG 12 圆点环 loading + Button 内 96×96 齿轮 SVG + 5 处 `fa-circle-notch fa-spin`（全部统一为 `fa-spinner fa-spin`）。
+
 ## [2.3.10] - 2026-05-09
 
 ### 修复

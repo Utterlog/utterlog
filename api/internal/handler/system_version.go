@@ -228,10 +228,10 @@ func splitPre(v string) (main, pre string) {
 }
 
 // applyGitHubHeaders sets the standard GitHub API headers on req. When
-// admin has saved a `github_access_token` (or `coding_github_token`)
-// option we add Authorization: Bearer ... so the request counts against
-// the user's 5000/hour quota instead of the 60/hour anonymous quota
-// (per public IP, easily exhausted on shared cloud egress).
+// admin has saved a `github_access_token` option we add
+// Authorization: Bearer ... so the request counts against the user's
+// 5000/hour quota instead of the 60/hour anonymous quota (per public
+// IP, easily exhausted on shared cloud egress).
 func applyGitHubHeaders(req *http.Request) {
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "utterlog-api")

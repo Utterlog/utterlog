@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
-import { Button } from '@/components/ui';
+import { Button, SaveButton } from '@/components/ui';
 import api, { networkApi, optionsApi } from '@/lib/api';
 
 export default function UtterlogCenterPage() {
@@ -175,7 +175,7 @@ export default function UtterlogCenterPage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <Button onClick={saveShareSettings} loading={savingShare}>保存</Button>
+            <SaveButton onClick={saveShareSettings} loading={savingShare} />
           </div>
         </div>
 

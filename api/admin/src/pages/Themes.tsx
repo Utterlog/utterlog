@@ -7,7 +7,7 @@ import AzureProfileSettings from '@/components/AzureProfileSettings';
 import MenusPage from './Menus';
 
 export default function Themes() {
-  const [tab, setTab] = useState<'themes' | 'menus' | 'profile' | 'header' | 'footer'>('themes');
+  const [tab, setTab] = useState<'themes' | 'menus' | 'profile' | 'header' | 'footer' | 'hero'>('themes');
   const [themes, setThemes] = useState<ExtensionManifest[]>([]);
   const [active, setActive] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -25,6 +25,7 @@ export default function Themes() {
   const showProfile = adminPanels.includes('profile_card');
   const showHeader = adminPanels.includes('header_buttons');
   const showFooter = adminPanels.includes('footer_icons');
+  const showHero = adminPanels.includes('hero_tiles');
 
   const fetchList = async () => {
     setLoading(true);
@@ -78,9 +79,11 @@ export default function Themes() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ paths: ['/'], tags: ['theme', 'options'] }),
         });
-        toast.success('前台缓存已清除，新主题立即生效', { icon: '✨' });
+        toast.success('前台缓存已清除，新主题立即生效');
       } catch {
-        toast('前台缓存清除失败，访客下次访问后生效', { icon: 'ℹ️' });
+        // 失败时不会"下次访问"立刻生效 —— 前台 layout 的 options
+        // 走 ISR revalidate 60s，需等缓存自然过期才拉新数据。
+        toast('前台缓存清除失败，约 1 分钟后自动刷新');
       }
     } catch (e: any) {
       toast.error(e?.response?.data?.error?.message || '切换失败');
@@ -108,6 +111,7 @@ export default function Themes() {
     { key: 'menus', label: '菜单', icon: 'fa-regular fa-list', visible: true },
     { key: 'profile', label: '资料卡', icon: 'fa-regular fa-id-card', visible: showProfile },
     { key: 'header', label: '头部按钮', icon: 'fa-regular fa-window-maximize', visible: showHeader },
+    { key: 'hero', label: '首页图块', icon: 'fa-regular fa-grid-2', visible: showHero },
     { key: 'footer', label: '页脚图标', icon: 'fa-regular fa-share-nodes', visible: showFooter },
   ];
   const tabs = allTabs.filter(t => t.visible);
@@ -115,7 +119,7 @@ export default function Themes() {
   useEffect(() => {
     if (!tabs.find(t => t.key === tab)) setTab('themes');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showProfile, showHeader, showFooter]);
+  }, [showProfile, showHeader, showFooter, showHero]);
 
   return (
     <div>
@@ -152,6 +156,20 @@ export default function Themes() {
           }
         />
       )}
+      {tab === 'hero' && showHero && (
+        <FooterIconsEditor
+          optionKey="nebula_hero_tiles"
+          title="首页 Hero 图块（最多 4 个）"
+          emptyText="尚未配置，前台会显示主题内置的 4 个默认图块（影音 / 代码 / 旅行 / 日常）。添加第一个即覆盖默认。"
+          emptyRow={{ icon: 'fa-solid fa-star', label: '图块', href: '/' }}
+          description={
+            <>
+              首页顶部 Hero 区的 4 个图块按钮。位置 / 旋转 / 动画由主题 CSS 控制，按数组顺序填充第 1-4 位；超过 4 个会被忽略。图标支持 FontAwesome 类名（如 <code>fa-solid fa-tv-music</code>）、
+              图片 URL、内联 SVG、或上传图片。「标题」会在鼠标悬浮时显示在图块下方；链接留空则该图块仅作展示。
+            </>
+          }
+        />
+      )}
       {tab === 'footer' && showFooter && <FooterIconsEditor />}
       {tab === 'themes' && <>
       {/* Toolbar */}
@@ -171,9 +189,8 @@ export default function Themes() {
           <button className="btn btn-secondary btn-square" onClick={fetchList} disabled={loading} title="刷新列表">
             <i className="fa-regular fa-arrows-rotate" style={{ fontSize: 14 }} />
           </button>
-          <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="上传主题 .zip">
-            <i className="fa-regular fa-upload" style={{ fontSize: 14 }} />
-            {uploading ? '上传中…' : '上传主题'}
+          <button className="btn btn-primary btn-square" onClick={() => fileInputRef.current?.click()} disabled={uploading} title={uploading ? '上传中…' : '上传主题 .zip'}>
+            <i className={uploading ? 'fa-regular fa-spinner fa-spin' : 'fa-regular fa-upload'} style={{ fontSize: 14 }} />
           </button>
           <input
             ref={fileInputRef}

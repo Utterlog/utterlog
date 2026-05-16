@@ -10,6 +10,18 @@ import { useThemeContext } from '@/lib/theme-context';
 import { formatDateInTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
 
+// 把任意字符串（友链 RSS link）哈希成 32-bit 无符号整数，用作
+// randomCoverUrl 的 seed。直接用整段 URL 当 r= 参数会被 img.et 截断
+// 或归一化，导致几张卡命中同一张图。hash 后是稳定的整数 seed ——
+// 同一 link 每次都拿同一张图（刷新不闪），不同 link 4 张卡 4 张图。
+function hashFeedSeed(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
 function LazyCardImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
   const [inView, setInView] = useState(false);
@@ -227,19 +239,27 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
       )}
 
       {/* Tabs + Post List */}
-      {tabs.some(t => t.items.length > 0) && (
+      {/* 可见性 / 禁用判断要把 feeds 这条特殊化 —— FeedItem 类型不是
+          NavPost，存在独立的 data.feeds 字段，tab 定义里的 items 是
+          空占位（避免类型不匹配）。之前直接用 tab.items.length 导致
+          友链 tab 永远 disabled、整段 tab 区也常因为其他类目无数据
+          而被隐藏。 */}
+      {(tabs.some(t => t.items.length > 0) || feeds.length > 0) && (
         <div className="post-related-section">
           <div className="post-related-tabs">
-            {tabs.map(tab => (
-              <button
-                key={tab.key}
-                className={`post-related-tab${activeTab === tab.key ? ' active' : ''}`}
-                onClick={() => { setActiveTab(tab.key); setPageIndex(0); }}
-                disabled={tab.items.length === 0}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {tabs.map(tab => {
+              const isEmpty = tab.key === 'feeds' ? feeds.length === 0 : tab.items.length === 0;
+              return (
+                <button
+                  key={tab.key}
+                  className={`post-related-tab${activeTab === tab.key ? ' active' : ''}`}
+                  onClick={() => { setActiveTab(tab.key); setPageIndex(0); }}
+                  disabled={isEmpty}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
             <button
               className="post-related-refresh"
               onClick={handleRefresh}
@@ -249,22 +269,31 @@ export default function PostNavigation({ postId, coverUrl, pageSize }: { postId:
             </button>
           </div>
           <div className="post-related-grid">
-            {/* 友链更新 — 特殊渲染 */}
+            {/* 友链更新 — 复用 16:10 卡片槽位，左上站名 / 右上时间 /
+                底部 hover 标题。RSS 拉不到友链文章特色图，所以用
+                randomCoverUrl(seed) 拿稳定的随机封面（每个 link 对应
+                同一张图，刷新不闪），右上加 RSS 角标做"友链"标识。 */}
             {activeTab === 'feeds' && feeds.length > 0 && feeds.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE).map((item, idx) => {
               const mon = formatDateInTimeZone(item.pub_date || 0, 'zh-CN', { month: 'short', day: 'numeric' }, timeZone);
+              // hash(link) → 32-bit 整数 seed，再叠加大素数 × idx 让相邻 idx
+              // 散得更开（避免 img.et 内部 mod 图池后 collide）；同一 link
+              // 仍稳定拿同一张图。
+              const rawSeed = item.link || `feed-${pageIndex}-${idx}`;
+              const seed = (hashFeedSeed(rawSeed) + idx * 999983) >>> 0;
+              const fallbackCover = randomCoverUrl(seed, options);
               return (
-                <a key={idx} href={item.link} target="_blank" rel="noopener noreferrer" className="post-related-card">
-                  <div className="post-related-card-cover" style={{ background: 'var(--color-bg-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ textAlign: 'center', padding: '12px 8px' }}>
-                      <i className="fa-light fa-rss" style={{ fontSize: '20px', color: 'var(--color-text-dim)', marginBottom: '4px', display: 'block' }} />
-                      <span style={{ fontSize: '11px', color: 'var(--color-text-dim)', fontWeight: 500 }}>{item.site_name}</span>
-                    </div>
+                <a key={`${pageIndex}-${idx}`} href={item.link} target="_blank" rel="noopener noreferrer" className="post-related-card cover-zoom">
+                  <div className="post-related-card-cover">
+                    <LazyCardImage src={fallbackCover} alt={item.site_name} />
+                    <span className="post-related-card-cat" title={item.site_name}>
+                      <i className="fa-light fa-rss" /> {item.site_name}
+                    </span>
                     <span className="post-related-card-date">{mon}</span>
                     <div className="post-related-card-overlay">
                       <div className="post-related-card-bottom">
                         <span className="post-related-card-title">{item.title}</span>
                         <span className="post-related-card-stats">
-                          <i className="fa-light fa-arrow-up-right-from-square" /> {item.site_name}
+                          <i className="fa-light fa-arrow-up-right-from-square" /> 阅读原文
                         </span>
                       </div>
                     </div>

@@ -105,23 +105,17 @@ export default function MediaPage() {
           ))}
         </div>
         {/* Only show storage selector if multiple drivers configured */}
-        <label className="cursor-pointer flex-shrink-0">
+        <label className="cursor-pointer flex-shrink-0" title={uploading ? t('admin.media.uploading', '上传中…') : t('admin.media.uploadFile', '上传文件')}>
           <input type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.zip,.rar,.7z" onChange={handleUpload} className="hidden" />
-          <span className="btn-primary btn inline-flex items-center" style={{ padding: '0 24px', gap: '10px' }}>
-            <i className="fa-regular fa-cloud-arrow-up" style={{ fontSize: '14px' }} />
-            {uploading ? t('admin.media.uploading', '上传中…') : t('admin.media.uploadFile', '上传文件')}
+          <span className="btn-primary btn btn-square inline-flex items-center justify-center">
+            <i className={uploading ? 'fa-regular fa-spinner fa-spin' : 'fa-regular fa-cloud-arrow-up'} style={{ fontSize: '14px' }} />
           </span>
         </label>
       </div>
 
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: '12px' }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="var(--color-primary)">
-            <path d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z" opacity=".25"/>
-            <path d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z">
-              <animateTransform attributeName="transform" type="rotate" dur="0.75s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
-            </path>
-          </svg>
+          <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: 28, color: 'var(--color-primary)' }} aria-hidden="true" />
           <p className="text-dim" style={{ fontSize: '13px' }}>{t('admin.common.loading', '加载中…')}</p>
         </div>
       ) : files.length === 0 ? (

@@ -1,4 +1,5 @@
 export { Button } from './button';
+export { SaveButton } from './save-button';
 export { Input } from './input';
 export { Textarea } from './textarea';
 export { Select } from './select';

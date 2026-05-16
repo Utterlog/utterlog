@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import api, { optionsApi } from '@/lib/api';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, SaveButton } from '@/components/ui';
 
 type AboutProfile = {
   name: string;
@@ -485,7 +485,7 @@ export default function AboutPageEditor({ open, onClose }: { open: boolean; onCl
           </div>
           <div style={{ flex: '0 0 auto', display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 18, marginTop: 18, borderTop: '1px solid var(--color-border)' }}>
             <Button variant="secondary" onClick={onClose} disabled={saving}>取消</Button>
-            <Button onClick={handleSave} loading={saving}>保存</Button>
+            <SaveButton onClick={handleSave} loading={saving} />
           </div>
         </div>
       </div>

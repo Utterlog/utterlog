@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { commentsApi } from '@/lib/api';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Button, Table, Pagination, ConfirmDialog, Modal } from '@/components/ui';
+import { Button, SaveButton, Table, Pagination, ConfirmDialog, Modal } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 import { postUrlOf } from '@/lib/site';
@@ -645,7 +645,7 @@ export default function CommentsPage({ initialStatus }: { initialStatus?: string
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               <Button variant="secondary" onClick={() => setEditComment(null)}>{t('admin.common.cancel', '取消')}</Button>
-              <Button onClick={handleEditSave}>{t('admin.common.save', '保存')}</Button>
+              <SaveButton onClick={handleEditSave} />
             </div>
           </div>
         )}

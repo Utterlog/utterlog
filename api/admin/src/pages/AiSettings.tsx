@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Button, Input, Textarea, Select, Modal, Toggle, SettingsTabs, Spinner } from '@/components/ui';
+import { Button, Input, SaveButton, Textarea, Select, Modal, Toggle, SettingsTabs, Spinner } from '@/components/ui';
 import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC, FormRowRangeC } from '@/components/form/FormC';
 import { useAuthStore } from '@/lib/store';
 import { useI18n } from '@/lib/i18n';
@@ -486,7 +486,7 @@ export default function AiSettingsPage() {
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '8px' }}>
                   <Button className="btn-dialog" variant="secondary" onClick={testConnection} loading={testing}>{t('admin.common.testConnection', '测试连接')}</Button>
                   <Button className="btn-dialog" variant="secondary" onClick={() => setEditing(null)}>{t('admin.common.cancel', '取消')}</Button>
-                  <Button className="btn-dialog" onClick={saveProvider} loading={saving}>{t('admin.common.save', '保存')}</Button>
+                  <SaveButton className="btn-dialog" onClick={saveProvider} loading={saving} />
                 </div>
               </div>
             )}
@@ -578,7 +578,7 @@ export default function AiSettingsPage() {
             />
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>{t('admin.common.save', '保存')}</Button>
+            <SaveButton onClick={saveConfig} loading={savingConfig} />
           </div>
         </>
       )}
@@ -755,7 +755,7 @@ export default function AiSettingsPage() {
           </FormSectionC>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>{t('admin.common.save', '保存')}</Button>
+            <SaveButton onClick={saveConfig} loading={savingConfig} />
           </div>
         </>
       )}
@@ -808,7 +808,7 @@ export default function AiSettingsPage() {
             />
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>{t('admin.common.save', '保存')}</Button>
+            <SaveButton onClick={saveConfig} loading={savingConfig} />
           </div>
         </>
       )}
@@ -827,7 +827,7 @@ export default function AiSettingsPage() {
             />
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>{t('admin.common.save', '保存')}</Button>
+            <SaveButton onClick={saveConfig} loading={savingConfig} />
           </div>
         </>
       )}
@@ -865,7 +865,7 @@ export default function AiSettingsPage() {
             })()}
           </FormSectionC>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={saveConfig} loading={savingConfig}>{t('admin.common.save', '保存')}</Button>
+            <SaveButton onClick={saveConfig} loading={savingConfig} />
           </div>
         </>
       )}

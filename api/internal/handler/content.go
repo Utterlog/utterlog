@@ -21,6 +21,7 @@ import (
 	"utterlog-go/internal/email"
 	"utterlog-go/internal/middleware"
 	"utterlog-go/internal/model"
+	"utterlog-go/internal/textutil"
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -866,6 +867,9 @@ func CreateLink(c *gin.Context) {
 	if orderNum <= 0 {
 		orderNum = nextLinkOrderNum(t)
 	}
+	// Defensive: 解码 name 里的 HTML 实体，避免脏数据进 DB（详见
+	// textutil.NormalizeDisplayName 注释 + database.go 一次性迁移）。
+	req.Name = textutil.NormalizeDisplayName(req.Name)
 	var id int
 	config.DB.QueryRow(fmt.Sprintf(
 		"INSERT INTO %s (name, url, description, logo, rss_url, group_name, order_num, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id", t),
@@ -895,6 +899,7 @@ func UpdateLink(c *gin.Context) {
 	}
 	now := time.Now().Unix()
 	t := config.T("links")
+	req.Name = textutil.NormalizeDisplayName(req.Name)
 	config.DB.Exec(fmt.Sprintf(
 		"UPDATE %s SET name=$1, url=$2, description=$3, logo=$4, rss_url=$5, group_name=$6, order_num=$7, status=$8, updated_at=$9 WHERE id=$10", t),
 		req.Name, req.URL, req.Description, req.Logo, req.RssURL, req.GroupName, req.OrderNum, req.Status, now, id,
@@ -917,6 +922,7 @@ func ApplyLink(c *gin.Context) {
 	}
 	now := time.Now().Unix()
 	t := config.T("links")
+	req.Name = textutil.NormalizeDisplayName(req.Name)
 
 	// Check duplicate URL
 	var exists int

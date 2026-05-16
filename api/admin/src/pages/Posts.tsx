@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { postsApi, optionsApi } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Button, Input, Table, Pagination, Badge, ConfirmDialog, Modal } from '@/components/ui';
+import { Button, Input, SaveButton, Table, Pagination, Badge, ConfirmDialog, Modal } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
 import { usePostsToolbar } from '@/layouts/PostsLayout';
 import { useI18n } from '@/lib/i18n';
@@ -262,9 +262,9 @@ export default function PostsPage() {
 
   useEffect(() => {
     setToolbar(
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-        {/* 左侧：状态筛选 + 新建文章 */}
-        <div style={{ display: 'flex', gap: '4px' }}>
+      <>
+        {/* 状态筛选 */}
+        <div style={{ display: 'flex', gap: 4 }}>
           {([
             { key: '', label: t('admin.menus.all', '全部') },
             { key: 'publish', label: statusLabel('publish') },
@@ -276,21 +276,23 @@ export default function PostsPage() {
             </Button>
           ))}
         </div>
-        <Button className="btn-toolbar" onClick={() => navigate('/posts/create')}>
-          <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />{t('admin.posts.newPost', '新建文章')}
+        <Button className="btn-square" title={t('admin.posts.newPost', '新建文章')} onClick={() => navigate('/posts/create')}>
+          <i className="fa-regular fa-plus" style={{ fontSize: 14 }} />
+        </Button>
+        {/* 文章设置移到新建文章之后、搜索框之前 —— 与新建动作贴近，
+            搜索区单独成组（只剩 Input + 搜索按钮）。 */}
+        <Button className="btn-square" variant="secondary" title={t('admin.posts.settingsTitle', '文章设置')} onClick={openSettings}>
+          <i className="fa-regular fa-gear" style={{ fontSize: 14 }} />
         </Button>
 
-        {/* 右侧：搜索框 + 设置 */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <Input placeholder={t('admin.posts.searchPlaceholder', '检索标题 / 摘要 / 正文')} value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchPosts())} style={{ width: '240px' }} />
+        {/* 搜索框 */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <Input placeholder={t('admin.posts.searchPlaceholder', '检索标题 / 摘要 / 正文')} value={search} onChange={(e: any) => setSearch(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && (setPage(1), fetchPosts())} style={{ width: 220 }} />
           <Button className="btn-square" title={t('common.search', '搜索')} onClick={() => { setPage(1); fetchPosts(); }}>
-            <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
-          </Button>
-          <Button className="btn-square" variant="secondary" title={t('admin.posts.settingsTitle', '文章设置')} onClick={openSettings}>
-            <i className="fa-regular fa-gear" style={{ fontSize: '14px' }} />
+            <i className="fa-regular fa-magnifying-glass" style={{ fontSize: 14 }} />
           </Button>
         </div>
-      </div>
+      </>
     );
     return () => setToolbar(null);
   }, [search, status, t]);
@@ -397,7 +399,7 @@ export default function PostsPage() {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid var(--color-border)', paddingTop: '14px' }}>
             <Button variant="secondary" onClick={() => setSettingsOpen(false)} disabled={settingsSaving}>{t('admin.common.cancel', '取消')}</Button>
-            <Button onClick={saveSettings} loading={settingsSaving}>{t('admin.common.save', '保存')}</Button>
+            <SaveButton onClick={saveSettings} loading={settingsSaving} />
           </div>
         </div>
       </Modal>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar';
 import NotificationBell from '@/components/layout/NotificationBell';
@@ -6,6 +6,15 @@ import { useAuthStore } from '@/lib/store';
 import { optionsApi } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { setAdminTimeZone } from '@/lib/timezone';
+
+// Page-level badge slot — pages call `setPageBadge(<span>共 58 条</span>)`
+// in useEffect, the global header renders it right after the page title.
+// Mirrors the `usePostsToolbar` pattern but scoped to the layout header.
+const PageBadgeContext = createContext<{ setPageBadge: (node: ReactNode) => void }>({ setPageBadge: () => {} });
+
+export function usePageBadge() {
+  return useContext(PageBadgeContext);
+}
 
 // Route-to-title map — displayed in header + document.title.
 // Icons reuse the sidebar FontAwesome classes for visual consistency.
@@ -115,12 +124,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [siteUrl, setSiteUrl] = useState(() => resolveVisitSiteUrl());
   const [siteTitle, setSiteTitle] = useState('Utterlog');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pageBadge, setPageBadge] = useState<ReactNode>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const pageBadgeCtx = useMemo(() => ({ setPageBadge }), []);
 
   const pageMeta = resolveTitle(pathname);
   const pageTitle = t(pageKey(pageMeta), pageMeta.label);
   const pageEn = locale === 'zh-CN' ? pageMeta.en : '';
   const pageIcon = pageMeta.icon;
+
+  // Reset the badge slot whenever the route changes — pages that don't
+  // set one shouldn't inherit the previous page's badge.
+  useEffect(() => { setPageBadge(null); }, [pathname]);
 
   useEffect(() => {
     optionsApi.list().then((r: any) => {
@@ -232,6 +247,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 · {pageEn}
               </span>
             )}
+            {pageBadge && (
+              <span style={{
+                fontSize: 12, fontWeight: 400,
+                color: 'var(--color-text-dim)',
+                flexShrink: 0,
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+              }}>
+                <span aria-hidden="true">·</span>
+                {pageBadge}
+              </span>
+            )}
           </div>
 
           {/* Right: actions + user */}
@@ -334,22 +360,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             overflowY: fullWidth ? 'hidden' : 'scroll',
           }}
         >
-          {fullWidth ? (
-            // Editor / chat / logs: fill the full viewport height, children handle internal scroll
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              {children}
-            </div>
-          ) : wide ? (
-            // Wide pages: full viewport width, normal scroll
-            <div style={{ padding: '24px 32px' }}>
-              {children}
-            </div>
-          ) : (
-            // Regular pages: centered with max-width
-            <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 32px' }}>
-              {children}
-            </div>
-          )}
+          <PageBadgeContext.Provider value={pageBadgeCtx}>
+            {fullWidth ? (
+              // Editor / chat / logs: fill the full viewport height, children handle internal scroll
+              <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                {children}
+              </div>
+            ) : wide ? (
+              // Wide pages: full viewport width, normal scroll
+              <div style={{ padding: '24px 32px' }}>
+                {children}
+              </div>
+            ) : (
+              // Regular pages: centered with max-width
+              <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 32px' }}>
+                {children}
+              </div>
+            )}
+          </PageBadgeContext.Provider>
         </main>
       </div>
     </div>

@@ -89,11 +89,12 @@ const manifestRegistry: Record<string, ThemeManifest> = {
   Nebula: NebulaManifest as ThemeManifest,
 };
 
-// Utterlog (renamed from Westlife in 2026-04) is the official default
-// theme — served when no active_theme is set in the DB or when an
-// unknown theme name is requested. The previous default Azure now
-// stays available but is no longer the fallback.
-export const DEFAULT_THEME = 'Utterlog';
+// Azure is the official default theme for fresh installs (as of
+// 2026-05) — served when no active_theme is set in the DB or when
+// an unknown theme name is requested. Utterlog (renamed from
+// Westlife in 2026-04) remains available but is no longer the
+// fallback.
+export const DEFAULT_THEME = 'Azure';
 
 export function getThemeComponents(themeName: string): ThemeComponents {
   return themeRegistry[themeName] || themeRegistry[DEFAULT_THEME];

@@ -149,7 +149,7 @@ export default function MusicPage() {
                 style={{ paddingLeft: '32px' }}
               />
             </div>
-            <Button className="btn-toolbar-square" title="搜索" onClick={doSearch} loading={searching}>
+            <Button className="btn-square" title="搜索" onClick={doSearch} loading={searching}>
               <i className="fa-regular fa-magnifying-glass" style={{ fontSize: '14px' }} />
             </Button>
           </div>

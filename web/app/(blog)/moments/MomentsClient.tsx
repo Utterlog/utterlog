@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/store';
 import { useThemeContext } from '@/lib/theme-context';
 import { datePartsInTimeZone, formatDateInTimeZone, formatDateTimeInTimeZone } from '@/lib/timezone';
 import PageTitle from '@/components/blog/PageTitle';
+import Lightbox from '@/components/blog/Lightbox';
 import toast from 'react-hot-toast';
 
 function formatTime(ts: number, timeZone: string) {
@@ -131,8 +132,15 @@ export default function MomentsPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Lightbox state
-  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  // Lightbox state —— 用全站共享 <Lightbox> 组件（FLIP 缩放、键盘导航、
+  // 滚动锁定、UI 按钮等全部由组件负责）。state 形态对齐 Lightbox 的
+  // props：list 项 {src, alt}，外加 originRect 记被点缩略图视口位置
+  // 让 FLIP open 能"从点击位置放大"、close 能"飞回原位"。
+  const [lightbox, setLightbox] = useState<{
+    list: { src: string; alt: string }[];
+    index: number;
+    originRect: DOMRect | null;
+  } | null>(null);
 
   // Scattered card interaction
   const [activeCard, setActiveCard] = useState<number | null>(null);
@@ -208,20 +216,16 @@ export default function MomentsPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [showCalendar, showTagPanel]);
 
-  // Keyboard handler for lightbox & composer
+  // Keyboard handler 只剩 composer 的 Escape；lightbox 的 Esc/←→ 已由
+  // 共享 <Lightbox> 内部 useEffect 处理（document keydown listener）。
   useEffect(() => {
+    if (!showComposer) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (lightbox) {
-        if (e.key === 'Escape') setLightbox(null);
-        if (e.key === 'ArrowLeft') setLightbox(prev => prev ? { ...prev, index: Math.max(0, prev.index - 1) } : null);
-        if (e.key === 'ArrowRight') setLightbox(prev => prev ? { ...prev, index: Math.min(prev.images.length - 1, prev.index + 1) } : null);
-      } else if (showComposer && e.key === 'Escape') {
-        setShowComposer(false);
-      }
+      if (e.key === 'Escape') setShowComposer(false);
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [lightbox, showComposer]);
+  }, [showComposer]);
 
   const fetchMoments = async () => {
     setLoading(true);
@@ -326,12 +330,13 @@ export default function MomentsPage() {
     );
   };
 
-  const openLightbox = (imgs: string[], index: number) => {
+  const openLightbox = (imgs: string[], index: number, originRect: DOMRect | null) => {
     // Honour Settings → 图片处理 → 启用灯箱; ImageEffects.tsx writes
     // data-img-lightbox on <html> so we can early-return when admin
     // has the toggle off.
     if (document.documentElement.dataset.imgLightbox === '0') return;
-    setLightbox({ images: imgs, index });
+    const list = imgs.map((src) => ({ src, alt: '' }));
+    setLightbox({ list, index, originRect });
   };
 
   return (
@@ -471,13 +476,13 @@ export default function MomentsPage() {
 
                     {/* Images */}
                     {imgs.length === 1 && (
-                      <img src={imgs[0]} alt="" onClick={(e) => { e.stopPropagation(); openLightbox(imgs, 0); }}
+                      <img src={imgs[0]} alt="" onClick={(e) => { e.stopPropagation(); openLightbox(imgs, 0, e.currentTarget.getBoundingClientRect()); }}
                         style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }} />
                     )}
                     {imgs.length >= 2 && (
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
                         {imgs.map((url, idx) => (
-                          <img key={idx} src={url} alt="" onClick={(e) => { e.stopPropagation(); openLightbox(imgs, idx); }}
+                          <img key={idx} src={url} alt="" onClick={(e) => { e.stopPropagation(); openLightbox(imgs, idx, e.currentTarget.getBoundingClientRect()); }}
                             style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }} />
                         ))}
                       </div>
@@ -887,78 +892,17 @@ export default function MomentsPage() {
         </div>
       )}
 
-      {/* ==================== Lightbox ==================== */}
+      {/* ==================== Lightbox ====================
+          全站共享 <Lightbox> 组件 —— FLIP 缩放（从被点缩略图位置放大
+          / 飞回）+ 键盘导航 + 滚动锁定 + UI 工具栏 + 加载指示 ……
+          全部由组件负责。说说 / 文章正文用同一份代码同一种体感。 */}
       {lightbox && (
-        <div
-          onClick={() => setLightbox(null)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 3000,
-            background: 'rgba(0,0,0,0.9)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'zoom-out',
-          }}
-        >
-          {/* Close button */}
-          <button style={{
-            position: 'absolute', top: '20px', right: '20px',
-            width: '40px', height: '40px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer',
-            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <i className="fa-solid fa-xmark" style={{ fontSize: '20px' }} />
-          </button>
-
-          {/* Image */}
-          <img
-            src={lightbox.images[lightbox.index]}
-            alt=""
-            onClick={e => e.stopPropagation()}
-            style={{
-              maxWidth: '90vw', maxHeight: '90vh',
-              objectFit: 'contain', borderRadius: '4px',
-              cursor: 'default',
-            }}
-          />
-
-          {/* Navigation arrows */}
-          {lightbox.images.length > 1 && (
-            <>
-              {lightbox.index > 0 && (
-                <button
-                  onClick={e => { e.stopPropagation(); setLightbox(prev => prev ? { ...prev, index: prev.index - 1 } : null); }}
-                  style={{
-                    position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)',
-                    width: '44px', height: '44px', borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer',
-                    color: '#fff', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  ‹
-                </button>
-              )}
-              {lightbox.index < lightbox.images.length - 1 && (
-                <button
-                  onClick={e => { e.stopPropagation(); setLightbox(prev => prev ? { ...prev, index: prev.index + 1 } : null); }}
-                  style={{
-                    position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)',
-                    width: '44px', height: '44px', borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer',
-                    color: '#fff', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  ›
-                </button>
-              )}
-              {/* Counter */}
-              <span style={{
-                position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-                color: 'rgba(255,255,255,0.6)', fontSize: '13px',
-              }}>
-                {lightbox.index + 1} / {lightbox.images.length}
-              </span>
-            </>
-          )}
-        </div>
+        <Lightbox
+          list={lightbox.list}
+          index={lightbox.index}
+          originRect={lightbox.originRect}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   );

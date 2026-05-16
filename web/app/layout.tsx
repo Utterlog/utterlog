@@ -18,23 +18,23 @@ function normalizeLocale(locale?: string): string {
 // Falls back silently when the API isn't reachable (build-time, dev
 // cold-start, etc.) so we never block render on options-fetching.
 async function getRootDisplayOptions(): Promise<{ activeTheme: string; locale: string; timeZone: string }> {
-  if (!API_BASE) return { activeTheme: 'Utterlog', locale: 'zh-CN', timeZone: localTimeZone() };
+  if (!API_BASE) return { activeTheme: 'Azure', locale: 'zh-CN', timeZone: localTimeZone() };
   try {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 2000);
     const res = await fetch(`${API_BASE}/options`, { next: { revalidate: 60 }, signal: ac.signal });
     clearTimeout(timer);
-    if (!res.ok) return { activeTheme: 'Utterlog', locale: 'zh-CN', timeZone: localTimeZone() };
+    if (!res.ok) return { activeTheme: 'Azure', locale: 'zh-CN', timeZone: localTimeZone() };
     const json = await res.json();
     const opts = json.data || json || {};
     const timeZone = resolveSiteTimeZone(opts);
     return {
-      activeTheme: (opts.active_theme || 'Utterlog').toString().trim() || 'Utterlog',
+      activeTheme: (opts.active_theme || 'Azure').toString().trim() || 'Azure',
       locale: normalizeLocale(opts.site_locale),
       timeZone: isValidTimeZone(timeZone) ? timeZone : localTimeZone(),
     };
   } catch {
-    return { activeTheme: 'Utterlog', locale: 'zh-CN', timeZone: localTimeZone() };
+    return { activeTheme: 'Azure', locale: 'zh-CN', timeZone: localTimeZone() };
   }
 }
 
@@ -127,19 +127,12 @@ export default async function RootLayout({
             so we link their generated stylesheets directly — the browser
             only downloads the slices a given page actually uses. */}
         <link rel="preconnect" href="https://static.utterlog.com" crossOrigin="anonymous" />
-        {/* Preload the four FA Pro webfonts the page actually uses on first
-            paint (light/regular/solid/sharp-light) so they don't wait
-            on the CSS parse → @font-face → woff2 fetch waterfall. */}
-        <link rel="preload" as="font" type="font/woff2" crossOrigin="anonymous"
-              href="https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-light-300.woff2" />
-        <link rel="preload" as="font" type="font/woff2" crossOrigin="anonymous"
-              href="https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-regular-400.woff2" />
-        <link rel="preload" as="font" type="font/woff2" crossOrigin="anonymous"
-              href="https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-solid-900.woff2" />
-        <link rel="preload" as="font" type="font/woff2" crossOrigin="anonymous"
-              href="https://static.utterlog.com/libs/fontawesome/7.2.0/webfonts/fa-sharp-light-300.woff2" />
-        {/* Font Awesome Pro 7.2.0 — official all.min.css, font-display
-            override applied via globals.css @font-face rules below. */}
+        {/* Font Awesome Pro 7.2.0 — 全站只引这一份。之前 layout 再
+            preload 4 个 woff2 + globals.css 再 @font-face 一遍，移动
+            端在弱网下被反复解析判定重复源，体感反而更慢。简化为单
+            一 official CSS：浏览器从这里读 @font-face，所有图标走同
+            一通道。代价：失去 font-display: swap 覆盖，icons 用默认
+            block（100ms FOIT），交换的是源清晰 + 配置简单。 */}
         <link rel="stylesheet" href="https://static.utterlog.com/libs/fontawesome/7.2.0/css/all.min.css" />
         {/* Noto Sans SC — primary Chinese sans, mirrored from Google Fonts
             to R2 (101 unicode-range slices, ~5MB total but each page

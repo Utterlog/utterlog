@@ -45,6 +45,7 @@ type Extension struct {
 	//   profile_card    — 侧栏个人资料卡（Azure）
 	//   header_buttons  — 头部图标按钮（Azure / Nebula / Renascent）
 	//   footer_icons    — 页脚图标（Azure / Chred）
+	//   hero_tiles      — 首页 hero 4 个图块按钮（Nebula）
 	// 数组为空 → admin 只显示「主题 / 菜单」两个 tab。前端按本字段过滤
 	// 而不是写死，新主题只要在 manifest 里声明就能用上对应面板。
 	AdminPanels []string `json:"adminPanels,omitempty"`
@@ -132,10 +133,11 @@ func enabledOptionKey(kind ExtensionKind) string {
 // They live in the web container, not the Go container, so we hard-code
 // their manifest so the admin can list + activate them.
 //
-// Utterlog (renamed from Westlife in 2026-04) is the official default
-// theme. The "Utterlog 2026" theme was removed in the same change —
-// any site whose active_theme is still "2026" or "Westlife" falls
-// through to Utterlog via the default fallback in listExtensions.
+// Azure is the official default theme for fresh installs (as of
+// 2026-05). Utterlog (renamed from Westlife in 2026-04) and the
+// removed "Utterlog 2026" theme remain available; legacy DBs still
+// pointing at "2026" or "Westlife" are migrated to Utterlog by
+// api/config/database.go, not the listExtensions fallback below.
 var builtInThemes = []Extension{
 	{
 		ID: "Utterlog", Name: "Utterlog", Version: "2.0.2",
@@ -212,7 +214,7 @@ var builtInThemes = []Extension{
 			{Key: "header", Label: "顶部导航", Description: "网站顶部 Header 的主菜单"},
 			{Key: "category", Label: "分类导航", Description: "首页中部的分类筛选条；不配则自动列出所有分类"},
 		},
-		AdminPanels: []string{"header_buttons"},
+		AdminPanels: []string{"header_buttons", "hero_tiles"},
 	},
 }
 
@@ -227,7 +229,7 @@ func listExtensions(kind ExtensionKind) []Extension {
 	if kind == KindTheme {
 		activeTheme = model.GetOption("active_theme")
 		if activeTheme == "" {
-			activeTheme = "Utterlog" // official default theme
+			activeTheme = "Azure" // official default theme
 		}
 	} else {
 		raw := model.GetOption("active_plugins")

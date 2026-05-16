@@ -323,14 +323,12 @@ export default function SystemUpdatePanel() {
       // 这不是失败，是"成功 + 自动确认信号有歧义"。
       toast(
         `升级已应用 —— 容器 commit 已更新到 ${lastCommit.slice(0, 7)}，` +
-        `但版本号自动确认超时。可手动刷新页面核对。`,
-        { icon: 'ℹ️' }
+        `但版本号自动确认超时。可手动刷新页面核对。`
       );
     } else if (lastGot && lastGot === baseSnapshot) {
       toast(
         `升级超时未确认 —— 当前版本 ${lastGot}，期望 ${expected || '?'}。` +
-        `镜像可能还在拉取或 registry 还没同步，等几分钟刷新页面再看。`,
-        { icon: '⚠️' }
+        `镜像可能还在拉取或 registry 还没同步，等几分钟刷新页面再看。`
       );
     } else {
       toast.error(
@@ -585,7 +583,7 @@ export default function SystemUpdatePanel() {
           }}
         >
           <i
-            className={`fa-solid ${upgradeStatus.running ? 'fa-circle-notch fa-spin' : upgradeStatus.success ? 'fa-circle-check' : 'fa-circle-xmark'}`}
+            className={`fa-solid ${upgradeStatus.running ? 'fa-spinner fa-spin' : upgradeStatus.success ? 'fa-circle-check' : 'fa-circle-xmark'}`}
             style={{ color: upgradeStatus.running ? '#fff' : upgradeStatus.success ? '#16a34a' : '#dc2626' }}
           />
           {upgradeStatus.running ? '查看升级进度…' : upgradeStatus.success ? '查看升级日志（成功）' : '查看升级日志（失败）'}
@@ -633,7 +631,7 @@ export default function SystemUpdatePanel() {
             background: 'linear-gradient(180deg, #0f1729 0%, #0a0e1a 100%)',
           }}>
             <i
-              className={`fa-solid ${upgradeStatus?.running ? 'fa-circle-notch fa-spin' : upgradeStatus?.success ? 'fa-circle-check' : 'fa-circle-xmark'}`}
+              className={`fa-solid ${upgradeStatus?.running ? 'fa-spinner fa-spin' : upgradeStatus?.success ? 'fa-circle-check' : 'fa-circle-xmark'}`}
               style={{ color: upgradeStatus?.running ? '#60a5fa' : upgradeStatus?.success ? '#4ade80' : '#f87171', fontSize: 13 }}
             />
             <span style={{ color: '#cbd5e1' }}>

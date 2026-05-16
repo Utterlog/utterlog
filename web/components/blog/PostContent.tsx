@@ -12,6 +12,7 @@ import 'prismjs/themes/prism-tomorrow.css';
 import { AnnotationProvider } from './AnnotationProvider';
 import BlockAnnotation from './BlockAnnotation';
 import LazyImage from './LazyImage';
+import Lightbox from './Lightbox';
 import ImageGrid from './ImageGrid';
 import MomentEmbed from './MomentEmbed';
 import GitHubRepoCard from './GitHubRepoCard';
@@ -88,159 +89,6 @@ function CodeBlock({ children, className, ...props }: React.HTMLAttributes<HTMLP
           {collapsed ? `展开全部 (${lineCount} 行)` : '收起'}
         </button>
       )}
-    </div>
-  );
-}
-
-// Lightbox — gallery-style overlay. The article collects every
-// `.blog-image img` src into a list; clicking one opens the overlay
-// at that index and the user can step through siblings with the
-// arrow keys or the on-screen prev/next buttons. Open / close play
-// a 300ms translate+fade so the transition feels smooth even on
-// large covers (the <img> gets `decoding="async"` for the same
-// reason). Scroll lock is handled by toggling `html.lightbox-active`
-// which maps to `!important` overflow rules in globals.css.
-interface LightboxProps {
-  list: { src: string; alt: string }[];
-  index: number;
-  onClose: () => void;
-}
-
-function Lightbox({ list, index: startIndex, onClose }: LightboxProps) {
-  const [index, setIndex] = useState(startIndex);
-  const [loading, setLoading] = useState(true);
-  const [imgOut, setImgOut] = useState(false);   // triggers translateY+fade on the img between prev/next swaps
-  const [closing, setClosing] = useState(false); // fades overlay out before unmount
-
-  const current = list[index];
-
-  const closeSoft = useCallback(() => {
-    if (closing) return;
-    setClosing(true);
-    // Match the overlay fade-out keyframe length (300ms) before
-    // unmounting so the animation actually plays instead of getting
-    // torn down with an abrupt opacity:1 → null.
-    window.setTimeout(onClose, 300);
-  }, [closing, onClose]);
-
-  const step = useCallback((dir: 1 | -1) => {
-    if (list.length < 2) return;
-    const next = (index + dir + list.length) % list.length;
-    setImgOut(true);
-    // Swap the src mid-way so the in-animation plays on the new image
-    // — mirrors the ViewImage behaviour where the previous frame
-    // slides down/fades out, a brief blank appears, then the next
-    // frame slides in from above.
-    window.setTimeout(() => {
-      setIndex(next);
-      setLoading(true);
-      setImgOut(false);
-    }, 300);
-  }, [index, list.length]);
-
-  // Keyboard: Esc closes, arrows navigate.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeSoft();
-      else if (e.key === 'ArrowLeft')  step(-1);
-      else if (e.key === 'ArrowRight') step(1);
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [closeSoft, step]);
-
-  // Scroll lock — runs via useLayoutEffect (not useEffect) so it
-  // lands synchronously before the browser's first paint of the
-  // lightbox. If we used useEffect, frame 1 would show the overlay
-  // with .blog-main still scrollable, frame 2 would apply the
-  // padding-right compensation → a visible horizontal shift on open
-  // and another one on close.
-  useLayoutEffect(() => {
-    const blogMain = document.querySelector('.blog-main') as HTMLElement | null;
-    const sbWidth = blogMain ? blogMain.offsetWidth - blogMain.clientWidth : 0;
-    const prevPad = blogMain?.style.paddingRight || '';
-    if (blogMain && sbWidth > 0) blogMain.style.paddingRight = `${sbWidth}px`;
-    document.documentElement.classList.add('lightbox-active');
-
-    const blockScroll = (e: Event) => { e.preventDefault(); };
-    document.addEventListener('wheel', blockScroll, { passive: false });
-    document.addEventListener('touchmove', blockScroll, { passive: false });
-
-    return () => {
-      document.documentElement.classList.remove('lightbox-active');
-      document.removeEventListener('wheel', blockScroll);
-      document.removeEventListener('touchmove', blockScroll);
-      if (blogMain) blogMain.style.paddingRight = prevPad;
-    };
-  }, []);
-
-  return (
-    <div
-      className={`vi-overlay${closing ? ' vi-closing' : ''}`}
-      onClick={(e) => {
-        // Click outside the image (on the backdrop layer or overlay
-        // background) closes the lightbox; don't close when clicking
-        // the image itself, buttons, or tools bar.
-        const target = e.target as HTMLElement;
-        if (target === e.currentTarget || target.classList.contains('vi-backstop')) {
-          closeSoft();
-        }
-      }}
-    >
-      <div className={`vi-stage${imgOut ? ' vi-img-out' : ''}`}>
-        <div className="vi-backstop" />
-        {loading && (
-          <svg className="vi-loading" fill="currentColor" viewBox="0 0 40 4" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect className="vi-loading-react" width="40" height="4" fill="currentColor" />
-          </svg>
-        )}
-        <img
-          key={current.src}
-          className="vi-img"
-          src={current.src}
-          alt={current.alt || ''}
-          decoding="async"
-          draggable={false}
-          onLoad={() => setLoading(false)}
-        />
-      </div>
-
-      <div className="vi-tools">
-        <div className="vi-count">
-          <b>{index + 1}</b>/{list.length}
-        </div>
-        <div className="vi-nav">
-          <button
-            type="button"
-            className="vi-btn"
-            onClick={() => step(-1)}
-            disabled={list.length < 2}
-            aria-label="上一张"
-            title="上一张 (←)"
-          >
-            <svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M31 36L19 24L31 12" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <button
-            type="button"
-            className="vi-btn"
-            onClick={() => step(1)}
-            disabled={list.length < 2}
-            aria-label="下一张"
-            title="下一张 (→)"
-          >
-            <svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M19 12L31 24L19 36" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-        </div>
-        <button
-          type="button"
-          className="vi-btn"
-          onClick={closeSoft}
-          aria-label="关闭"
-          title="关闭 (Esc)"
-        >
-          <svg width="14" height="14" viewBox="0 0 48 48" fill="none"><path d="M8 8L40 40" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 40L40 8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-      </div>
     </div>
   );
 }
@@ -391,6 +239,9 @@ function processShortcodes(text: string): string {
   // CSS 变量 (--md-download-bg / --md-download-accent / --md-download-text)
   // override 配色。改样式只需改一处 globals.css，不再 inline 散落。
   text = text.replace(/\[download\s+title="([^"]*)"\s+desc="([^"]*)"\s+url="([^"]*)"\]/g, (_, title, desc, url) => {
+    // 左侧 .md-download-icon 圆形下载 icon + 右侧按钮文字「立即下载」。
+    // 右侧 .md-download-btn 是按钮不是链接，下划线 / favicon / 外链
+    // icon 由下方 components.a 拦截 + globals.css `!important` 覆盖去掉。
     return `<div class="md-download-card"><div class="md-download-icon"><i class="fa-solid fa-download"></i></div><div class="md-download-info"><div class="md-download-title">${title}</div><div class="md-download-desc">${desc}</div></div><a class="md-download-btn" href="${url}" target="_blank" rel="noopener noreferrer">立即下载</a></div>`;
   });
   // [color=#hex]text[/color]
@@ -427,7 +278,14 @@ export default function PostContent({ content, postId }: PostContentProps) {
   // counters further and every BlockAnnotation's blockId would drift,
   // forcing a remount cascade.
   const blockCounters = useRef({ p: 0, pre: 0, img: 0 });
-  const [lightbox, setLightbox] = useState<{ list: { src: string; alt: string }[]; index: number } | null>(null);
+  // originRect 记录"点击的那张缩略图在视口里的位置"，传给 Lightbox 做
+  // FLIP（First, Last, Invert, Play）动画 —— 灯箱图从这个 rect 平滑放
+  // 大到全屏，关闭时反向飞回。null 时 Lightbox 退化为中心呼吸动画。
+  const [lightbox, setLightbox] = useState<{
+    list: { src: string; alt: string }[];
+    index: number;
+    originRect: DOMRect | null;
+  } | null>(null);
   const [exifMap, setExifMap] = useState<Record<string, Record<string, string>>>({});
   // Mirror exifMap into a ref so the memoized components factory can
   // read the latest value without taking exifMap as a dep (which
@@ -466,7 +324,10 @@ export default function PostContent({ content, postId }: PostContentProps) {
       const all = Array.from(nodeList);
       const list = all.map(el => ({ src: el.currentSrc || el.src, alt: el.alt || '' }));
       const idx = all.indexOf(img);
-      setLightbox({ list, index: idx >= 0 ? idx : 0 });
+      // 抓被点击图的视口 rect —— 让 Lightbox FLIP 动画从这里开始/结束。
+      // 灯箱本身锁滚动，期间 rect 不会失效（无需再 listen scroll）。
+      const originRect = img.getBoundingClientRect();
+      setLightbox({ list, index: idx >= 0 ? idx : 0, originRect });
     };
     el.addEventListener('click', handleClick, true);
     return () => el.removeEventListener('click', handleClick, true);
@@ -517,7 +378,17 @@ export default function PostContent({ content, postId }: PostContentProps) {
       const el = <CodeBlock {...props} />;
       return postId ? <BlockAnnotation blockId={id}>{el}</BlockAnnotation> : el;
     },
-    a: ({ node, ...props }: any) => <ExternalLink {...props} />,
+    a: ({ node, ...props }: any) => {
+      // .md-download-btn 是 [download] shortcode 渲染的按钮，不该被
+      // ExternalLink 包成"网站 favicon + 外链 icon"的预览链接 ——
+      // 它是按钮不是链接，favicon 看上去像 logo，右侧外链 icon 也
+      // 是无意义装饰。透传成原生 <a>，保持按钮纯净。
+      const className = (props.className || '') as string;
+      if (className.split(/\s+/).includes('md-download-btn')) {
+        return <a {...props} />;
+      }
+      return <ExternalLink {...props} />;
+    },
     div: ({ node, ...props }: any) => {
       const el = props as any;
       // Image grid
@@ -587,7 +458,7 @@ export default function PostContent({ content, postId }: PostContentProps) {
         </ReactMarkdown>
       </div>
       {lightbox && (
-        <Lightbox list={lightbox.list} index={lightbox.index} onClose={() => setLightbox(null)} />
+        <Lightbox list={lightbox.list} index={lightbox.index} originRect={lightbox.originRect} onClose={() => setLightbox(null)} />
       )}
     </>
   );

@@ -15,6 +15,7 @@ import (
 	"utterlog-go/config"
 	"utterlog-go/internal/middleware"
 	"utterlog-go/internal/model"
+	"utterlog-go/internal/textutil"
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -144,6 +145,7 @@ func FollowSite(c *gin.Context) {
 	json.NewDecoder(resp.Body).Decode(&meta)
 	data, _ := meta["data"].(map[string]interface{})
 	siteName, _ := data["name"].(string)
+	siteName = textutil.NormalizeDisplayName(siteName) // 防 "Foo&#039;s" 类脏数据进 DB
 	if siteName == "" { siteName = req.SiteURL }
 
 	// 2. Send follow request to remote site
@@ -234,10 +236,10 @@ func ReceiveFollow(c *gin.Context) {
 
 	if count > 0 {
 		config.DB.Exec(fmt.Sprintf("UPDATE %s SET mutual = true WHERE source_site = $1", t("followers")), req.FollowerSite)
-		// Auto add link
+		// Auto add link —— req.FollowerName 来自远端 POST，可能含 HTML 实体
 		config.DB.Exec(fmt.Sprintf(
 			"INSERT INTO %s (name, url, description, status, sort_order, created_at, updated_at) VALUES ($1,$2,'互关好友','publish',0,$3,$4) ON CONFLICT DO NOTHING",
-			t("links")), req.FollowerName, req.FollowerSite, now, now)
+			t("links")), textutil.NormalizeDisplayName(req.FollowerName), req.FollowerSite, now, now)
 	}
 
 	util.Success(c, gin.H{"accepted": true, "mutual": count > 0})

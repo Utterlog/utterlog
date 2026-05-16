@@ -87,9 +87,8 @@ export default function Plugins() {
           <button className="btn btn-secondary btn-square" onClick={fetchList} disabled={loading} title="刷新列表">
             <i className="fa-regular fa-arrows-rotate" style={{ fontSize: 14 }} />
           </button>
-          <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="上传插件 .zip">
-            <i className="fa-regular fa-upload" style={{ fontSize: 14 }} />
-            {uploading ? '上传中…' : '上传插件'}
+          <button className="btn btn-primary btn-square" onClick={() => fileInputRef.current?.click()} disabled={uploading} title={uploading ? '上传中…' : '上传插件 .zip'}>
+            <i className={uploading ? 'fa-regular fa-spinner fa-spin' : 'fa-regular fa-upload'} style={{ fontSize: 14 }} />
           </button>
           <input
             ref={fileInputRef}

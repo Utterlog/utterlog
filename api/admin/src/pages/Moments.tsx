@@ -1,12 +1,14 @@
 
 import { useEffect, useState } from 'react';
-import { momentsApi, optionsApi, mediaApi } from '@/lib/api';
+import { momentsApi, optionsApi, mediaApi, geoApi } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Button, Modal, ConfirmDialog } from '@/components/ui';
+import { Button, Input, Modal, ConfirmDialog } from '@/components/ui';
 import { useI18n } from '@/lib/i18n';
+import { usePageBadge } from '@/layouts/DashboardLayout';
 
 export default function MomentsPage() {
   const { t } = useI18n();
+  const { setPageBadge } = usePageBadge();
   const [moments, setMoments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,11 +18,14 @@ export default function MomentsPage() {
   const [formImages, setFormImages] = useState<string[]>([]);
   const [imgUploading, setImgUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   // Tag management
   const [tags, setTags] = useState<string[]>(['随想', '技术', '生活', '阅读']);
   const [showTagManager, setShowTagManager] = useState(false);
   const [newTag, setNewTag] = useState('');
+  const [editingTag, setEditingTag] = useState<{ old: string; draft: string } | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => { fetchData(); fetchTags(); }, []);
 
@@ -58,8 +63,24 @@ export default function MomentsPage() {
     toast.success(t('admin.moments.toast.tagAdded', '已添加标签「{tag}」', { tag }));
   };
 
-  const removeTag = (tag: string) => {
-    saveTags(tags.filter(t => t !== tag));
+  // Inline rename: 用户在胶囊里直接改名后点 ✓ 或回车 / 失焦保存。
+  // 空输入 = 删除（保留删除路径，不需要再点别的按钮）。
+  const commitTagEdit = (oldName: string, draft: string) => {
+    const next = draft.trim();
+    if (next === oldName) { setEditingTag(null); return; }
+    if (!next) {
+      saveTags(tags.filter(t => t !== oldName));
+      setEditingTag(null);
+      toast.success(t('admin.moments.toast.tagRemoved', '已删除标签「{tag}」', { tag: oldName }));
+      return;
+    }
+    if (tags.some(t => t === next && t !== oldName)) {
+      toast.error(t('admin.moments.toast.tagExists', '标签「{tag}」已存在', { tag: next }));
+      return;
+    }
+    saveTags(tags.map(t => (t === oldName ? next : t)));
+    setEditingTag(null);
+    toast.success(t('admin.moments.toast.tagRenamed', '「{old}」已重命名为「{newName}」', { old: oldName, newName: next }));
   };
 
   const parseImages = (m: any): string[] => {
@@ -85,6 +106,49 @@ export default function MomentsPage() {
 
   const openCreate = () => { setEditingId(null); setForm({ content: '', location: '', mood: '', images: '', visibility: 'public' }); setFormImages([]); setIsModalOpen(true); };
   const openEdit = (m: any) => { setEditingId(m.id); const imgs = parseImages(m); setFormImages(imgs); setForm({ content: m.content, location: m.location || '', mood: m.mood || '', images: '', visibility: m.visibility }); setIsModalOpen(true); };
+
+  // 浏览器定位 + 反查地址。统一走后端 /api/v1/location/reverse —— 与前台
+  // 说说发布（web/app/(blog)/moments/MomentsClient.tsx）共用同一服务端
+  // 实现：Mapbox → 高德 → 腾讯三档 fallback，且全部限定到城市/区/省/国家
+  // 五级，不返回街道或 POI，保证 admin / 前台写入数据库的 location 粒度
+  // 一致（城市名）。
+  const fetchCurrentLocation = async () => {
+    if (!('geolocation' in navigator)) {
+      toast.error(t('admin.moments.toast.geolocationUnsupported', '当前浏览器不支持地理位置 API'));
+      return;
+    }
+    setLocating(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60_000,
+        });
+      });
+      const { latitude: lat, longitude: lng } = position.coords;
+
+      const res: any = await geoApi.reverse(lat, lng);
+      const data = res?.data || res || {};
+      const resolved = String(data.location || data.city || data.region || data.country || '').trim();
+
+      if (!resolved) {
+        toast.error(t('admin.moments.toast.locationNotResolved', '未能识别城市，请手动填写位置'));
+        return;
+      }
+
+      setForm(prev => ({ ...prev, location: resolved }));
+      toast.success(t('admin.moments.toast.locationFetched', '位置已获取'));
+    } catch (err: any) {
+      let msg = t('admin.moments.toast.locationFailed', '位置获取失败');
+      if (err?.code === 1) msg = t('admin.moments.toast.locationDenied', '位置权限被拒绝，请在浏览器/系统设置中允许');
+      else if (err?.code === 2) msg = t('admin.moments.toast.locationUnavailable', '位置不可用，请检查 GPS / 网络');
+      else if (err?.code === 3) msg = t('admin.moments.toast.locationTimeout', '位置获取超时，请重试');
+      toast.error(msg);
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const handleImgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -133,17 +197,82 @@ export default function MomentsPage() {
     return `${y}-${m}-${day} ${h}:${min}`;
   };
 
+  // Search filter — content / location / mood (关键词) 三字段命中即显示
+  const searchTerm = search.trim().toLowerCase();
+  const filteredMoments = searchTerm
+    ? moments.filter((m: any) => {
+        const haystack = [m.content, m.location, m.mood]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(searchTerm);
+      })
+    : moments;
+
+  // Push count badge into the global header (next to "说说管理 · Moments")
+  useEffect(() => {
+    setPageBadge(
+      <span>
+        {searchTerm
+          ? t('admin.moments.totalFiltered', '共 {count} 条说说 · 命中 {matched} 条', { count: moments.length, matched: filteredMoments.length })
+          : t('admin.moments.total', '共 {count} 条说说', { count: moments.length })}
+      </span>
+    );
+    return () => setPageBadge(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moments.length, filteredMoments.length, searchTerm, t]);
+
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-        <span className="text-dim" style={{ fontSize: '13px' }}>{t('admin.moments.total', '共 {count} 条说说', { count: moments.length })}</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" onClick={() => setShowTagManager(!showTagManager)} style={{ width: 88, minWidth: 88 }}>
-            <i className="fa-regular fa-tags" style={{ fontSize: '14px' }} />{t('admin.posts.columns.keywords', '关键词')}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap', rowGap: 8 }}>
+        {/* Left: 关键词 + 发布（正方形 icon-only） */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Button
+            className="btn-square"
+            variant={showTagManager ? 'primary' : 'secondary'}
+            title={t('admin.posts.columns.keywords', '关键词')}
+            aria-label={t('admin.posts.columns.keywords', '关键词')}
+            onClick={() => setShowTagManager(!showTagManager)}
+          >
+            <i className="fa-solid fa-hashtag" style={{ fontSize: 14 }} />
           </Button>
-          <Button onClick={openCreate} style={{ width: 88, minWidth: 88 }}>
-            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />{t('admin.moments.publish', '发布')}
+          <Button
+            className="btn-square"
+            title={t('admin.moments.publish', '发布')}
+            aria-label={t('admin.moments.publish', '发布')}
+            onClick={openCreate}
+          >
+            <i className="fa-solid fa-plus" style={{ fontSize: 14 }} />
           </Button>
+        </div>
+
+        {/* Right: 搜索框 + 🔍 + ✕ */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Input
+            placeholder={t('admin.moments.searchPlaceholder', '检索内容 / 位置 / 关键词')}
+            value={search}
+            onChange={(e: any) => setSearch(e.target.value)}
+            style={{ width: 220 }}
+          />
+          <Button
+            className="btn-square"
+            title={t('common.search', '搜索')}
+            aria-label={t('common.search', '搜索')}
+            onClick={() => { /* 即时搜索：按钮仅作视觉锚点 */ }}
+          >
+            <i className="fa-regular fa-magnifying-glass" style={{ fontSize: 14 }} />
+          </Button>
+          {search && (
+            <Button
+              className="btn-square"
+              variant="secondary"
+              title={t('admin.common.clear', '清空')}
+              aria-label={t('admin.common.clear', '清空')}
+              onClick={() => setSearch('')}
+            >
+              <i className="fa-regular fa-xmark" style={{ fontSize: 14 }} />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -153,25 +282,82 @@ export default function MomentsPage() {
           <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>{t('admin.moments.tagManagerTitle', '说说关键词管理')}</h3>
           <p className="text-dim" style={{ fontSize: '12px', marginBottom: '16px' }}>{t('admin.moments.tagManagerHint', '管理前台说说发布时可选的关键词标签，发布后显示在卡片右上角')}</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
-            {tags.map(tag => (
-              <span
-                key={tag}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  padding: '5px 12px', borderRadius: '16px', fontSize: '13px',
-                  background: 'var(--color-bg-soft)', color: 'var(--color-text-sub)',
-                  border: '1px solid var(--color-border)',
-                }}
-              >
-                {tag}
-                <button
-                  onClick={() => removeTag(tag)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--color-text-dim)', display: 'flex' }}
+            {tags.map(tag => {
+              const isEditing = editingTag?.old === tag;
+              const draft = isEditing ? editingTag!.draft : tag;
+              return (
+                <span
+                  key={tag}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '5px 12px', borderRadius: '16px', fontSize: '13px',
+                    background: isEditing ? 'var(--color-bg-card)' : 'var(--color-bg-soft)',
+                    color: 'var(--color-text-sub)',
+                    border: `1px solid ${isEditing ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                    transition: 'border-color 0.12s, background 0.12s',
+                  }}
                 >
-                  <i className="fa-solid fa-xmark" style={{ fontSize: '12px' }} />
-                </button>
-              </span>
-            ))}
+                  {isEditing ? (
+                    <input
+                      autoFocus
+                      value={draft}
+                      onChange={e => setEditingTag({ old: tag, draft: e.target.value })}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') { e.preventDefault(); commitTagEdit(tag, draft); }
+                        if (e.key === 'Escape') { e.preventDefault(); setEditingTag(null); }
+                      }}
+                      onFocus={e => e.currentTarget.select()}
+                      onBlur={() => commitTagEdit(tag, draft)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        color: 'var(--color-text-main)',
+                        fontSize: '13px',
+                        padding: 0,
+                        // 让宽度跟着内容长度走（中英混排粗略按 1ch ≈ 1 字符宽估算）
+                        width: `${Math.max(2, draft.length) + 1}ch`,
+                        fontFamily: 'inherit',
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setEditingTag({ old: tag, draft: tag })}
+                      title={t('admin.common.edit', '编辑')}
+                      style={{
+                        background: 'none', border: 'none', padding: 0,
+                        color: 'inherit', font: 'inherit',
+                        cursor: 'text',
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    // 防止 mousedown 把 input blur 掉造成双触发；click 时显式提交
+                    onMouseDown={e => { if (isEditing) e.preventDefault(); }}
+                    onClick={() => {
+                      if (isEditing) commitTagEdit(tag, draft);
+                      else setEditingTag({ old: tag, draft: tag });
+                    }}
+                    title={isEditing ? t('admin.common.confirm', '确认') : t('admin.common.edit', '编辑')}
+                    aria-label={isEditing ? t('admin.common.confirm', '确认') : t('admin.common.edit', '编辑')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      color: isEditing ? 'var(--color-primary)' : 'var(--color-text-dim)',
+                      display: 'flex',
+                    }}
+                  >
+                    <i className="fa-solid fa-check" style={{ fontSize: '12px' }} />
+                  </button>
+                </span>
+              );
+            })}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
@@ -194,9 +380,13 @@ export default function MomentsPage() {
           <p style={{ fontSize: '15px', marginBottom: '12px' }}>{t('admin.moments.empty', '还没有说说')}</p>
           <Button onClick={openCreate}><i className="fa-regular fa-plus" style={{ fontSize: '16px' }} />{t('admin.moments.first', '发第一条')}</Button>
         </div>
+      ) : filteredMoments.length === 0 ? (
+        <div className="text-dim" style={{ textAlign: 'center', padding: '48px', fontSize: '14px' }}>
+          {t('admin.moments.noMatch', '没有匹配 "{q}" 的说说', { q: search })}
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {moments.map((m) => (
+          {filteredMoments.map((m) => (
             <div key={m.id} className="card" style={{ padding: '16px 20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
@@ -293,8 +483,26 @@ export default function MomentsPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <input className="input focus-ring" placeholder={t('admin.moments.locationPlaceholder', '位置（可选）')} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} style={{ flex: 1 }} />
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input
+              className="input focus-ring"
+              placeholder={t('admin.moments.locationPlaceholder', '位置（可选 / 点右侧定位获取）')}
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              style={{ flex: 1 }}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              className="btn-square"
+              title={t('admin.moments.fetchLocation', '获取当前位置')}
+              aria-label={t('admin.moments.fetchLocation', '获取当前位置')}
+              onClick={fetchCurrentLocation}
+              loading={locating}
+              disabled={locating}
+            >
+              <i className="fa-solid fa-location-crosshairs" style={{ fontSize: 14 }} />
+            </Button>
           </div>
           <select className="input" value={form.visibility} onChange={(e) => setForm({ ...form, visibility: e.target.value })}>
             <option value="public">{t('admin.moments.visibility.public', '公开')}</option>

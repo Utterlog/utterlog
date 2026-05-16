@@ -28,13 +28,9 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     setToolbar(
-      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-        <div style={{ marginLeft: 'auto' }}>
-          <Button className="btn-toolbar" onClick={openCreate}>
-            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />{t('admin.categories.newCategory', '新建分类')}
-          </Button>
-        </div>
-      </div>
+      <Button className="btn-square" title={t('admin.categories.newCategory', '新建分类')} onClick={openCreate}>
+        <i className="fa-regular fa-plus" style={{ fontSize: 14 }} />
+      </Button>
     );
     return () => setToolbar(null);
   }, [t]);

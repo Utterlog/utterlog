@@ -333,12 +333,15 @@ func UpdatePost(c *gin.Context) {
 	}
 
 	var req struct {
-		Title        string              `json:"title"`
-		Slug         string              `json:"slug"`
-		Content      *string             `json:"content"`
-		Excerpt      string              `json:"excerpt"`
-		Status       string              `json:"status"`
-		CoverURL     string              `json:"cover_url"`
+		Title    string  `json:"title"`
+		Slug     string  `json:"slug"`
+		Content  *string `json:"content"`
+		Excerpt  string  `json:"excerpt"`
+		Status   string  `json:"status"`
+		// CoverURL 用指针区分「没传字段」(nil → 不动) 和「传了空串」
+		// (非 nil → 清空)。之前 string 类型没法表达"清空"语义，导致
+		// admin 在文章编辑页删 URL 保存时前端发了 "" 也被后端忽略。
+		CoverURL     *string             `json:"cover_url"`
 		Password     string              `json:"password"`
 		AllowComment *bool               `json:"allow_comment"`
 		Pinned       *bool               `json:"pinned"`
@@ -374,8 +377,14 @@ func UpdatePost(c *gin.Context) {
 	if req.Status != "" {
 		existing.Status = req.Status
 	}
-	if req.CoverURL != "" {
-		existing.CoverURL = &req.CoverURL
+	if req.CoverURL != nil {
+		// 非 nil 即代表 admin 主动设了字段：值为 "" 时存 NULL 让前台
+		// 走"无封面 → 走随机图 / 首图 fallback"；否则存用户给的 URL。
+		if v := strings.TrimSpace(*req.CoverURL); v != "" {
+			existing.CoverURL = &v
+		} else {
+			existing.CoverURL = nil
+		}
 	}
 	if req.Password != "" {
 		existing.Password = &req.Password

@@ -14,6 +14,7 @@ import (
 	"utterlog-go/config"
 	"utterlog-go/internal/middleware"
 	"utterlog-go/internal/model"
+	"utterlog-go/internal/textutil"
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -257,6 +258,7 @@ func SubscribeSite(c *gin.Context) {
 	json.NewDecoder(resp.Body).Decode(&meta)
 	data, _ := meta["data"].(map[string]interface{})
 	siteName, _ := data["name"].(string)
+	siteName = textutil.NormalizeDisplayName(siteName)
 	if siteName == "" {
 		siteName = req.SiteURL
 	}

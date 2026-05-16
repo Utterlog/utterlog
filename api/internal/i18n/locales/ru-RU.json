@@ -1480,7 +1480,7 @@
     "admin.syncSites.sourceUrlLabel": "Исходный адрес (URL старого блога WordPress)",
     "admin.syncSites.sourceUrlHintPrefix": "Когда сервер сканирует URL-адрес изображения в содержимом статьи, он будет соответствовать URL-адресу под этим доменным именем.",
     "admin.syncSites.sourceUrlHintSuffix": "путь.",
-    "admin.syncSites.generateToken": "Создать UUID + Token",
+    "admin.syncSites.generateToken": "Создать авторизацию",
     "admin.syncSites.createdTitle": "Авторизация создана · Пожалуйста, сохраните сейчас",
     "admin.syncSites.tokenOnce": "Токен отображается только в этот раз",
     "admin.syncSites.tokenOnceHint": "Его нельзя просмотреть снова после закрытия, и в случае потери его необходимо восстановить.",

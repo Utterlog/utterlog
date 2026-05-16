@@ -545,12 +545,7 @@ function RecentVisitorsPanel() {
             pointerEvents: 'none',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', fontSize: '12px', color: 'var(--color-text-sub)' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="var(--color-primary)">
-                <path d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z" opacity=".25"/>
-                <path d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z">
-                  <animateTransform attributeName="transform" type="rotate" dur="0.75s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
-                </path>
-              </svg>
+              <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: 14, color: 'var(--color-primary)' }} aria-hidden="true" />
               更新中
             </div>
           </div>

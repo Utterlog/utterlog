@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button, Input, Modal, ConfirmDialog, EmptyState } from '@/components/ui';
 import { useI18n } from '@/lib/i18n';
+import { usePageBadge } from '@/layouts/DashboardLayout';
 
 type LinkGroupStyle = 'card' | 'compact';
 
@@ -95,6 +96,7 @@ function mergeLinkGroups(configs: LinkGroupConfig[], links: any[]): LinkGroupCon
 
 export default function LinksPage() {
   const { t } = useI18n();
+  const { setPageBadge } = usePageBadge();
   const [links, setLinks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -102,6 +104,7 @@ export default function LinksPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [activeGroup, setActiveGroup] = useState('all');
+  const [search, setSearch] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -304,7 +307,31 @@ export default function LinksPage() {
     if (ao !== bo) return ao - bo;
     return (Number(a.id) || 0) - (Number(b.id) || 0);
   });
-  const filteredLinks = activeGroup === 'all' ? orderedLinks : orderedLinks.filter((l: any) => (l.group_name || 'default') === activeGroup);
+  const groupedLinks = activeGroup === 'all' ? orderedLinks : orderedLinks.filter((l: any) => (l.group_name || 'default') === activeGroup);
+  const searchTerm = search.trim().toLowerCase();
+  const filteredLinks = searchTerm
+    ? groupedLinks.filter((l: any) => {
+        const haystack = [l.name, l.url, l.description, l.rss_url, l.group_name]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(searchTerm);
+      })
+    : groupedLinks;
+
+  // Push the count badge into the global header (next to "友链管理 · Links")
+  useEffect(() => {
+    setPageBadge(
+      <span>
+        {searchTerm
+          ? t('admin.links.totalFiltered', '共 {count} 条友链 · 命中 {matched} 条', { count: links.length, matched: filteredLinks.length })
+          : t('admin.links.total', '共 {count} 条友链', { count: links.length })}
+      </span>
+    );
+    return () => setPageBadge(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [links.length, filteredLinks.length, searchTerm, t]);
+
   const nextOrderNum = () => orderedLinks.reduce((max: number, link: any) => {
     const n = Number(link.order_num) > 0 ? Number(link.order_num) : Number(link.id) || 0;
     return Math.max(max, n);
@@ -361,56 +388,129 @@ export default function LinksPage() {
     return g === DEFAULT_GROUP_KEY ? t('admin.links.defaultGroup', '默认') : g;
   };
 
-  return (
-    <div>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <span className="text-dim" style={{ fontSize: '13px' }}>{t('admin.links.total', '共 {count} 条友链', { count: links.length })}</span>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <Button variant="secondary" onClick={refreshIcons} loading={busy === 'icon'} disabled={busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
-            <i className="fa-regular fa-image" />
-            {t('admin.links.refreshIco', '刷新 ico')}
+  // Tabs (left) and tools (right) share one row. No bottom rule on the
+  // container — only the active tab keeps its 2px primary underline.
+  const showTabs = groups.length > 2;
+  const tabsAndTools = (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        marginBottom: 16,
+        flexWrap: 'wrap',
+        rowGap: 8,
+      }}
+    >
+      {/* Left: group tabs (与 PostsLayout 子 tabs 视觉对齐：minHeight 40 / 字重 700-500 / 下划线 2px) */}
+      {showTabs ? (
+        <div
+          role="tablist"
+          aria-label={t('admin.links.groups', '分类')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            overflowX: 'auto',
+            minHeight: 40,
+          }}
+        >
+          {groups.map(g => {
+            const isActive = activeGroup === g;
+            const count = g === 'all' ? links.length : links.filter(l => (l.group_name || 'default') === g).length;
+            const groupCfg = g === 'all' ? null : groupMap.get(g);
+            const icon = g === 'all' ? 'fa-regular fa-layer-group' : (groupCfg?.icon || 'fa-regular fa-folder');
+            return (
+              <button
+                key={g}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveGroup(g)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 7,
+                  minHeight: 40,
+                  padding: '0 16px',
+                  background: 'none',
+                  borderTop: 'none',
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  // Active tab underline drawn on the button so it visually
+                  // sits flush with the row's bottom border.
+                  borderBottom: `2px solid ${isActive ? 'var(--color-primary)' : 'transparent'}`,
+                  color: isActive ? 'var(--color-primary)' : 'var(--color-text-sub)',
+                  fontSize: 13,
+                  fontWeight: isActive ? 700 : 500,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <i className={icon} style={{ fontSize: 14 }} />
+                <span>{groupLabel(g)}</span>
+                <span className="text-dim" style={{ fontSize: 12, fontWeight: 400 }}>({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : <span />}
+
+      {/* Right: action buttons first, then search box (远右端 — 与 Posts 一致) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minHeight: 40 }}>
+        <Button variant="secondary" className="btn-square" onClick={refreshIcons} loading={busy === 'icon'} disabled={busy !== null} title={t('admin.links.refreshIco', '刷新 ico')}>
+          <i className="fa-regular fa-image" />
+        </Button>
+        <Button variant="secondary" className="btn-square" onClick={clearRSSCache} loading={busy === 'rss'} disabled={busy !== null} title={t('admin.links.clearRss', '清空 RSS')}>
+          <i className="fa-regular fa-trash-can" />
+        </Button>
+        <Button variant="secondary" className="btn-square" onClick={refreshFeeds} loading={refreshingFeeds} disabled={refreshingFeeds || busy !== null} title={t('admin.links.refreshFeeds', '刷新订阅')}>
+          <i className="fa-regular fa-arrows-rotate" />
+        </Button>
+        <Button variant="secondary" className="btn-square" onClick={() => setShowGroupModal(true)} title={t('admin.links.groups', '分类')}>
+          <i className="fa-regular fa-folder-tree" />
+        </Button>
+        <Button className="btn-square" onClick={openCreate} title={t('admin.common.add', '添加')}>
+          <i className="fa-regular fa-plus" style={{ fontSize: 14 }} />
+        </Button>
+
+        {/* 搜索：input + 正方形 🔍 按钮（搜索是即时的；按钮主要做视觉锚点，
+            ✕ 仅在有搜索词时出现以快速清空） */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Input
+            placeholder={t('admin.links.searchPlaceholder', '检索名称 / 网址 / 描述')}
+            value={search}
+            onChange={(e: any) => setSearch(e.target.value)}
+            style={{ width: 220 }}
+          />
+          <Button
+            className="btn-square"
+            title={t('common.search', '搜索')}
+            aria-label={t('common.search', '搜索')}
+            onClick={() => { /* 即时搜索：按钮仅作视觉锚点 */ }}
+          >
+            <i className="fa-regular fa-magnifying-glass" style={{ fontSize: 14 }} />
           </Button>
-          <Button variant="secondary" onClick={clearRSSCache} loading={busy === 'rss'} disabled={busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
-            <i className="fa-regular fa-trash-can" />
-            {t('admin.links.clearRss', '清空 RSS')}
-          </Button>
-          <Button variant="secondary" onClick={refreshFeeds} loading={refreshingFeeds} disabled={refreshingFeeds || busy !== null} style={{ padding: '0 18px', gap: '8px' }}>
-            <i className="fa-regular fa-arrows-rotate" />
-            {t('admin.links.refreshFeeds', '刷新订阅')}
-          </Button>
-          <Button variant="secondary" onClick={() => setShowGroupModal(true)} style={{ padding: '0 18px', gap: '8px' }}>
-            <i className="fa-regular fa-folder-tree" />
-            {t('admin.links.groups', '分类')}
-          </Button>
-          <Button onClick={openCreate} style={{ padding: '0 20px', gap: '8px' }}>
-            <i className="fa-regular fa-plus" style={{ fontSize: '14px' }} />
-            {t('admin.common.add', '添加')}
-          </Button>
+          {search && (
+            <Button
+              className="btn-square"
+              variant="secondary"
+              title={t('admin.common.clear', '清空')}
+              aria-label={t('admin.common.clear', '清空')}
+              onClick={() => setSearch('')}
+            >
+              <i className="fa-regular fa-xmark" style={{ fontSize: 14 }} />
+            </Button>
+          )}
         </div>
       </div>
+    </div>
+  );
 
-      {/* Group tabs */}
-      {groups.length > 2 && (
-        <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--color-border)', marginBottom: '16px' }}>
-          {groups.map(g => (
-            <button
-              key={g}
-              onClick={() => setActiveGroup(g)}
-              style={{
-                padding: '8px 16px', fontSize: '13px',
-                fontWeight: activeGroup === g ? 600 : 400,
-                color: activeGroup === g ? 'var(--color-primary)' : 'var(--color-text-sub)',
-                borderBottom: activeGroup === g ? '2px solid var(--color-primary)' : '2px solid transparent',
-                background: 'none', border: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none',
-                cursor: 'pointer', whiteSpace: 'nowrap',
-              }}
-            >
-              {groupLabel(g)} ({g === 'all' ? links.length : links.filter(l => (l.group_name || 'default') === g).length})
-            </button>
-          ))}
-        </div>
-      )}
+  return (
+    <div>
+      {tabsAndTools}
 
       {links.length === 0 && !loading ? (
         <EmptyState title={t('admin.links.empty', '暂无友链')} description={t('admin.links.emptyDescription', '添加您的第一个友情链接')} actionText={t('admin.links.addLink', '添加友链')} onAction={openCreate} />

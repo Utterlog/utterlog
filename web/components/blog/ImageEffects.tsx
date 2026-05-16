@@ -116,47 +116,51 @@ export default function ImageEffects({ effect, durationMs, lazyLoad, lightbox }:
     const mo = new MutationObserver(sweep);
     mo.observe(document.body, { childList: true, subtree: true });
 
-    // ── (3) scroll-triggered effects ──────────────────────────────
-    // Only `scale` still needs IO; fade is pure CSS keyed on
-    // `data-loaded`, and the rest were retired.
-    let io: IntersectionObserver | null = null;
-    if (value === 'scale') {
-      io = new IntersectionObserver(
-        (entries) => {
-          for (const e of entries) {
-            if (e.isIntersecting) {
-              (e.target as HTMLElement).dataset.imgEffectVisible = '1';
-              io!.unobserve(e.target);
-            }
+    // ── (3) scroll-triggered visibility ───────────────────────────
+    // 永远跑一个 IO 标记图在不在视口 —— 给 fade 和 scale 共用。
+    //
+    // Why: Chrome 的 `loading="lazy"` 默认会在视口外 ~3000px 时就预拉
+    // 图片；如果 fade 只看 `data-loaded`，那些图在用户滚到之前就完
+    // 成了 blur→sharp 过渡 ——> 用户滚下去看到的是「已清晰的图」，没
+    // 有 fade 体感。让 CSS 同时要求 `data-img-visible=1` 才解除模糊，
+    // 这样图先在视口外完成下载（loaded=1）但 stays blurred，进视口
+    // 时（visible=1）才开始 fade，用户**始终能看到淡入**。
+    //
+    // rootMargin: -10% bottom 让触发延迟到图有 10% 进入视口（避免一
+    // 个像素冒头就 fire 显得突兀）；scale 之前用的 -40px 类似但更
+    // 紧。两者都接受，统一用 -10% 体感更跟手。
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            const t = e.target as HTMLElement;
+            t.dataset.imgVisible = '1';
+            // 兼容旧名 —— scale 效果的旧 CSS 仍可能读 data-img-effect-visible
+            t.dataset.imgEffectVisible = '1';
+            io.unobserve(e.target);
           }
-        },
-        { rootMargin: '0px 0px -40px 0px' }
-      );
-      const attachIo = () => {
-        document
-          .querySelectorAll<HTMLElement>('img[data-blog-image]')
-          .forEach((el) => {
-            if (el.dataset.imgEffectWatched) return;
-            el.dataset.imgEffectWatched = '1';
-            io!.observe(el);
-          });
-      };
-      attachIo();
-      // Reuse the same MutationObserver — re-attach on DOM changes.
-      const moIo = new MutationObserver(attachIo);
-      moIo.observe(document.body, { childList: true, subtree: true });
-
-      return () => {
-        document.removeEventListener('load', onLoad, true);
-        mo.disconnect();
-        moIo.disconnect();
-        io!.disconnect();
-      };
-    }
+        }
+      },
+      { rootMargin: '0px 0px -10% 0px' },
+    );
+    const attachIo = () => {
+      document
+        .querySelectorAll<HTMLElement>('img[data-blog-image]')
+        .forEach((el) => {
+          if (el.dataset.imgEffectWatched) return;
+          el.dataset.imgEffectWatched = '1';
+          io.observe(el);
+        });
+    };
+    attachIo();
+    const moIo = new MutationObserver(attachIo);
+    moIo.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       document.removeEventListener('load', onLoad, true);
       mo.disconnect();
+      moIo.disconnect();
+      io.disconnect();
     };
   }, [effect, durationMs, lazyLoad, lightbox]);
 

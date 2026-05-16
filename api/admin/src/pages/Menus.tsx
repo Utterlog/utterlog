@@ -111,7 +111,7 @@ export default function MenusPage() {
         themesApi.list().catch(() => null),
       ]);
       const opts = optRes.data || optRes || {};
-      const theme = (opts.active_theme || 'Utterlog').toString();
+      const theme = (opts.active_theme || 'Azure').toString();
       const themeData = themeRes?.data || themeRes || {};
       const activeManifest = (themeData.themes || []).find((t: any) => t.id === theme || t.enabled);
       const manifestPositions = activeManifest?.menuPositions || activeManifest?.menu_positions || [];
