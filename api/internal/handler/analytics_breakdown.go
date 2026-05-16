@@ -26,6 +26,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"utterlog-go/config"
+	"utterlog-go/internal/siteclock"
 	"utterlog-go/internal/util"
 )
 
@@ -34,8 +35,9 @@ import (
 // startUnix is used for ul_access_logs (created_at column). label is
 // just the canonical name echoed back in the response.
 func periodWindow(period string) (startUnix int64, startDate time.Time, label string) {
+	loc := siteclock.Location()
 	now := time.Now()
-	today := now.UTC().Truncate(24 * time.Hour)
+	today := dayStartInSite(now)
 	switch period {
 	case "24h":
 		return now.Add(-24 * time.Hour).Unix(), today, "24h"
@@ -44,13 +46,14 @@ func periodWindow(period string) (startUnix int64, startDate time.Time, label st
 	case "30d":
 		return now.Add(-30 * 24 * time.Hour).Unix(), today.Add(-29 * 24 * time.Hour), "30d"
 	case "year":
-		// Year-to-date: from Jan 1 of current year (in UTC) to now.
-		jan1 := time.Date(now.UTC().Year(), 1, 1, 0, 0, 0, 0, time.UTC)
+		// Year-to-date: from Jan 1 of current site-tz year.
+		nowSite := now.In(loc)
+		jan1 := time.Date(nowSite.Year(), 1, 1, 0, 0, 0, 0, loc)
 		return jan1.Unix(), jan1, "year"
 	case "365d":
 		return now.Add(-365 * 24 * time.Hour).Unix(), today.Add(-364 * 24 * time.Hour), "365d"
 	case "all":
-		return 0, time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), "all"
+		return 0, time.Date(2000, 1, 1, 0, 0, 0, 0, loc), "all"
 	default:
 		// Unknown period falls through to 24h — same as the old
 		// AnalyticsOverview default. Caller already validated, this

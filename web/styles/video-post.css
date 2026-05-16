@@ -36,13 +36,6 @@
   gap: 12px;
   min-width: 0;
 }
-.ul-video__title {
-  font-size: clamp(22px, 3vw, 30px);
-  font-weight: 700;
-  margin: 0;
-  line-height: 1.25;
-  color: var(--color-text-main, #111);
-}
 .ul-video__chips {
   display: flex;
   flex-wrap: wrap;
@@ -267,9 +260,6 @@
   }
   .ul-video__poster {
     width: 120px;
-  }
-  .ul-video__title {
-    font-size: 18px;
   }
   .ul-video__episodes-grid {
     grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));

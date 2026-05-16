@@ -138,6 +138,7 @@ func main() {
 
 	// SEO + AI discovery (admin Settings → SEO 与 AI tab drives output).
 	r.GET("/robots.txt", handler.RobotsTxt)
+	r.GET("/sitemap.xml", handler.SitemapXML)
 	r.GET("/llms.txt", handler.LlmsTxt)
 	r.GET("/llms-full.txt", handler.LlmsFullTxt)
 

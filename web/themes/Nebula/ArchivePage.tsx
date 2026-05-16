@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import PostLink from '@/components/blog/PostLink';
 import PageTitle from '@/components/blog/PageTitle';
-import { datePartsInTimeZone, formatMonthDayInTimeZone } from '@/lib/timezone';
+import { datePartsInTimeZone, formatMonthDayInTimeZone, isValidTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
 
 function timeAgo(ts: number | string): string {
@@ -80,11 +80,19 @@ function formatDate(ts: string | number, timeZone: string) {
 // ──────────────────────────────────────────────────────────────
 // Nebula 风热力图：绿色活跃色 + 暗底（替代默认 #ebedf0 浅灰底）
 // ──────────────────────────────────────────────────────────────
-function NebulaHeatmap({ data }: { data: { date: string; count: number }[] }) {
-  const today = new Date();
+function NebulaHeatmap({ data, timeZone }: { data: { date: string; count: number }[]; timeZone: string }) {
+  // 日期一律按 site_timezone 切日，跟后端 heatmap 分桶口径一致；
+  // 之前用浏览器本地 setDate 在跨时区或夏令时边界会让最右一格漂移。
+  const tz = isValidTimeZone(timeZone) ? timeZone : 'UTC';
+  const ymd = (d: Date) => {
+    const t = datePartsInTimeZone(d, tz);
+    return `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}`;
+  };
+  const todayYmd = ymd(new Date());
+  const today = new Date(`${todayYmd}T00:00:00Z`);
   const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - 364);
-  startDate.setDate(startDate.getDate() - startDate.getDay());
+  startDate.setUTCDate(startDate.getUTCDate() - 364);
+  startDate.setUTCDate(startDate.getUTCDate() - startDate.getUTCDay());
 
   const countMap = new Map<string, number>();
   for (const d of data) countMap.set(d.date, d.count);
@@ -94,9 +102,12 @@ function NebulaHeatmap({ data }: { data: { date: string; count: number }[] }) {
   while (current <= today || weeks.length < 53) {
     const week: { date: Date; count: number; dateStr: string }[] = [];
     for (let d = 0; d < 7; d++) {
-      const dateStr = current.toISOString().slice(0, 10);
+      // 用 UTC YMD 作 key —— current 始终是 UTC midnight，跟 ymd() 在 UTC tz
+      // 下结果一致；这套 grid 只是日历，跟 site_tz 的具体小时无关。
+      const t = datePartsInTimeZone(current, 'UTC');
+      const dateStr = `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}`;
       week.push({ date: new Date(current), count: countMap.get(dateStr) || 0, dateStr });
-      current.setDate(current.getDate() + 1);
+      current.setUTCDate(current.getUTCDate() + 1);
     }
     weeks.push(week);
     if (current > today && weeks.length >= 53) break;
@@ -105,7 +116,7 @@ function NebulaHeatmap({ data }: { data: { date: string; count: number }[] }) {
   const monthLabels: { label: string; col: number }[] = [];
   let lastMonth = -1;
   weeks.forEach((week, i) => {
-    const month = week[0].date.getMonth();
+    const month = week[0].date.getUTCMonth();
     if (month !== lastMonth) {
       monthLabels.push({ label: `${month + 1}月`, col: i });
       lastMonth = month;
@@ -197,7 +208,7 @@ export default function NebulaArchivePage({ posts, categories, tags, stats, time
           <span className="nebula-archive-section-tip">颜色越深表示当天发文越多</span>
         </header>
         <div className="nebula-archive-card">
-          <NebulaHeatmap data={heatmapData} />
+          <NebulaHeatmap data={heatmapData} timeZone={timeZone} />
         </div>
       </section>
 

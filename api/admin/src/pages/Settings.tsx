@@ -10,6 +10,7 @@ import { setAdminTimeZone } from '@/lib/timezone';
 import { useForm } from 'react-hook-form';
 import { FormSectionC, FormRowInputC, FormRowTextareaC, FormRowSelectC, FormRowToggleC, FormRowRadioC } from '@/components/form/FormC';
 import SystemUpdatePanel from '@/components/SystemUpdatePanel';
+import { TimezoneCombobox } from '@/components/TimezoneCombobox';
 
 // Shared style constants
 const cardStyle = { padding: 'var(--settings-panel-padding)', marginBottom: 'var(--settings-section-gap)' } as const;
@@ -26,24 +27,6 @@ const subTitleRow = { display: 'flex', justifyContent: 'space-between', alignIte
 // Tab IDs recognized on #hash so deep links like /settings#update land
 // directly on the right pane. Keep in sync with `tabs` below.
 const VALID_TABS = new Set(['general', 'seo', 'email', 'telegram', 'comment', 'media', 'image', 'services', 'update']);
-const COMMON_TIME_ZONES = [
-  'Asia/Shanghai',
-  'Asia/Tashkent',
-  'Asia/Tokyo',
-  'Asia/Seoul',
-  'Asia/Singapore',
-  'Asia/Dubai',
-  'Europe/Moscow',
-  'Europe/London',
-  'Europe/Paris',
-  'UTC',
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'Australia/Sydney',
-];
-
 function initialTabFromHash(): string {
   if (typeof window === 'undefined') return 'general';
   const h = window.location.hash.replace(/^#/, '');
@@ -56,22 +39,6 @@ function browserTimeZone(): string {
   } catch {
     return '';
   }
-}
-
-function buildTimeZoneOptions(current: string | undefined, t: (key: string, fallback?: string, vars?: Record<string, string | number>) => string) {
-  const detected = browserTimeZone();
-  const set = new Set(COMMON_TIME_ZONES);
-  if (detected) set.add(detected);
-  if (current) set.add(current);
-  return [
-    {
-      value: '',
-      label: detected
-        ? t('admin.settings.general.timezoneAutoWithBrowser', '自动识别本地时区（当前浏览器：{timezone}）', { timezone: detected })
-        : t('admin.settings.general.timezoneAuto', '自动识别本地时区'),
-    },
-    ...Array.from(set).map((tz) => ({ value: tz, label: tz })),
-  ];
 }
 
 /**
@@ -138,7 +105,6 @@ export default function SettingsPage() {
 
   const { register, handleSubmit, reset, getValues, watch, setValue } = useForm();
   const emailProvider = watch('email_provider', 'smtp');
-  const currentSiteTimezone = watch('site_timezone', '');
   const effectiveSiteTimezone = watch('site_timezone_effective', '');
   const mediaDriver = watch('media_driver', 'local');
   const imageQuality = watch('image_quality', 82);
@@ -574,12 +540,21 @@ export default function SettingsPage() {
                     label: `${loc.native_name || loc.name || loc.locale} (${loc.locale})${loc.source === 'external' ? ` · ${t('admin.settings.general.customLanguagePack', '自定义')}` : ''}`,
                   }))}
                 />
-                <FormRowSelectC
-                  label={t('admin.settings.general.siteTimezone', '站点时区')}
-                  hint={t('admin.settings.general.siteTimezoneHint', '全站发布时间、归档和统计按此时区显示；留空自动使用本地时区。当前生效：{timezone}', { timezone: effectiveSiteTimezone || browserTimeZone() || 'UTC' })}
-                  register={register('site_timezone')}
-                  options={buildTimeZoneOptions(currentSiteTimezone, t)}
-                />
+                {/* 站点时区 —— input + datalist 组合：可下拉选 60+ 主要城市
+                    （label 显示 "城市 · UTC±N · IANA"），也可直接键入任意
+                    合法 IANA 名。后端 siteclock.IsValid 兜底校验，无效保持
+                    原值不写入。留空 → 走自动识别（os env TZ → 浏览器 → UTC）。*/}
+                <div className="settings-row">
+                  <div className="settings-row-label-cell">
+                    <div className="settings-field-label">{t('admin.settings.general.siteTimezone', '站点时区')}</div>
+                    <div className="settings-field-hint">
+                      {t('admin.settings.general.siteTimezoneHint', '全站发布时间、归档和统计按此时区显示；留空自动使用本地时区。当前生效：{timezone}', { timezone: effectiveSiteTimezone || browserTimeZone() || 'UTC' })}
+                    </div>
+                  </div>
+                  <div className="settings-row-control-cell">
+                    <TimezoneCombobox register={register('site_timezone')} />
+                  </div>
+                </div>
                 <FormRowInputC label={t('admin.settings.general.siteUrl', '站点网址')} register={register('site_url')} placeholder="https://yourdomain.com" />
                 <FormRowInputC label={t('admin.settings.general.adminEmail', '管理员邮箱')} type="email" register={register('admin_email')} placeholder="admin@yourdomain.com" hint={t('admin.settings.general.adminEmailHint', '接收系统升级、安全通知等消息')} />
                 <FormRowInputC label={t('admin.settings.general.siteSince', '建站时间')} type="date" register={register('site_since')} hint={t('admin.settings.general.siteSinceHint', '留空则从第一篇文章算起。站点描述和关键词请到 SEO 与 AI tab 设置。')} last />

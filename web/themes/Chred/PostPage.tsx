@@ -32,11 +32,29 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
 
   return (
     <div style={{ padding: '0' }}>
-      {/* Featured image —— 影视模式用 VideoPostBody 替代 */}
+      {/* Featured image —— 影视模式无 400px hero，改用 mini-hero（面包屑 + h1）+ VideoPostBody */}
       {isVideo ? (
-        <div style={{ padding: '0 32px' }}>
-          <VideoPostBody post={post} />
-        </div>
+        <>
+          <div style={{ padding: '28px 32px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 12, color: '#999' }}>
+              <Link prefetch={false} href="/" style={{ color: '#999', textDecoration: 'none' }}>首页</Link>
+              <span>/</span>
+              <Link prefetch={false} href="/films" style={{ color: '#999', textDecoration: 'none' }}>影视</Link>
+              {catName && (
+                <>
+                  <span>/</span>
+                  <Link prefetch={false} href={`/categories/${post.categories[0].slug}`} style={{ color: '#999', textDecoration: 'none' }}>{catName}</Link>
+                </>
+              )}
+            </div>
+            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, lineHeight: 1.3, letterSpacing: '-0.02em', color: '#202020' }}>
+              {post.title}
+            </h1>
+          </div>
+          <div style={{ padding: '0 32px' }}>
+            <VideoPostBody post={post} />
+          </div>
+        </>
       ) : (
         <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
           <FadeCover src={coverUrl} alt={post.title}

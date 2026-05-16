@@ -5,6 +5,7 @@ import { Button, Input } from '@/components/ui';
 import { FormSectionC, FormRowInputC, FormRowSelectC, FormRowToggleC } from '@/components/form/FormC';
 import toast from 'react-hot-toast';
 import { useI18n } from '@/lib/i18n';
+import { formatWithAdminTimeZone } from '@/lib/timezone';
 
 const tabs = [
   { id: '概览',     label: '概览',     key: 'admin.security.tabs.overview', icon: 'fa-regular fa-chart-pie' },
@@ -83,7 +84,7 @@ export default function SecurityPage() {
   const fmtTime = (ts: any) => {
     if (!ts) return '-';
     const n = typeof ts === 'number' ? ts : parseInt(ts);
-    return new Date(n * 1000).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return formatWithAdminTimeZone(new Date(n * 1000), 'zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   return (

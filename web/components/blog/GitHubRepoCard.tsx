@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, type CSSProperties } from 'react';
+import { useThemeContext } from '@/lib/theme-context';
+import { formatDateInTimeZone } from '@/lib/timezone';
 
 interface GitHubRepoCardProps {
   owner: string;
@@ -101,16 +103,13 @@ function formatCount(value?: number) {
   return String(n);
 }
 
-function formatDate(value?: string | null) {
+function formatDate(value: string | null | undefined, timeZone: string) {
   if (!value) return '';
-  return new Date(value).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
+  return formatDateInTimeZone(value, 'zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }, timeZone);
 }
 
 export default function GitHubRepoCard({ owner, repo, url }: GitHubRepoCardProps) {
+  const { timeZone } = useThemeContext();
   const cleanOwner = String(owner || '').trim();
   const cleanRepo = String(repo || '').trim().replace(/\.git$/i, '');
   const fallbackUrl = url || `https://github.com/${cleanOwner}/${cleanRepo}`;
@@ -271,7 +270,7 @@ export default function GitHubRepoCard({ owner, repo, url }: GitHubRepoCardProps
             <span><i className="fa-solid fa-code-fork" aria-hidden="true" />{formatCount(data?.forks_count)}</span>
             {!!data?.open_issues_count && <span><i className="fa-regular fa-circle-dot" aria-hidden="true" />{formatCount(data.open_issues_count)}</span>}
             {data?.license?.spdx_id && data.license.spdx_id !== 'NOASSERTION' && <span>{data.license.spdx_id}</span>}
-            {data?.pushed_at && <span>{formatDate(data.pushed_at)}</span>}
+            {data?.pushed_at && <span>{formatDate(data.pushed_at, timeZone)}</span>}
           </div>
         ) : (
           <div className="github-repo-card__status">

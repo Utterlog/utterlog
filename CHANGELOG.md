@@ -23,6 +23,42 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.5.0] - 2026-05-16
+
+### 新增
+
+- **`/sitemap.xml` 端点**：`api/internal/handler/seo.go` 新增 `SitemapXML` handler，含首页 + 14 个静态索引页（about / archives / films / moments / footprints / coding / links / albums / music / books / games / movies / goods / feeds）+ 全量 publish post 与 video（按 admin permalink_structure 渲染，video 永久指向 `/films/<slug>`）+ 全量 category / tag。`<lastmod>` 按 `site_timezone` 输出 RFC3339 带偏移。`robots.txt` 之前引用但未实现，现在终于兑现。
+- **文章 OpenGraph + Article JSON-LD**：`/posts/<slug>` 注入 `BlogPosting` 微数据（headline / author / datePublished / dateModified / image / publisher / mainEntityOfPage）+ OpenGraph `article:published_time` / `article:modified_time` / `authors`。`/films/<slug>` 的 Movie & TVSeries JSON-LD 加 `dateModified`，`datePublished` 没填年份时回落到文章发布时间。Google / 微信 / 微博等社交分享卡片现在能拿到准确日期。
+- **后台站点时区选择器升级**：从原本 15 项硬编码 IANA 下拉，升级为 input + datalist 90+ 城市，每行显示「城市 · UTC±N · IANA」（如「北京 / 上海 · UTC+8 · Asia/Shanghai」「巴黎 · UTC+1 · Europe/Paris」「洛杉矶 · UTC−8 · America/Los_Angeles」）。偏移用 `Intl.DateTimeFormat` 实时计算，自动跟随夏令时。支持自由键入任意合法 IANA 名，后端 `siteclock.IsValid` 兜底校验。
+- **评论时间绝对值 tooltip**：评论列表的「X 分钟前」hover 显示完整绝对时间（按 `site_timezone` 格式化为 `YYYY-MM-DD HH:MM`），覆盖 5 份 CommentList 副本（shared + Azure / Chred / Flux / Utterlog）。
+- **Web `<Button>` 组件用 .btn 类体系**：`web/components/ui/button.tsx` 从 inline CSSProperties 重写为 className composer。`web/app/globals.css` 已有的 `.btn / .btn-primary / .btn-secondary / .btn-danger / .btn-ghost` 体系扩展出 `.btn-sm` / `.btn-lg` / `.btn-spinner`，hover / `:focus-visible` 双层焦点环 / `:disabled` / `:active` 全在 CSS 层一次定义。
+- **Nebula 主题 hero_tiles 后台配置**：「主题 → 首页图块」tab 现在能正确显示（之前因 `sync-theme-styles.mjs` 只同步 css 不同步 theme.json，运行时 manifest 缺 `hero_tiles` 声明）。脚本扩展为同步 `styles.css` + `theme.json`，6 主题的 adminPanels 字段更新后自动生效。
+
+### 优化
+
+- **全站时区一致性大改**：`site_timezone` 选项现在贯穿整条链路 ——
+  - **后端**：`crud.go` RSS pubDate / `analytics.go` 日活分桶 / `analytics_rollup.go` 全套（含 oldestDay / yesterday / rollupCutoffDate / dateOnly / formatYMD 新增 `dayStartInSite` helper）/ `analytics_breakdown.go` periodWindow today + jan1 / `coding.go` rolling365Range + emptyCodingContributions + buildCodingContributions + fetchCodingGitHubData / `footprint.go` parseFootprintDate / `seo.go` LlmsFullTxt Generated 时间 — 全部由 `siteclock.Location()` 统一切日。之前 `_total` 维度走 site_tz、breakdown 维度走 UTC，跨午夜数据错配，现在两路对齐。
+  - **前端**：`FootprintsClient` / `coding/page.tsx` todayContributionCount + rollingDays / `archives/Heatmap.tsx` + Nebula NebulaHeatmap（接收 timeZone prop，UTC 步长 + site_tz 切日，跟后端 heatmap 分桶口径对齐）/ `GitHubRepoCard` 推送时间 / `BlockAnnotation` 批注时间 / `MomentEmbed` 说说嵌入时间 全部走 `useThemeContext().timeZone` + `formatDateInTimeZone` / `datePartsInTimeZone`。
+  - **评论问候**：5 份 CommentForm 副本的「早上好 / 晚上好」按 `site_timezone` 当前小时算（Intl.DateTimeFormat 取 hourCycle:'h23'），跨时区站长 / 访客都跟站点一致。
+  - **Admin**：13 处 `toLocaleString*` 切到 `formatWithAdminTimeZone`（SyncSitesPanel / SystemUpdatePanel 3 处 / NotificationBell / AiLogs / Assistant 2 处 / Analytics / Footprints / Profile 2 处 / Security）；新增 `adminDateYMD` / `adminDateYMDHM` helper，PostEdit / PostCreate / PageEdit 的 `<input type="datetime-local">` 初值按 `site_timezone` 渲染，跟后端 `parsePostPublishedAt` 的 `siteclock.Location()` 解析往返一致；SystemStatusPanel 左下角时钟按 `site_timezone` 跳动，远程站长能看到「站点所在地」的当前时间。
+- **影视模式标题层级收敛**：`VideoPostBody` 不再渲染 h1，h1 统一由 6 主题各自的 PostPage 渲染。Renascent 双 h1 / Utterlog meta 倒置 / Nebula 缺过渡 / Azure-Chred-Flux 缺 hero 替代物 都修好。`web/styles/video-post.css` 删掉无用的 `.ul-video__title` 规则。
+- **AIReaderChat 颜色透主题**：写死的 Azure 蓝 `#0052D9` / `#e8f0fe` / `#fafafa` 等换成 `var(--color-primary)` / `var(--color-bg-soft)` / `var(--color-border)` / `var(--color-text-sub|dim)`。陪读卡片现在在 Chred 红 / Flux 绿 / Nebula 深紫 / Renascent 黑灰主题下都跟随主题色。
+- **Schema.org Movie/TVSeries 微数据增强**：`/films/<slug>` JSON-LD 新增 `dateModified`，`datePublished` 没填 `meta.year` 时回落到 `postDateInput(post)`。
+
+### 修复
+
+- **RSS pubDate 错位**：之前一律取 `created_at` 而非 `published_at`，草稿先建后发的文章订阅源里日期错位（13 号入草、16 号发布会显示 13 号）。改为 `published_at` 优先、`created_at` 兜底，与列表排序 `COALESCE(published_at, created_at)` 口径一致。
+- **`/coding` 今日 commit 计数偏移**：原本用 `new Date().toISOString().slice(0, 10)` 取「今日」键，浏览器本地与 UTC 跨午夜时格子错位。改为 `datePartsInTimeZone` 按 `site_timezone` 切日。
+- **足迹 visited_at 解析错位**：`footprint.go:parseFootprintDate` 之前 `ParseInLocation(layout, value, time.Local)` 用容器时区（通常 UTC），+0800 用户填的「今天」被算成「站点时区今天 08:00」错位一整天。改为 `siteclock.Location()`。
+- **Nebula「首页图块」后台 tab 失踪**：根因是 `sync-theme-styles.mjs` 只同步 css 不同步 theme.json，源码加 `"hero_tiles"` 到 `adminPanels` 后，运行时 `web/public/themes/Nebula/theme.json` 一直是老版本。脚本扩展为同步两类文件，6 主题的 manifest 也一并修齐。
+- **分析 / 编码热力图跨午夜数据错配**：之前 logAccess 实时 UPSERT `ul_analytics_daily._total` 用 UTC 日期键，但 daily rollup 也用 UTC 日期键。+0800 站长晚上 8 点写文章会落到 UTC 次日，跟前端按站点自然日预期不符。所有 daily 分桶（含 ul_visitor_dates / ul_stats_post_daily）现在统一走 `siteclock.Location()`。
+
+### 移除
+
+- `web/components/blog/PostCard.tsx`：无任何调用方（6 主题都有自己的 PostCard 副本），死代码。
+- 旧的 `<Button>` inline CSSProperties 实现：伪类写不出来 hover / focus / active 全失效，重写为 className composer 后由 `.btn` 类接管所有状态。
+- 后台时区选择器的硬编码 15 项 `COMMON_TIME_ZONES` 数组与 `buildTimeZoneOptions()` 函数：被新 `TimezoneCombobox` 组件取代。
+
 ## [2.4.2] - 2026-05-16
 
 ### 新增

@@ -6,6 +6,7 @@ import FootprintMap from '@/components/blog/FootprintMap';
 import FootprintTimeline, { type FootprintTimelineItem } from '@/components/blog/FootprintTimeline';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { buildPermalink } from '@/lib/permalink';
+import { datePartsInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
@@ -32,18 +33,18 @@ function parseCenter(value?: string): [number, number] {
   return [108.14, 33.87];
 }
 
-function formatDate(seconds?: number) {
+function formatDate(seconds: number | undefined, timeZone: string) {
   if (!seconds) return '';
-  const d = new Date(seconds * 1000);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toISOString().slice(0, 10);
+  const { year, month, day } = datePartsInTimeZone(seconds * 1000, timeZone);
+  if (!year) return '';
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 function footprintTime(item: FootprintRow) {
   return Number(item.visited_at || item.created_at || 0);
 }
 
-function buildTimelineItems(rows: FootprintRow[], options: Record<string, string>): FootprintTimelineItem[] {
+function buildTimelineItems(rows: FootprintRow[], options: Record<string, string>, timeZone: string): FootprintTimelineItem[] {
   const chronologicalOrder = new Map<number, number>();
   [...rows]
     .sort((a, b) => {
@@ -80,7 +81,7 @@ function buildTimelineItems(rows: FootprintRow[], options: Record<string, string
       cover: item.cover_url || randomCoverUrl(item.post_id ?? item.id, options),
       location,
       flag: countryCode ? `https://flagcdn.io/flags/4x3/${countryCode}.svg` : '',
-      date: formatDate(item.visited_at),
+      date: formatDate(item.visited_at, timeZone),
       placeKey,
       countryKey: countryCode || countryName,
       cityKey: cityName ? [countryCode || countryName, cityName].filter(Boolean).join('|') : '',
@@ -104,7 +105,8 @@ export default function FootprintsClient({
   const token = (options.mapbox_access_token || options.footprint_mapbox_token || '').trim();
   const center = parseCenter(options.footprint_default_center);
   const zoom = Number(options.footprint_default_zoom || 3);
-  const timelineItems = useMemo(() => buildTimelineItems(rows, options), [rows, options]);
+  const timeZone = resolveSiteTimeZone(options);
+  const timelineItems = useMemo(() => buildTimelineItems(rows, options, timeZone), [rows, options, timeZone]);
   const mapPoints = useMemo(() => rows.map((item) => {
     const countryCode = String(item.country_code || '').trim().toLowerCase();
     const href = buildPermalink({
@@ -119,9 +121,9 @@ export default function FootprintsClient({
       href,
       location: [item.city_name, item.country_name].filter(Boolean).join(' · '),
       flag: countryCode ? `https://flagcdn.io/flags/4x3/${countryCode}.svg` : '',
-      date: formatDate(item.visited_at),
+      date: formatDate(item.visited_at, timeZone),
     };
-  }), [rows, options]);
+  }), [rows, options, timeZone]);
 
   const searchFootprints = async (value: string) => {
     const q = value.trim();

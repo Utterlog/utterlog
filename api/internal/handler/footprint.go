@@ -10,6 +10,7 @@ import (
 	"time"
 	"utterlog-go/config"
 	"utterlog-go/internal/model"
+	"utterlog-go/internal/siteclock"
 	"utterlog-go/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -86,8 +87,12 @@ func parseFootprintDate(value string) int64 {
 	if value == "" {
 		return 0
 	}
+	// 用 site_timezone 解释用户输入的"2026-05-16" —— 之前用 time.Local
+	// (= 容器 TZ，通常是 UTC) 会把 +0800 用户填的"今天"算成"今天 00:00 UTC"
+	// = 站点时区"今天 08:00"，时间线视图错位一整天。RFC3339 自带偏移所以
+	// ParseInLocation 的 loc 参数被忽略，行为不变。
 	for _, layout := range []string{"2006-01-02", "2006-01-02T15:04", "2006-01-02T15:04:05", time.RFC3339} {
-		if t, err := time.ParseInLocation(layout, value, time.Local); err == nil {
+		if t, err := time.ParseInLocation(layout, value, siteclock.Location()); err == nil {
 			return t.Unix()
 		}
 	}

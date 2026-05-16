@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { momentsApi } from '@/lib/api';
+import { useThemeContext } from '@/lib/theme-context';
+import { formatDateInTimeZone } from '@/lib/timezone';
 
 interface MomentEmbedProps {
   id: string | number;
@@ -40,14 +42,10 @@ function parseMomentImages(value: MomentData['images']): string[] {
   return text.split(',').map(item => item.trim()).filter(Boolean);
 }
 
-function formatMomentDate(timestamp?: number): string {
+function formatMomentDate(timestamp: number | undefined, timeZone: string): string {
   if (!timestamp) return '';
   const millis = timestamp > 10_000_000_000 ? timestamp : timestamp * 1000;
-  return new Date(millis).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
+  return formatDateInTimeZone(millis, 'zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }, timeZone);
 }
 
 function formatMomentSource(source?: string | null): string {
@@ -60,6 +58,7 @@ function formatMomentSource(source?: string | null): string {
 }
 
 export default function MomentEmbed({ id }: MomentEmbedProps) {
+  const { timeZone } = useThemeContext();
   const momentId = String(id || '').trim();
   const [moment, setMoment] = useState<MomentData | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing'>('loading');
@@ -123,7 +122,7 @@ export default function MomentEmbed({ id }: MomentEmbedProps) {
     );
   }
 
-  const date = formatMomentDate(moment.created_at);
+  const date = formatMomentDate(moment.created_at, timeZone);
   const sourceLabel = formatMomentSource(moment.source);
   const metaItems = [moment.location, moment.mood, sourceLabel ? `via ${sourceLabel}` : ''].filter(Boolean);
 

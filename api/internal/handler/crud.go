@@ -906,7 +906,16 @@ func PostsFeed(c *gin.Context) {
 		} else {
 			link = siteURL + BuildPostPermalink(&p, permalinkTpl)
 		}
-		pubDate := time.Unix(p.CreatedAt, 0).UTC().Format(time.RFC1123Z)
+		// pubDate 必须跟列表排序口径一致（line 880 排序用 COALESCE(published_at, created_at)）。
+		// 之前一律取 created_at，导致草稿先建后发的文章在 RSS 里显示成入草日期。
+		// 时区按 site_timezone 输出（非 UTC），RFC1123Z 自带偏移所以 reader 解析无歧义。
+		var pubTs time.Time
+		if p.PublishedAt != nil {
+			pubTs = *p.PublishedAt
+		} else {
+			pubTs = time.Unix(p.CreatedAt, 0)
+		}
+		pubDate := pubTs.In(siteclock.Location()).Format(time.RFC1123Z)
 		xml += fmt.Sprintf("<item><title>%s</title><link>%s</link><guid isPermaLink=\"true\">%s</guid><pubDate>%s</pubDate><description><![CDATA[%s]]></description></item>\n",
 			xmlEscape(p.Title), xmlEscape(link), xmlEscape(link), pubDate, cdataSafe(excerpt))
 	}

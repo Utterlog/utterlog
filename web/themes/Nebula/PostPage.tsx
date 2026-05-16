@@ -95,12 +95,17 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
       </header>
 
       {post.type === 'video' ? (
-        <div className="nebula-post-body">
-          <div className="nebula-post-prose">
-            <VideoPostBody post={post} />
-            {post.content ? <PostContent content={post.content} postId={post.id} /> : null}
+        <>
+          {/* 影视模式无 cover figure；标题作为独立 h1 在 head 之后，
+              视觉上和 .nebula-post-title 单独显示分支保持一致 */}
+          <h1 className="nebula-post-title">{post.title}</h1>
+          <div className="nebula-post-body">
+            <div className="nebula-post-prose">
+              <VideoPostBody post={post} />
+              {post.content ? <PostContent content={post.content} postId={post.id} /> : null}
+            </div>
           </div>
-        </div>
+        </>
       ) : (
         <>
           {coverUrl ? (

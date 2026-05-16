@@ -7,6 +7,7 @@ import { Button } from '@/components/ui';
 import api from '@/lib/api';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
+import { adminDateYMDHM } from '@/lib/timezone';
 
 export default function EditPostPage() {
   const navigate = useNavigate();
@@ -54,8 +55,10 @@ export default function EditPostPage() {
       if (post.categories?.length) setCategoryId(post.categories[0].id);
       if (post.tags?.length) setTagInput(post.tags.map((t: any) => t.name).join(', '));
       if (post.published_at) {
-        const d = new Date(post.published_at);
-        setPublishAt(d.toISOString().slice(0, 16));
+        // datetime-local input 期待"naive 本地时间"格式 YYYY-MM-DDTHH:MM。
+        // 用 site_timezone 渲染保证站长看到的是站点时区时间，提交回后端时
+        // 后端 parsePostPublishedAt 也按 site_timezone 解析（往返一致）。
+        setPublishAt(adminDateYMDHM(new Date(post.published_at)));
       }
     } catch {
       toast.error('获取文章失败');

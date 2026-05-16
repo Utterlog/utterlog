@@ -626,7 +626,9 @@ func normalizeCodingRepoSelection(selected map[string]bool) string {
 }
 
 func fetchCodingGitHubData(ctx context.Context, usernames []string, sourceRepos map[string]bool) (codingPageData, error) {
-	now := time.Now().UTC()
+	// now 用 site_timezone —— 下游 rolling365Range / emptyCodingContributions
+	// 也按这个时区切日，传 UTC 等于双重转换浪费。
+	now := time.Now().In(siteclock.Location())
 	profiles := make([]codingGitHubProfile, 0, len(usernames))
 	repos := []codingGitHubRepo{}
 	activities := []codingGitHubActivity{}
@@ -1421,7 +1423,9 @@ func buildCodingContributions(events []githubEventResponse, now time.Time) []cod
 		index[day.Date] = i
 	}
 	for _, event := range events {
-		day := event.CreatedAt.UTC().Format("2006-01-02")
+		// 事件日期按 site_timezone 切日，跟 emptyCodingContributions 的 365 天
+		// 占位数组对齐 —— 否则跨午夜的 push 会落到错误格子里。
+		day := event.CreatedAt.In(siteclock.Location()).Format("2006-01-02")
 		i, ok := index[day]
 		if !ok {
 			continue
@@ -1679,8 +1683,12 @@ func currentYearContributionRange(now time.Time) (time.Time, time.Time) {
 // 这个 helper 让 fetchGitHubContributionCalendar / emptyCodingContributions
 // 都能拿到完整的 365 天范围，跟前端预期对齐。
 func rolling365Range(now time.Time) (time.Time, time.Time) {
-	to := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, time.UTC)
-	from := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -364)
+	// 用 site_timezone 切日，否则 +0800 用户在晚上 8 点之后的 commit 会
+	// 被算到 UTC 次日，热力图最右一格"今天"位置错位（应该是 +0800 自然日）。
+	loc := siteclock.Location()
+	now = now.In(loc)
+	to := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, loc)
+	from := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -364)
 	return from, to
 }
 
@@ -1768,8 +1776,10 @@ func parseContributionCount(raw string) int {
 // （~128 天 / 18 周），前端 rollingDays 过滤后只剩这一小段，热力图列数
 // 远少于 53 周 → "数量不对"。本次改成 rolling 365 天对齐前端预期。
 func emptyCodingContributions(now time.Time) []codingContributionDay {
+	loc := siteclock.Location()
+	now = now.In(loc)
 	from, _ := rolling365Range(now)
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	days := make([]codingContributionDay, 0, 366)
 	for d := from; !d.After(today); d = d.AddDate(0, 0, 1) {
 		days = append(days, codingContributionDay{Date: d.Format("2006-01-02"), Count: 0})

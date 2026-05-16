@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import { formatWithAdminTimeZone } from '@/lib/timezone';
 
 export default function AiLogsPage() {
   const [stats, setStats] = useState<any>(null);
@@ -35,7 +36,7 @@ export default function AiLogsPage() {
 
   const fmtDate = (ts: number) => {
     if (!ts) return '-';
-    return new Date(ts * 1000).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return formatWithAdminTimeZone(new Date(ts * 1000), 'zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   return (

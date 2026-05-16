@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { Modal } from '@/components/ui/modal';
+import { formatWithAdminTimeZone } from '@/lib/timezone';
 
 interface VersionInfo {
   current: { version: string; commit?: string; built_at: string };
@@ -401,8 +402,7 @@ export default function SystemUpdatePanel() {
   }, []);
 
   function fmtDate(iso: string) {
-    const d = new Date(iso);
-    return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+    return formatWithAdminTimeZone(new Date(iso), 'zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
   // Main label = release version (v1.0.5). Commit SHA goes below as
@@ -482,7 +482,7 @@ export default function SystemUpdatePanel() {
             )}
             {info?.latest?.published_at && (
               <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                发布于 {new Date(info.latest.published_at).toLocaleString()}
+                发布于 {formatWithAdminTimeZone(new Date(info.latest.published_at), 'zh-CN', {})}
               </div>
             )}
           </div>
@@ -639,7 +639,7 @@ export default function SystemUpdatePanel() {
             </span>
             {upgradeStatus?.started_at && (
               <span style={{ marginLeft: 'auto', color: '#64748b', fontSize: 11 }}>
-                started: {new Date(upgradeStatus.started_at).toLocaleTimeString('zh-CN', { hour12: false })}
+                started: {formatWithAdminTimeZone(new Date(upgradeStatus.started_at), 'zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
               </span>
             )}
           </div>

@@ -48,7 +48,10 @@ func logAccess(ip, path, method, referer, ua, xff, visitorID, fingerprint string
 	}
 
 	now := time.Now().Unix()
-	today := time.Unix(now, 0).UTC().Format("2006-01-02")
+	// today 用 site_timezone 切日 —— 否则 +0800 用户晚 8 点写的访问
+	// 会被分到 UTC 次日，跟前台档案 / 月历 / 编码热力图等所有按"站点
+	// 自然日"显示的视图脱节。
+	today := time.Unix(now, 0).In(siteclock.Location()).Format("2006-01-02")
 
 	visitorKey := visitorID
 	if visitorKey == "" {

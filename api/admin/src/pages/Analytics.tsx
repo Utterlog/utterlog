@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import { BrowserIcon, OSIcon, DeviceIcon } from '@/lib/tech-icons';
 import VisitorMap from '@/components/dashboard/VisitorMap';
 import { Button } from '@/components/ui';
+import { formatWithAdminTimeZone } from '@/lib/timezone';
 
 
 const periods = [
@@ -429,7 +430,7 @@ function RecentVisitorsPanel() {
 
   const formatTime = (ts: number) => {
     if (!ts) return '';
-    return new Date(ts * 1000).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+    return formatWithAdminTimeZone(new Date(ts * 1000), 'zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
   const formatDuration = (s: number) => {

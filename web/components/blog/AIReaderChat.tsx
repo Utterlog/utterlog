@@ -240,7 +240,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
           </div>
           <span style={{
             position: 'absolute', top: -4, right: -6,
-            background: '#0052D9', color: '#fff', fontSize: 9, fontWeight: 700,
+            background: 'var(--color-primary)', color: '#fff', fontSize: 9, fontWeight: 700,
             padding: '1px 5px', borderRadius: 8, lineHeight: '14px',
           }}>AI</span>
         </div>
@@ -298,7 +298,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
         background: '#fafafa',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <i className="fa-sharp fa-solid fa-message-bot" style={{ color: '#0052D9', fontSize: 16 }} />
+          <i className="fa-sharp fa-solid fa-message-bot" style={{ color: 'var(--color-primary)', fontSize: 16 }} />
           <span style={{ fontWeight: 600, fontSize: 14, color: '#1a1a1a' }}>边读边聊</span>
           <span style={{ fontSize: 11, color: '#999' }}>围绕文章追问</span>
         </div>
@@ -327,13 +327,13 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
                 <p style={{ fontSize: 12, color: '#999', margin: '0 0 4px' }}>你可以试着问：</p>
                 {questions.map((q, i) => (
                   <button key={i} onClick={() => sendMessage(q)} style={{
-                    padding: '10px 14px', fontSize: 13, color: '#555',
-                    background: '#fafafa', border: '1px solid #e5e5e5',
+                    padding: '10px 14px', fontSize: 13, color: 'var(--color-text-sub)',
+                    background: 'var(--color-bg-soft)', border: '1px solid var(--color-border)',
                     cursor: 'pointer', textAlign: 'left',
                     transition: 'border-color 0.15s, background 0.15s',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#0052D9'; e.currentTarget.style.background = '#e8f0fe'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e5e5'; e.currentTarget.style.background = '#fafafa'; }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.background = 'color-mix(in srgb, var(--color-primary) 8%, transparent)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.background = 'var(--color-bg-soft)'; }}
                   >
                     {q}
                   </button>
@@ -355,7 +355,7 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
               <div style={{
                 maxWidth: '85%', padding: '10px 14px',
                 fontSize: 13, lineHeight: 1.7,
-                background: '#0052D9', color: '#fff',
+                background: 'var(--color-primary)', color: '#fff',
                 wordBreak: 'break-word',
               }}>
                 {msg.content}
@@ -411,11 +411,12 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
           disabled={sending || !input.trim()}
           style={{
             width: 36, height: 36,
-            background: input.trim() ? '#0052D9' : '#f0f0f0',
-            color: input.trim() ? '#fff' : '#ccc',
+            background: input.trim() ? 'var(--color-primary)' : 'var(--color-bg-soft)',
+            color: input.trim() ? '#fff' : 'var(--color-text-dim)',
             border: 'none', cursor: input.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
+            transition: 'background 0.15s',
           }}
         >
           <i className="fa-solid fa-paper-plane-top" style={{ fontSize: 14 }} />
@@ -443,10 +444,10 @@ export default function AIReaderChat({ postId, title, excerpt, authorAvatar }: A
         }
         .ai-reader-md pre code { background: none; padding: 0; }
         .ai-reader-md blockquote {
-          border-left: 3px solid #0052D9; margin: 6px 0; padding: 4px 12px; color: #555;
+          border-left: 3px solid var(--color-primary); margin: 6px 0; padding: 4px 12px; color: var(--color-text-sub);
         }
         .ai-reader-md strong { font-weight: 600; }
-        .ai-reader-md a { color: #0052D9; text-decoration: none; }
+        .ai-reader-md a { color: var(--color-primary); text-decoration: none; }
         .ai-reader-md hr { border: none; border-top: 1px solid #e0e0e0; margin: 8px 0; }
       `}</style>
     </div>

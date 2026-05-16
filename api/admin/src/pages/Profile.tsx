@@ -6,6 +6,7 @@ import { Button, Input, SaveButton, Modal } from '@/components/ui';
 import api, { authApi, optionsApi } from '@/lib/api';
 import { useForm } from 'react-hook-form';
 import { useI18n } from '@/lib/i18n';
+import { formatWithAdminTimeZone } from '@/lib/timezone';
 
 // WebAuthn helpers
 function base64urlToBuffer(base64url: string): ArrayBuffer {
@@ -722,8 +723,8 @@ export default function ProfilePage() {
                   <div style={{ flex: 1 }}>
                     <p className="text-main" style={{ fontSize: '13px', fontWeight: 500 }}>{pk.name || t('admin.profile.unnamedPasskey', '未命名密钥')}</p>
                     <p className="text-dim" style={{ fontSize: '11px' }}>
-                      {t('admin.profile.passkeyCreatedAt', '添加于 {date}', { date: new Date(pk.created_at * 1000).toLocaleDateString(locale || 'zh-CN') })}
-                      {pk.last_used_at > 0 && <> · {t('admin.profile.passkeyLastUsed', '最后使用 {date}', { date: new Date(pk.last_used_at * 1000).toLocaleDateString(locale || 'zh-CN') })}</>}
+                      {t('admin.profile.passkeyCreatedAt', '添加于 {date}', { date: formatWithAdminTimeZone(new Date(pk.created_at * 1000), locale || 'zh-CN', { year: 'numeric', month: 'short', day: 'numeric' }) })}
+                      {pk.last_used_at > 0 && <> · {t('admin.profile.passkeyLastUsed', '最后使用 {date}', { date: formatWithAdminTimeZone(new Date(pk.last_used_at * 1000), locale || 'zh-CN', { year: 'numeric', month: 'short', day: 'numeric' }) })}</>}
                     </p>
                   </div>
                   <button

@@ -32,11 +32,30 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
 
   return (
     <div className="azure-post-page">
-      {/* Featured image —— 影视模式用 VideoPostBody 自带的海报 + 标题 + 元信息替代 */}
+      {/* Featured image —— 影视模式无 400px hero，改用 mini-hero（面包屑 + h1）+ VideoPostBody。
+          标题 h1 由这里渲染（非 VideoPostBody 内），保证页面 h1 唯一且贴主题字号。 */}
       {isVideo ? (
-        <div className="azure-post-content-wrap">
-          <VideoPostBody post={post} />
-        </div>
+        <>
+          <div style={{ padding: '28px 32px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 12, color: '#666' }}>
+              <Link href="/" prefetch={false} style={{ color: '#666', textDecoration: 'none' }}>首页</Link>
+              <span>/</span>
+              <Link href="/films" prefetch={false} style={{ color: '#666', textDecoration: 'none' }}>影视</Link>
+              {catName && (
+                <>
+                  <span>/</span>
+                  <Link href={`/categories/${post.categories[0].slug}`} prefetch={false} style={{ color: '#666', textDecoration: 'none' }}>{catName}</Link>
+                </>
+              )}
+            </div>
+            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, lineHeight: 1.3, color: 'var(--color-text-main, #111)' }}>
+              {post.title}
+            </h1>
+          </div>
+          <div className="azure-post-content-wrap">
+            <VideoPostBody post={post} />
+          </div>
+        </>
       ) : (
         <div className="azure-post-hero">
           <FadeCover src={coverUrl} alt={post.title} className="azure-post-hero-cover" />

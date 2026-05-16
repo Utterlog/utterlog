@@ -2,6 +2,15 @@ import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getPostBySlug, getActiveTheme, getOptions } from '@/lib/blog-api';
 import { getThemeComponents } from '@/lib/theme';
+import { postDateInput } from '@/lib/post-date';
+
+function isoDate(input: any): string | undefined {
+  if (input === null || input === undefined || input === '') return undefined;
+  const n = Number(input);
+  const d = !isNaN(n) && n > 1e9 && n < 1e10 ? new Date(n * 1000) : new Date(input);
+  if (isNaN(d.getTime())) return undefined;
+  return d.toISOString();
+}
 
 // 把 admin 端的 meta JSON 转成 schema.org/Movie 或 TVSeries 节点。
 // Google 看到这段 JSON-LD 会在搜索结果显示「电影卡片」rich snippet
@@ -24,7 +33,10 @@ function buildVideoJsonLd(post: any, siteUrl: string) {
     inLanguage: meta.language || undefined,
     description: post.excerpt || (post.content ? String(post.content).slice(0, 240) : undefined),
     image: post.cover_url || undefined,
-    datePublished: meta.year ? String(meta.year) : undefined,
+    // datePublished：影视上线年份（meta.year，作品制作年份）优先；
+    // 没填的话用文章发布时间。schema.org 接受 YYYY 或完整 ISO 日期。
+    datePublished: meta.year ? String(meta.year) : isoDate(postDateInput(post)),
+    dateModified: isoDate(post.updated_at) || isoDate(postDateInput(post)),
     countryOfOrigin: meta.region ? { '@type': 'Country', name: meta.region } : undefined,
     director: directors.length ? directors.map((n: string) => ({ '@type': 'Person', name: n })) : undefined,
     actor: actors.length ? actors.map((n: string) => ({ '@type': 'Person', name: n })) : undefined,
@@ -76,6 +88,8 @@ export async function generateMetadata({ params }: FilmPageProps): Promise<Metad
         title: fullTitle,
         description,
         type: 'video.other',
+        ...(isoDate(postDateInput(post)) ? { publishedTime: isoDate(postDateInput(post)) } : {}),
+        ...(isoDate(post.updated_at) ? { modifiedTime: isoDate(post.updated_at) } : {}),
         ...(image ? { images: [{ url: image }] } : {}),
       },
       twitter: {

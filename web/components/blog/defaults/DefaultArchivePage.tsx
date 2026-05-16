@@ -118,7 +118,7 @@ export default function DefaultArchivePage({ posts, categories, tags, stats, tim
           <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-text-main)' }}>近一年更新热力图</h2>
           <span style={{ fontSize: '12px', color: 'var(--color-text-dim)' }}>颜色越深表示当天发文越多</span>
         </div>
-        <Heatmap data={stats.heatmap || []} />
+        <Heatmap data={stats.heatmap || []} timeZone={timeZone} />
       </div>
 
       {/* Categories — module cards */}

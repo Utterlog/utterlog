@@ -10,13 +10,16 @@ import { useI18n } from '@/lib/i18n';
 import { firstMarkdownH1, resolveMarkdownTitle } from '@/lib/markdown';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
+import { adminDateYMDHM } from '@/lib/timezone';
 import FootprintEditor, { type FootprintFormValue, normalizeFootprintsForPayload } from '@/components/FootprintEditor';
 import VideoFormSection from '@/components/VideoFormSection';
 
 // Convert a backend date (RFC3339 string, unix int seconds, or ISO-ish)
 // into the "YYYY-MM-DDTHH:mm" shape that <input type="datetime-local">
-// expects in local time. Returns empty string for null/undefined/invalid
-// input so the input sits in its placeholder state.
+// expects. Rendered in site_timezone so admins editing remotely see the
+// wall-clock time that matches the site, not their browser's local zone.
+// Backend parsePostPublishedAt also parses with siteclock.Location(),
+// so the round-trip is consistent.
 function toLocalDatetime(val: string | number | null | undefined): string {
   if (val === null || val === undefined || val === '') return '';
   const n = Number(val);
@@ -24,8 +27,7 @@ function toLocalDatetime(val: string | number | null | undefined): string {
     ? new Date(n * 1000)
     : new Date(val as any);
   if (isNaN(d.getTime())) return '';
-  const pad = (v: number) => String(v).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return adminDateYMDHM(d);
 }
 
 function toLocalDate(val: string | number | null | undefined): string {

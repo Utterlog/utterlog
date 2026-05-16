@@ -29,7 +29,19 @@ import (
 	"time"
 
 	"utterlog-go/config"
+	"utterlog-go/internal/siteclock"
 )
+
+// dayStartInSite returns midnight of t's date in the configured site
+// timezone. All analytics date keys (ul_analytics_daily.date,
+// ul_stats_post_daily.date, ul_visitor_dates.date) are bucketed by site
+// natural day so admins see "stats since I went to bed last night" align
+// with their wall clock, not UTC.
+func dayStartInSite(t time.Time) time.Time {
+	loc := siteclock.Location()
+	t = t.In(loc)
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
+}
 
 // rollupRetentionDays is how long raw access_logs rows are kept.
 // Anything older is aggregated into ul_analytics_daily (if not
@@ -77,8 +89,8 @@ func RollupAccessLogs() (int, int, error) {
 		return 0, 0, nil
 	}
 
-	oldestDay := time.Unix(oldestUnix, 0).UTC().Truncate(24 * time.Hour)
-	yesterday := time.Now().UTC().Truncate(24 * time.Hour).Add(-24 * time.Hour)
+	oldestDay := dayStartInSite(time.Unix(oldestUnix, 0))
+	yesterday := dayStartInSite(time.Now()).Add(-24 * time.Hour)
 	if oldestDay.After(yesterday) {
 		// Only today's rows present — nothing to aggregate yet.
 		return 0, 0, nil
@@ -193,21 +205,21 @@ func runAnalyticsRollup() {
 
 // rollupCutoffDate returns the date that splits raw vs aggregate
 // data. Reads happen "raw side" >= this date, "aggregate side" < this.
-// Used by the breakdown queries.
+// Used by the breakdown queries. Uses site_timezone day boundary so
+// it lines up with the rollup writer.
 func rollupCutoffDate() time.Time {
-	return time.Now().UTC().Truncate(24 * time.Hour).Add(-time.Duration(rollupRetentionDays) * 24 * time.Hour)
+	return dayStartInSite(time.Now()).Add(-time.Duration(rollupRetentionDays) * 24 * time.Hour)
 }
 
-// dateOnly truncates a Unix second to UTC midnight. Helper for tests.
+// dateOnly truncates a Unix second to site-tz midnight. Helper for tests.
 func dateOnly(unix int64) time.Time {
-	return time.Unix(unix, 0).UTC().Truncate(24 * time.Hour)
+	return dayStartInSite(time.Unix(unix, 0))
 }
 
-// formatYMD formats a time as YYYY-MM-DD without depending on the
-// caller's timezone — all date keys in ul_analytics_daily use this
-// format / UTC.
+// formatYMD formats a time as YYYY-MM-DD in site_timezone — all date
+// keys in ul_analytics_daily are bucketed by site natural day.
 func formatYMD(t time.Time) string {
-	return t.UTC().Format("2006-01-02")
+	return t.In(siteclock.Location()).Format("2006-01-02")
 }
 
 // stringInSlice — tiny helper used by the breakdown query when

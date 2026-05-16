@@ -2,13 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useAnnotations, type Annotation } from './AnnotationProvider';
+import { useThemeContext } from '@/lib/theme-context';
+import { formatDateInTimeZone } from '@/lib/timezone';
 
 interface BlockAnnotationProps {
   blockId: string;
   children: React.ReactNode;
 }
 
-function formatTime(ts: number) {
+function formatTime(ts: number, timeZone: string) {
   const d = new Date(ts * 1000);
   const now = new Date();
   const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
@@ -16,11 +18,12 @@ function formatTime(ts: number) {
   if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
   if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
   if (diff < 2592000) return `${Math.floor(diff / 86400)} 天前`;
-  return d.toLocaleDateString('zh-CN');
+  return formatDateInTimeZone(d, 'zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }, timeZone);
 }
 
 export default function BlockAnnotation({ blockId, children }: BlockAnnotationProps) {
   const { annotations, activeBlock, setActiveBlock, addAnnotation } = useAnnotations();
+  const { timeZone } = useThemeContext();
   const [hovered, setHovered] = useState(false);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -192,7 +195,7 @@ export default function BlockAnnotation({ blockId, children }: BlockAnnotationPr
                       )}
                     </div>
                     <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-main)' }}>{a.user_name}</span>
-                    <span style={{ fontSize: '10px', color: 'var(--color-text-dim)' }}>{formatTime(a.created_at)}</span>
+                    <span style={{ fontSize: '10px', color: 'var(--color-text-dim)' }}>{formatTime(a.created_at, timeZone)}</span>
                   </div>
                   <p style={{ fontSize: '13px', color: 'var(--color-text-sub)', lineHeight: 1.6, margin: 0 }}>{a.content}</p>
                 </div>

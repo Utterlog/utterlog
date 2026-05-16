@@ -5,6 +5,7 @@ import api, { optionsApi } from '@/lib/api';
 import { Button, EmptyState, Input, Modal, Toggle } from '@/components/ui';
 import { useI18n } from '@/lib/i18n';
 import { formatDate } from '@/lib/utils';
+import { adminDateYMD } from '@/lib/timezone';
 
 type FootprintRow = {
   id: number;
@@ -78,7 +79,7 @@ function dateOnly(seconds?: number) {
   if (!seconds) return '';
   const date = new Date(seconds * 1000);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 10);
+  return adminDateYMD(date);
 }
 
 function cleanNumber(value: string) {

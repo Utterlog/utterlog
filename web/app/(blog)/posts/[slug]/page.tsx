@@ -3,9 +3,51 @@ import type { Metadata } from 'next';
 import { getPostBySlug, getActiveTheme, getOptions } from '@/lib/blog-api';
 import { getThemeComponents } from '@/lib/theme';
 import { randomCoverUrl } from '@/lib/blog-image';
+import { postDateInput } from '@/lib/post-date';
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
+}
+
+// Convert a Post timestamp (RFC3339 string, unix seconds, or Date) to
+// ISO 8601 string suitable for `article:published_time` and JSON-LD.
+function isoDate(input: any): string | undefined {
+  if (input === null || input === undefined || input === '') return undefined;
+  const n = Number(input);
+  const d = !isNaN(n) && n > 1e9 && n < 1e10 ? new Date(n * 1000) : new Date(input);
+  if (isNaN(d.getTime())) return undefined;
+  return d.toISOString();
+}
+
+// Build a schema.org/BlogPosting JSON-LD node for the post. Search engines
+// (Google, Bing, Yandex) prefer this over OpenGraph for article structure
+// — surfaces author, datePublished, headline + image as a rich snippet.
+function buildArticleJsonLd(post: any, siteUrl: string, options: Record<string, string>) {
+  const published = isoDate(post.published_at) || isoDate(post.created_at);
+  const modified = isoDate(post.updated_at) || published;
+  const author = post.author?.nickname || post.author?.username || options.site_title || 'Utterlog';
+  const url = `${siteUrl}/posts/${post.slug}`;
+  const image = post.cover_url || undefined;
+  const node: Record<string, any> = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    url,
+    inLanguage: options.site_locale || undefined,
+    description: post.excerpt || undefined,
+    image: image || undefined,
+    datePublished: published || undefined,
+    dateModified: modified || undefined,
+    author: { '@type': 'Person', name: author },
+    publisher: {
+      '@type': 'Organization',
+      name: options.site_title || 'Utterlog',
+      ...(options.site_logo ? { logo: { '@type': 'ImageObject', url: options.site_logo } } : {}),
+    },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+  };
+  Object.keys(node).forEach((k) => { if (node[k] === undefined) delete node[k]; });
+  return node;
 }
 
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
@@ -43,6 +85,14 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
         title,
         description,
         type: 'article',
+        // article:published_time / article:modified_time —— Facebook /
+        // 微博 / RSS reader 都会展示这两个字段；之前完全缺失，分享卡片
+        // 上没日期。优先用 published_at，回落 created_at（同 postDateInput）。
+        ...(isoDate(postDateInput(post)) ? { publishedTime: isoDate(postDateInput(post)) } : {}),
+        ...(isoDate(post.updated_at) ? { modifiedTime: isoDate(post.updated_at) } : {}),
+        ...(post.author?.nickname || post.author?.username
+          ? { authors: [post.author?.nickname || post.author?.username] }
+          : {}),
         ...(image ? { images: [{ url: image }] } : {}),
       },
       twitter: {
@@ -101,5 +151,17 @@ export default async function PostPage({ params }: PostPageProps) {
   const optionsRes = await getOptions().catch(() => ({ data: {} } as any));
   const options = (optionsRes?.data || {}) as Record<string, string>;
 
-  return <ThemePostPage post={post} options={options} />;
+  const siteUrl = (options.site_url || '').replace(/\/$/, '');
+  const jsonLd = buildArticleJsonLd(post, siteUrl, options);
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        // schema.org/BlogPosting JSON-LD — Google rich snippet 用
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <ThemePostPage post={post} options={options} />
+    </>
+  );
 }

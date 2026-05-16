@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n';
 import { firstMarkdownH1, resolveMarkdownTitle } from '@/lib/markdown';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
+import { adminDateYMDHM } from '@/lib/timezone';
 import FootprintEditor, { type FootprintFormValue, normalizeFootprintsForPayload } from '@/components/FootprintEditor';
 import VideoFormSection from '@/components/VideoFormSection';
 
@@ -84,9 +85,9 @@ export default function CreatePostPage() {
       const o = r.data || r || {};
       setAiFlags({ summary: o.ai_summary_auto === 'true', image: o.ai_image_auto === 'true', slug: o.ai_slug_auto === 'true', keywords: o.ai_keywords_auto === 'true', polish: o.ai_polish_auto === 'true' });
     }).catch(() => {});
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    setPublishAt(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`);
+    // 默认发布时间填"现在"，按 site_timezone 渲染（远程站长 / 跨时区
+     // admin 都能看到跟站点一致的时间）。
+    setPublishAt(adminDateYMDHM(new Date()));
   }, []);
 
   // Auto-save to localStorage

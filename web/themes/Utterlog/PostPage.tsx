@@ -63,31 +63,31 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
             )}
           </div>
 
-          {/* 影视模式：VideoPostBody 自带标题/海报/播放器/选集；
-              传统文章模式：标题 + AISummary + PostContent。 */}
+          {/* 影视模式：h1 + VideoPostBody（海报/播放器/选集）；可选补充正文。
+              传统文章模式：h1 + AISummary + PostContent。 */}
           {post.type === 'video' ? (
-            <VideoPostBody post={post} />
-          ) : (
             <>
-              {/* Title */}
               <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#202020', lineHeight: 1.4, marginBottom: '24px' }}>
                 {post.title}
               </h1>
-
-              {/* AI Summary */}
+              <VideoPostBody post={post} />
+              {post.content ? (
+                <article style={{ marginTop: 24 }}>
+                  <PostContent content={post.content} postId={post.id} />
+                </article>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#202020', lineHeight: 1.4, marginBottom: '24px' }}>
+                {post.title}
+              </h1>
               <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
-
-              {/* Content */}
               <article>
                 <PostContent content={post.content || ''} postId={post.id} />
               </article>
             </>
           )}
-          {post.type === 'video' && post.content ? (
-            <article style={{ marginTop: 24 }}>
-              <PostContent content={post.content} postId={post.id} />
-            </article>
-          ) : null}
 
           {/* Tags */}
           {post.tags?.length > 0 && (

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { formatWithAdminTimeZone } from '@/lib/timezone';
 
 export default function NotificationBell() {
   const { locale, t } = useI18n();
@@ -71,7 +72,7 @@ export default function NotificationBell() {
     if (diff < 60) return t('admin.time.justNow', '刚刚');
     if (diff < 3600) return t('admin.time.minutesAgo', '{count} 分钟前', { count: Math.floor(diff / 60) });
     if (diff < 86400) return t('admin.time.hoursAgo', '{count} 小时前', { count: Math.floor(diff / 3600) });
-    return d.toLocaleDateString(locale || 'zh-CN', { month: 'short', day: 'numeric' });
+    return formatWithAdminTimeZone(d, locale || 'zh-CN', { month: 'short', day: 'numeric' });
   };
 
   return (

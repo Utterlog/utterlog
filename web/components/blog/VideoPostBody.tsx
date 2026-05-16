@@ -144,7 +144,8 @@ export default function VideoPostBody({ post }: Props) {
           </div>
         ) : null}
         <div className="ul-video__info">
-          <h1 className="ul-video__title">{post.title}</h1>
+          {/* h1 由各主题 PostPage 在 VideoPostBody 之上渲染 —— 保证页面唯一 h1
+              并贴合主题字体 / 字号风格。这里只渲染元信息 chips 起。 */}
           <div className="ul-video__chips">
             <span className="ul-video__chip ul-video__chip--type">{typeLabel}</span>
             {meta.year ? <span className="ul-video__chip">{meta.year}</span> : null}

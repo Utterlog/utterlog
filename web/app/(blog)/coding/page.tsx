@@ -179,8 +179,13 @@ function contributionWeeks(days: CodingDay[]) {
   return weeks;
 }
 
-function todayContributionCount(days: CodingDay[]) {
-  const today = new Date().toISOString().slice(0, 10);
+function todayContributionCount(days: CodingDay[], timeZone: string) {
+  // "今天"按站点时区切日 —— 后端 emptyCodingContributions 也按 site_tz
+  // 生成日期键（api/internal/handler/coding.go），两边对齐才能让最右
+  // 一格的 count 在跨午夜 / 跨时区时不偏移。
+  const tz = isValidTimeZone(timeZone) ? timeZone : 'UTC';
+  const t = datePartsInTimeZone(new Date(), tz);
+  const today = `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}`;
   return days.find(day => day.date === today)?.count || 0;
 }
 
@@ -284,8 +289,11 @@ export default async function CodingPage() {
    const allDays = Array.isArray(data.contributions) ? data.contributions : [];
    const rollingDays = (() => {
      if (!allDays.length) return allDays;
-     const todayISO = new Date().toISOString().slice(0, 10);
-     // 从 today - 364 天 开始
+     // "今天"按站点时区取，跟后端 rolling365Range（site_tz）对齐；
+     // 否则边界格子在跨午夜的访客那里会偏移一天。
+     const tz = isValidTimeZone(timeZone) ? timeZone : 'UTC';
+     const t = datePartsInTimeZone(new Date(), tz);
+     const todayISO = `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}`;
      const cutoff = new Date(`${todayISO}T00:00:00Z`);
      cutoff.setUTCDate(cutoff.getUTCDate() - 364);
      const cutoffISO = cutoff.toISOString().slice(0, 10);
@@ -293,7 +301,7 @@ export default async function CodingPage() {
    })();
   const days = rollingDays;
   const weeks = contributionWeeks(days);
-  const todayContributions = todayContributionCount(days);
+  const todayContributions = todayContributionCount(days, timeZone);
   const heatmapYear = contributionYear(days);
   const stats = data.stats || {};
   const profileSummary = profiles.length > 1

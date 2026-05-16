@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui';
 import { useI18n } from '@/lib/i18n';
+import { formatWithAdminTimeZone } from '@/lib/timezone';
 
 interface SyncSite {
   site_uuid: string;
@@ -60,8 +61,7 @@ const PLATFORM_META: Record<SyncPlatform, {
 
 function fmtTime(ts: number, locale = 'zh-CN') {
   if (!ts) return '—';
-  const d = new Date(ts * 1000);
-  return d.toLocaleString(locale);
+  return formatWithAdminTimeZone(new Date(ts * 1000), locale, {});
 }
 
 function stageLabel(stage: string, t: (key: string, fallback?: string, vars?: Record<string, string | number>) => string) {

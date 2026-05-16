@@ -6,6 +6,7 @@ import CommentForm from './CommentForm';
 import { BrowserIcon, OSIcon } from '@/lib/tech-icons';
 import { getVisitorId } from '@/lib/fingerprint';
 import { useThemeContext } from '@/lib/theme-context';
+import { formatDateTimeInTimeZone } from '@/lib/timezone';
 import toast from 'react-hot-toast';
 
 // 表情 slug → 文件名映射
@@ -228,6 +229,7 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
   const canEdit = editableIds.has(comment.id);
   const remaining = useEditCountdown(comment.created_at, canEdit);
   const ua = parseUA(comment.user_agent);
+  const { timeZone } = useThemeContext();
   // Prefer Client Hints (accurate) over UA parsing (frozen versions)
   const os = comment.os_name || ua.os;
   const osVer = comment.os_version || ua.osVer;
@@ -401,7 +403,10 @@ function CommentRow({ comment, postId, depth, floor, parentComment, onReplySucce
             )}
 
             <span style={{ color: '#bbb' }}>&middot;</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#aaa' }}>
+            <span
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#aaa' }}
+              title={comment.created_at ? formatDateTimeInTimeZone(comment.created_at * 1000, 'zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }, timeZone) : ''}
+            >
               <i className="fa-regular fa-clock" style={{ fontSize: '11px' }} />
               {relativeTime(comment.created_at)}
             </span>

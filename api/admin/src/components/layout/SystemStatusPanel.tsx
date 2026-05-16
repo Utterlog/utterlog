@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { adminTimeZone } from '@/lib/timezone';
 
 // SVG Ring chart component
 function Ring({ percent, size = 48, stroke = 4, color = 'var(--color-primary)', label, sub }: {
@@ -50,11 +51,14 @@ export default function SystemStatusPanel({ isOpen }: { isOpen: boolean }) {
     fetchStatus();
     // Only poll frequently when expanded
     const statusInterval = setInterval(fetchStatus, expanded ? 3000 : 30000);
-    const clockInterval = setInterval(() => {
-      setClock(new Date().toLocaleTimeString(locale || 'zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-    }, 1000);
-    // Init clock immediately
-    setClock(new Date().toLocaleTimeString(locale || 'zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    // 时钟按 site_timezone 显示 —— 站长可能在境外远程维护，site_timezone
+    // 跟浏览器本地时区不一致，此处应反映"站点所在地"的当前时间。
+    const tz = adminTimeZone() || undefined;
+    const fmt = () => new Date().toLocaleTimeString(locale || 'zh-CN', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: tz,
+    });
+    const clockInterval = setInterval(() => setClock(fmt()), 1000);
+    setClock(fmt());
     return () => { clearInterval(statusInterval); clearInterval(clockInterval); };
   }, [expanded, locale]);
 

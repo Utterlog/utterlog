@@ -16,6 +16,6 @@
     { "key": "header", "label": "顶部导航", "description": "网站顶部 Header 的主菜单" },
     { "key": "category", "label": "分类导航", "description": "首页中部的分类筛选条；不配则自动列出所有分类" }
   ],
-  "adminPanels": ["header_buttons"],
+  "adminPanels": ["header_buttons", "hero_tiles"],
   "features": ["search", "random_post", "footer_menu"]
 }

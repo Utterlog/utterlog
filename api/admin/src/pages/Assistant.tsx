@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
+import { adminDateYMDHM, formatWithAdminTimeZone } from '@/lib/timezone';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -82,7 +83,7 @@ export default function AiChatPage() {
       const r: any = await api.get('/options');
       const opts = r.data || r || {};
       const existing = opts.ai_blogger_memory || '';
-      const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      const timestamp = adminDateYMDHM(new Date()).replace('T', ' ');
       const entry = `\n---\n[${timestamp}]\n${content.trim()}\n`;
       await api.put('/options', { ai_blogger_memory: existing + entry });
       setSavedMsgIds(prev => new Set(prev).add(msgIdx));
@@ -217,7 +218,7 @@ export default function AiChatPage() {
 
   const formatTime = (ts: number) => {
     if (!ts) return '';
-    return new Date(ts * 1000).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    return formatWithAdminTimeZone(new Date(ts * 1000), 'zh-CN', { month: 'short', day: 'numeric' });
   };
 
   const ToolCards = ({ events }: { events: ToolEvent[] }) => {
