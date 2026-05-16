@@ -23,6 +23,31 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.4.2] - 2026-05-16
+
+### 新增
+
+- **专业影视模式**：文章新增 `type='video'` 类型，承载多集 / 多线路可在线播放的影视内容（电影 / 剧集 / 综艺 / 动漫 / 纪录片）。复用 `ul_posts` 整套基础设施（评论 / SEO / RSS / 搜索），新增 `ul_post_episodes` 表（每集 `video_url` / `embed_url` / `platform` / `alt_sources` 多线路 / 时长 / 集封面）+ `ul_posts.meta` JSONB 列（影视元数据：导演 / 主演 / 类型 / 地区 / 年份 / 总集数 / 语言 / 豆瓣评分 / 豆瓣 URL / IMDb / 温馨提示）。
+- **后台「娱乐 → 影视」管理**：左侧导航新增「影视」子项，独立 `/films` 列表页（status 过滤 / 搜索 / 海报缩略图 / 元信息 / 编辑 / 删除）+ 「新建影视」入口。`/films/create` 和 `/films/edit/:id` 复用 PostCreate / PostEdit 全屏布局，按 `type=video` 切换 UI：上方一整张「影视元数据」卡片 + 中间「剧集列表」（添加 / 上下移 / 删除 / 备线折叠 / 批量粘贴）+ 下方 Markdown 简介编辑器。
+- **豆瓣 / NeoDB 链接一键导入**：元数据卡片右上角「链接导入」按钮调 `/media/parse`。后端 Douban 解析器升级为 JSON-LD + `#info` 块抓取，自动填充导演 / 主演 / 类型 / 上映年 / 时长 / 评分 / 制片国家 / 语言 / IMDb / 集数；NeoDB 走自家公开 API。封面 / 标题 / 简介按「字段为空才填」语义合并，不覆盖用户已手填的内容。
+- **前台 `/films` 海报网格 + 筛选**：访客侧新增 `/films` 列表页，类型 tab（全部 / 剧集 / 电影 / 综艺 / 动漫 / 纪录片）+ 已筛选 chip（年份 / 地区可移除）+ 2:3 海报网格（集数徽章 + 豆瓣评分徽章 + 类型徽章）+ 上 / 下页分页。`/films/<slug>` 详情页复用主题 PostPage，自动按 type=video 切到 VideoPostBody 渲染：左海报 + 右元信息 + 16:9 自适应播放器 + 主线 / 备线 chip 切换 + 集数网格切集 + 温馨提示。播放器支持 YouTube / Bilibili / 腾讯 / 优酷 / 爱奇艺（iframe）和 mp4 / webm / m3u8（HLS 按需懒加载 hls.js，Safari 走原生）。
+- **影视专属 SEO（schema.org/Movie & TVSeries）**：`/films/<slug>` 注入 JSON-LD 微数据（name / director / actor / genre / countryOfOrigin / datePublished / numberOfEpisodes / aggregateRating / image / inLanguage），Google 显示「电影卡片」rich snippet。OpenGraph 用 `video.other` type + 海报当 og:image。
+- **影视 RSS 订阅**：`/api/v1/feed?type=video` 单独订阅影视、`?type=all` 混合两类、不带参数保持原行为（只发文章）兼容现有订阅者。
+
+### 优化
+
+- **`/posts/<slug>` 自动 308 redirect 到 `/films/<slug>`**：影视类型的 post 遇到走错门口的外链 / 旧书签时永久重定向，避免 `/posts/<slug>` 和 `/films/<slug>` 两套 URL 同时被搜索引擎收录（duplicate content）。
+- **影视编辑页全宽布局**：`/films/create` 和 `/films/edit/:id` 加入 `fullWidth` 路由集合，与 `/posts/create` 享受同一套全屏（隐藏 main 滚动条 + 编辑区自接管内部滚动），不再被 1280px 居中容器卡住。
+- **`getPosts` 前端 API helper 扩展**：新增 `type` / `video_type` / `region` / `year` / `genre` 参数，后端 `PostsListOptions` 用 JSONB `->>` 等值过滤 + `@>` 数组包含过滤；普通 `/posts` 调用不传新参数即可保持原行为。
+
+### 修复
+
+暂无。
+
+### 移除
+
+暂无。
+
 ## [2.4.1] - 2026-05-16
 
 ### 新增

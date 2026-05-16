@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "mapbox-gl/dist/mapbox-gl.css";
+@import "../styles/video-post.css";
 
 /* Scrollbar: reserve space, track matches background, thumb hidden until scroll */
 /* ===== Scrollbar: prevent layout shift ===== */

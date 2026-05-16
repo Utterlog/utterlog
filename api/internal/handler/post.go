@@ -47,7 +47,15 @@ func ListPosts(c *gin.Context) {
 		config.DB.Get(&tagSlug, fmt.Sprintf("SELECT slug FROM %s WHERE id = $1 AND type = 'tag'", config.T("metas")), tagID)
 	}
 
-	posts, total, _ := model.PostsList(typ, status, search, orderBy, order, page, perPage, categorySlug, tagSlug)
+	// v2.4.2 影视过滤：仅在 type='video' 时由前台 /films 列表用
+	posts, total, _ := model.PostsList(typ, status, search, orderBy, order, page, perPage, model.PostsListOptions{
+		CategorySlug: categorySlug,
+		TagSlug:      tagSlug,
+		VideoType:    c.Query("video_type"),
+		Region:       c.Query("region"),
+		Year:         c.Query("year"),
+		Genre:        c.Query("genre"),
+	})
 	formatted := make([]model.PostWithRelations, len(posts))
 	for i, p := range posts {
 		formatted[i] = model.FormatPost(&p, false)
@@ -102,6 +110,32 @@ func GetPostByDisplayID(c *gin.Context) {
 	}
 	maybeBumpPostView(c, p)
 	util.Success(c, model.FormatPost(p, true))
+}
+
+// GetPostEpisodes 单独取一个 post 的剧集列表（公开接口）。
+// 主要场景：前端 SSR 已通过 /posts/:id 拿到 embed 的 episodes 数组，本
+// endpoint 给"切集后增量刷新"、"管理员预览"等异步场景用。type 非 video
+// 的 post 也允许返回（空数组即可），调用方不必先判断 type。
+func GetPostEpisodes(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	p, err := model.PostByID(id)
+	if err != nil {
+		util.NotFound(c, "文章")
+		return
+	}
+	if p.Status != "publish" && middleware.GetUserID(c) == 0 {
+		util.NotFound(c, "文章")
+		return
+	}
+	eps, err := model.ListEpisodesByPost(id)
+	if err != nil {
+		util.Error(c, 500, "QUERY_ERROR", err.Error())
+		return
+	}
+	if eps == nil {
+		eps = []model.PostEpisode{}
+	}
+	util.Success(c, gin.H{"episodes": eps, "total": len(eps)})
 }
 
 // maybeBumpPostView is the WordPress-style server-side view-count
@@ -219,6 +253,10 @@ func CreatePost(c *gin.Context) {
 		CategoryIDs  []int              `json:"category_ids"`
 		TagNames     []string           `json:"tag_names"`
 		Footprints   []FootprintPayload `json:"footprints"`
+		// v2.4.2 影视相关：当 type='video' 时 admin 会填这两个；其它
+		// type 也可以传 meta（未来富内容类型扩展）。nil = 不动 / 默认 '{}'.
+		Meta     json.RawMessage      `json:"meta"`
+		Episodes []model.PostEpisode  `json:"episodes"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		util.BadRequest(c, "请求格式错误")
@@ -296,11 +334,23 @@ func CreatePost(c *gin.Context) {
 	}
 	p.AllowComment = req.AllowComment
 	p.Pinned = req.Pinned
+	if len(req.Meta) > 0 {
+		p.Meta = req.Meta
+	}
 
 	id, err := model.CreatePost(p)
 	if err != nil {
 		util.Error(c, 500, "CREATE_ERROR", err.Error())
 		return
+	}
+
+	// 影视类型：保存剧集列表（即使空数组也写入，让前端编辑器"清空全部
+	// 然后保存"语义正确）。非 video 类型即使前端传了也忽略，避免脏数据。
+	if typ == "video" && req.Episodes != nil {
+		if err := model.ReplaceEpisodes(id, req.Episodes); err != nil {
+			util.Error(c, 500, "EPISODES_ERROR", "保存剧集失败: "+err.Error())
+			return
+		}
 	}
 
 	// Save category and tag relationships
@@ -352,6 +402,12 @@ func UpdatePost(c *gin.Context) {
 		// datetime-local value here so authors can backdate or reschedule.
 		// Empty string clears it back to NULL.
 		PublishedAt *string `json:"published_at"`
+		// v2.4.2 影视：meta 接收完整 JSON 对象（影视元数据），episodes
+		// nil 时不动剧集（status-only 更新场景），非 nil 时整体替换。
+		Meta     *json.RawMessage     `json:"meta"`
+		Episodes *[]model.PostEpisode `json:"episodes"`
+		// type 字段可在编辑时改（从 post → video 或反向），需要透传
+		Type *string `json:"type"`
 	}
 	c.ShouldBindJSON(&req)
 
@@ -394,6 +450,12 @@ func UpdatePost(c *gin.Context) {
 	}
 	if req.Pinned != nil {
 		existing.Pinned = req.Pinned
+	}
+	if req.Type != nil && *req.Type != "" {
+		existing.Type = *req.Type
+	}
+	if req.Meta != nil {
+		existing.Meta = *req.Meta
 	}
 
 	// Explicit published_at from the client wins. Empty string clears.
@@ -461,6 +523,15 @@ func UpdatePost(c *gin.Context) {
 	if req.Footprints != nil {
 		if err := model.SyncPostFootprints(id, normalizeFootprintPayloads(*req.Footprints)); err != nil {
 			util.Error(c, 500, "FOOTPRINT_ERROR", err.Error())
+			return
+		}
+	}
+
+	// 影视剧集同步：req.Episodes nil = "本次更新不动剧集"（兼容状态-only
+	// 更新场景）；非 nil = 整体替换（空数组清空全部）。
+	if req.Episodes != nil {
+		if err := model.ReplaceEpisodes(id, *req.Episodes); err != nil {
+			util.Error(c, 500, "EPISODES_ERROR", "保存剧集失败: "+err.Error())
 			return
 		}
 	}

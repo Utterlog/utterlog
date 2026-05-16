@@ -28,6 +28,7 @@ const BUILTIN_PAGES: { key: string; label: string; href: string }[] = [
   { key: 'albums', label: '相册',   href: '/albums' },
   { key: 'music', label: '音乐',   href: '/music' },
   { key: 'movies', label: '电影',   href: '/movies' },
+  { key: 'films', label: '影视',   href: '/films' },
   { key: 'books', label: '图书',   href: '/books' },
   { key: 'goods', label: '好物',   href: '/goods' },
   { key: 'links', label: '友链',   href: '/links' },

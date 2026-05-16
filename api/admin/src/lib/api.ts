@@ -103,7 +103,8 @@ export const authApi = {
 
 // Posts API
 export const postsApi = {
-  list: (params?: { page?: number; limit?: number; status?: string; search?: string }) =>
+  // type 用来按 ul_posts.type 过滤（'post' / 'video' / ...）。空 / 不传 = 全部。
+  list: (params?: { page?: number; limit?: number; status?: string; search?: string; type?: string }) =>
     api.get('/posts', { params }),
   get: (id: number) => api.get(`/posts/${id}`),
   create: (data: any) => api.post('/posts', data),

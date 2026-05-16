@@ -5,6 +5,7 @@ import AISummary from './AISummary';
 import PostNavigation from './PostNavigation';
 import FadeCover from '@/components/blog/FadeCover';
 import FootprintFlags from '@/components/blog/FootprintFlags';
+import VideoPostBody from '@/components/blog/VideoPostBody';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
@@ -27,29 +28,37 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
 
+  const isVideo = post.type === 'video';
+
   return (
     <div className="azure-post-page">
-      {/* Featured image */}
-      <div className="azure-post-hero">
-        <FadeCover src={coverUrl} alt={post.title} className="azure-post-hero-cover" />
-        <FootprintFlags countries={post.footprint_countries} />
-        <div className="azure-post-hero-overlay">
-          {/* Breadcrumb */}
-          <div className="azure-breadcrumb">
-            <Link href="/" prefetch={false}>首页</Link>
-            <span>/</span>
-            {catName && (
-              <>
-                <Link href={`/categories/${post.categories[0].slug}`} prefetch={false}>{catName}</Link>
-                <span>/</span>
-              </>
-            )}
-          </div>
-          <h1 className="azure-post-title">
-            {post.title}
-          </h1>
+      {/* Featured image —— 影视模式用 VideoPostBody 自带的海报 + 标题 + 元信息替代 */}
+      {isVideo ? (
+        <div className="azure-post-content-wrap">
+          <VideoPostBody post={post} />
         </div>
-      </div>
+      ) : (
+        <div className="azure-post-hero">
+          <FadeCover src={coverUrl} alt={post.title} className="azure-post-hero-cover" />
+          <FootprintFlags countries={post.footprint_countries} />
+          <div className="azure-post-hero-overlay">
+            {/* Breadcrumb */}
+            <div className="azure-breadcrumb">
+              <Link href="/" prefetch={false}>首页</Link>
+              <span>/</span>
+              {catName && (
+                <>
+                  <Link href={`/categories/${post.categories[0].slug}`} prefetch={false}>{catName}</Link>
+                  <span>/</span>
+                </>
+              )}
+            </div>
+            <h1 className="azure-post-title">
+              {post.title}
+            </h1>
+          </div>
+        </div>
+      )}
 
       {/* Meta bar */}
       <div className="azure-post-meta">

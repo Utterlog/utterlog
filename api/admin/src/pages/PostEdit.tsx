@@ -11,6 +11,7 @@ import { firstMarkdownH1, resolveMarkdownTitle } from '@/lib/markdown';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
 import FootprintEditor, { type FootprintFormValue, normalizeFootprintsForPayload } from '@/components/FootprintEditor';
+import VideoFormSection from '@/components/VideoFormSection';
 
 // Convert a backend date (RFC3339 string, unix int seconds, or ISO-ish)
 // into the "YYYY-MM-DDTHH:mm" shape that <input type="datetime-local">
@@ -70,6 +71,13 @@ export default function EditPostPage() {
   const [insertLoading, setInsertLoading] = useState(false);
   const [aiFlags, setAiFlags] = useState({ summary: false, image: false, slug: false, keywords: false, polish: false });
 
+  // v2.4.2 影视模式 —— 文章 type=video 时启用元数据 + 剧集编辑
+  const [postType, setPostType] = useState<string>('post');
+  const [initialVideoMeta, setInitialVideoMeta] = useState<any>({});
+  const [initialVideoEpisodes, setInitialVideoEpisodes] = useState<any[]>([]);
+  const [videoData, setVideoData] = useState<{ meta: any; episodes: any[] }>({ meta: {}, episodes: [] });
+  const backTarget = postType === 'video' ? '/films' : '/posts';
+
   const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
@@ -120,6 +128,20 @@ export default function EditPostPage() {
         : [];
       setFootprints(nextFootprints);
       setFootprintsEnabled(nextFootprints.length > 0);
+
+      // v2.4.2: 加载影视专用数据。后端返回 meta（JSONB object）+ episodes（[]）
+      setPostType(post.type || 'post');
+      if (post.type === 'video') {
+        let metaObj: any = {};
+        if (post.meta && typeof post.meta === 'object') metaObj = post.meta;
+        else if (typeof post.meta === 'string') {
+          try { metaObj = JSON.parse(post.meta); } catch {}
+        }
+        setInitialVideoMeta(metaObj);
+        setInitialVideoEpisodes(Array.isArray(post.episodes) ? post.episodes : []);
+        // 编辑时初始 videoData 也要直接装上，避免用户没碰表单就保存丢数据
+        setVideoData({ meta: metaObj, episodes: Array.isArray(post.episodes) ? post.episodes : [] });
+      }
     } catch {
       toast.error(t('admin.postEditor.toast.fetchFailed', '获取文章失败'));
     } finally {
@@ -153,6 +175,11 @@ export default function EditPostPage() {
         pinned,
         footprints: footprintsEnabled ? normalizeFootprintsForPayload(footprints, coverUrl, publishAt) : [],
       };
+      if (postType === 'video') {
+        payload.type = 'video';
+        payload.meta = videoData.meta;
+        payload.episodes = videoData.episodes;
+      }
       if (nextStatus === 'publish' && publishAt) {
         payload.published_at = publishAt;
       }
@@ -160,7 +187,7 @@ export default function EditPostPage() {
       toast.success(t('admin.postEditor.toast.updated', '文章更新成功'));
       const nextId = response?.data?.id || response?.id;
       if (nextId && nextId !== postId) {
-        navigate(`/posts/edit/${nextId}`, { replace: true });
+        navigate(`${postType === 'video' ? '/films' : '/posts'}/edit/${nextId}`, { replace: true });
       }
     } catch (err: any) {
       const detail = err?.response?.data?.error?.message
@@ -233,36 +260,63 @@ export default function EditPostPage() {
             }}
           />
           <input ref={mdFileRef} type="file" accept=".md,.markdown,.txt" style={{ display: 'none' }} onChange={handleMdUpload} />
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <MarkdownEditor
-              value={content}
-              onChange={(val) => {
-                if (!title.trim()) {
-                  const resolved = resolveMarkdownTitle(title, val);
-                  if (resolved.title) {
-                    setTitle(resolved.title);
-                    setContent(resolved.content);
-                    return;
+          {postType === 'video' ? (
+            <div style={{ flex: 1, overflow: 'auto', padding: 16, background: 'var(--color-bg-soft)' }}>
+              <VideoFormSection
+                initialMeta={initialVideoMeta}
+                initialEpisodes={initialVideoEpisodes}
+                onChange={setVideoData}
+                onImportedExtras={(ex) => {
+                  if (ex.coverUrl && !coverUrl) setCoverUrl(ex.coverUrl);
+                  if (ex.title && !title.trim()) setTitle(ex.title);
+                  if (ex.summary && !excerpt) setExcerpt(ex.summary);
+                }}
+              />
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-main)', margin: '4px 0 8px' }}>
+                <i className="fa-regular fa-pen-line" style={{ marginRight: 6 }} />
+                影视简介 / 剧情（Markdown）
+              </div>
+              <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+                <MarkdownEditor
+                  value={content}
+                  onChange={setContent}
+                  minHeight="360px"
+                  onImportMd={() => mdFileRef.current?.click()}
+                />
+              </div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <MarkdownEditor
+                value={content}
+                onChange={(val) => {
+                  if (!title.trim()) {
+                    const resolved = resolveMarkdownTitle(title, val);
+                    if (resolved.title) {
+                      setTitle(resolved.title);
+                      setContent(resolved.content);
+                      return;
+                    }
                   }
-                }
-                setContent(val);
-              }}
-              className="h-full rounded-none border-0"
-              minHeight="100%"
-              onImportMd={() => mdFileRef.current?.click()}
-              onInsertContent={async (type) => {
-                setInsertType(type);
-                setInsertLoading(true);
-                setInsertItems([]);
-                try {
-                  const endpoint = type === '音乐' ? '/music' : type === '图书' ? '/books' : type === '电影' ? '/movies' : '/moments';
-                  const r: any = await api.get(endpoint, { params: { per_page: 20 } });
-                  setInsertItems(r.data || []);
-                } catch {}
-                setInsertLoading(false);
-              }}
-            />
-          </div>
+                  setContent(val);
+                }}
+                className="h-full rounded-none border-0"
+                minHeight="100%"
+                onImportMd={() => mdFileRef.current?.click()}
+                onInsertContent={async (type) => {
+                  setInsertType(type);
+                  setInsertLoading(true);
+                  setInsertItems([]);
+                  try {
+                    const endpoint = type === '音乐' ? '/music' : type === '图书' ? '/books' : type === '电影' ? '/movies' : '/moments';
+                    const r: any = await api.get(endpoint, { params: { per_page: 20 } });
+                    setInsertItems(r.data || []);
+                  } catch {}
+                  setInsertLoading(false);
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right sidebar — same as create page */}
@@ -276,7 +330,7 @@ export default function EditPostPage() {
               <Button onClick={() => handleSave()} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
                 {t('admin.common.save', '保存')}
               </Button>
-              <Button variant="secondary" onClick={() => navigate('/posts')} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
+              <Button variant="secondary" onClick={() => navigate(backTarget)} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
                 {t('admin.common.back', '返回')}
               </Button>
             </div>

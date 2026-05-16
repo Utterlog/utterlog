@@ -27,12 +27,18 @@ async function fetchAPI<T>(path: string, options?: any): Promise<T> {
 }
 
 // 文章列表
+// v2.4.2 新增 type / video_type / region / year / genre 给 /films 列表用
 export async function getPosts(params?: {
   page?: number;
   per_page?: number;
   category_id?: number;
   tag_id?: number;
   status?: string;
+  type?: string;        // 'post'（默认）/ 'video'
+  video_type?: string;  // tv / movie / show / anime / doc
+  region?: string;
+  year?: string;
+  genre?: string;
 }) {
   const searchParams = new URLSearchParams();
   if (params?.page) searchParams.set('page', String(params.page));
@@ -40,6 +46,11 @@ export async function getPosts(params?: {
   if (params?.category_id) searchParams.set('category_id', String(params.category_id));
   if (params?.tag_id) searchParams.set('tag_id', String(params.tag_id));
   if (params?.status) searchParams.set('status', params.status);
+  if (params?.type) searchParams.set('type', params.type);
+  if (params?.video_type) searchParams.set('video_type', params.video_type);
+  if (params?.region) searchParams.set('region', params.region);
+  if (params?.year) searchParams.set('year', params.year);
+  if (params?.genre) searchParams.set('genre', params.genre);
 
   const query = searchParams.toString();
   return fetchAPI<any>(`/posts${query ? `?${query}` : ''}`);

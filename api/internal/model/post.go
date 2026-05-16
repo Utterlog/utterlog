@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -34,6 +35,12 @@ type Post struct {
 	// Stored as a proper timestamp column so WP-style backdated imports
 	// keep real publish dates, independent of created_at.
 	PublishedAt *time.Time `db:"published_at" json:"published_at,omitempty"`
+	// Meta JSONB —— 当 post.type='video' 时存影视元数据
+	// {video_type, region, year, total_episodes, directors[], actors[],
+	//  genres[], douban_rating, douban_url, imdb_id, tips, ...}。
+	// 其他 type 默认 '{}'，未来其他富内容类型也可复用此扩展位。
+	// 注意：是 ul_posts 上的 JSONB 列，不是 legacy EAV 表 ul_post_meta。
+	Meta json.RawMessage `db:"meta" json:"meta,omitempty"`
 }
 
 type PostWithRelations struct {
@@ -43,6 +50,10 @@ type PostWithRelations struct {
 	Tags               []MetaBrief        `json:"tags"`
 	Footprints         []PostFootprint    `json:"footprints,omitempty"`
 	FootprintCountries []FootprintCountry `json:"footprint_countries,omitempty"`
+	// Episodes 只在 detail=true 且 post.type='video' 时填充（其它场景
+	// 不查 ul_post_episodes，避免无谓 JOIN）。omitempty 让普通博客文章
+	// 返回不含此字段，前端区分简单。
+	Episodes []PostEpisode `json:"episodes,omitempty"`
 }
 
 type UserBrief struct {
@@ -66,10 +77,22 @@ type MetaBrief struct {
 // ai_summary included so list views (homepage cards, search results)
 // can prefer AI-generated summary over plain excerpt without a second
 // round-trip. ~80 runes per row is cheap.
-const postListCols = "id, title, slug, excerpt, ai_summary, type, display_id, status, author_id, cover_url, view_count, comment_count, word_count, created_at, updated_at, published_at"
-const postDetailCols = "id, title, slug, content, excerpt, ai_summary, ai_questions, type, display_id, status, author_id, cover_url, password, allow_comment, pinned, view_count, comment_count, word_count, created_at, updated_at, published_at"
+const postListCols = "id, title, slug, excerpt, ai_summary, type, display_id, status, author_id, cover_url, view_count, comment_count, word_count, created_at, updated_at, published_at, meta"
+const postDetailCols = "id, title, slug, content, excerpt, ai_summary, ai_questions, type, display_id, status, author_id, cover_url, password, allow_comment, pinned, view_count, comment_count, word_count, created_at, updated_at, published_at, meta"
 
-func PostsList(typ, status, search, orderBy, order string, page, perPage int, categorySlug string, tagSlug ...string) ([]Post, int, error) {
+// PostsListOptions —— ListPosts 的可选过滤参数。
+// v2.4.2 起为影视列表新增 meta JSONB 字段过滤（VideoType / Region / Year / Genre）。
+// 普通 /posts API 调用不传这些字段即可，只在 type='video' 场景下才生效。
+type PostsListOptions struct {
+	CategorySlug string
+	TagSlug      string
+	VideoType    string // meta->>'video_type' = $ —— tv / movie / show / anime / doc
+	Region       string // meta->>'region' = $
+	Year         string // meta->>'year' = $（按字符串比较，因为 meta 里数字也会被 ->> 拿成字符串）
+	Genre        string // meta->'genres' @> '["xxx"]'::jsonb（JSONB 数组包含）
+}
+
+func PostsList(typ, status, search, orderBy, order string, page, perPage int, opts PostsListOptions) ([]Post, int, error) {
 	t := config.T("posts")
 	where := []string{}
 	args := []interface{}{}
@@ -91,18 +114,40 @@ func PostsList(typ, status, search, orderBy, order string, page, perPage int, ca
 		args = append(args, "%"+search+"%", "%"+search+"%")
 		idx += 2
 	}
-	if categorySlug != "" {
+	if opts.CategorySlug != "" {
 		joinClause = fmt.Sprintf(
 			" JOIN %s r ON r.post_id = p.id JOIN %s m ON m.id = r.meta_id AND m.type = 'category' AND m.slug = $%d",
 			config.T("relationships"), config.T("metas"), idx)
-		args = append(args, categorySlug)
+		args = append(args, opts.CategorySlug)
 		idx++
 	}
-	if len(tagSlug) > 0 && tagSlug[0] != "" {
+	if opts.TagSlug != "" {
 		joinClause += fmt.Sprintf(
 			" JOIN %s rt ON rt.post_id = p.id JOIN %s mt ON mt.id = rt.meta_id AND mt.type = 'tag' AND mt.slug = $%d",
 			config.T("relationships"), config.T("metas"), idx)
-		args = append(args, tagSlug[0])
+		args = append(args, opts.TagSlug)
+		idx++
+	}
+	// 影视 meta 过滤 —— 仅当传入对应值时拼 WHERE
+	if opts.VideoType != "" {
+		where = append(where, fmt.Sprintf("p.meta->>'video_type' = $%d", idx))
+		args = append(args, opts.VideoType)
+		idx++
+	}
+	if opts.Region != "" {
+		where = append(where, fmt.Sprintf("p.meta->>'region' = $%d", idx))
+		args = append(args, opts.Region)
+		idx++
+	}
+	if opts.Year != "" {
+		where = append(where, fmt.Sprintf("(p.meta->>'year') = $%d", idx))
+		args = append(args, opts.Year)
+		idx++
+	}
+	if opts.Genre != "" {
+		// meta.genres 是 string[] —— 用 @> JSONB 包含；先把 genre 字符串包成 JSON 数组
+		where = append(where, fmt.Sprintf("p.meta->'genres' @> $%d::jsonb", idx))
+		args = append(args, fmt.Sprintf(`["%s"]`, strings.ReplaceAll(opts.Genre, `"`, `\"`)))
 		idx++
 	}
 
@@ -346,6 +391,12 @@ func FormatPost(p *Post, detail bool) PostWithRelations {
 	if detail {
 		pr.Footprints = PostFootprints(p.ID)
 		pr.FootprintCountries = FootprintCountriesFrom(pr.Footprints)
+		// 影视类型才查剧集 —— 普通 post / page / moment 不触发额外 SQL
+		if p.Type == "video" {
+			if eps, err := ListEpisodesByPost(p.ID); err == nil {
+				pr.Episodes = eps
+			}
+		}
 	}
 	return pr
 }
@@ -414,14 +465,18 @@ func UpdatePost(id int, p *Post) (int, error) {
 	}
 
 	displayIDSQL := "display_id"
+	meta := p.Meta
+	if len(meta) == 0 {
+		meta = json.RawMessage("{}")
+	}
 	args := []interface{}{
-		p.Title, p.Slug, p.Content, p.Excerpt, p.AISummary, p.Status, p.CoverURL, p.Password, p.AllowComment, p.Pinned, p.WordCount, p.UpdatedAt, p.PublishedAt, id,
+		p.Title, p.Slug, p.Content, p.Excerpt, p.AISummary, p.Status, p.CoverURL, p.Password, p.AllowComment, p.Pinned, p.WordCount, p.UpdatedAt, p.PublishedAt, []byte(meta), id,
 	}
 	if id > 0 && p.Type == "post" && p.Status == "publish" {
 		displayIDSQL = "id"
 	}
 	_, err := config.DB.Exec(fmt.Sprintf(
-		"UPDATE %s SET title=$1, slug=$2, content=$3, excerpt=$4, ai_summary=$5, status=$6, cover_url=$7, password=$8, allow_comment=$9, pinned=$10, word_count=$11, updated_at=$12, published_at=$13, display_id=%s WHERE id=$14",
+		"UPDATE %s SET title=$1, slug=$2, content=$3, excerpt=$4, ai_summary=$5, status=$6, cover_url=$7, password=$8, allow_comment=$9, pinned=$10, word_count=$11, updated_at=$12, published_at=$13, meta=$14, display_id=%s WHERE id=$15",
 		t, displayIDSQL), args...)
 	return id, err
 }
@@ -437,12 +492,17 @@ func nextPostID(tx *sqlx.Tx, table string, publicPost bool) (int, error) {
 }
 
 func insertPostWithID(tx *sqlx.Tx, table string, id int, displayID int, p *Post) error {
+	meta := p.Meta
+	if len(meta) == 0 {
+		meta = json.RawMessage("{}")
+	}
 	_, err := tx.Exec(fmt.Sprintf(
-		"INSERT INTO %s (id, display_id, title, slug, content, excerpt, ai_summary, type, status, author_id, cover_url, password, allow_comment, pinned, word_count, created_at, updated_at, published_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)",
+		"INSERT INTO %s (id, display_id, title, slug, content, excerpt, ai_summary, type, status, author_id, cover_url, password, allow_comment, pinned, word_count, created_at, updated_at, published_at, meta) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)",
 		table),
 		id, displayID,
 		p.Title, p.Slug, p.Content, p.Excerpt, p.AISummary, p.Type, p.Status, p.AuthorID,
 		p.CoverURL, p.Password, p.AllowComment, p.Pinned, p.WordCount, p.CreatedAt, p.UpdatedAt, p.PublishedAt,
+		[]byte(meta),
 	)
 	return err
 }

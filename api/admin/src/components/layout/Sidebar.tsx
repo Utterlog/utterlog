@@ -23,6 +23,10 @@ const menuItems: MenuItem[] = [
     to: '/music', icon: 'fa-solid fa-clapperboard', label: '娱乐', key: 'admin.nav.entertainment', sub: 'Entertainment',
     children: [
       { to: '/music', label: '音乐', icon: 'fa-regular fa-music' },
+      // 「影视」是带集数的专业影视作品（type=post.video，独立模板 + 海报
+      // + 多线路播放器 + 集数网格）。与下面「电影」（ul_movies 观影评分
+      // 日记）和「视频」（ul_videos 单视频库）三者并存、语义不同。
+      { to: '/films', label: '影视', icon: 'fa-regular fa-clapperboard-play' },
       { to: '/movies', label: '电影', icon: 'fa-regular fa-film' },
       { to: '/videos', label: '视频', icon: 'fa-regular fa-video' },
       { to: '/books', label: '图书', icon: 'fa-regular fa-book' },
@@ -68,6 +72,7 @@ const navKeys: Record<string, string> = {
   '/moments': 'admin.nav.moments',
   '/footprints': 'admin.nav.footprints',
   '/music': 'admin.nav.music',
+  '/films': 'admin.nav.films',
   '/movies': 'admin.nav.movies',
   '/videos': 'admin.nav.videos',
   '/books': 'admin.nav.books',

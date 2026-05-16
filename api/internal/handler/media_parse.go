@@ -169,12 +169,17 @@ func mapNeoDBType(t string) string {
 	}
 }
 
-// Douban: scrape OGP meta tags
+// Douban: OGP + JSON-LD enrichment
+//
+// 影视模式（v2.4.2）要把豆瓣链接一键带入元数据，OGP 只能拿到标题/封面/简介，
+// 远不够填满表单。豆瓣电影页头部有 <script type="application/ld+json">
+// 一段结构化数据，含 director/actor/genre/datePublished/duration/aggregateRating，
+// 配合 #info 块的「制片国家/地区: ...」「语言: ...」「IMDb: ...」正则
+// 即可拿到我们需要的全部字段。
 func parseDouban(url string) (*ParsedMedia, error) {
 	result, err := parseOGP(url)
 	if err != nil { return nil, err }
 
-	// Detect type from URL
 	if strings.Contains(url, "movie.douban.com") || strings.Contains(url, "/subject/") {
 		if strings.Contains(url, "book.douban.com") {
 			result.Type = "book"
@@ -185,7 +190,119 @@ func parseDouban(url string) (*ParsedMedia, error) {
 	if strings.Contains(url, "music.douban.com") { result.Type = "music" }
 	result.Platform = "douban"
 
+	if result.Type == "movie" {
+		// 重新拉一次 HTML 用于 JSON-LD + #info 抓取（200 KB 上限，沿用 OGP 的限制）
+		req, _ := http.NewRequest("GET", url, nil)
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+		resp, herr := httpClient.Do(req)
+		if herr == nil {
+			defer resp.Body.Close()
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 400*1024))
+			html := string(body)
+			enrichDoubanMovie(result, html)
+		}
+	}
+
 	return result, nil
+}
+
+// enrichDoubanMovie pulls structured fields from a Douban movie HTML page
+// and writes them into result (Artist=directors joined, Extra=everything
+// else). Caller decides what's worth surfacing in the admin form.
+func enrichDoubanMovie(result *ParsedMedia, html string) {
+	if result.Extra == nil { result.Extra = map[string]string{} }
+
+	// JSON-LD —— 主要数据来源
+	ldRe := regexp.MustCompile(`(?s)<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>`)
+	if m := ldRe.FindStringSubmatch(html); len(m) > 1 {
+		// Douban 的 JSON-LD 里有未转义的换行符，先粗暴清掉
+		raw := strings.ReplaceAll(m[1], "\n", " ")
+		raw = strings.ReplaceAll(raw, "\r", " ")
+		raw = strings.ReplaceAll(raw, "\t", " ")
+		var ld map[string]interface{}
+		if err := json.Unmarshal([]byte(raw), &ld); err == nil {
+			if v, ok := ld["name"].(string); ok && result.Title == "" { result.Title = v }
+			if v, ok := ld["image"].(string); ok && result.Cover == "" { result.Cover = v }
+			if v, ok := ld["datePublished"].(string); ok && len(v) >= 4 {
+				result.Year = v[:4]
+			}
+			// 导演
+			if dirs, ok := ld["director"].([]interface{}); ok && len(dirs) > 0 {
+				names := []string{}
+				for _, d := range dirs {
+					if dm, ok := d.(map[string]interface{}); ok {
+						if n, ok := dm["name"].(string); ok { names = append(names, n) }
+					}
+				}
+				if len(names) > 0 { result.Artist = strings.Join(names, ", ") }
+			}
+			// 主演
+			if acts, ok := ld["actor"].([]interface{}); ok && len(acts) > 0 {
+				names := []string{}
+				for _, a := range acts {
+					if am, ok := a.(map[string]interface{}); ok {
+						if n, ok := am["name"].(string); ok { names = append(names, n) }
+					}
+				}
+				if len(names) > 0 { result.Extra["actors"] = strings.Join(names, ", ") }
+			}
+			// 类型
+			if gs, ok := ld["genre"].([]interface{}); ok && len(gs) > 0 {
+				names := []string{}
+				for _, g := range gs { names = append(names, fmt.Sprintf("%v", g)) }
+				result.Extra["genres"] = strings.Join(names, ", ")
+			}
+			// 时长 "PT142M" → "142 分钟"
+			if d, ok := ld["duration"].(string); ok {
+				if mm := regexp.MustCompile(`PT(\d+)M`).FindStringSubmatch(d); len(mm) > 1 {
+					result.Extra["duration"] = mm[1] + " 分钟"
+				}
+			}
+			// 评分
+			if agg, ok := ld["aggregateRating"].(map[string]interface{}); ok {
+				if rv, ok := agg["ratingValue"].(string); ok {
+					fmt.Sscanf(rv, "%f", &result.Rating)
+				}
+				if rv, ok := agg["ratingValue"].(float64); ok {
+					result.Rating = rv
+				}
+			}
+		}
+	}
+
+	// JSON-LD 里没有的字段：地区 / 语言 / IMDb / 集数 → 从 #info 块抓
+	if v := extractDoubanInfo(html, "制片国家/地区"); v != "" {
+		result.Extra["region"] = v
+	}
+	if v := extractDoubanInfo(html, "语言"); v != "" {
+		result.Extra["language"] = v
+	}
+	if v := extractDoubanInfo(html, "IMDb"); v != "" {
+		result.Extra["imdb_id"] = v
+	}
+	if v := extractDoubanInfo(html, "集数"); v != "" {
+		result.Extra["total_episodes"] = v
+	}
+	// 电视剧的「类型」如果 JSON-LD 没拿到，从 info 块兜底
+	if result.Extra["genres"] == "" {
+		if v := extractDoubanInfo(html, "类型"); v != "" {
+			result.Extra["genres"] = strings.Join(strings.Fields(strings.ReplaceAll(v, "/", " ")), ", ")
+		}
+	}
+}
+
+// 豆瓣 #info 块格式是 `<span class="pl">XXX:</span> 值<br>`，每个键值之间没有
+// 稳定的 tag 结构，最简单的方式是「键之后到下一个 <br/ 之间的文本」。
+func extractDoubanInfo(html, key string) string {
+	re := regexp.MustCompile(`(?s)<span class="pl">` + regexp.QuoteMeta(key) + `[:：]?\s*</span>\s*(.*?)<br`)
+	m := re.FindStringSubmatch(html)
+	if len(m) < 2 { return "" }
+	v := m[1]
+	// 去掉嵌套 tag、注释、多空白
+	v = regexp.MustCompile(`<[^>]+>`).ReplaceAllString(v, "")
+	v = strings.TrimSpace(v)
+	v = regexp.MustCompile(`\s+`).ReplaceAllString(v, " ")
+	return v
 }
 
 // Netease Cloud Music

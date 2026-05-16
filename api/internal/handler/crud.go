@@ -860,16 +860,32 @@ func PostsFeed(c *gin.Context) {
 	// 渲染，跟前端 web/lib/permalink.ts:buildPermalink 完全对齐。
 	permalinkTpl := model.GetOption("permalink_structure")
 
+	// v2.4.2 影视 feed —— `/feed?type=video` 单独订阅影视；不带参数
+	// 保持原行为（只发文章）以兼容现有订阅者。`type=all` 混合两种。
+	feedType := c.DefaultQuery("type", "post")
+	whereType := "type='post'"
+	feedTitle := siteTitle
+	selfPath := "/api/v1/feed"
+	switch feedType {
+	case "video":
+		whereType = "type='video'"
+		feedTitle = siteTitle + " · 影视"
+		selfPath = "/api/v1/feed?type=video"
+	case "all":
+		whereType = "type IN ('post','video')"
+		selfPath = "/api/v1/feed?type=all"
+	}
+
 	var posts []model.Post
-	config.DB.Select(&posts, fmt.Sprintf("SELECT id, title, slug, excerpt, content, display_id, created_at, updated_at, published_at FROM %s WHERE status='publish' AND type='post' ORDER BY COALESCE(published_at, TO_TIMESTAMP(created_at)) DESC LIMIT 20", t))
+	config.DB.Select(&posts, fmt.Sprintf("SELECT id, title, slug, excerpt, content, type, display_id, created_at, updated_at, published_at FROM %s WHERE status='publish' AND %s ORDER BY COALESCE(published_at, TO_TIMESTAMP(created_at)) DESC LIMIT 20", t, whereType))
 
 	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.Header("Cache-Control", "public, max-age=3600")
 	xml := `<?xml version="1.0" encoding="UTF-8"?>` + "\n"
 	xml += `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>` + "\n"
 	xml += fmt.Sprintf("<title>%s</title><link>%s</link><description>%s</description><language>%s</language>\n",
-		xmlEscape(siteTitle), xmlEscape(siteURL), xmlEscape(siteDesc), xmlEscape(siteLocale))
-	xml += fmt.Sprintf(`<atom:link href="%s/api/v1/feed" rel="self" type="application/rss+xml"/>`+"\n", xmlEscape(siteURL))
+		xmlEscape(feedTitle), xmlEscape(siteURL), xmlEscape(siteDesc), xmlEscape(siteLocale))
+	xml += fmt.Sprintf(`<atom:link href="%s%s" rel="self" type="application/rss+xml"/>`+"\n", xmlEscape(siteURL), selfPath)
 	for _, p := range posts {
 		content := ""
 		if p.Content != nil {
@@ -882,7 +898,14 @@ func PostsFeed(c *gin.Context) {
 		if excerpt == "" && len(content) > 300 {
 			excerpt = content[:300]
 		}
-		link := siteURL + BuildPostPermalink(&p, permalinkTpl)
+		// 影视 post 永久指向 /films/<slug>（与 PostPage 的 308 redirect 对齐），
+		// 普通文章走 admin 配置的 permalink 结构。
+		var link string
+		if p.Type == "video" {
+			link = siteURL + "/films/" + p.Slug
+		} else {
+			link = siteURL + BuildPostPermalink(&p, permalinkTpl)
+		}
 		pubDate := time.Unix(p.CreatedAt, 0).UTC().Format(time.RFC1123Z)
 		xml += fmt.Sprintf("<item><title>%s</title><link>%s</link><guid isPermaLink=\"true\">%s</guid><pubDate>%s</pubDate><description><![CDATA[%s]]></description></item>\n",
 			xmlEscape(p.Title), xmlEscape(link), xmlEscape(link), pubDate, cdataSafe(excerpt))

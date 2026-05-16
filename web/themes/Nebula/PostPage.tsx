@@ -4,6 +4,7 @@ import FootprintFlags from '@/components/blog/FootprintFlags';
 import PostContent from '@/components/blog/PostContent';
 import PostNavigation from '@/components/blog/PostNavigation';
 import TableOfContents from '@/components/blog/TableOfContents';
+import VideoPostBody from '@/components/blog/VideoPostBody';
 import { coverProps, randomCoverUrl } from '@/lib/blog-image';
 import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
@@ -93,24 +94,35 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         )}
       </header>
 
-      {coverUrl ? (
-        <figure className="nebula-post-cover nebula-post-cover--with-title">
-          <img {...coverProps({ src: coverUrl, alt: post.title, priority: true })} />
-          <div className="nebula-post-cover-scrim" aria-hidden="true" />
-          <h1 className="nebula-post-title nebula-post-title--on-cover">{post.title}</h1>
-          <FootprintFlags countries={post.footprint_countries} />
-        </figure>
-      ) : (
-        /* 没有封面时回退：标题独立显示在 head 区下方 */
-        <h1 className="nebula-post-title">{post.title}</h1>
-      )}
-
-      <div className="nebula-post-body">
-        <div className="nebula-post-prose">
-          <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
-          <PostContent content={post.content || ''} postId={post.id} />
+      {post.type === 'video' ? (
+        <div className="nebula-post-body">
+          <div className="nebula-post-prose">
+            <VideoPostBody post={post} />
+            {post.content ? <PostContent content={post.content} postId={post.id} /> : null}
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          {coverUrl ? (
+            <figure className="nebula-post-cover nebula-post-cover--with-title">
+              <img {...coverProps({ src: coverUrl, alt: post.title, priority: true })} />
+              <div className="nebula-post-cover-scrim" aria-hidden="true" />
+              <h1 className="nebula-post-title nebula-post-title--on-cover">{post.title}</h1>
+              <FootprintFlags countries={post.footprint_countries} />
+            </figure>
+          ) : (
+            /* 没有封面时回退：标题独立显示在 head 区下方 */
+            <h1 className="nebula-post-title">{post.title}</h1>
+          )}
+
+          <div className="nebula-post-body">
+            <div className="nebula-post-prose">
+              <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
+              <PostContent content={post.content || ''} postId={post.id} />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 目录浮在 .nebula-post 右侧空白区，不占文章宽度；窄屏（< 1240px）自动隐藏 */}
       <aside className="nebula-post-toc" aria-label="目录">

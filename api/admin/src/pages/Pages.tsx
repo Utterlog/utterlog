@@ -19,6 +19,7 @@ const builtinPages = [
   { key: 'page_archives', label: '归档', slug: '/archives', icon: 'fa-regular fa-box-archive' },
   { key: 'page_music', label: '音乐', slug: '/music', icon: 'fa-regular fa-music' },
   { key: 'page_movies', label: '电影', slug: '/movies', icon: 'fa-regular fa-film' },
+  { key: 'page_films', label: '影视', slug: '/films', icon: 'fa-regular fa-clapperboard-play' },
   { key: 'page_books', label: '图书', slug: '/books', icon: 'fa-regular fa-book' },
   { key: 'page_goods', label: '好物', slug: '/goods', icon: 'fa-regular fa-bag-shopping' },
   { key: 'page_feeds', label: '订阅', slug: '/feeds', icon: 'fa-regular fa-rss' },

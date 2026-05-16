@@ -25,6 +25,10 @@ const pageTitleMap: Record<string, PageMeta> = {
   '/posts/create':   { label: '新建文章',      en: 'New Post',        icon: 'fa-regular fa-plus' },
   '/posts/categories': { label: '文章分类',    en: 'Categories',      icon: 'fa-regular fa-folder' },
   '/posts/tags':     { label: '文章标签',      en: 'Tags',            icon: 'fa-regular fa-tag' },
+  // v2.4.2: 影视专业模式 —— 复用 ul_posts (type='video')，独立 sidebar 入口
+  // 直达 /films 路由（前端单独页面，预设 type=video 过滤）。
+  '/films':          { label: '影视管理',      en: 'Films',           icon: 'fa-regular fa-clapperboard-play' },
+  '/films/create':   { label: '新建影视',      en: 'New Film',        icon: 'fa-regular fa-plus' },
   '/pages':          { label: '页面管理',      en: 'Pages',           icon: 'fa-regular fa-file-lines' },
   '/pages/create':   { label: '新建页面',      en: 'New Page',        icon: 'fa-regular fa-file-plus' },
   '/moments':        { label: '说说管理',      en: 'Moments',         icon: 'fa-solid fa-comment-dots' },
@@ -191,6 +195,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const fullWidth =
     pathname === '/posts/create' ||
     pathname.startsWith('/posts/edit/') ||
+    pathname === '/films/create' ||
+    pathname.startsWith('/films/edit/') ||
     pathname === '/pages/create' ||
     pathname.startsWith('/pages/edit/') ||
     pathname === '/ai' ||
@@ -208,6 +214,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     pathname === '/posts' ||
     pathname.startsWith('/posts/categories') ||
     pathname.startsWith('/posts/tags') ||
+    pathname === '/films' ||
     pathname === '/pages' ||
     pathname === '/footprints' ||
     pathname === '/comments' ||

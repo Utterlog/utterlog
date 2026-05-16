@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getPostBySlug, getActiveTheme, getOptions } from '@/lib/blog-api';
 import { getThemeComponents } from '@/lib/theme';
@@ -73,6 +73,13 @@ export default async function PostPage({ params }: PostPageProps) {
   }
 
   if (!post) notFound();
+
+  // v2.4.2: 影视类型的 post 永久指向 /films/<slug>，避免 /posts/<slug>
+  // 和 /films/<slug> 两套 URL 同时被搜索引擎收录（duplicate content）。
+  // 收到走错门口的外链 / 旧书签会被 308 重定向到影视专属路径。
+  if (post.type === 'video') {
+    redirect(`/films/${slug}`);
+  }
 
   // /posts/[slug] is kept as a stable fallback for old bookmarks and
   // feed readers — it renders the post at this URL regardless of the

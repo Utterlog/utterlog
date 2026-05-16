@@ -753,6 +753,49 @@ func InitDB() error {
 	decodeHTMLEntitiesIn("comments", "author_name")
 	decodeHTMLEntitiesIn("posts", "title")
 
+	// 2026-05 (v2.4.2): 影视专业模式 schema 准备。
+	// 1. ul_posts 加 `meta` JSONB 列 —— 当 post.type='video' 时存
+	//    {video_type, region, year, total_episodes, directors[], actors[],
+	//    genres[], douban_rating, douban_url, imdb_id, tips, ...}。
+	//    其它内容类型保留扩展位（type='post' 也可放结构化元数据）。
+	//    命名特意叫 `meta` 而不是 `post_meta`，避免与既有 EAV 表
+	//    ul_post_meta（key-value 模式、几乎不用）混淆。
+	// 2. ul_post_episodes —— 每行一集，按 post_id + episode_no 唯一。
+	//    支持多线路：alt_sources JSONB 数组 [{label, url, platform, embed_url}]。
+	// Idempotent — IF NOT EXISTS 保护重复运行无副作用。
+	DB.Exec(fmt.Sprintf(
+		"ALTER TABLE %s ADD COLUMN IF NOT EXISTS meta JSONB NOT NULL DEFAULT '{}'::jsonb",
+		T("posts"),
+	))
+	// v2.4.2 dev：若之前误用了 post_meta 列名（同一会话内迁过），删
+	// 之保证唯一来源（生产用户不会触发这条，只对本机 dev 同会话有效）。
+	DB.Exec(fmt.Sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS post_meta", T("posts")))
+	DB.Exec(fmt.Sprintf(`
+		CREATE TABLE IF NOT EXISTS %s (
+			id          SERIAL PRIMARY KEY,
+			post_id     INTEGER NOT NULL,
+			episode_no  INTEGER NOT NULL,
+			title       VARCHAR(200) NOT NULL DEFAULT '',
+			video_url   TEXT NOT NULL DEFAULT '',
+			embed_url   TEXT NOT NULL DEFAULT '',
+			platform    VARCHAR(50) NOT NULL DEFAULT '',
+			alt_sources JSONB NOT NULL DEFAULT '[]'::jsonb,
+			duration    VARCHAR(20) NOT NULL DEFAULT '',
+			cover_url   VARCHAR(500) NOT NULL DEFAULT '',
+			sort_order  INTEGER NOT NULL DEFAULT 0,
+			created_at  BIGINT NOT NULL DEFAULT 0,
+			updated_at  BIGINT NOT NULL DEFAULT 0,
+			CONSTRAINT %s_post_id_fk FOREIGN KEY (post_id)
+				REFERENCES %s(id) ON DELETE CASCADE,
+			CONSTRAINT %s_post_ep_uq UNIQUE (post_id, episode_no)
+		)`,
+		T("post_episodes"), T("post_episodes"), T("posts"), T("post_episodes"),
+	))
+	DB.Exec(fmt.Sprintf(
+		"CREATE INDEX IF NOT EXISTS idx_%s_post_sort ON %s(post_id, sort_order, episode_no)",
+		T("post_episodes"), T("post_episodes"),
+	))
+
 	return nil
 }
 

@@ -1,6 +1,6 @@
 
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { postsApi, categoriesApi, tagsApi, mediaApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui';
@@ -10,10 +10,22 @@ import { firstMarkdownH1, resolveMarkdownTitle } from '@/lib/markdown';
 
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
 import FootprintEditor, { type FootprintFormValue, normalizeFootprintsForPayload } from '@/components/FootprintEditor';
+import VideoFormSection from '@/components/VideoFormSection';
 
 export default function CreatePostPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  // /films/create 路由或 ?type=video 都视为新建影视
+  const initialType = useMemo(() => {
+    if (location.pathname.startsWith('/films')) return 'video';
+    if (searchParams.get('type') === 'video') return 'video';
+    return 'post';
+  }, [location.pathname, searchParams]);
+  const [postType] = useState<string>(initialType);
+  const [videoData, setVideoData] = useState<{ meta: any; episodes: any[] }>({ meta: {}, episodes: [] });
+  const backTarget = postType === 'video' ? '/films' : '/posts';
   const [submitting, setSubmitting] = useState(false);
   const mdFileRef = useRef<HTMLInputElement>(null);
   const coverFileRef = useRef<HTMLInputElement>(null);
@@ -109,13 +121,20 @@ export default function CreatePostPage() {
         pinned,
         footprints: footprintsEnabled ? normalizeFootprintsForPayload(footprints, coverUrl, publishAt) : [],
       };
+      if (postType !== 'post') {
+        payload.type = postType;
+      }
+      if (postType === 'video') {
+        payload.meta = videoData.meta;
+        payload.episodes = videoData.episodes;
+      }
       if (nextStatus === 'publish' && publishAt) {
         payload.published_at = publishAt;
       }
       await postsApi.create(payload);
       localStorage.removeItem('draft_post');
-      toast.success(t('admin.postEditor.toast.created', '文章创建成功'));
-      navigate('/posts');
+      toast.success(t('admin.postEditor.toast.created', postType === 'video' ? '影视创建成功' : '文章创建成功'));
+      navigate(backTarget);
     } catch (err: any) {
       const detail = err?.response?.data?.error?.message
         || err?.response?.data?.message
@@ -185,37 +204,62 @@ export default function CreatePostPage() {
             }}
           />
           <input ref={mdFileRef} type="file" accept=".md,.markdown,.txt" style={{ display: 'none' }} onChange={handleMdUpload} />
-          {/* Editor */}
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <MarkdownEditor
-              value={content}
-              onChange={(val) => {
-                if (!title.trim()) {
-                  const resolved = resolveMarkdownTitle(title, val);
-                  if (resolved.title) {
-                    setTitle(resolved.title);
-                    setContent(resolved.content);
-                    return;
+          {/* Editor —— 影视模式上方先渲染元数据 + 剧集，下方留 Markdown 编辑器写简介 */}
+          {postType === 'video' ? (
+            <div style={{ flex: 1, overflow: 'auto', padding: 16, background: 'var(--color-bg-soft)' }}>
+              <VideoFormSection
+                onChange={setVideoData}
+                onImportedExtras={(ex) => {
+                  if (ex.coverUrl && !coverUrl) setCoverUrl(ex.coverUrl);
+                  if (ex.title && !title.trim()) setTitle(ex.title);
+                  if (ex.summary && !excerpt) setExcerpt(ex.summary);
+                }}
+              />
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-main)', margin: '4px 0 8px' }}>
+                <i className="fa-regular fa-pen-line" style={{ marginRight: 6 }} />
+                影视简介 / 剧情（Markdown）
+              </div>
+              <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+                <MarkdownEditor
+                  value={content}
+                  onChange={setContent}
+                  minHeight="360px"
+                  onImportMd={() => mdFileRef.current?.click()}
+                />
+              </div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <MarkdownEditor
+                value={content}
+                onChange={(val) => {
+                  if (!title.trim()) {
+                    const resolved = resolveMarkdownTitle(title, val);
+                    if (resolved.title) {
+                      setTitle(resolved.title);
+                      setContent(resolved.content);
+                      return;
+                    }
                   }
-                }
-                setContent(val);
-              }}
-              className="h-full rounded-none border-0"
-              minHeight="100%"
-              onImportMd={() => mdFileRef.current?.click()}
-              onInsertContent={async (type) => {
-                setInsertType(type);
-                setInsertLoading(true);
-                setInsertItems([]);
-                try {
-                  const endpoint = type === '音乐' ? '/music' : type === '图书' ? '/books' : type === '电影' ? '/movies' : '/moments';
-                  const r: any = await api.get(endpoint, { params: { per_page: 20 } });
-                  setInsertItems(r.data || []);
-                } catch {}
-                setInsertLoading(false);
-              }}
-            />
-          </div>
+                  setContent(val);
+                }}
+                className="h-full rounded-none border-0"
+                minHeight="100%"
+                onImportMd={() => mdFileRef.current?.click()}
+                onInsertContent={async (type) => {
+                  setInsertType(type);
+                  setInsertLoading(true);
+                  setInsertItems([]);
+                  try {
+                    const endpoint = type === '音乐' ? '/music' : type === '图书' ? '/books' : type === '电影' ? '/movies' : '/moments';
+                    const r: any = await api.get(endpoint, { params: { per_page: 20 } });
+                    setInsertItems(r.data || []);
+                  } catch {}
+                  setInsertLoading(false);
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right sidebar */}
@@ -232,7 +276,7 @@ export default function CreatePostPage() {
               <Button variant="secondary" onClick={() => handleSave('draft')} loading={submitting} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
                 {t('admin.common.save', '保存')}
               </Button>
-              <Button variant="secondary" onClick={() => navigate(-1)} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
+              <Button variant="secondary" onClick={() => navigate(backTarget)} style={{ flex: 1, minWidth: 0, padding: '0 8px' }}>
                 {t('admin.common.back', '返回')}
               </Button>
             </div>

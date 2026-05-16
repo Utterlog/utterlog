@@ -1,0 +1,281 @@
+/* Video post body —— v2.4.2
+   主题无关：6 个主题在 post.type === 'video' 时统一渲染。
+   颜色全用 var(--color-*)，自动跟随主题（深 / 浅 / 强彩色都能匹配）。 */
+
+.ul-video {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 24px 0;
+}
+
+/* ---------- 头部 ---------- */
+.ul-video__head {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 28px;
+  align-items: start;
+}
+.ul-video__poster {
+  width: 220px;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  background: var(--color-bg-soft, #f4f4f5);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.ul-video__poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ul-video__info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.ul-video__title {
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.25;
+  color: var(--color-text-main, #111);
+}
+.ul-video__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ul-video__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-bg-soft, rgba(0, 0, 0, 0.05));
+  color: var(--color-text-sub, #555);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.ul-video__chip--type {
+  background: var(--color-primary, #2b6cb0);
+  color: #fff;
+}
+.ul-video__chip--rating {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+.ul-video__chip--rating .fa-star {
+  color: #f59e0b;
+}
+.ul-video__genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ul-video__tag {
+  font-size: 12px;
+  color: var(--color-text-sub, #666);
+  padding: 2px 8px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
+  border-radius: 4px;
+}
+.ul-video__row {
+  font-size: 13px;
+  color: var(--color-text-main, #333);
+  line-height: 1.7;
+  display: flex;
+  gap: 10px;
+}
+.ul-video__row b {
+  flex-shrink: 0;
+  color: var(--color-text-sub, #666);
+  font-weight: 500;
+  min-width: 36px;
+}
+.ul-video__links {
+  display: flex;
+  gap: 14px;
+  margin-top: 4px;
+}
+.ul-video__links a {
+  font-size: 13px;
+  color: var(--color-primary, #2b6cb0);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ul-video__links a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- 播放器 ---------- */
+.ul-video__player-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+}
+.ul-video__iframe,
+.ul-video__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+}
+.ul-video__video {
+  object-fit: contain;
+}
+.ul-video__player-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--color-bg-soft, #f3f4f6);
+  color: var(--color-text-dim, #999);
+  border: 1px dashed var(--color-border, #ddd);
+  border-radius: 6px;
+  padding: 60px 24px;
+}
+.ul-video__player-empty i {
+  font-size: 32px;
+}
+
+/* ---------- 线路切换（主线 + 备线） ---------- */
+.ul-video__sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.ul-video__sources-label {
+  font-size: 13px;
+  color: var(--color-text-sub, #555);
+  margin-right: 2px;
+}
+.ul-video__src {
+  background: var(--color-bg-soft, #f3f4f6);
+  color: var(--color-text-main, #222);
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
+  padding: 5px 14px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ul-video__src:hover {
+  border-color: var(--color-primary, #2b6cb0);
+}
+.ul-video__src.is-active {
+  background: var(--color-primary, #2b6cb0);
+  color: #fff;
+  border-color: var(--color-primary, #2b6cb0);
+}
+
+/* ---------- 集数网格 ---------- */
+.ul-video__episodes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ul-video__episodes-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-main, #222);
+}
+.ul-video__episodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+}
+.ul-video__ep {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 6px;
+  background: var(--color-bg-soft, #f3f4f6);
+  color: var(--color-text-main, #222);
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s;
+  min-height: 44px;
+}
+.ul-video__ep:hover {
+  border-color: var(--color-primary, #2b6cb0);
+  color: var(--color-primary, #2b6cb0);
+}
+.ul-video__ep.is-active {
+  background: var(--color-primary, #2b6cb0);
+  color: #fff;
+  border-color: var(--color-primary, #2b6cb0);
+}
+.ul-video__ep-no {
+  font-variant-numeric: tabular-nums;
+}
+.ul-video__ep-title {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.85;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 提示卡片 ---------- */
+.ul-video__tips {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  background: var(--color-bg-soft, rgba(0, 0, 0, 0.03));
+  border-left: 3px solid var(--color-primary, #2b6cb0);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-text-sub, #555);
+  line-height: 1.7;
+}
+.ul-video__tips i {
+  font-size: 15px;
+  margin-top: 2px;
+  color: var(--color-primary, #2b6cb0);
+}
+
+/* ---------- 移动端 ---------- */
+@media (max-width: 720px) {
+  .ul-video__head {
+    grid-template-columns: 120px 1fr;
+    gap: 16px;
+  }
+  .ul-video__poster {
+    width: 120px;
+  }
+  .ul-video__title {
+    font-size: 18px;
+  }
+  .ul-video__episodes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  }
+  .ul-video__ep {
+    min-height: 38px;
+    font-size: 13px;
+  }
+}

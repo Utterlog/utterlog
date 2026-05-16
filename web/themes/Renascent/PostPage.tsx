@@ -4,6 +4,7 @@ import FootprintFlags from '@/components/blog/FootprintFlags';
 import PostContent from '@/components/blog/PostContent';
 import PostNavigation from '@/components/blog/PostNavigation';
 import TableOfContents from '@/components/blog/TableOfContents';
+import VideoPostBody from '@/components/blog/VideoPostBody';
 import { coverProps, randomCoverUrl } from '@/lib/blog-image';
 import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
@@ -74,7 +75,7 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
         </div>
       </header>
 
-      {coverUrl && (
+      {post.type !== 'video' && coverUrl && (
         <figure className="renascent-article-cover-wrap">
           <div className="renascent-article-cover">
             <img {...coverProps({ src: coverUrl, alt: post.title, priority: true })} />
@@ -116,8 +117,17 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
 
         <div className="renascent-article-content">
           <div className="renascent-content-frame">
-            <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
-            <PostContent content={post.content || ''} postId={post.id} />
+            {post.type === 'video' ? (
+              <>
+                <VideoPostBody post={post} />
+                {post.content ? <PostContent content={post.content} postId={post.id} /> : null}
+              </>
+            ) : (
+              <>
+                <AISummary postId={post.id} aiSummary={post.ai_summary} excerpt={post.excerpt} />
+                <PostContent content={post.content || ''} postId={post.id} />
+              </>
+            )}
           </div>
         </div>
       </div>

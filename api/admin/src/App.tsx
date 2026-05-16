@@ -68,6 +68,7 @@ const PostTags = lazy(() => import('@/pages/PostTags'));
 const Pages = lazy(() => import('@/pages/Pages'));
 const PageCreate = lazy(() => import('@/pages/PageCreate'));
 const PageEdit = lazy(() => import('@/pages/PageEdit'));
+const Films = lazy(() => import('@/pages/Films'));
 const Moments = lazy(() => import('@/pages/Moments'));
 const Footprints = lazy(() => import('@/pages/Footprints'));
 const Comments = lazy(() => import('@/pages/Comments'));
@@ -194,6 +195,13 @@ export default function App() {
         <Route path="/menus" element={<Navigate to="/themes" replace />} />
         <Route path="/pages/create" element={<PageCreate />} />
         <Route path="/pages/edit/:id" element={<PageEdit />} />
+
+        {/* v2.4.2 影视管理 —— 内部仍走 PostCreate/PostEdit（type=video
+            预设）；/films 列表页用 Posts.tsx 的精简变体专门 list
+            type=video 的 posts。 */}
+        <Route path="/films" element={<Films />} />
+        <Route path="/films/create" element={<PostCreate />} />
+        <Route path="/films/edit/:id" element={<PostEdit />} />
 
         <Route path="/moments" element={<Moments />} />
         <Route path="/footprints" element={<Footprints />} />

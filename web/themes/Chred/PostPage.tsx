@@ -5,6 +5,7 @@ import AISummary from './AISummary';
 import PostNavigation from './PostNavigation';
 import FadeCover from '@/components/blog/FadeCover';
 import FootprintFlags from '@/components/blog/FootprintFlags';
+import VideoPostBody from '@/components/blog/VideoPostBody';
 import { randomCoverUrl } from '@/lib/blog-image';
 import { formatDateInTimeZone, resolveSiteTimeZone } from '@/lib/timezone';
 import { postDateInput } from '@/lib/post-date';
@@ -27,34 +28,42 @@ export default function PostPage({ post, options }: { post: any; options?: Recor
   const catName = cat0?.name;
   const catIcon = cat0 ? getCategoryIcon(cat0) : 'fa-sharp fa-light fa-folder';
 
+  const isVideo = post.type === 'video';
+
   return (
     <div style={{ padding: '0' }}>
-      {/* Featured image */}
-      <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
-        <FadeCover src={coverUrl} alt={post.title}
-          style={{ width: '100%', height: '400px' }} />
-        <FootprintFlags countries={post.footprint_countries} />
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',
-          padding: '60px 32px 24px',
-        }}>
-          {/* Breadcrumb */}
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Link prefetch={false} href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>首页</Link>
-            <span>/</span>
-            {catName && (
-              <>
-                <Link prefetch={false} href={`/categories/${post.categories[0].slug}`} style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>{catName}</Link>
-                <span>/</span>
-              </>
-            )}
-          </div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', lineHeight: 1.3, letterSpacing: '-0.02em' }}>
-            {post.title}
-          </h1>
+      {/* Featured image —— 影视模式用 VideoPostBody 替代 */}
+      {isVideo ? (
+        <div style={{ padding: '0 32px' }}>
+          <VideoPostBody post={post} />
         </div>
-      </div>
+      ) : (
+        <div style={{ position: 'relative', borderBottom: '1px solid #e5e5e5' }}>
+          <FadeCover src={coverUrl} alt={post.title}
+            style={{ width: '100%', height: '400px' }} />
+          <FootprintFlags countries={post.footprint_countries} />
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',
+            padding: '60px 32px 24px',
+          }}>
+            {/* Breadcrumb */}
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Link prefetch={false} href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>首页</Link>
+              <span>/</span>
+              {catName && (
+                <>
+                  <Link prefetch={false} href={`/categories/${post.categories[0].slug}`} style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>{catName}</Link>
+                  <span>/</span>
+                </>
+              )}
+            </div>
+            <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', lineHeight: 1.3, letterSpacing: '-0.02em' }}>
+              {post.title}
+            </h1>
+          </div>
+        </div>
+      )}
 
       {/* Meta bar */}
       <div style={{

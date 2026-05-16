@@ -194,6 +194,9 @@ func main() {
 	// 是「按发布顺序连续递增」的 public id，跟 db 主键 id 解耦。
 	api.GET("/posts/by-display-id/:display_id", middleware.OptionalAuth(), handler.GetPostByDisplayID)
 	api.GET("/posts/:id/navigation", handler.PostNavigation)
+	// v2.4.2 影视：单独的剧集列表 endpoint，供前端切换选集 / 增量
+	// 刷新（也已嵌入 /posts/:id 的 detail 响应，普通场景一次往返够用）。
+	api.GET("/posts/:id/episodes", handler.GetPostEpisodes)
 
 	// Categories & Tags
 	api.GET("/categories", handler.ListCategories)
