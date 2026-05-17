@@ -35,6 +35,7 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 - **`utterlog.io/install.sh` 默认国内友好**：Docker 缺失时默认走 Docker 官方脚本的 Aliyun mirror；fresh host 自动写 Docker Hub `registry-mirrors` 到 `https://registry.cn-hangzhou.aliyuncs.com`；`docker compose pull` 拆成基础镜像与应用镜像两段并加超时；`POSTGRES_IMAGE` / `REDIS_IMAGE` 可覆盖，应用镜像从 `registry.utterlog.io` 拉取失败时 fallback 到 GHCR。
 - **Docker 发布 / 安装 / 升级链路系统化兜底**：GHCR 明确作为权威应用镜像源，`registry.utterlog.io` 作为可探测镜像源；官网安装脚本与后台一键升级会先用 20 秒 manifest 探测选择可读源，并把选中的 `UTTERLOG_IMAGE_PREFIX` 写回 `.env`，避免 `pull` 和 `up` 使用不同镜像源。
 - **Docker workflow 改为 GHCR 阻塞发布源**：`docker-publish.yml` 推送并校验 GHCR 目标 tag manifest；`registry.utterlog.io` 降级为安装 / 升级时可探测镜像源，不再因为 registry 代理层卡顿拖死正式发布。
+- **Docker 镜像标签兼容 Git tag**：发布 `v2.5.1` 时同时保留 `2.5.1` 与 `v2.5.1` 两种镜像标签，避免校验脚本或服务器固定版本部署因为 tag 形式不同失败。
 - **README 快速开始改用官网安装入口**：默认推荐 `curl -fsSL https://utterlog.io/install.sh | bash`，把 GitHub raw 源码安装保留为源码 / 内置 Caddy HTTPS 场景。
 - **前台请求拦截迁移到 Next 16 Proxy 约定**：`web/middleware.ts` 按官方迁移方式改为 `web/proxy.ts`，导出函数从 `middleware` 改为 `proxy`，消除 Next 16 构建时的弃用警告。
 - **Nebula 页脚快捷入口对齐 Azure 布局**：Utterlog logo 与音乐入口移到页脚最左侧，Utterlog 使用整颗 logo 铺满显示；RSS 从页脚移到 header 右侧 actions，并复用 header 圆形透明按钮风格。
