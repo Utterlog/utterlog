@@ -13,7 +13,7 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 ### 优化
 
-暂无。
+- **Typecho 插件独立仓库化**：`typecho-plugin/UtterlogSync` 已拆分到 [`utterlog/UtterlogSync`](https://github.com/utterlog/UtterlogSync)，主仓库只保留 Utterlog 服务端 / 前端代码。
 
 ### 修复
 
@@ -21,7 +21,7 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 ### 移除
 
-暂无。
+- 移除主仓库内的 `typecho-plugin/UtterlogSync` 插件源码，避免插件与主项目重复维护。
 
 ## [2.5.1] - 2026-05-17
 
