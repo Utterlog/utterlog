@@ -71,6 +71,15 @@
   --nebula-shadow-tile: rgba(8, 66, 160, 0.28) 0px 30px 80px -28px;
   --nebula-shadow-tile-hover: rgba(8, 66, 160, 0.42) 0px 40px 100px -25px;
 
+  /* Layout width
+     --nebula-content-max is the visual content line used by header,
+     footer, article pages, home sections, and generic pages.
+     The outer shell includes side padding so border-box max-width does
+     not silently shrink the usable content area. */
+  --nebula-content-max: 960px;
+  --nebula-content-pad: 24px;
+  --nebula-shell-max: calc(var(--nebula-content-max) + (var(--nebula-content-pad) * 2));
+
   /* Fonts */
   --nebula-font-display: 'Google Sans Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --nebula-font-body: 'Google Sans Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -162,9 +171,9 @@
 }
 
 [data-theme="Nebula"] .nebula-container {
-  max-width: 960px;
+  max-width: var(--nebula-shell-max);
   margin: 0 auto;
-  padding: 0 40px;
+  padding: 0 var(--nebula-content-pad);
   width: 100%;
 }
 
@@ -182,10 +191,10 @@
 }
 
 [data-theme="Nebula"] .nebula-header-inner {
-  max-width: 960px;
+  max-width: var(--nebula-shell-max);
   margin: 0 auto;
   height: 64px;
-  padding: 0 32px;
+  padding: 0 var(--nebula-content-pad);
   display: flex;
   align-items: center;
   gap: 24px;
@@ -394,7 +403,7 @@
 [data-theme="Nebula"] .nebula-hero-inner {
   position: relative;
   z-index: 1;
-  max-width: 960px;
+  max-width: var(--nebula-content-max);
   margin: 0 auto;
   text-align: center;
   display: flex;
@@ -432,7 +441,7 @@
   list-style: none;
   margin: 0 auto;
   padding: 0;
-  max-width: 960px;
+  max-width: var(--nebula-content-max);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -454,7 +463,8 @@
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid #000;   /* 黑边突出"叠在彩色头像上" */
-  background: var(--nebula-tile-elevated);
+  /* 透明头像在首页黑底上会透出深色；用白色兜底保持与评论区一致。 */
+  background: #fff;
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), z-index 0s;
   position: relative;
   z-index: 1;
@@ -465,6 +475,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  background: #fff;
 }
 
 /* Hover：放大、提到最前、蓝边、轻微旋转 */
@@ -597,7 +608,7 @@
   gap: 12px;
   width: fit-content;
   min-width: 480px;
-  max-width: 960px;
+  max-width: var(--nebula-content-max);
   margin: 16px auto;
   padding: 9px 20px;
   background: rgba(255, 255, 255, 0.05);
@@ -1491,10 +1502,10 @@
 
 /* Page wrapper — 唯一容器，所有子段都按 960 内宽对齐 */
 [data-theme="Nebula"] .nebula-post {
-  max-width: 960px;
+  max-width: var(--nebula-shell-max);
   width: 100%;
   margin: 0 auto;
-  padding: 56px 24px 64px;
+  padding: 56px var(--nebula-content-pad) 64px;
 }
 
 /* ── Head：面包屑 + 标题 + 摘要 + 一行 byline ── */
@@ -3268,51 +3279,43 @@
   font-size: 10px;
 }
 
-/* 音乐 / RSS / Utterlog logo / 登录按钮 —— 统一 24×24 外框 + 22%
-   squircle 圆角（小米 / iOS logo 风格） + 半透明深底 + 蓝细边，整体呈
-   "图标在中心 + 外边框"的 logo 形状。hover 1.2x 弹簧放大 */
-[data-theme="Nebula"] .nebula-footer-music-btn,
+/* 页脚左侧固定入口：对齐 Azure 的 Utterlog + 音乐位置。 */
+[data-theme="Nebula"] .nebula-footer-left-actions {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 登录按钮 —— 跟 header 的 .nebula-icon-button 保持同一风格。 */
 [data-theme="Nebula"] .nebula-footer-links a[title="音乐"],
-[data-theme="Nebula"] .nebula-footer-rss-btn,
-[data-theme="Nebula"] .nebula-footer-tag,
 [data-theme="Nebula"] .nebula-footer-auth-btn {
-  width: 24px !important;
-  height: 24px !important;
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 28px !important;
   padding: 0 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0;
   overflow: hidden;
-  border-radius: 22% !important;       /* 小米 / iOS 风 squircle */
-  background: rgba(15, 17, 21, 0.6) !important;
-  border: 1px solid rgba(128, 207, 255, 0.2) !important;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-              border-color 0.15s ease,
-              background 0.15s ease !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  transition: background 0.2s ease, color 0.2s ease !important;
 }
 [data-theme="Nebula"] .nebula-footer-music-btn:hover,
 [data-theme="Nebula"] .nebula-footer-links a[title="音乐"]:hover,
-[data-theme="Nebula"] .nebula-footer-rss-btn:hover,
-[data-theme="Nebula"] .nebula-footer-tag:hover,
 [data-theme="Nebula"] .nebula-footer-auth-btn:hover {
-  transform: scale(1.2) !important;
-  border-color: rgba(128, 207, 255, 0.4) !important;
-  background: rgba(20, 24, 30, 0.85) !important;
-}
-[data-theme="Nebula"] .nebula-footer-music-btn,
-[data-theme="Nebula"] .nebula-footer-rss-btn {
-  cursor: pointer;
-}
-/* RSS 复制成功 1.8s 内：图标变绿对号 */
-[data-theme="Nebula"] .nebula-footer-rss-btn.is-copied i {
-  color: #4ade80 !important; /* tailwind green-400，跟 toast 成功色一致 */
-}
-[data-theme="Nebula"] .nebula-footer-rss-btn.is-copied {
-  cursor: default;
+  background: rgba(255, 255, 255, 0.06) !important;
 }
 /* mini-player 打开时音乐按钮：visibility:hidden 占位但不可见，
-   保证后排 RSS / Logo / 头像 三个按钮位置不跟着前移 */
+   保证左侧 Utterlog / 音乐的节奏不跳。 */
 [data-theme="Nebula"] .nebula-footer-music-btn.is-hidden {
   visibility: hidden !important;
   pointer-events: none !important;
@@ -3514,10 +3517,8 @@
   }
 }
 
-/* 三种内部元素都强制 16×16 + 统一 60% 白图标色 */
-[data-theme="Nebula"] .nebula-footer-music-btn i,
-[data-theme="Nebula"] .nebula-footer-links a[title="音乐"] i,
-[data-theme="Nebula"] .nebula-footer-rss-btn i {
+/* 内部 icon 强制 16×16，颜色跟 header 按钮一致。 */
+[data-theme="Nebula"] .nebula-footer-links a[title="音乐"] i {
   font-size: 16px !important;
   line-height: 1 !important;
   width: 16px !important;
@@ -3527,15 +3528,14 @@
   justify-content: center;
   color: rgba(255, 255, 255, 0.6) !important;
 }
-[data-theme="Nebula"] .nebula-footer-music-btn:hover i,
 [data-theme="Nebula"] .nebula-footer-links a[title="音乐"]:hover i,
-[data-theme="Nebula"] .nebula-footer-rss-btn:hover i,
 [data-theme="Nebula"] .nebula-footer-auth-btn:hover i {
-  color: var(--nebula-sky) !important;
+  color: var(--nebula-white) !important;
 }
-[data-theme="Nebula"] .nebula-footer-tag .nebula-footer-utterlog-logo {
-  width: 16px !important;
-  height: 16px !important;
+[data-theme="Nebula"] .nebula-footer-tag .nebula-footer-utterlog-logo,
+[data-theme="Nebula"] .nebula-footer-music-logo {
+  width: 32px !important;
+  height: 32px !important;
   display: block !important;
 }
 [data-theme="Nebula"] .nebula-footer-auth-btn i {
@@ -3543,25 +3543,51 @@
   line-height: 1 !important;
 }
 [data-theme="Nebula"] .nebula-footer-auth-avatar {
-  width: 16px !important;
-  height: 16px !important;
+  width: 100% !important;
+  height: 100% !important;
   display: block !important;
   object-fit: cover;
-  border-radius: 22%; /* 跟外层 22% squircle 一致，避免 gravatar 白底突兀 */
-  background: rgba(255, 255, 255, 0.06); /* 透明头像下兜底色，不再是纯白 */
+  border-radius: 31%;
+  clip-path: path('M14 0C3.2 0 0 3.2 0 14C0 24.8 3.2 28 14 28C24.8 28 28 24.8 28 14C28 3.2 24.8 0 14 0Z');
+  background: rgba(255, 255, 255, 0.06);
+}
+/* 登录头像按钮用 Utterlog logo 一样的 squircle，不跟 header 圆形按钮走。 */
+[data-theme="Nebula"] .nebula-footer-auth-btn:has(.nebula-footer-auth-avatar) {
+  border-radius: 31% !important;
+  clip-path: path('M14 0C3.2 0 0 3.2 0 14C0 24.8 3.2 28 14 28C24.8 28 28 24.8 28 14C28 3.2 24.8 0 14 0Z');
 }
 /* 未登录占位 fa-user 图标颜色统一 */
 [data-theme="Nebula"] .nebula-footer-auth-btn i {
   color: rgba(255, 255, 255, 0.6) !important;
 }
-/* Utterlog logo 链接：默认与音乐/RSS 一样的 60% 白（之前 35% 太暗），
-   hover sky 蓝，跟其他三个按钮视觉重量对齐 */
-[data-theme="Nebula"] .nebula-footer-tag {
-  color: rgba(255, 255, 255, 0.6) !important;
-  transition: color 0.2s ease, background 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+/* Utterlog logo 链接：整颗 logo 铺满按钮，不再只是中间小 icon。 */
+[data-theme="Nebula"] .nebula-footer-tag,
+[data-theme="Nebula"] .nebula-footer-music-btn {
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 31% !important;
+  clip-path: path('M16 0C3.7 0 0 3.7 0 16C0 28.3 3.7 32 16 32C28.3 32 32 28.3 32 16C32 3.7 28.3 0 16 0Z');
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: rgba(225, 231, 238, 0.42) !important;
+  cursor: pointer;
+  transition: opacity 0.2s ease, color 0.2s ease !important;
 }
-[data-theme="Nebula"] .nebula-footer-tag:hover {
-  color: var(--nebula-sky) !important;
+[data-theme="Nebula"] .nebula-footer-tag:hover,
+[data-theme="Nebula"] .nebula-footer-music-btn:hover {
+  opacity: 0.82;
+  color: rgba(225, 231, 238, 0.68) !important;
+}
+[data-theme="Nebula"] .nebula-footer-music-btn > i {
+  display: none !important;
 }
 /* logo 内部 cutout 用透明而不是纯黑，避免 footer 黑底上看不到内圈线条
    currentColor 控制外圆，inner 透明让背景透出做出"双色"效果 */
@@ -3797,11 +3823,11 @@
   /* Nebula 全站统一 960px：跟首页 / 文章页 / coding 等页面的内容栏宽度
      对齐，视觉一致。v2.3.6 临时拉到 1200 是为了 tags / categories chip
      多列时少换行，但破坏了全站宽度统一感，本次回到 960。 */
-  max-width: 960px;
+  max-width: var(--nebula-shell-max);
   margin-left: auto;
   margin-right: auto;
-  padding-left: 24px;
-  padding-right: 24px;
+  padding-left: var(--nebula-content-pad);
+  padding-right: var(--nebula-content-pad);
   padding-top: 32px;
   padding-bottom: 32px;
   width: 100%;
@@ -3876,6 +3902,15 @@
   color: var(--nebula-white);
   font-family: var(--nebula-font-display);
   font-weight: 500;
+}
+
+/* About page uses a CSS-module body wrapper shared by all themes.
+   Nebula already gives generic pages their 960px container + 24px
+   side padding, so remove the module wrapper's extra horizontal inset
+   to align the about cards with PageTitle and other Nebula pages. */
+[data-theme="Nebula"] .about-page .about-page-body {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* coding-page-title 走横向分隔线，把分隔线改为蓝边 */
@@ -4015,7 +4050,7 @@
    - 不依赖 flex / :has，避免浏览器实现差异
    - 不要被通用 .nebula-frame > div 规则的 padding 污染（已用 :not 排除） */
 [data-theme="Nebula"] .moments-page {
-  max-width: 960px;
+  max-width: var(--nebula-content-max);
   width: 100%;
   margin: 0 auto;
   padding: 0 0 120px !important;
@@ -4596,15 +4631,15 @@
    宽度收到 960，跟 Nebula 其他页面（friend links / archives / search 等）
    保持一致；section / grid 通过覆盖 CSS 变量 --coding-content-width 拉齐 */
 [data-theme="Nebula"] .coding-page {
-  --coding-content-width: min(960px, calc(100% - 48px));
+  --coding-content-width: min(var(--nebula-content-max), calc(100% - (var(--nebula-content-pad) * 2)));
   background: #121212 !important;
   color: var(--nebula-white);
 }
 [data-theme="Nebula"] .coding-hero {
-  max-width: 960px;
+  max-width: var(--nebula-shell-max);
   margin-inline: auto;
-  padding-left: 24px;
-  padding-right: 24px;
+  padding-left: var(--nebula-content-pad);
+  padding-right: var(--nebula-content-pad);
   background-color: #121212 !important;
   background-image:
     linear-gradient(rgba(168, 199, 250, 0.04) 1px, transparent 1px),
@@ -5788,13 +5823,17 @@
 /* ============================================================ */
 
 @media (max-width: 1199px) {
+  [data-theme="Nebula"] {
+    --nebula-content-pad: 20px;
+  }
+
   [data-theme="Nebula"] .nebula-container {
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: var(--nebula-content-pad);
+    padding-right: var(--nebula-content-pad);
   }
 
   [data-theme="Nebula"] .nebula-header-inner {
-    padding: 0 20px;
+    padding: 0 var(--nebula-content-pad);
     gap: 12px;
   }
 
@@ -5811,6 +5850,13 @@
   [data-theme="Nebula"] .nebula-footer-row {
     gap: 4px 10px;
     font-size: 11px;
+  }
+  [data-theme="Nebula"] .nebula-footer-left-actions {
+    position: static;
+    transform: none;
+    align-self: center;
+    margin-top: 10px;
+    margin-bottom: 0;
   }
   [data-theme="Nebula"] .nebula-footer-copy,
   [data-theme="Nebula"] .nebula-footer-links {
@@ -5829,14 +5875,18 @@
 }
 
 @media (max-width: 767px) {
+  [data-theme="Nebula"] {
+    --nebula-content-pad: 16px;
+  }
+
   [data-theme="Nebula"] .nebula-container {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: var(--nebula-content-pad);
+    padding-right: var(--nebula-content-pad);
   }
 
   [data-theme="Nebula"] .nebula-post {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: var(--nebula-content-pad);
+    padding-right: var(--nebula-content-pad);
   }
 
   [data-theme="Nebula"] .nebula-post-title {

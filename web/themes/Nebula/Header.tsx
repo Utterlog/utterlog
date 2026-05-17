@@ -52,6 +52,7 @@ export default function Header() {
   const [randomLoading, setRandomLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [rssCopied, setRssCopied] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const siteName = site.title || 'Utterlog';
@@ -230,6 +231,26 @@ export default function Header() {
             onClick={visitRandomPost}
           >
             <i className={randomLoading ? 'fa-solid fa-circle-notch fa-spin' : 'fa-solid fa-dice'} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={`nebula-icon-button${rssCopied ? ' active' : ''}`}
+            title={rssCopied ? '已复制 RSS 地址' : '复制 RSS 订阅地址'}
+            aria-label={rssCopied ? 'RSS 地址已复制' : '复制 RSS 订阅地址'}
+            onClick={async () => {
+              if (rssCopied) return;
+              const url = `${window.location.origin}/feed`;
+              try {
+                await navigator.clipboard.writeText(url);
+                toast.success('RSS 地址已复制');
+                setRssCopied(true);
+                setTimeout(() => setRssCopied(false), 1800);
+              } catch {
+                toast.error('复制失败，请手动复制');
+              }
+            }}
+          >
+            <i className={`fa-solid ${rssCopied ? 'fa-check' : 'fa-rss'}`} aria-hidden="true" />
           </button>
           {headerButtons.map(actionButton)}
           <button

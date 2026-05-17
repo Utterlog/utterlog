@@ -56,6 +56,16 @@ rand_str() {
   echo
 }
 
+persist_env() {
+  local key="$1" value="$2"
+  if grep -q "^${key}=" .env 2>/dev/null; then
+    sed -i.bak "s|^${key}=.*|${key}=${value}|" .env
+  else
+    echo "${key}=${value}" >> .env
+  fi
+  rm -f .env.bak
+}
+
 GENERATED=0
 INTERACTIVE=0
 TLS_MODE=0
@@ -146,6 +156,11 @@ set -a
 . ./.env
 set +a
 
+if [ "$PULL_MODE" -eq 1 ] && [ -z "${UTTERLOG_IMAGE_PREFIX:-}" ]; then
+  export UTTERLOG_IMAGE_PREFIX="ghcr.io/utterlog"
+  persist_env UTTERLOG_IMAGE_PREFIX "$UTTERLOG_IMAGE_PREFIX"
+fi
+
 # ============================================================
 # Step 3: find a free port (starting from UTTERLOG_PORT)
 # ============================================================
@@ -230,9 +245,9 @@ elif [ "$DB_M" = "external" ]; then
 fi
 
 if [ "$PULL_MODE" -eq 1 ]; then
-  # Pull pre-built images from GHCR — skips all local compilation
+  # Pull pre-built images — skips all local compilation
   COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml $EXTERNAL_OVERLAY"
-  log "拉取 ghcr.io/utterlog 预构建镜像 ..."
+  log "拉取 ${UTTERLOG_IMAGE_PREFIX:-ghcr.io/utterlog} 预构建镜像 ..."
   $COMPOSE pull
   log "启动容器 ..."
   $COMPOSE up -d

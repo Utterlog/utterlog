@@ -112,11 +112,11 @@ export default function AboutContent() {
   ];
 
   return (
-    <div>
+    <div className="about-page">
       <PageTitle title="关于" icon="fa-sharp fa-light fa-user" actions={<SocialLinks options={options} />} />
 
       {aboutMode === 'markdown' ? (
-        <div className={styles.wrap}>
+        <div className={`${styles.wrap} about-page-body`}>
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <i className="fa-brands fa-markdown" aria-hidden="true" />
@@ -139,7 +139,7 @@ export default function AboutContent() {
           </section>
         </div>
       ) : (
-        <div className={styles.wrap}>
+        <div className={`${styles.wrap} about-page-body`}>
         <section className={styles.hero}>
           <div className={styles.avatarBox}>
             {avatar ? (

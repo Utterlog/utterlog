@@ -8,6 +8,7 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -29,7 +30,8 @@ func GenerateFederationToken(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	user, err := model.UserByID(userID)
 	if err != nil {
-		util.NotFound(c, "用户"); return
+		util.NotFound(c, "用户")
+		return
 	}
 
 	// Create a federation JWT valid for 24 hours
@@ -66,14 +68,16 @@ func VerifyFederationToken(c *gin.Context) {
 		Token string `json:"token" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "token 不能为空"); return
+		util.BadRequest(c, "token 不能为空")
+		return
 	}
 
 	// Parse without verification first to get the issuer
 	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
 	unverified, _, _ := parser.ParseUnverified(req.Token, jwt.MapClaims{})
 	if unverified == nil {
-		util.Error(c, 400, "INVALID_TOKEN", "Token 格式无效"); return
+		util.Error(c, 400, "INVALID_TOKEN", "Token 格式无效")
+		return
 	}
 
 	claims := unverified.Claims.(jwt.MapClaims)
@@ -85,7 +89,8 @@ func VerifyFederationToken(c *gin.Context) {
 			return []byte(config.C.JWTSecret), nil
 		})
 		if err != nil || !verified.Valid {
-			util.Error(c, 401, "EXPIRED", "Token 已过期"); return
+			util.Error(c, 401, "EXPIRED", "Token 已过期")
+			return
 		}
 		vc := verified.Claims.(jwt.MapClaims)
 		util.Success(c, gin.H{
@@ -106,7 +111,8 @@ func VerifyFederationToken(c *gin.Context) {
 	resp, err := http.Post(issuer+"/api/v1/federation/verify",
 		"application/json", jsonReader(gin.H{"token": req.Token}))
 	if err != nil {
-		util.Error(c, 502, "VERIFY_FAILED", "无法连接发行站点"); return
+		util.Error(c, 502, "VERIFY_FAILED", "无法连接发行站点")
+		return
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
@@ -122,6 +128,26 @@ func VerifyFederationToken(c *gin.Context) {
 
 // ===================== Follow System =====================
 
+func normalizeFederationSiteURL(raw string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return ""
+	}
+	if !strings.Contains(s, "://") {
+		s = "https://" + s
+	}
+	u, err := url.Parse(s)
+	if err != nil || u.Host == "" {
+		return strings.TrimRight(s, "/")
+	}
+	u.Scheme = strings.ToLower(u.Scheme)
+	u.Host = strings.ToLower(u.Host)
+	u.RawQuery = ""
+	u.Fragment = ""
+	u.Path = strings.TrimRight(u.Path, "/")
+	return strings.TrimRight(u.String(), "/")
+}
+
 func FollowSite(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	var req struct {
@@ -129,7 +155,13 @@ func FollowSite(c *gin.Context) {
 		Username string `json:"username"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "site_url 不能为空"); return
+		util.BadRequest(c, "site_url 不能为空")
+		return
+	}
+	req.SiteURL = normalizeFederationSiteURL(req.SiteURL)
+	if req.SiteURL == "" {
+		util.BadRequest(c, "site_url 不能为空")
+		return
 	}
 
 	t := config.T
@@ -138,30 +170,43 @@ func FollowSite(c *gin.Context) {
 	// 1. Discover the remote site
 	resp, err := http.Get(req.SiteURL + "/api/v1/federation/metadata")
 	if err != nil {
-		util.Error(c, 400, "DISCOVERY_FAILED", "无法连接目标站点"); return
+		util.Error(c, 400, "DISCOVERY_FAILED", "无法连接目标站点")
+		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		util.Error(c, 400, "DISCOVERY_FAILED", "目标站点未返回有效联邦信息")
+		return
+	}
 	var meta map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&meta)
+	if err := json.NewDecoder(resp.Body).Decode(&meta); err != nil {
+		util.Error(c, 400, "DISCOVERY_FAILED", "目标站点联邦信息格式无效")
+		return
+	}
 	data, _ := meta["data"].(map[string]interface{})
 	siteName, _ := data["name"].(string)
 	siteName = textutil.NormalizeDisplayName(siteName) // 防 "Foo&#039;s" 类脏数据进 DB
-	if siteName == "" { siteName = req.SiteURL }
+	if siteName == "" {
+		siteName = req.SiteURL
+	}
 
 	// 2. Send follow request to remote site
 	user, _ := model.UserByID(userID)
 	followReq := gin.H{
-		"follower_site": config.C.AppURL,
-		"follower_name": user.NicknameStr(),
+		"follower_site":   config.C.AppURL,
+		"follower_name":   user.NicknameStr(),
 		"follower_avatar": user.AvatarURL(),
-		"follower_url":  config.C.AppURL,
+		"follower_url":    config.C.AppURL,
 	}
 	http.Post(req.SiteURL+"/api/v1/federation/follow", "application/json", jsonReader(followReq))
 
 	// 3. Store follow locally
-	config.DB.Exec(fmt.Sprintf(
+	if _, err := config.DB.Exec(fmt.Sprintf(
 		"INSERT INTO %s (user_id, following_id, source_site, status, created_at) VALUES ($1, 0, $2, 'active', $3) ON CONFLICT DO NOTHING",
-		t("followers")), userID, req.SiteURL, now)
+		t("followers")), userID, req.SiteURL, now); err != nil {
+		util.Error(c, 500, "FOLLOW_SAVE_FAILED", "关注关系保存失败")
+		return
+	}
 
 	// 4. Auto subscribe to RSS
 	feedURL := req.SiteURL + "/api/v1/feed"
@@ -196,10 +241,23 @@ func FollowSite(c *gin.Context) {
 
 func UnfollowSite(c *gin.Context) {
 	userID := middleware.GetUserID(c)
-	var req struct { SiteURL string `json:"site_url" binding:"required"` }
-	c.ShouldBindJSON(&req)
+	var req struct {
+		SiteURL string `json:"site_url" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.BadRequest(c, "site_url 不能为空")
+		return
+	}
+	req.SiteURL = normalizeFederationSiteURL(req.SiteURL)
+	if req.SiteURL == "" {
+		util.BadRequest(c, "site_url 不能为空")
+		return
+	}
 	t := config.T
-	config.DB.Exec(fmt.Sprintf("DELETE FROM %s WHERE user_id = $1 AND source_site = $2", t("followers")), userID, req.SiteURL)
+	if _, err := config.DB.Exec(fmt.Sprintf("DELETE FROM %s WHERE user_id = $1 AND source_site = $2", t("followers")), userID, req.SiteURL); err != nil {
+		util.Error(c, 500, "UNFOLLOW_FAILED", "取消关注失败")
+		return
+	}
 	config.DB.Exec(fmt.Sprintf("DELETE FROM %s WHERE user_id = $1 AND site_url = $2", t("rss_subscriptions")), userID, req.SiteURL)
 	util.Success(c, gin.H{"unfollowed": true})
 }
@@ -213,15 +271,26 @@ func ReceiveFollow(c *gin.Context) {
 		FollowerURL    string `json:"follower_url"`
 	}
 	c.ShouldBindJSON(&req)
-	if req.FollowerSite == "" { util.BadRequest(c, "follower_site 不能为空"); return }
+	if req.FollowerSite == "" {
+		util.BadRequest(c, "follower_site 不能为空")
+		return
+	}
+	req.FollowerSite = normalizeFederationSiteURL(req.FollowerSite)
+	if req.FollowerSite == "" {
+		util.BadRequest(c, "follower_site 不能为空")
+		return
+	}
 
 	t := config.T
 	now := time.Now().Unix()
 
 	// Store as follower of admin (user_id=1)
-	config.DB.Exec(fmt.Sprintf(
+	if _, err := config.DB.Exec(fmt.Sprintf(
 		"INSERT INTO %s (user_id, following_id, source_site, status, created_at) VALUES (0, 1, $1, 'active', $2) ON CONFLICT DO NOTHING",
-		t("followers")), req.FollowerSite, now)
+		t("followers")), req.FollowerSite, now); err != nil {
+		util.Error(c, 500, "FOLLOW_SAVE_FAILED", "关注关系保存失败")
+		return
+	}
 
 	// Notify admin
 	config.DB.Exec(fmt.Sprintf(
@@ -247,8 +316,11 @@ func ReceiveFollow(c *gin.Context) {
 
 // Get follow status
 func FollowStatus(c *gin.Context) {
-	siteURL := c.Query("site_url")
-	if siteURL == "" { util.BadRequest(c, "site_url 参数不能为空"); return }
+	siteURL := normalizeFederationSiteURL(c.Query("site_url"))
+	if siteURL == "" {
+		util.BadRequest(c, "site_url 参数不能为空")
+		return
+	}
 	userID := middleware.GetUserID(c)
 
 	var following int
@@ -281,7 +353,9 @@ func ListFollowing(c *gin.Context) {
 			subs = append(subs, row)
 		}
 	}
-	if subs == nil { subs = []map[string]interface{}{} }
+	if subs == nil {
+		subs = []map[string]interface{}{}
+	}
 	util.Success(c, subs)
 }
 
@@ -294,7 +368,8 @@ func FederatedComment(c *gin.Context) {
 		Token   string `json:"federation_token"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.BadRequest(c, "post_id 和 content 不能为空"); return
+		util.BadRequest(c, "post_id 和 content 不能为空")
+		return
 	}
 
 	t := config.T
@@ -314,9 +389,15 @@ func FederatedComment(c *gin.Context) {
 
 		if err == nil && token.Valid {
 			claims := token.Claims.(jwt.MapClaims)
-			if n, ok := claims["nickname"].(string); ok && n != "" { author = n }
-			if e, ok := claims["email"].(string); ok { email = e }
-			if s, ok := claims["site"].(string); ok { url = s }
+			if n, ok := claims["nickname"].(string); ok && n != "" {
+				author = n
+			}
+			if e, ok := claims["email"].(string); ok {
+				email = e
+			}
+			if s, ok := claims["site"].(string); ok {
+				url = s
+			}
 		} else {
 			// Try remote verification
 			issuer := ""
@@ -324,9 +405,15 @@ func FederatedComment(c *gin.Context) {
 			if unverified != nil {
 				claims := unverified.Claims.(jwt.MapClaims)
 				issuer, _ = claims["iss"].(string)
-				if n, ok := claims["nickname"].(string); ok { author = n }
-				if e, ok := claims["email"].(string); ok { email = e }
-				if s, ok := claims["site"].(string); ok { url = s }
+				if n, ok := claims["nickname"].(string); ok {
+					author = n
+				}
+				if e, ok := claims["email"].(string); ok {
+					email = e
+				}
+				if s, ok := claims["site"].(string); ok {
+					url = s
+				}
 			}
 			_ = issuer // Could verify with remote site
 		}
@@ -345,7 +432,12 @@ func FederatedComment(c *gin.Context) {
 		"INSERT INTO %s (post_id, author, email, url, content, status, ip, user_agent, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id",
 		t("comments")),
 		req.PostID, author, email, url, req.Content,
-		func() string { if req.Token != "" || middleware.GetUserID(c) > 0 { return "approved" }; return "pending" }(),
+		func() string {
+			if req.Token != "" || middleware.GetUserID(c) > 0 {
+				return "approved"
+			}
+			return "pending"
+		}(),
 		ip, ua, now,
 	).Scan(&id)
 
@@ -494,7 +586,9 @@ func FeedTimeline(c *gin.Context) {
 			items = append(items, row)
 		}
 	}
-	if items == nil { items = []map[string]interface{}{} }
+	if items == nil {
+		items = []map[string]interface{}{}
+	}
 
 	var total int
 	config.DB.Get(&total, fmt.Sprintf(
@@ -509,6 +603,7 @@ func FeedTimeline(c *gin.Context) {
 //   - count_total: feed_items lifetime (kept for context, optional)
 //   - rss_count: number of rss_subscriptions for this user (= friend links with RSS)
 //   - last_fetched_at: max last_fetched_at across subscriptions (unix seconds)
+//
 // Same public-friendly fallback as FeedTimeline: anonymous visitors see the
 // owner's (user_id=1) aggregated stats.
 func FeedStats(c *gin.Context) {
@@ -569,7 +664,9 @@ func NotificationsList(c *gin.Context) {
 			notifs = append(notifs, row)
 		}
 	}
-	if notifs == nil { notifs = []map[string]interface{}{} }
+	if notifs == nil {
+		notifs = []map[string]interface{}{}
+	}
 	util.Paginate(c, notifs, total, page, perPage)
 }
 
@@ -593,7 +690,9 @@ func FollowManagement(c *gin.Context) {
 			following = append(following, row)
 		}
 	}
-	if following == nil { following = []map[string]interface{}{} }
+	if following == nil {
+		following = []map[string]interface{}{}
+	}
 
 	// My followers (sites that follow me)
 	var followers []map[string]interface{}
@@ -608,15 +707,21 @@ func FollowManagement(c *gin.Context) {
 			followers = append(followers, row)
 		}
 	}
-	if followers == nil { followers = []map[string]interface{}{} }
+	if followers == nil {
+		followers = []map[string]interface{}{}
+	}
 
 	// Fetch rich metadata for each site (in background for speed)
 	enrichSiteInfo := func(items []map[string]interface{}) {
 		for i, item := range items {
 			siteURL, _ := item["source_site"].(string)
-			if siteURL == "" { continue }
+			if siteURL == "" {
+				continue
+			}
 			resp, err := http.Get(siteURL + "/api/v1/federation/metadata")
-			if err != nil { continue }
+			if err != nil {
+				continue
+			}
 			defer resp.Body.Close()
 			var result map[string]interface{}
 			json.NewDecoder(resp.Body).Decode(&result)
@@ -636,7 +741,9 @@ func FollowManagement(c *gin.Context) {
 			mutual = append(mutual, f)
 		}
 	}
-	if mutual == nil { mutual = []map[string]interface{}{} }
+	if mutual == nil {
+		mutual = []map[string]interface{}{}
+	}
 
 	util.Success(c, gin.H{
 		"following": following,
@@ -676,11 +783,15 @@ type rssXML struct {
 func fetchRSSFeed(feedURL string) ([]rssItem, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get(feedURL)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 
 	var rss rssXML
-	if err := xml.NewDecoder(resp.Body).Decode(&rss); err != nil { return nil, err }
+	if err := xml.NewDecoder(resp.Body).Decode(&rss); err != nil {
+		return nil, err
+	}
 
 	var items []rssItem
 	for _, item := range rss.Channel.Items {

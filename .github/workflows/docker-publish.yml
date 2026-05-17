@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
 
 env:
-  # Dual registries: GHCR (global, CDN) + registry.utterlog.io (first-party,
-  # CN-friendly via CF + reverse proxy nodes). Install.sh prefers the
-  # utterlog registry; users can opt into GHCR via UTTERLOG_IMAGE_PREFIX.
+  # GHCR is the authoritative image source. registry.utterlog.io is a
+  # first-party mirror that installers/upgraders may use when manifest
+  # probes show it is readable from the deploy host.
   GHCR_API: ghcr.io/utterlog/utterlog-api
   GHCR_WEB: ghcr.io/utterlog/utterlog-web
   UTTERLOG_API: registry.utterlog.io/utterlog/utterlog-api
@@ -102,6 +102,16 @@ jobs:
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
 
+      - name: Verify pushed API manifests
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VERIFY_TAG="${{ github.ref_name }}"
+          else
+            VERIFY_TAG="latest"
+          fi
+          docker buildx imagetools inspect "${GHCR_API}:${VERIFY_TAG}"
+          docker buildx imagetools inspect "${UTTERLOG_API}:${VERIFY_TAG}"
+
   web:
     name: Web image
     runs-on: ubuntu-latest
@@ -155,6 +165,16 @@ jobs:
             NEXT_PUBLIC_API_URL=/api/v1
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
+
+      - name: Verify pushed Web manifests
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VERIFY_TAG="${{ github.ref_name }}"
+          else
+            VERIFY_TAG="latest"
+          fi
+          docker buildx imagetools inspect "${GHCR_WEB}:${VERIFY_TAG}"
+          docker buildx imagetools inspect "${UTTERLOG_WEB}:${VERIFY_TAG}"
 
   # ─────────────────────────────────────────────────────────────────
   # On a v* tag push, ping utterlog/utterlog-landing so the marketing

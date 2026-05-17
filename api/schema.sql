@@ -2141,14 +2141,6 @@ ALTER TABLE ONLY public.ul_followers
 
 
 --
--- Name: ul_followers ul_followers_user_id_follower_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ul_followers
-    ADD CONSTRAINT ul_followers_user_id_follower_id_key UNIQUE (user_id, follower_id);
-
-
---
 -- Name: ul_games ul_games_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2607,6 +2599,13 @@ CREATE INDEX idx_followers_follower ON public.ul_followers USING btree (follower
 
 
 --
+-- Name: idx_followers_follower_site; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_followers_follower_site ON public.ul_followers USING btree (following_id, source_site) WHERE (((source_site)::text <> ''::text) AND (user_id = 0));
+
+
+--
 -- Name: idx_followers_mutual; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2618,6 +2617,13 @@ CREATE INDEX idx_followers_mutual ON public.ul_followers USING btree (mutual) WH
 --
 
 CREATE INDEX idx_followers_user ON public.ul_followers USING btree (user_id);
+
+
+--
+-- Name: idx_followers_following_site; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_followers_following_site ON public.ul_followers USING btree (user_id, source_site) WHERE (((source_site)::text <> ''::text) AND (following_id = 0));
 
 
 --
@@ -3088,22 +3094,6 @@ ALTER TABLE ONLY public.ul_federated_users
 
 ALTER TABLE ONLY public.ul_feed_items
     ADD CONSTRAINT ul_feed_items_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.ul_rss_subscriptions(id) ON DELETE CASCADE;
-
-
---
--- Name: ul_followers ul_followers_follower_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ul_followers
-    ADD CONSTRAINT ul_followers_follower_id_fkey FOREIGN KEY (follower_id) REFERENCES public.ul_users(id) ON DELETE CASCADE;
-
-
---
--- Name: ul_followers ul_followers_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ul_followers
-    ADD CONSTRAINT ul_followers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.ul_users(id) ON DELETE CASCADE;
 
 
 --

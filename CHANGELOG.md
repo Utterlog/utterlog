@@ -23,6 +23,33 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 暂无。
 
+## [2.5.1] - 2026-05-17
+
+### 新增
+
+- **官网 pull-only 安装文件纳入仓库**：新增 `deploy/site/`，保存发布到 `utterlog.io` 的 `install.sh` / `docker-compose.yml` / `.env.example` / README，明确它与根目录源码安装脚本分工，避免后续发布把线上国内优化脚本覆盖回旧版本。
+- **镜像同步维护脚本**：新增 `scripts/sync-mirrors.sh`，用于在 registry 主机把 `pgvector/pgvector:pg18`、`redis:8-alpine`、`caddy:2-alpine` 同步到 `registry.utterlog.io`，降低国内用户安装时卡在 Docker Hub 的概率。
+
+### 优化
+
+- **`utterlog.io/install.sh` 默认国内友好**：Docker 缺失时默认走 Docker 官方脚本的 Aliyun mirror；fresh host 自动写 Docker Hub `registry-mirrors` 到 `https://registry.cn-hangzhou.aliyuncs.com`；`docker compose pull` 拆成基础镜像与应用镜像两段并加超时；`POSTGRES_IMAGE` / `REDIS_IMAGE` 可覆盖，应用镜像从 `registry.utterlog.io` 拉取失败时 fallback 到 GHCR。
+- **Docker 发布 / 安装 / 升级链路系统化兜底**：GHCR 明确作为权威应用镜像源，`registry.utterlog.io` 作为可探测镜像源；官网安装脚本与后台一键升级会先用 20 秒 manifest 探测选择可读源，并把选中的 `UTTERLOG_IMAGE_PREFIX` 写回 `.env`，避免 `pull` 和 `up` 使用不同镜像源。
+- **Docker workflow 增加发布后 manifest 校验**：`docker-publish.yml` 在推送 api/web 后分别检查 GHCR 与 `registry.utterlog.io` 的目标 tag manifest，防止 Actions 显示成功但外部 registry 不可读的问题静默进入发布。
+- **README 快速开始改用官网安装入口**：默认推荐 `curl -fsSL https://utterlog.io/install.sh | bash`，把 GitHub raw 源码安装保留为源码 / 内置 Caddy HTTPS 场景。
+- **前台请求拦截迁移到 Next 16 Proxy 约定**：`web/middleware.ts` 按官方迁移方式改为 `web/proxy.ts`，导出函数从 `middleware` 改为 `proxy`，消除 Next 16 构建时的弃用警告。
+- **Nebula 页脚快捷入口对齐 Azure 布局**：Utterlog logo 与音乐入口移到页脚最左侧，Utterlog 使用整颗 logo 铺满显示；RSS 从页脚移到 header 右侧 actions，并复用 header 圆形透明按钮风格。
+
+### 修复
+
+- **后台升级成功后按钮仍卡在“升级中...”**：API 重建会清空后端内存里的升级状态，但日志已经写入 `升级应用 [Utterlog] 成功 [TASK-END]`。`SystemUpdatePanel` 现在识别日志终止标记并归一化状态，成功时立即停止轮询、释放按钮、强制刷新版本信息并触发 `admin:version-changed`，不再依赖手动刷新页面。
+- **Nebula 文章页 TOC / 回到顶部定位偏差**：目录高亮从 `IntersectionObserver` 改为按实际滚动容器坐标计算，点击目录时区分 `.blog-main` 与 window 的偏移；页脚右侧“回到顶部”也会先确认 `.blog-main` 真正可滚动，避免点了没有回到顶部。
+- **后台关注站点无法正确保存**：旧 `ul_followers` 约束按本地用户 `follower_id` 去重，但远程站点关注使用 `source_site` + `0` 占位，导致只能写入第一条或被外键拦截。启动迁移现在移除旧约束，改为按远程站点 URL 去重，并让关注接口返回真实保存错误。
+- **前台 / 后台 npm 依赖安全审计漏洞**：后台 lockfile 升级 `axios` 到 1.16.1；前台 lockfile 升级 `next` 到 16.2.6、`axios` 到 1.16.1、`dompurify` 到 3.4.4、`@xmldom/xmldom` 到 0.8.13、`follow-redirects` 到 1.16.0，并通过 `overrides.postcss` 固定安全版 `postcss`，`npm audit --audit-level=moderate` 已清零。
+
+### 移除
+
+暂无。
+
 ## [2.5.0] - 2026-05-16
 
 ### 新增

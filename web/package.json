@@ -1,6 +1,6 @@
 {
   "name": "utterlog-admin",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "private": true,
   "scripts": {
     "sync:themes": "node ./scripts/sync-theme-styles.mjs",
@@ -62,5 +62,8 @@
     "eslint-config-next": "^16.2.4",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2"
+  },
+  "overrides": {
+    "postcss": "^8.5.14"
   }
 }

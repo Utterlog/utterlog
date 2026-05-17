@@ -22,7 +22,6 @@ export default function Footer() {
   const siteName = site.title || 'Utterlog';
   const footerItems = menus.footer || [];
   const { open: miniMusicOpen, toggle: toggleMiniMusic } = useMiniMusic();
-  const [rssCopied, setRssCopied] = useState(false);
 
   // ── 登录态 ──
   const {
@@ -216,6 +215,63 @@ export default function Footer() {
         {/* 回到顶部按钮：贴在 footer 右侧、container 之外。
             滚动 ≤ 400px 时 visibility:hidden（组件内 .is-hidden 处理） */}
         <BackToTop />
+        <span className="nebula-footer-left-actions" aria-label="页脚快捷入口">
+          <a
+            href="https://utterlog.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nebula-footer-tag"
+            title="Powered by Utterlog"
+            aria-label="Powered by Utterlog"
+          >
+            <svg
+              className="nebula-footer-utterlog-logo"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 0c9.601 0 12 2.399 12 12 0 9.601-2.399 12-12 12-9.601 0-12-2.399-12-12C0 2.399 2.399 0 12 0z"
+                fill="currentColor"
+              />
+              <path
+                d="M17.008 17.29H11.44a5.57 5.57 0 0 1-5.562-5.567A5.57 5.57 0 0 1 11.44 6.16a5.57 5.57 0 0 1 5.567 5.563Z"
+                fill="var(--nebula-black)"
+              />
+            </svg>
+          </a>
+          <button
+            type="button"
+            title="音乐"
+            aria-label="打开迷你播放器"
+            className={`nebula-footer-music-btn${miniMusicOpen ? ' is-hidden' : ''}`}
+            onClick={() => toggleMiniMusic(true)}
+            aria-hidden={miniMusicOpen}
+            tabIndex={miniMusicOpen ? -1 : 0}
+          >
+            <i className="fa-solid fa-music" aria-hidden="true" />
+            <svg
+              className="nebula-footer-music-logo"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 0c9.601 0 12 2.399 12 12 0 9.601-2.399 12-12 12-9.601 0-12-2.399-12-12C0 2.399 2.399 0 12 0z"
+                fill="currentColor"
+              />
+              <path
+                d="M16 5.5v8a2.5 2.5 0 1 1-1.5-2.29V8.08l-5 1.15v5.27a2.5 2.5 0 1 1-1.5-2.29V6.5l8-1.84z"
+                fill="var(--nebula-black)"
+                transform="translate(0.5, 0.5)"
+              />
+            </svg>
+          </button>
+        </span>
         <div className="nebula-container nebula-footer-row">
           {/* 版权 */}
           <span className="nebula-footer-copy">
@@ -264,68 +320,6 @@ export default function Footer() {
                 {item.label}
               </Link>
             ))}
-            {/* 音乐按钮：mini 打开时 visibility:hidden 占位但不显示，
-                避免后面 RSS / Logo / 头像 三个按钮位置左移 */}
-            <button
-              type="button"
-              title="音乐"
-              aria-label="打开迷你播放器"
-              className={`nebula-footer-music-btn${miniMusicOpen ? ' is-hidden' : ''}`}
-              onClick={() => toggleMiniMusic(true)}
-              aria-hidden={miniMusicOpen}
-              tabIndex={miniMusicOpen ? -1 : 0}
-            >
-              <i className="fa-solid fa-music" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              title={rssCopied ? '已复制' : '复制 RSS 订阅地址'}
-              aria-label={rssCopied ? 'RSS 地址已复制' : '复制 RSS 订阅地址'}
-              className={`nebula-footer-rss-btn${rssCopied ? ' is-copied' : ''}`}
-              onClick={async () => {
-                if (rssCopied) return;
-                const url = `${window.location.origin}/feed`;
-                try {
-                  await navigator.clipboard.writeText(url);
-                  toast.success('RSS 地址已复制');
-                  setRssCopied(true);
-                  setTimeout(() => setRssCopied(false), 1800);
-                } catch {
-                  toast.error('复制失败，请手动复制');
-                }
-              }}
-            >
-              <i
-                className={`fa-solid ${rssCopied ? 'fa-check' : 'fa-rss'}`}
-                aria-hidden="true"
-              />
-            </button>
-            <a
-              href="https://utterlog.io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="nebula-footer-tag"
-              title="Powered by Utterlog"
-              aria-label="Powered by Utterlog"
-            >
-              <svg
-                className="nebula-footer-utterlog-logo"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                aria-hidden="true"
-              >
-                <path
-                  d="M12 0c9.601 0 12 2.399 12 12 0 9.601-2.399 12-12 12-9.601 0-12-2.399-12-12C0 2.399 2.399 0 12 0z"
-                  fill="currentColor"
-                />
-                <path
-                  d="M17.008 17.29H11.44a5.57 5.57 0 0 1-5.562-5.567A5.57 5.57 0 0 1 11.44 6.16a5.57 5.57 0 0 1 5.567 5.563Z"
-                  fill="var(--nebula-black)"
-                />
-              </svg>
-            </a>
 
             {/* 登录按钮 / 头像 */}
             <span className="nebula-footer-auth" ref={loginRef}>

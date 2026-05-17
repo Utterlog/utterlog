@@ -9,7 +9,7 @@ import type { NextRequest } from 'next/server';
  * Status is cached per-request via fetch — in Edge runtime, Next.js dedupes
  * same-URL fetches within the same request.
  */
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Skip static assets, API proxies, /admin (served by Go), Next internals.

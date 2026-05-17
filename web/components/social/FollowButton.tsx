@@ -18,9 +18,10 @@ export default function FollowButton({ siteUrl, siteName }: FollowButtonProps) {
   useEffect(() => {
     if (!isAuthenticated || !siteUrl) return;
     api.get(`/social/follow-status?site_url=${encodeURIComponent(siteUrl)}`).then((r: any) => {
-      if (r.data) {
-        setFollowing(r.data.following);
-        setMutual(r.data.mutual);
+      const data = r.data || r;
+      if (data) {
+        setFollowing(Boolean(data.following));
+        setMutual(Boolean(data.mutual));
       }
     }).catch(() => {});
   }, [siteUrl, isAuthenticated]);
@@ -36,8 +37,9 @@ export default function FollowButton({ siteUrl, siteName }: FollowButtonProps) {
         setMutual(false);
       } else {
         const r: any = await api.post('/social/follow', { site_url: siteUrl });
+        const data = r.data || r;
         setFollowing(true);
-        if (r.data?.mutual) setMutual(true);
+        setMutual(Boolean(data?.mutual));
       }
     } catch {}
     setLoading(false);

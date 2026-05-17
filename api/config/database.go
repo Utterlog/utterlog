@@ -105,6 +105,17 @@ func InitDB() error {
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS embedding vector(1536)", T("posts")))
 	DB.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_posts_embedding ON %s USING hnsw (embedding vector_cosine_ops)", T("posts")))
 
+	// Federation follows store remote sites in source_site and use 0 as the
+	// opposite-side placeholder. Older schemas had local-user FK constraints
+	// and UNIQUE(user_id, follower_id), which makes every remote follow after
+	// the first conflict or fail. Keep the legacy columns, but constrain the
+	// actual remote-site identity instead.
+	DB.Exec(fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS ul_followers_user_id_follower_id_key", T("followers")))
+	DB.Exec(fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS ul_followers_user_id_fkey", T("followers")))
+	DB.Exec(fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS ul_followers_follower_id_fkey", T("followers")))
+	DB.Exec(fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS idx_followers_following_site ON %s (user_id, source_site) WHERE source_site != '' AND following_id = 0", T("followers")))
+	DB.Exec(fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS idx_followers_follower_site ON %s (following_id, source_site) WHERE source_site != '' AND user_id = 0", T("followers")))
+
 	// Word count and AI reader questions fields
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS word_count INTEGER DEFAULT 0", T("posts")))
 	DB.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS ai_questions TEXT", T("posts")))

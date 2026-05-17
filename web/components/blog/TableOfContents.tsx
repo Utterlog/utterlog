@@ -1,7 +1,7 @@
 'use client';
 
 import './toc-styles.css';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 interface TocItem {
   id: string;
@@ -12,6 +12,9 @@ interface TocItem {
 interface TableOfContentsProps {
   content: string;
 }
+
+const CONTAINER_SCROLL_OFFSET = 24;
+const WINDOW_SCROLL_OFFSET = 88;
 
 export default function TableOfContents({ content }: TableOfContentsProps) {
   const [headings, setHeadings] = useState<TocItem[]>([]);
@@ -42,9 +45,13 @@ export default function TableOfContents({ content }: TableOfContentsProps) {
 
   // 获取实际滚动容器（可能是 window 或 .blog-main）
   const getScrollContainer = useCallback((): HTMLElement | null => {
-    const main = document.querySelector('.blog-main') as HTMLElement;
+    const main = document.querySelector('.blog-main') as HTMLElement | null;
     if (main && main.scrollHeight > main.clientHeight) return main;
     return null; // 用 window
+  }, []);
+
+  const getScrollOffset = useCallback((container: HTMLElement | null) => {
+    return container ? CONTAINER_SCROLL_OFFSET : WINDOW_SCROLL_OFFSET;
   }, []);
 
   // Scroll spy
@@ -52,40 +59,55 @@ export default function TableOfContents({ content }: TableOfContentsProps) {
     if (headings.length === 0) return;
 
     const container = getScrollContainer();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
-          }
-        });
-      },
-      { root: container, rootMargin: '-80px 0px -70% 0px' }
-    );
+    const headingEls = headings
+      .map(({ id }) => document.getElementById(id))
+      .filter((el): el is HTMLElement => Boolean(el));
 
-    headings.forEach(({ id }) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
+    if (headingEls.length === 0) return;
 
-    return () => observer.disconnect();
-  }, [headings, getScrollContainer]);
+    const updateActive = () => {
+      const rootTop = container ? container.getBoundingClientRect().top : 0;
+      const activeLine = rootTop + getScrollOffset(container) + 4;
+      let currentId = headingEls[0].id;
+
+      for (const el of headingEls) {
+        if (el.getBoundingClientRect().top <= activeLine) {
+          currentId = el.id;
+        } else {
+          break;
+        }
+      }
+
+      setActiveId(prev => (prev === currentId ? prev : currentId));
+    };
+
+    const scrollTarget: HTMLElement | Window = container || window;
+    updateActive();
+    scrollTarget.addEventListener('scroll', updateActive, { passive: true });
+    window.addEventListener('resize', updateActive);
+
+    return () => {
+      scrollTarget.removeEventListener('scroll', updateActive);
+      window.removeEventListener('resize', updateActive);
+    };
+  }, [headings, getScrollContainer, getScrollOffset]);
 
   const scrollTo = useCallback((id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
     const container = getScrollContainer();
+    const offset = getScrollOffset(container);
     if (container) {
       // 计算元素相对于滚动容器的真实偏移
       const elRect = el.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
-      const y = container.scrollTop + (elRect.top - containerRect.top) - 20;
-      container.scrollTo({ top: y, behavior: 'smooth' });
+      const y = container.scrollTop + (elRect.top - containerRect.top) - offset;
+      container.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
     } else {
-      const y = el.getBoundingClientRect().top + window.scrollY - 20;
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      const y = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
     }
-  }, [getScrollContainer]);
+  }, [getScrollContainer, getScrollOffset]);
 
   // 滚动 20% 显示，滚到评论区消失
   const [visible, setVisible] = useState(false);
@@ -103,7 +125,8 @@ export default function TableOfContents({ content }: TableOfContentsProps) {
       if (navEl) {
         const rect = navEl.getBoundingClientRect();
         const viewportH = container ? container.clientHeight : window.innerHeight;
-        hitComment = rect.top < viewportH * 0.5;
+        const viewportTop = container ? container.getBoundingClientRect().top : 0;
+        hitComment = rect.top < viewportTop + viewportH * 0.5;
       }
 
       setVisible(showStart && !hitComment);

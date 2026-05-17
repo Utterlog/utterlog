@@ -19,7 +19,7 @@
 
 services:
   postgres:
-    image: pgvector/pgvector:pg18
+    image: registry.utterlog.io/utterlog/pgvector:pg18
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-utterlog}
@@ -43,7 +43,7 @@ services:
     # Redis 8 — backwards compatible with 7 RDB/AOF files, so existing
     # deployments upgrade in place: docker compose pull && up -d. The
     # redisdata volume is preserved across the swap, no rebuild needed.
-    image: redis:8-alpine
+    image: registry.utterlog.io/utterlog/redis:8-alpine
     restart: unless-stopped
     volumes:
       - redisdata:/data
@@ -136,7 +136,7 @@ services:
   # ============================================================
   caddy:
     profiles: [tls]
-    image: caddy:2-alpine
+    image: registry.utterlog.io/utterlog/caddy:2-alpine
     restart: unless-stopped
     ports:
       - "80:80"

@@ -29,6 +29,14 @@ interface UpgradeStatus {
   log_tail: string;
 }
 
+function upgradeTerminalFromLog(status: UpgradeStatus | null): 'success' | 'failure' | null {
+  const tail = status?.log_tail || '';
+  if (!tail.includes('[TASK-END]')) return null;
+  if (/升级应用\s+\[Utterlog\]\s+成功\s+\[TASK-END\]/.test(tail)) return 'success';
+  if (/升级应用\s+\[Utterlog\]\s+失败\s+\[TASK-END\]/.test(tail)) return 'failure';
+  return null;
+}
+
 // Markdown renderer for GitHub release bodies. Handles headings,
 // lists, paragraphs, inline code, fenced code blocks, bold/italic,
 // and [text](url) links. Mirrors the landing site's changelog
@@ -205,6 +213,7 @@ export default function SystemUpdatePanel() {
   // 关闭后还能从"查看升级日志"按钮重新打开（只要 log_tail 还在）
   const [logModalOpen, setLogModalOpen] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const upgradeSettledRef = useRef(false);
   // 升级日志滚动容器 + 末尾哨兵 —— 每次 log_tail 变化都自动滚到底部，
   // 让最新一行始终在视口里，符合"日志在持续滚动"的预期视觉
   const logScrollRef = useRef<HTMLDivElement | null>(null);
@@ -343,11 +352,23 @@ export default function SystemUpdatePanel() {
   async function pollStatus() {
     try {
       const r = await api.get<any>('/admin/system/upgrade/status');
-      setUpgradeStatus(r.data);
-      if (!r.data.running && r.data.finished) {
-        clearInterval(pollRef.current!);
+      const status = r.data as UpgradeStatus;
+      const terminal = upgradeTerminalFromLog(status);
+      const normalizedStatus = terminal
+        ? { ...status, running: false, finished: true, success: terminal === 'success' }
+        : status;
+      setUpgradeStatus(normalizedStatus);
+
+      if ((!normalizedStatus.running && normalizedStatus.finished) && !upgradeSettledRef.current) {
+        upgradeSettledRef.current = true;
+        if (pollRef.current) clearInterval(pollRef.current);
         pollRef.current = null;
-        if (r.data.success) {
+        if (normalizedStatus.success && terminal === 'success') {
+          toast.success('升级完成');
+          setUpgrading(false);
+          await load(true);
+          window.dispatchEvent(new Event('admin:version-changed'));
+        } else if (normalizedStatus.success) {
           // Backend's "success" is optimistic — verify the running
           // version actually flipped before declaring victory.
           // 这里超时**必须**给足时间 —— 真实升级流程包括：
@@ -360,10 +381,15 @@ export default function SystemUpdatePanel() {
           // 不会真等满 240s。
           const expected = info?.latest?.version || '';
           toast('升级脚本已执行，正在确认容器版本…');
-          await verifyUpgradeApplied(expected, 240);
-          setUpgrading(false);
+          try {
+            await verifyUpgradeApplied(expected, 240);
+            await load(true);
+            window.dispatchEvent(new Event('admin:version-changed'));
+          } finally {
+            setUpgrading(false);
+          }
         } else {
-          toast.error('升级失败：' + r.data.message);
+          toast.error('升级失败：' + (normalizedStatus.message || '请查看升级日志'));
           setUpgrading(false);
         }
       }
@@ -382,6 +408,11 @@ export default function SystemUpdatePanel() {
   async function runUpgrade() {
     setConfirmOpen(false);
     setUpgrading(true);
+    upgradeSettledRef.current = false;
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
     try {
       await api.post('/admin/system/upgrade');
       toast('升级已开始，请勿刷新页面');

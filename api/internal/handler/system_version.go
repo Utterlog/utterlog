@@ -71,11 +71,11 @@ const (
 	//   3. 国内访问 utterlog.io 通常比 api.github.com 快得多
 	// 失败时（utterlog.io 暂时挂掉 / 内网部署不能出公网）自动 fallback
 	// 到 GitHub 直连（变量 ghReleasesFallback / ghAllReleasesFallback）。
-	defaultVersionURL  = "https://utterlog.io/api/version.json"
-	defaultReleasesURL = "https://utterlog.io/api/releases.json"
-	ghReleasesFallback = "https://api.github.com/repos/utterlog/utterlog/releases/latest"
+	defaultVersionURL     = "https://utterlog.io/api/version.json"
+	defaultReleasesURL    = "https://utterlog.io/api/releases.json"
+	ghReleasesFallback    = "https://api.github.com/repos/utterlog/utterlog/releases/latest"
 	ghAllReleasesFallback = "https://api.github.com/repos/utterlog/utterlog/releases?per_page=20"
-	cacheTTL           = 10 * time.Minute
+	cacheTTL              = 10 * time.Minute
 )
 
 // versionSourceURL 让用户可以在后台 `version_source_url` 选项里覆盖
@@ -172,12 +172,12 @@ func currentVersion() gin.H {
 }
 
 // isNewer returns true when latest is considered newer than current.
-// - Current == "dev" or starts with "sha-" (untagged build): any tagged
-//   semver release counts as newer. This lets dev/local installs see
-//   the update badge so the feature is visible while testing.
-// - Both semver: numeric-per-component compare so 1.0.10 > 1.0.9 (the
-//   old lexicographic compare flipped those). Pre-release gating is
-//   surfaced via the prerelease flag separately.
+//   - Current == "dev" or starts with "sha-" (untagged build): any tagged
+//     semver release counts as newer. This lets dev/local installs see
+//     the update badge so the feature is visible while testing.
+//   - Both semver: numeric-per-component compare so 1.0.10 > 1.0.9 (the
+//     old lexicographic compare flipped those). Pre-release gating is
+//     surfaced via the prerelease flag separately.
 func isNewer(current, latest string) bool {
 	c := strings.TrimPrefix(current, "v")
 	l := strings.TrimPrefix(latest, "v")
@@ -200,23 +200,40 @@ func compareSemver(a, b string) int {
 	bMain, bPre := splitPre(b)
 	ap := strings.Split(aMain, ".")
 	bp := strings.Split(bMain, ".")
-	n := len(ap); if len(bp) > n { n = len(bp) }
+	n := len(ap)
+	if len(bp) > n {
+		n = len(bp)
+	}
 	for i := 0; i < n; i++ {
 		var av, bv int
-		if i < len(ap) { av, _ = strconv.Atoi(ap[i]) }
-		if i < len(bp) { bv, _ = strconv.Atoi(bp[i]) }
+		if i < len(ap) {
+			av, _ = strconv.Atoi(ap[i])
+		}
+		if i < len(bp) {
+			bv, _ = strconv.Atoi(bp[i])
+		}
 		if av != bv {
-			if av > bv { return 1 }
+			if av > bv {
+				return 1
+			}
 			return -1
 		}
 	}
 	// Equal main → a release is newer than a pre-release of the same
 	// main ("1.0.0" > "1.0.0-rc1"); two pre-releases fall back to
 	// lexicographic.
-	if aPre == "" && bPre != "" { return 1 }
-	if aPre != "" && bPre == "" { return -1 }
-	if aPre > bPre { return 1 }
-	if aPre < bPre { return -1 }
+	if aPre == "" && bPre != "" {
+		return 1
+	}
+	if aPre != "" && bPre == "" {
+		return -1
+	}
+	if aPre > bPre {
+		return 1
+	}
+	if aPre < bPre {
+		return -1
+	}
 	return 0
 }
 
@@ -245,10 +262,10 @@ func applyGitHubHeaders(req *http.Request) {
 // 名字），所以容器名也不一定是 "utterlog-api-1"。
 //
 // 探测顺序：
-//   1. UTTERLOG_API_CONTAINER 环境变量（用户显式覆盖）
-//   2. os.Hostname() 拿到当前容器的短 ID（docker 默认把 hostname
-//      设成短 ID 12 字符），docker inspect 它得到完整 .Name
-//   3. 兜底 "utterlog-api-1"
+//  1. UTTERLOG_API_CONTAINER 环境变量（用户显式覆盖）
+//  2. os.Hostname() 拿到当前容器的短 ID（docker 默认把 hostname
+//     设成短 ID 12 字符），docker inspect 它得到完整 .Name
+//  3. 兜底 "utterlog-api-1"
 //
 // 后面所有 docker inspect / health check / digest 比对都用这里返回
 // 的真实名字。
@@ -453,7 +470,9 @@ func fetchLatestRelease() {
 }
 
 // tryFetchProxyVersion 抓 utterlog.io 风格的 version.json：
-//   { generated_at, latest: { tag_name, name, body, html_url, ..., commit }, source }
+//
+//	{ generated_at, latest: { tag_name, name, body, html_url, ..., commit }, source }
+//
 // 成功返回 (release, true)；任何 HTTP / decode / 字段缺失错误返回 (nil, false)
 // 让调用方走 GitHub fallback。
 func tryFetchProxyVersion(url string) (*githubRelease, bool) {
@@ -482,7 +501,8 @@ func tryFetchProxyVersion(url string) (*githubRelease, bool) {
 }
 
 // tryFetchProxyReleases 抓 utterlog.io 风格的 releases.json：
-//   { generated_at, items: [release...], source }
+//
+//	{ generated_at, items: [release...], source }
 func tryFetchProxyReleases(url string) ([]githubRelease, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -874,48 +894,109 @@ if [ "$MODE" = "slim" ]; then
   fi
 fi
 
-# 镜像拉取双源策略：默认 registry.utterlog.io（来自 docker-compose.pull.yml
-# 里的 ${UTTERLOG_IMAGE_PREFIX:-registry.utterlog.io/utterlog}）；失败时
-# export UTTERLOG_IMAGE_PREFIX=ghcr.io/utterlog 重试 —— GHA workflow
-# (.github/workflows/docker-publish.yml) 把每个 release 的镜像同时推到
-# 这两个 registry，所以 GHCR 能完整顶替 registry.utterlog.io。
+# 镜像拉取双源策略：先快速探测 registry.utterlog.io 是否真的能读到
+# api/web manifest；不可读时直接使用 GHCR，避免 docker compose pull
+# 卡在一个坏掉的 registry/proxy 上。必须 export，后面的 up -d 子进程
+# 才会读到同一个 prefix。
 #
-# 注意：必须 export（不只是赋值），后面的 docker compose up -d 子进程
-# 才会读到同一个 prefix —— 否则会出现"拉了 ghcr 的，up 时找
-# registry.utterlog.io 找不到"的不一致状态。
-do_pull() {
+run_timeout() {
+  local seconds="$1"
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$seconds" "$@"
+  else
+    "$@"
+  fi
+}
+
+compose() {
   case "$MODE" in
-    overlay) docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml pull ;;
-    slim)    docker compose pull ;;
+    overlay) docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml "$@" ;;
+    slim)    docker compose "$@" ;;
     *)       log "ERROR 未知部署模式 [$MODE]"; return 2 ;;
   esac
 }
 
-log "拉取镜像 [docker compose pull] —— 主源 registry.utterlog.io"
-PULL_OK=0
-if do_pull; then
-  PULL_OK=1
+persist_env() {
+  local key="$1" value="$2"
+  if [ -f .env ]; then
+    if grep -q "^${key}=" .env 2>/dev/null; then
+      sed -i.bak "s|^${key}=.*|${key}=${value}|" .env
+    else
+      echo "${key}=${value}" >> .env
+    fi
+    rm -f .env.bak
+  fi
+}
+
+has_app_manifest() {
+  local prefix="$1"
+  local tag="${UTTERLOG_IMAGE_TAG:-latest}"
+  run_timeout 20 docker manifest inspect "$prefix/utterlog-api:$tag" >/dev/null 2>&1 \
+    && run_timeout 20 docker manifest inspect "$prefix/utterlog-web:$tag" >/dev/null 2>&1
+}
+
+select_image_source() {
+  if [ -n "${UTTERLOG_IMAGE_PREFIX:-}" ]; then
+    export UTTERLOG_IMAGE_PREFIX="${UTTERLOG_IMAGE_PREFIX%/}"
+    persist_env UTTERLOG_IMAGE_PREFIX "$UTTERLOG_IMAGE_PREFIX"
+    log "使用已配置镜像源 [$UTTERLOG_IMAGE_PREFIX]"
+    return 0
+  fi
+
+  log "探测镜像源 [registry.utterlog.io/utterlog]"
+  if has_app_manifest "registry.utterlog.io/utterlog"; then
+    export UTTERLOG_IMAGE_PREFIX="registry.utterlog.io/utterlog"
+    persist_env UTTERLOG_IMAGE_PREFIX "$UTTERLOG_IMAGE_PREFIX"
+    log "选择镜像源 [$UTTERLOG_IMAGE_PREFIX]"
+    return 0
+  fi
+
+  log "WARN registry.utterlog.io manifest 不可读，切换到 [ghcr.io/utterlog]"
+  export UTTERLOG_IMAGE_PREFIX="ghcr.io/utterlog"
+  persist_env UTTERLOG_IMAGE_PREFIX "$UTTERLOG_IMAGE_PREFIX"
+  if has_app_manifest "$UTTERLOG_IMAGE_PREFIX"; then
+    log "选择镜像源 [$UTTERLOG_IMAGE_PREFIX]"
+  else
+    log "WARN GHCR manifest 探测也失败，继续尝试 docker compose pull 获取真实错误"
+  fi
+}
+
+log "拉取基础镜像 [postgres/redis]"
+if compose pull postgres redis; then
+  log "拉取基础镜像 成功"
+else
+  log "ERROR 拉取基础镜像失败 [postgres/redis]"
+  log "升级应用 [Utterlog] 失败 [TASK-END]"
+  exit 1
 fi
 
-if [ "$PULL_OK" = "1" ]; then
-  log "拉取镜像 成功 (registry.utterlog.io)"
+select_image_source
+
+log "拉取应用镜像 [api/web] —— 源 [$UTTERLOG_IMAGE_PREFIX]"
+if compose pull api web; then
+  log "拉取应用镜像 成功 ($UTTERLOG_IMAGE_PREFIX)"
 else
-  log "WARN registry.utterlog.io 拉取失败，fallback 到 ghcr.io/utterlog"
-  export UTTERLOG_IMAGE_PREFIX="ghcr.io/utterlog"
-  if do_pull; then
-    log "拉取镜像 成功 (ghcr.io fallback)"
+  if [ "$UTTERLOG_IMAGE_PREFIX" != "ghcr.io/utterlog" ]; then
+    log "WARN $UTTERLOG_IMAGE_PREFIX 拉取失败，fallback 到 [ghcr.io/utterlog]"
+    export UTTERLOG_IMAGE_PREFIX="ghcr.io/utterlog"
+    persist_env UTTERLOG_IMAGE_PREFIX "$UTTERLOG_IMAGE_PREFIX"
+    if compose pull api web; then
+      log "拉取应用镜像 成功 (ghcr.io fallback)"
+    else
+      log "ERROR 应用镜像拉取失败 [api/web]"
+      log "升级应用 [Utterlog] 失败 [TASK-END]"
+      exit 1
+    fi
   else
-    log "ERROR registry.utterlog.io + ghcr.io 均拉取失败"
+    log "ERROR 应用镜像拉取失败 [api/web]"
     log "升级应用 [Utterlog] 失败 [TASK-END]"
     exit 1
   fi
 fi
 
 log "重建容器 [$API_CONTAINER, $WEB_CONTAINER]"
-case "$MODE" in
-  overlay) docker compose -f docker-compose.prod.yml -f docker-compose.pull.yml up -d --remove-orphans ;;
-  slim)    docker compose up -d --remove-orphans ;;
-esac
+compose up -d --remove-orphans
 log "重建容器 成功"
 
 log "等待 api 健康检查 [$API_CONTAINER]"
