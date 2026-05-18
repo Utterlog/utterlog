@@ -1066,7 +1066,12 @@ log "升级应用 [Utterlog] 成功 [TASK-END]"
 		"-e", "WEB_CONTAINER="+webName,
 		"-w", installDir,
 		// Official Docker CLI image — includes compose v2 plugin.
-		"docker:27-cli",
+		// Sourced from our own registry instead of docker.io so installs
+		// in mainland China don't hang on Docker Hub (registry-1.docker.io
+		// is unroutable from most CN ISPs). registry.utterlog.io is a thin
+		// mirror kept in sync nightly by scripts/sync-mirrors.sh — content
+		// is byte-identical to `docker:27-cli` on Docker Hub.
+		"registry.utterlog.io/utterlog/docker:27-cli",
 		"sh", "-c", sidecarScript,
 	)
 	cmd := exec.Command("docker", dockerArgs...)

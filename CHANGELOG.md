@@ -13,11 +13,30 @@ Docker 镜像地址不写入更新日志；镜像发布由 GitHub Actions 的 Do
 
 ### 优化
 
-- **Typecho 插件独立仓库化**：`typecho-plugin/UtterlogSync` 已拆分到 [`utterlog/UtterlogSync`](https://github.com/utterlog/UtterlogSync)，主仓库只保留 Utterlog 服务端 / 前端代码。
+暂无。
 
 ### 修复
 
 暂无。
+
+### 移除
+
+暂无。
+
+## [2.5.2] - 2026-05-18
+
+### 新增
+
+暂无。
+
+### 优化
+
+- **Typecho 插件独立仓库化**：`typecho-plugin/UtterlogSync` 已拆分到 [`utterlog/UtterlogSync`](https://github.com/utterlog/UtterlogSync)，主仓库只保留 Utterlog 服务端 / 前端代码。
+- **镜像同步覆盖升级 sidecar**：`scripts/sync-mirrors.sh` 新增 `docker:27-cli` 同步项，与 `pgvector` / `redis` / `caddy` 一起每日凌晨 3 点从 Docker Hub 镜像到 `registry.utterlog.io`。
+
+### 修复
+
+- **国内服务器一键升级在 sidecar 启动阶段卡死**：后台升级用的 `docker:27-cli` sidecar 之前直连 Docker Hub，国内 ISP 普遍不可达，导致 `升级请求 已收到` 之后停在 `Unable to find image 'docker:27-cli' locally` 并以 `exit status 125` 失败。改为从 `registry.utterlog.io/utterlog/docker:27-cli` 拉取，镜像由 `scripts/sync-mirrors.sh` 每日自动同步、内容字节一致。
 
 ### 移除
 

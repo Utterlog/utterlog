@@ -8,6 +8,7 @@
 #   pgvector/pgvector:pg18  → utterlog/pgvector:pg18 + :<precise>
 #   redis:8-alpine          → utterlog/redis:8-alpine + :<precise>
 #   caddy:2-alpine          → utterlog/caddy:2-alpine + :<precise>
+#   docker:27-cli           → utterlog/docker:27-cli (upgrade sidecar)
 #
 # The floating tag (pg18, 8-alpine, 2-alpine) is what
 # docker-compose.prod.yml references — it always points at the
@@ -71,6 +72,13 @@ precise_tag_for() {
                 | sed 's/^v//')
       [ -n "$precise" ] && precise="${precise}-alpine"
       ;;
+    docker)
+      # `docker:27-cli` is already a precise tag from upstream (major
+      # 27 + cli variant). No useful "more precise" tag exists, so leave
+      # the precise output empty — only the floating :27-cli tag will
+      # be pushed.
+      precise=""
+      ;;
   esac
   if [ -n "$precise" ] && [ "$precise" != "$floating" ]; then
     echo "$precise"
@@ -133,5 +141,6 @@ log "===== sync-mirrors start ====="
 mirror "pgvector/pgvector" "pg18"     "pgvector"
 mirror "redis"             "8-alpine" "redis"
 mirror "caddy"             "2-alpine" "caddy"
+mirror "docker"            "27-cli"   "docker"
 
 log "===== sync-mirrors done ====="
